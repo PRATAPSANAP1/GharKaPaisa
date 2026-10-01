@@ -82,10 +82,10 @@ export default function EmployeeAttendance() {
 
   const exportCSV = () => {
     if (!history || history.length === 0) return;
-    const headers = ['Date', 'Status', 'Check In', 'Check Out', 'Total Hours', 'Biometric Status'];
+    const headers = ['Date', 'Status', 'Start Work Time', 'End Work Time', 'Total Duration', 'Biometric Status'];
     const rows = history.map(item => [
       item.date ? new Date(item.date).toLocaleDateString('en-IN') : '--',
-      item.status || 'PRESENT',
+      item.check_in_time && item.check_out_time ? 'Work Completed' : item.check_in_time ? 'Working' : 'Not Started',
       item.check_in_time ? new Date(item.check_in_time).toLocaleTimeString('en-IN') : '--',
       item.check_out_time ? new Date(item.check_out_time).toLocaleTimeString('en-IN') : '--',
       item.total_hours ? `${item.total_hours} hrs` : '--',
@@ -252,9 +252,9 @@ export default function EmployeeAttendance() {
               <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B', fontWeight: 600 }}>
                 <th style={{ padding: '12px 16px' }}>Date</th>
                 <th style={{ padding: '12px 16px' }}>Status</th>
-                <th style={{ padding: '12px 16px' }}>Check In</th>
-                <th style={{ padding: '12px 16px' }}>Check Out</th>
-                <th style={{ padding: '12px 16px' }}>Total Hours</th>
+                <th style={{ padding: '12px 16px' }}>Start Work Time</th>
+                <th style={{ padding: '12px 16px' }}>End Work Time</th>
+                <th style={{ padding: '12px 16px' }}>Total Duration</th>
                 <th style={{ padding: '12px 16px' }}>Verification Method</th>
               </tr>
             </thead>
@@ -267,14 +267,14 @@ export default function EmployeeAttendance() {
                     </td>
                     <td style={{ padding: '14px 16px' }}>
                       <span style={{
-                        background: row.status === 'ABSENT' ? '#FEE2E2' : '#DCFCE7',
-                        color: row.status === 'ABSENT' ? '#DC2626' : '#16A34A',
+                        background: row.check_in_time && row.check_out_time ? '#DCFCE7' : row.check_in_time ? '#FEF3C7' : '#F1F5F9',
+                        color: row.check_in_time && row.check_out_time ? '#16A34A' : row.check_in_time ? '#D97706' : '#64748B',
                         padding: '4px 10px',
                         borderRadius: '12px',
                         fontSize: '12px',
                         fontWeight: 600
                       }}>
-                        {row.status || 'PRESENT'}
+                        {row.check_in_time && row.check_out_time ? 'Work Completed' : row.check_in_time ? 'Working' : 'Not Started'}
                       </span>
                     </td>
                     <td style={{ padding: '14px 16px', color: '#0F172A' }}>

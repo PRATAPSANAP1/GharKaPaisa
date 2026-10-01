@@ -1,10 +1,16 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, ShieldCheck, Check } from 'lucide-react';
+import { CheckCircle2, ShieldCheck } from 'lucide-react';
 
 export default function AttendanceSuccess({ verResult, user, onClose }) {
-  const checkInTimeDisplay = verResult?.checkInTime
-    ? new Date(verResult.checkInTime).toLocaleTimeString('en-IN', {
+  const isCheckIn = verResult?.action === 'CHECK_IN' || verResult?.action === 'START_WORK';
+  
+  const timestampToDisplay = isCheckIn
+    ? (verResult?.checkInTime || verResult?.timestamp)
+    : (verResult?.checkOutTime || verResult?.timestamp);
+
+  const timeDisplay = timestampToDisplay
+    ? new Date(timestampToDisplay).toLocaleTimeString('en-IN', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true
@@ -43,7 +49,7 @@ export default function AttendanceSuccess({ verResult, user, onClose }) {
         border: '1px solid #E2E8F0'
       }}
     >
-      {/* 100ms: Circle scales in 0.7 -> 1 */}
+      {/* Circle Icon */}
       <motion.div
         initial={{ scale: 0.7, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -52,16 +58,15 @@ export default function AttendanceSuccess({ verResult, user, onClose }) {
           width: '80px',
           height: '80px',
           borderRadius: '50%',
-          background: '#DCFCE7',
-          color: '#16A34A',
+          background: isCheckIn ? '#DCFCE7' : '#FFEDD5',
+          color: isCheckIn ? '#16A34A' : '#EA580C',
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
           marginBottom: '20px',
-          boxShadow: '0 4px 20px rgba(22, 163, 74, 0.2)'
+          boxShadow: isCheckIn ? '0 4px 20px rgba(22, 163, 74, 0.2)' : '0 4px 20px rgba(234, 88, 12, 0.2)'
         }}
       >
-        {/* 300ms: Checkmark appears */}
         <motion.div
           initial={{ scale: 0.5, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -71,29 +76,31 @@ export default function AttendanceSuccess({ verResult, user, onClose }) {
         </motion.div>
       </motion.div>
 
-      {/* 400ms: Content fades upward */}
+      {/* Title & Description */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.4 }}
       >
         <h3 style={{ margin: '0 0 8px', fontSize: '22px', fontWeight: 700, color: '#0F172A' }}>
-          Attendance Marked Successfully!
+          {isCheckIn ? 'Work Started Successfully!' : 'Work Ended Successfully!'}
         </h3>
 
         <p style={{ margin: '0 0 24px', fontSize: '14px', color: '#64748B', lineHeight: 1.4 }}>
-          Your identity has been verified and today's attendance has been recorded.
+          {isCheckIn
+            ? 'Your identity has been verified and your work session has officially started.'
+            : 'Your identity has been verified and your work session has ended for today.'}
         </p>
       </motion.div>
 
-      {/* 500ms: Check-in Card appears */}
+      {/* Time Card */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.5 }}
         style={{
-          background: '#DCFCE7',
-          border: '1px solid #BBF7D0',
+          background: isCheckIn ? '#DCFCE7' : '#FFEDD5',
+          border: `1px solid ${isCheckIn ? '#BBF7D0' : '#FDBA74'}`,
           borderRadius: '16px',
           padding: '20px',
           maxWidth: '400px',
@@ -101,13 +108,13 @@ export default function AttendanceSuccess({ verResult, user, onClose }) {
           textAlign: 'left'
         }}
       >
-        <div style={{ fontSize: '12px', fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          Check-in Time
+        <div style={{ fontSize: '12px', fontWeight: 700, color: isCheckIn ? '#166534' : '#9A3412', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          {isCheckIn ? 'Start Work Time' : 'End Work Time'}
         </div>
-        <div style={{ fontSize: '24px', fontWeight: 700, color: '#14532D', margin: '4px 0 2px' }}>
-          {checkInTimeDisplay}
+        <div style={{ fontSize: '24px', fontWeight: 700, color: isCheckIn ? '#14532D' : '#7C2D12', margin: '4px 0 2px' }}>
+          {timeDisplay}
         </div>
-        <div style={{ fontSize: '13px', color: '#15803D', fontWeight: 500 }}>
+        <div style={{ fontSize: '13px', color: isCheckIn ? '#15803D' : '#C2410C', fontWeight: 500 }}>
           {dateDisplay}
         </div>
       </motion.div>
@@ -132,11 +139,11 @@ export default function AttendanceSuccess({ verResult, user, onClose }) {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
           <span style={{ color: '#64748B', fontWeight: 500 }}>Employee</span>
-          <strong style={{ color: '#0F172A' }}>{user?.full_name || 'Gayatri Pachpande'}</strong>
+          <strong style={{ color: '#0F172A' }}>{user?.full_name || 'Employee'}</strong>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
           <span style={{ color: '#64748B', fontWeight: 500 }}>Employee ID</span>
-          <strong style={{ color: '#0F172A' }}>{user?.employee_code || user?.employee_id || 'EMP1001'}</strong>
+          <strong style={{ color: '#0F172A' }}>{user?.employee_code || user?.employee_id || '--'}</strong>
         </div>
         <div style={{
           paddingTop: '8px',
@@ -152,7 +159,7 @@ export default function AttendanceSuccess({ verResult, user, onClose }) {
         </div>
       </motion.div>
 
-      {/* 600ms: Done button appears */}
+      {/* Done button */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -167,12 +174,12 @@ export default function AttendanceSuccess({ verResult, user, onClose }) {
             height: '48px',
             borderRadius: '12px',
             border: 'none',
-            background: '#2563EB',
+            background: isCheckIn ? '#2563EB' : '#EA580C',
             color: '#FFFFFF',
             fontSize: '15px',
             fontWeight: 600,
             cursor: 'pointer',
-            boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)'
+            boxShadow: isCheckIn ? '0 4px 14px rgba(37, 99, 235, 0.3)' : '0 4px 14px rgba(234, 88, 12, 0.3)'
           }}
         >
           Done

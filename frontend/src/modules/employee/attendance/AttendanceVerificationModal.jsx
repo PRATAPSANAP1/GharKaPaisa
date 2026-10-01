@@ -66,6 +66,8 @@ export default function AttendanceVerificationModal({
     if (!isOpen) {
       stopCameraTracks();
       setCurrentState('INSTRUCTIONS');
+      setSessionId(null);
+      setErrorMessage('');
     }
   }, [isOpen, stopCameraTracks]);
 
@@ -147,7 +149,7 @@ export default function AttendanceVerificationModal({
     }
 
     try {
-      // 1. Session Creation
+      // 1. Session Creation (Always create a BRAND NEW verification session)
       setCurrentState('LIVENESS_STARTING');
       setOverlayMessage('Starting verification session...');
       const sessionRes = await attendanceService.createVerificationSession();
@@ -198,7 +200,7 @@ export default function AttendanceVerificationModal({
       // 4. Attendance Submitting
       setCurrentState('FACE_MATCHED');
       setCurrentState('ATTENDANCE_SUBMITTING');
-      setOverlayMessage("Recording today's attendance...");
+      setOverlayMessage(actionType === 'CHECK_OUT' ? 'Ending work session...' : 'Starting work session...');
 
       let attendanceRes;
       if (actionType === 'CHECK_OUT') {
@@ -211,7 +213,9 @@ export default function AttendanceVerificationModal({
 
       // 5. Success State
       const finalResult = {
-        checkInTime: attendanceRes?.data?.check_in_time || attendanceRes?.check_in_time || new Date().toISOString(),
+        checkInTime: attendanceRes?.data?.check_in_time || attendanceRes?.check_in_time,
+        checkOutTime: attendanceRes?.data?.check_out_time || attendanceRes?.check_out_time,
+        timestamp: attendanceRes?.data?.check_out_time || attendanceRes?.data?.check_in_time || attendanceRes?.check_in_time || new Date().toISOString(),
         attendanceDate: attendanceRes?.data?.date || new Date().toISOString(),
         action: actionType
       };
@@ -236,6 +240,14 @@ export default function AttendanceVerificationModal({
     }
   };
 
+  const handleRetry = () => {
+    setSessionId(null);
+    setVerificationResult(null);
+    setErrorMessage('');
+    setCurrentState('CAMERA_INITIALIZING');
+    startCamera();
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -258,6 +270,7 @@ export default function AttendanceVerificationModal({
         {currentState === 'INSTRUCTIONS' && (
           <AttendanceInstructions
             key="instructions"
+            actionType={actionType}
             onContinue={() => {
               setCurrentState('CAMERA_INITIALIZING');
               startCamera();
@@ -281,10 +294,7 @@ export default function AttendanceVerificationModal({
           <AttendanceFailure
             key="failure"
             errorMessage={errorMessage}
-            onRetry={() => {
-              setCurrentState('CAMERA_INITIALIZING');
-              startCamera();
-            }}
+            onRetry={handleRetry}
             onClose={handleModalClose}
           />
         )}
@@ -293,10 +303,7 @@ export default function AttendanceVerificationModal({
         {currentState === 'SERVICE_UNAVAILABLE' && (
           <AttendanceServiceUnavailable
             key="unavailable"
-            onRetry={() => {
-              setCurrentState('CAMERA_INITIALIZING');
-              startCamera();
-            }}
+            onRetry={handleRetry}
             onClose={handleModalClose}
           />
         )}
@@ -305,10 +312,7 @@ export default function AttendanceVerificationModal({
         {currentState === 'CAMERA_PERMISSION_DENIED' && (
           <CameraPermissionError
             key="permission_error"
-            onRetry={() => {
-              setCurrentState('CAMERA_INITIALIZING');
-              startCamera();
-            }}
+            onRetry={handleRetry}
             onClose={handleModalClose}
           />
         )}
@@ -317,10 +321,7 @@ export default function AttendanceVerificationModal({
         {currentState === 'CAMERA_ERROR' && (
           <CameraError
             key="camera_error"
-            onRetry={() => {
-              setCurrentState('CAMERA_INITIALIZING');
-              startCamera();
-            }}
+            onRetry={handleRetry}
             onClose={handleModalClose}
           />
         )}
@@ -368,10 +369,10 @@ export default function AttendanceVerificationModal({
             }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '19px', fontWeight: 700, color: '#0F172A' }}>
-                  Face Verification for Attendance
+                  {actionType === 'CHECK_OUT' ? 'Face Verification to End Work' : 'Face Verification to Start Work'}
                 </h3>
                 <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#64748B' }}>
-                  Look into the camera and follow the instructions.
+                  Look into the camera and complete biometric verification.
                 </p>
               </div>
 
@@ -463,7 +464,9 @@ export default function AttendanceVerificationModal({
                   height: '48px',
                   borderRadius: '12px',
                   border: 'none',
-                  background: currentState === 'CAMERA_READY' ? '#2563EB' : '#CBD5E1',
+                  background: currentState === 'CAMERA_READY'
+                    ? (actionType === 'CHECK_OUT' ? '#EA580C' : '#2563EB')
+                    : '#CBD5E1',
                   color: '#FFFFFF',
                   fontSize: '15px',
                   fontWeight: 600,
@@ -471,7 +474,9 @@ export default function AttendanceVerificationModal({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '10px',
-                  boxShadow: currentState === 'CAMERA_READY' ? '0 4px 14px rgba(37, 99, 235, 0.3)' : 'none',
+                  boxShadow: currentState === 'CAMERA_READY'
+                    ? (actionType === 'CHECK_OUT' ? '0 4px 14px rgba(234, 88, 12, 0.3)' : '0 4px 14px rgba(37, 99, 235, 0.3)')
+                    : 'none',
                   transition: 'background 0.2s ease'
                 }}
               >
@@ -485,11 +490,11 @@ export default function AttendanceVerificationModal({
                   </>
                 ) : currentState === 'ATTENDANCE_SUBMITTING' ? (
                   <>
-                    <RefreshCw size={18} className="animate-spin" /> Marking attendance...
+                    <RefreshCw size={18} className="animate-spin" /> {actionType === 'CHECK_OUT' ? 'Ending work...' : 'Starting work...'}
                   </>
                 ) : (
                   <>
-                    <Camera size={18} /> Verify & Mark Attendance
+                    <Camera size={18} /> {actionType === 'CHECK_OUT' ? 'Verify & End Work' : 'Verify & Start Work'}
                   </>
                 )}
               </button>

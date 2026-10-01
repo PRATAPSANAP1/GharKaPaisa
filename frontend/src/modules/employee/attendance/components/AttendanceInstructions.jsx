@@ -5,7 +5,9 @@ import {
   Glasses, Camera, ArrowRight, X, Info
 } from 'lucide-react';
 
-export default function AttendanceInstructions({ onContinue, onClose, loading }) {
+export default function AttendanceInstructions({ onContinue, onClose, loading, actionType = 'CHECK_IN' }) {
+  const isCheckIn = actionType === 'CHECK_IN';
+
   const instructions = [
     {
       icon: <Sun size={18} color="#2563EB" />,
@@ -63,8 +65,8 @@ export default function AttendanceInstructions({ onContinue, onClose, loading })
             width: '40px',
             height: '40px',
             borderRadius: '12px',
-            background: '#EFF6FF',
-            color: '#2563EB',
+            background: isCheckIn ? '#EFF6FF' : '#FFF7ED',
+            color: isCheckIn ? '#2563EB' : '#EA580C',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
@@ -73,10 +75,10 @@ export default function AttendanceInstructions({ onContinue, onClose, loading })
           </div>
           <div>
             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#0F172A' }}>
-              Face Verification
+              {isCheckIn ? 'Verify to Start Work' : 'Verify to End Work'}
             </h3>
             <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#64748B' }}>
-              Verify your identity before marking today's attendance.
+              {isCheckIn ? 'Complete face verification to start your work session.' : 'Complete face verification to end your work session.'}
             </p>
           </div>
         </div>
@@ -106,13 +108,13 @@ export default function AttendanceInstructions({ onContinue, onClose, loading })
           width: '68px',
           height: '68px',
           borderRadius: '50%',
-          background: '#EFF6FF',
-          border: '1px solid #DBEAFE',
-          color: '#2563EB',
+          background: isCheckIn ? '#EFF6FF' : '#FFF7ED',
+          border: `1px solid ${isCheckIn ? '#DBEAFE' : '#FFEDD5'}`,
+          color: isCheckIn ? '#2563EB' : '#EA580C',
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: '0 4px 12px rgba(37, 99, 235, 0.12)'
+          boxShadow: `0 4px 12px ${isCheckIn ? 'rgba(37, 99, 235, 0.12)' : 'rgba(234, 88, 12, 0.12)'}`
         }}>
           <ScanFace size={34} />
         </div>
@@ -153,8 +155,8 @@ export default function AttendanceInstructions({ onContinue, onClose, loading })
 
       {/* Information Box */}
       <div style={{
-        background: '#EFF6FF',
-        border: '1px solid #DBEAFE',
+        background: isCheckIn ? '#EFF6FF' : '#FFF7ED',
+        border: `1px solid ${isCheckIn ? '#DBEAFE' : '#FFEDD5'}`,
         borderRadius: '12px',
         padding: '12px 14px',
         marginBottom: '20px',
@@ -162,9 +164,9 @@ export default function AttendanceInstructions({ onContinue, onClose, loading })
         alignItems: 'center',
         gap: '10px'
       }}>
-        <Info size={16} color="#2563EB" style={{ flexShrink: 0 }} />
-        <span style={{ fontSize: '12.5px', color: '#1E3A5F', fontWeight: 500, lineHeight: 1.4 }}>
-          Live biometric verification is required before attendance can be marked.
+        <Info size={16} color={isCheckIn ? '#2563EB' : '#EA580C'} style={{ flexShrink: 0 }} />
+        <span style={{ fontSize: '12.5px', color: isCheckIn ? '#1E3A5F' : '#7C2D12', fontWeight: 500, lineHeight: 1.4 }}>
+          Live biometric verification is required before {isCheckIn ? 'starting work' : 'ending work'}.
         </span>
       </div>
 
@@ -198,7 +200,7 @@ export default function AttendanceInstructions({ onContinue, onClose, loading })
             height: '48px',
             borderRadius: '12px',
             border: 'none',
-            background: '#2563EB',
+            background: isCheckIn ? '#2563EB' : '#EA580C',
             color: '#FFFFFF',
             fontSize: '14px',
             fontWeight: 600,
@@ -207,7 +209,7 @@ export default function AttendanceInstructions({ onContinue, onClose, loading })
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
-            boxShadow: '0 4px 14px rgba(37, 99, 235, 0.25)'
+            boxShadow: isCheckIn ? '0 4px 14px rgba(37, 99, 235, 0.25)' : '0 4px 14px rgba(234, 88, 12, 0.25)'
           }}
         >
           {loading ? 'Starting Camera...' : 'Continue'} <ArrowRight size={16} />

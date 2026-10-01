@@ -119,7 +119,7 @@ export default function MobileAttendanceVerificationModal({
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>
-              {actionType === 'CHECK_IN' ? 'Check-In Verification' : 'Check-Out Verification'}
+              {actionType === 'CHECK_IN' ? 'Verify to Start Work' : 'Verify to End Work'}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <Text style={styles.closeText}>✕</Text>
@@ -193,7 +193,7 @@ export default function MobileAttendanceVerificationModal({
           {step === 'SUCCESS' ? (
             <View style={styles.successCard}>
               <Text style={styles.successText}>✓ Biometric Verification Passed!</Text>
-              <Text style={styles.successSub}>Submitting {actionType === 'CHECK_IN' ? 'Check-In' : 'Check-Out'}...</Text>
+              <Text style={styles.successSub}>Submitting {actionType === 'CHECK_IN' ? 'Start Work' : 'End Work'}...</Text>
             </View>
           ) : null}
 
@@ -209,7 +209,7 @@ export default function MobileAttendanceVerificationModal({
                   <ActivityIndicator color="#FFF" />
                 ) : (
                   <Text style={styles.primaryBtnText}>
-                    {step === 'FAILED' ? 'Retry Verification 🔄' : 'Start Biometric Liveness 🎥'}
+                    {step === 'FAILED' ? 'Retry Verification 🔄' : actionType === 'CHECK_IN' ? 'Start Work (Biometric) 🎥' : 'End Work (Biometric) 🎥'}
                   </Text>
                 )}
               </TouchableOpacity>

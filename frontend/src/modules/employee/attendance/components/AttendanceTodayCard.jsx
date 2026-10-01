@@ -1,12 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Clock, Play, LogOut, CheckCircle2 } from 'lucide-react';
 
 export default function AttendanceTodayCard({ todayAttendance }) {
   const isCheckedIn = !!todayAttendance?.check_in_time;
   const isCheckedOut = !!todayAttendance?.check_out_time;
 
   const formatTime = (timeStr) => {
-    if (!timeStr) return '--';
+    if (!timeStr) return '--:--';
     try {
       return new Date(timeStr).toLocaleTimeString('en-IN', {
         hour: '2-digit',
@@ -17,6 +18,27 @@ export default function AttendanceTodayCard({ todayAttendance }) {
       return timeStr;
     }
   };
+
+  const calculateDuration = (startTime, endTime) => {
+    if (!startTime || !endTime) return '--';
+    try {
+      const start = new Date(startTime);
+      const end = new Date(endTime);
+      const diffMs = end - start;
+      if (diffMs <= 0) return '0h 0m';
+      const hours = Math.floor(diffMs / (1000 * 60 * 60));
+      const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      return `${hours.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m`;
+    } catch (e) {
+      return '--';
+    }
+  };
+
+  const workStatus = !isCheckedIn
+    ? 'Not Started'
+    : !isCheckedOut
+    ? 'Working'
+    : 'Work Completed';
 
   return (
     <motion.div
@@ -35,17 +57,20 @@ export default function AttendanceTodayCard({ todayAttendance }) {
         fontSize: '17px',
         fontWeight: 700,
         color: '#0F172A',
-        margin: '0 0 18px 0'
+        margin: '0 0 18px 0',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
       }}>
-        Today's Attendance
+        <Clock size={18} color="#2563EB" /> Today's Work Summary
       </h3>
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
         gap: '16px'
       }}>
-        {/* CHECK-IN */}
+        {/* START WORK TIME */}
         <div style={{
           background: '#F8FAFC',
           border: '1px solid #E2E8F0',
@@ -57,21 +82,24 @@ export default function AttendanceTodayCard({ todayAttendance }) {
             fontWeight: 600,
             color: '#64748B',
             textTransform: 'uppercase',
-            letterSpacing: '0.5px'
+            letterSpacing: '0.5px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
           }}>
-            Check-In
+            <Play size={12} color="#2563EB" /> Start Work Time
           </div>
           <div style={{
             fontSize: '20px',
             fontWeight: 700,
-            color: isCheckedIn ? '#0F172A' : '#64748B',
+            color: isCheckedIn ? '#0F172A' : '#94A3B8',
             marginTop: '6px'
           }}>
             {formatTime(todayAttendance?.check_in_time)}
           </div>
         </div>
 
-        {/* STATUS */}
+        {/* WORK SESSION STATUS */}
         <div style={{
           background: '#F8FAFC',
           border: '1px solid #E2E8F0',
@@ -85,10 +113,36 @@ export default function AttendanceTodayCard({ todayAttendance }) {
             textTransform: 'uppercase',
             letterSpacing: '0.5px'
           }}>
-            Status
+            Work Session Status
           </div>
           <div style={{ marginTop: '8px' }}>
-            {isCheckedIn ? (
+            {!isCheckedIn ? (
+              <span style={{
+                background: '#F1F5F9',
+                color: '#64748B',
+                border: '1px solid #E2E8F0',
+                padding: '4px 12px',
+                borderRadius: '20px',
+                fontSize: '13px',
+                fontWeight: 600,
+                display: 'inline-block'
+              }}>
+                Not Started
+              </span>
+            ) : !isCheckedOut ? (
+              <span style={{
+                background: '#FEF3C7',
+                color: '#D97706',
+                border: '1px solid #FDE68A',
+                padding: '4px 12px',
+                borderRadius: '20px',
+                fontSize: '13px',
+                fontWeight: 700,
+                display: 'inline-block'
+              }}>
+                ⚡ Working
+              </span>
+            ) : (
               <span style={{
                 background: '#DCFCE7',
                 color: '#16A34A',
@@ -96,29 +150,45 @@ export default function AttendanceTodayCard({ todayAttendance }) {
                 padding: '4px 12px',
                 borderRadius: '20px',
                 fontSize: '13px',
-                fontWeight: 600,
+                fontWeight: 700,
                 display: 'inline-block'
               }}>
-                {isCheckedOut ? 'Completed' : 'Present'}
-              </span>
-            ) : (
-              <span style={{
-                background: '#FEF3C7',
-                color: '#B45309',
-                border: '1px solid #FDE68A',
-                padding: '4px 12px',
-                borderRadius: '20px',
-                fontSize: '13px',
-                fontWeight: 600,
-                display: 'inline-block'
-              }}>
-                Not Marked
+                ✓ Work Completed
               </span>
             )}
           </div>
         </div>
 
-        {/* CHECK-OUT */}
+        {/* END WORK TIME */}
+        <div style={{
+          background: '#F8FAFC',
+          border: '1px solid #E2E8F0',
+          borderRadius: '12px',
+          padding: '16px 20px'
+        }}>
+          <div style={{
+            fontSize: '12px',
+            fontWeight: 600,
+            color: '#64748B',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}>
+            <LogOut size={12} color="#EA580C" /> End Work Time
+          </div>
+          <div style={{
+            fontSize: '20px',
+            fontWeight: 700,
+            color: isCheckedOut ? '#0F172A' : '#94A3B8',
+            marginTop: '6px'
+          }}>
+            {formatTime(todayAttendance?.check_out_time)}
+          </div>
+        </div>
+
+        {/* TOTAL WORK DURATION */}
         <div style={{
           background: '#F8FAFC',
           border: '1px solid #E2E8F0',
@@ -132,15 +202,15 @@ export default function AttendanceTodayCard({ todayAttendance }) {
             textTransform: 'uppercase',
             letterSpacing: '0.5px'
           }}>
-            Check-Out
+            Total Work Duration
           </div>
           <div style={{
             fontSize: '20px',
             fontWeight: 700,
-            color: isCheckedOut ? '#0F172A' : '#64748B',
+            color: isCheckedIn && isCheckedOut ? '#2563EB' : '#94A3B8',
             marginTop: '6px'
           }}>
-            {formatTime(todayAttendance?.check_out_time)}
+            {calculateDuration(todayAttendance?.check_in_time, todayAttendance?.check_out_time)}
           </div>
         </div>
       </div>

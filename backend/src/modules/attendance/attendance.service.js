@@ -114,7 +114,7 @@ const checkIn = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
 
     if (existing && existing.check_in_time) {
       await client.query('ROLLBACK');
-      const error = new Error('Already checked in for today');
+      const error = new Error('Work has already been started for today.');
       error.statusCode = 409;
       error.code = 'ATTENDANCE_ALREADY_CHECKED_IN';
       throw error;
@@ -249,7 +249,7 @@ const checkOut = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
 
     if (!existing || !existing.check_in_time) {
       await client.query('ROLLBACK');
-      const error = new Error('No check-in record found for today. Check-in is required before check-out.');
+      const error = new Error('Please start work before ending your work session.');
       error.statusCode = 400;
       error.code = 'ATTENDANCE_NOT_STARTED';
       throw error;
@@ -257,7 +257,7 @@ const checkOut = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
 
     if (existing.check_out_time) {
       await client.query('ROLLBACK');
-      const error = new Error('Check-out already completed for today.');
+      const error = new Error('Work has already been ended for today.');
       error.statusCode = 409;
       error.code = 'ATTENDANCE_ALREADY_COMPLETED';
       throw error;

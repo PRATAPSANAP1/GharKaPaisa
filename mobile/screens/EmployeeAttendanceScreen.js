@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { useAuth } from '../src/context/AuthContext';
-import { isAttendanceEnabledForEmployee } from '../config/attendanceRollout';
 import {
   getTodayAttendance,
   getMyAttendanceHistory,
@@ -26,10 +25,6 @@ import MobileAttendanceVerificationModal from '../components/MobileAttendanceVer
 
 export default function EmployeeAttendanceScreen({ navigation }) {
   const { user } = useAuth();
-
-  // Determine Rollout Eligibility for authenticated employee
-  const empCode = user?.employee_code || user?.employee_id;
-  const isEnabled = isAttendanceEnabledForEmployee(empCode);
 
   // States
   const [loading, setLoading] = useState(false);
@@ -45,10 +40,8 @@ export default function EmployeeAttendanceScreen({ navigation }) {
   const [verificationModalVisible, setVerificationModalVisible] = useState(false);
   const [activeActionType, setActiveActionType] = useState('CHECK_IN'); // 'CHECK_IN' | 'CHECK_OUT'
 
-  // Fetch Attendance Data (ONLY if enabled)
+  // Fetch Attendance Data
   const fetchAttendanceDetails = useCallback(async () => {
-    if (!isEnabled) return;
-
     try {
       setLoading(true);
 
@@ -67,20 +60,18 @@ export default function EmployeeAttendanceScreen({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [isEnabled]);
+  }, []);
 
   useEffect(() => {
-    if (isEnabled) {
-      fetchAttendanceDetails();
-    }
-  }, [isEnabled, fetchAttendanceDetails]);
+    fetchAttendanceDetails();
+  }, [fetchAttendanceDetails]);
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchAttendanceDetails();
   };
 
-  // Trigger Check-In Flow
+  // Trigger Start Work Flow
   const handleInitiateCheckIn = async () => {
     const net = await NetInfo.fetch();
     if (!net.isConnected) {
@@ -92,7 +83,7 @@ export default function EmployeeAttendanceScreen({ navigation }) {
     setVerificationModalVisible(true);
   };
 
-  // Trigger Check-Out Flow
+  // Trigger End Work Flow
   const handleInitiateCheckOut = async () => {
     const net = await NetInfo.fetch();
     if (!net.isConnected) {
@@ -113,12 +104,12 @@ export default function EmployeeAttendanceScreen({ navigation }) {
       if (activeActionType === 'CHECK_IN') {
         const res = await executeCheckIn(sessionId);
         if (res?.success) {
-          Alert.alert('Check-In Successful 🎉', 'Your attendance check-in has been recorded with mobile verification.');
+          Alert.alert('Work Started 🎉', 'Your work session start time has been recorded with biometric verification.');
         }
       } else {
         const res = await executeCheckOut(sessionId);
         if (res?.success) {
-          Alert.alert('Check-Out Successful 🎉', 'Your attendance check-out has been recorded.');
+          Alert.alert('Work Ended 🎉', 'Your work session end time has been recorded.');
         }
       }
 
@@ -133,7 +124,7 @@ export default function EmployeeAttendanceScreen({ navigation }) {
 
   // Formatting helpers
   const formatTimeStr = (isoString) => {
-    if (!isoString) return '--';
+    if (!isoString) return '--:--';
     try {
       const d = new Date(isoString);
       return d.toLocaleTimeString('en-IN', {
@@ -143,7 +134,7 @@ export default function EmployeeAttendanceScreen({ navigation }) {
         hour12: true
       });
     } catch (e) {
-      return '--';
+      return '--:--';
     }
   };
 
@@ -161,38 +152,25 @@ export default function EmployeeAttendanceScreen({ navigation }) {
     }
   };
 
-  // ── RENDER COMING SOON IF NOT AUTHORIZED ──
-  if (!isEnabled) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <StatusBar backgroundColor="#0284C7" barStyle="light-content" />
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backBtnText}>← Dashboard</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Attendance</Text>
-          <View style={{ width: 60 }} />
-        </View>
+  const calculateDuration = (startTime, endTime) => {
+    if (!startTime || !endTime) return '--';
+    try {
+      const start = new Date(startTime);
+      const end = new Date(endTime);
+      const diffMs = end - start;
+      if (diffMs <= 0) return '0h 0m';
+      const hours = Math.floor(diffMs / (1000 * 60 * 60));
+      const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      return `${hours.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m`;
+    } catch (e) {
+      return '--';
+    }
+  };
 
-        <View style={styles.comingSoonContainer}>
-          <Text style={styles.comingSoonIcon}>⌛</Text>
-          <Text style={styles.comingSoonTitle}>Attendance Coming Soon</Text>
-          <Text style={styles.comingSoonDesc}>
-            Mobile face attendance functionality is currently being rolled out and will be available soon for your account.
-          </Text>
-          <View style={styles.comingSoonBadge}>
-            <Text style={styles.comingSoonBadgeText}>PHASE 6 ROLLOUT GATE ACTIVE</Text>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  // ── RENDER FULL ATTENDANCE SCREEN FOR CAND10001 ──
   const record = todayData?.attendance || null;
   const hasCheckIn = Boolean(record?.check_in_time);
   const hasCheckOut = Boolean(record?.check_out_time);
-  const statusStr = record?.status || (todayData?.status === 'NOT_MARKED' ? 'NOT MARKED' : 'PENDING');
+  const workStatusStr = !hasCheckIn ? 'Not Started' : !hasCheckOut ? 'Working' : 'Work Completed';
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -216,37 +194,45 @@ export default function EmployeeAttendanceScreen({ navigation }) {
         {/* TODAY'S ATTENDANCE CARD */}
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>Today's Attendance Status</Text>
-            <View style={[styles.statusBadge, hasCheckIn && styles.statusBadgePresent]}>
-              <Text style={[styles.statusBadgeText, hasCheckIn && styles.statusBadgeTextPresent]}>
-                {statusStr}
+            <Text style={styles.cardTitle}>Today's Work Session</Text>
+            <View style={[
+              styles.statusBadge,
+              hasCheckIn && !hasCheckOut && styles.statusBadgeWorking,
+              hasCheckIn && hasCheckOut && styles.statusBadgeCompleted
+            ]}>
+              <Text style={[
+                styles.statusBadgeText,
+                hasCheckIn && !hasCheckOut && styles.statusBadgeTextWorking,
+                hasCheckIn && hasCheckOut && styles.statusBadgeTextCompleted
+              ]}>
+                {workStatusStr}
               </Text>
             </View>
           </View>
 
           <View style={styles.metricsGrid}>
             <View style={styles.metricItem}>
-              <Text style={styles.metricLabel}>CHECK-IN</Text>
+              <Text style={styles.metricLabel}>START WORK TIME</Text>
               <Text style={styles.metricVal}>{formatTimeStr(record?.check_in_time)}</Text>
             </View>
 
             <View style={styles.metricItem}>
-              <Text style={styles.metricLabel}>CHECK-OUT</Text>
+              <Text style={styles.metricLabel}>END WORK TIME</Text>
               <Text style={styles.metricVal}>{formatTimeStr(record?.check_out_time)}</Text>
             </View>
 
             <View style={styles.metricItem}>
-              <Text style={styles.metricLabel}>ENVIRONMENT</Text>
-              <Text style={styles.metricValSub}>{record?.matched_environment_code || '--'}</Text>
+              <Text style={styles.metricLabel}>WORK DURATION</Text>
+              <Text style={styles.metricValSub}>{calculateDuration(record?.check_in_time, record?.check_out_time)}</Text>
             </View>
 
             <View style={styles.metricItem}>
               <Text style={styles.metricLabel}>VERIFICATION</Text>
-              <Text style={styles.metricValSub}>{record?.verification_reference || '--'}</Text>
+              <Text style={styles.metricValSub}>{record?.verification_reference || 'Face Verified'}</Text>
             </View>
           </View>
 
-          {/* Action Button (Check-In or Check-Out) */}
+          {/* Action Button (Start Work or End Work) */}
           {!hasCheckIn ? (
             <TouchableOpacity
               style={[styles.actionBtn, submittingAction && { opacity: 0.6 }]}
@@ -256,7 +242,7 @@ export default function EmployeeAttendanceScreen({ navigation }) {
               {submittingAction ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
-                <Text style={styles.actionBtnText}>Mark Check-In (Face Verify) 📸</Text>
+                <Text style={styles.actionBtnText}>START WORK 📸</Text>
               )}
             </TouchableOpacity>
           ) : !hasCheckOut ? (
@@ -268,12 +254,12 @@ export default function EmployeeAttendanceScreen({ navigation }) {
               {submittingAction ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
-                <Text style={styles.actionBtnText}>Mark Check-Out (Face Verify) ➔</Text>
+                <Text style={styles.actionBtnText}>END WORK ➔</Text>
               )}
             </TouchableOpacity>
           ) : (
             <View style={styles.completedBanner}>
-              <Text style={styles.completedText}>✓ Attendance Completed for Today</Text>
+              <Text style={styles.completedText}>✓ Work Session Completed for Today</Text>
             </View>
           )}
         </View>
@@ -313,15 +299,17 @@ export default function EmployeeAttendanceScreen({ navigation }) {
               <View style={styles.tableHeader}>
                 <Text style={[styles.th, { flex: 1.2 }]}>DATE</Text>
                 <Text style={[styles.th, { flex: 1.2 }]}>STATUS</Text>
-                <Text style={[styles.th, { flex: 1 }]}>IN</Text>
-                <Text style={[styles.th, { flex: 1 }]}>OUT</Text>
+                <Text style={[styles.th, { flex: 1 }]}>START</Text>
+                <Text style={[styles.th, { flex: 1 }]}>END</Text>
                 <Text style={[styles.th, { flex: 1 }]}>SRC</Text>
               </View>
 
               {historyData.map((item, idx) => (
                 <View key={item.id || idx} style={styles.tableRow}>
                   <Text style={[styles.tdBold, { flex: 1.2 }]}>{formatDateStr(item.attendance_date)}</Text>
-                  <Text style={[styles.tdStatus, { flex: 1.2 }]}>{item.status}</Text>
+                  <Text style={[styles.tdStatus, { flex: 1.2 }]}>
+                    {item.check_in_time && item.check_out_time ? 'Completed' : item.check_in_time ? 'Working' : 'Not Started'}
+                  </Text>
                   <Text style={[styles.td, { flex: 1 }]}>{formatTimeStr(item.check_in_time)}</Text>
                   <Text style={[styles.td, { flex: 1 }]}>{formatTimeStr(item.check_out_time)}</Text>
                   <Text style={[styles.tdBadge, { flex: 1 }]}>{item.source || 'MOBILE'}</Text>
@@ -372,44 +360,6 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 40
   },
-
-  // Coming Soon Styles
-  comingSoonContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 30
-  },
-  comingSoonIcon: {
-    fontSize: 54,
-    marginBottom: 16
-  },
-  comingSoonTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 8
-  },
-  comingSoonDesc: {
-    fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 20
-  },
-  comingSoonBadge: {
-    backgroundColor: '#E0F2FE',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20
-  },
-  comingSoonBadgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#0369A1'
-  },
-
-  // Card Styles
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -440,14 +390,18 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#64748B'
   },
-  statusBadgePresent: {
+  statusBadgeWorking: {
+    backgroundColor: '#FEF3C7'
+  },
+  statusBadgeTextWorking: {
+    color: '#D97706'
+  },
+  statusBadgeCompleted: {
     backgroundColor: '#ECFDF5'
   },
-  statusBadgeTextPresent: {
+  statusBadgeTextCompleted: {
     color: '#059669'
   },
-
-  // Metrics Grid
   metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -463,7 +417,7 @@ const styles = StyleSheet.create({
     borderColor: '#F1F5F9'
   },
   metricLabel: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '800',
     color: '#64748B',
     marginBottom: 4
@@ -474,12 +428,10 @@ const styles = StyleSheet.create({
     color: '#0F172A'
   },
   metricValSub: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: '#0284C7'
   },
-
-  // Action Buttons
   actionBtn: {
     backgroundColor: '#0284C7',
     paddingVertical: 14,
@@ -507,8 +459,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 13
   },
-
-  // Monthly Summary
   summaryGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -528,8 +478,6 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginTop: 2
   },
-
-  // History Table
   historyTable: {
     marginTop: 10
   },

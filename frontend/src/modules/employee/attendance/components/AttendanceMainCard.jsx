@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Camera, ScanFace, CheckCircle2 } from 'lucide-react';
+import { Play, LogOut, CheckCircle2, ScanFace } from 'lucide-react';
 
 export default function AttendanceMainCard({ onStartVerification, isCheckedIn, isCheckedOut, loading }) {
   return (
@@ -26,9 +26,9 @@ export default function AttendanceMainCard({ onStartVerification, isCheckedIn, i
           width: '52px',
           height: '52px',
           borderRadius: '14px',
-          background: '#EFF6FF',
-          border: '1px solid #DBEAFE',
-          color: '#2563EB',
+          background: isCheckedIn && !isCheckedOut ? '#FEF3C7' : isCheckedOut ? '#DCFCE7' : '#EFF6FF',
+          border: `1px solid ${isCheckedIn && !isCheckedOut ? '#FDE68A' : isCheckedOut ? '#BBF7D0' : '#DBEAFE'}`,
+          color: isCheckedIn && !isCheckedOut ? '#D97706' : isCheckedOut ? '#16A34A' : '#2563EB',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -44,7 +44,7 @@ export default function AttendanceMainCard({ onStartVerification, isCheckedIn, i
             color: '#0F172A',
             margin: '0 0 4px 0'
           }}>
-            Mark Today's Attendance
+            {!isCheckedIn ? 'Start Your Work Session' : !isCheckedOut ? 'Work Session In Progress' : 'Work Session Completed'}
           </h2>
           <p style={{
             fontSize: '13.5px',
@@ -52,7 +52,11 @@ export default function AttendanceMainCard({ onStartVerification, isCheckedIn, i
             margin: 0,
             lineHeight: 1.4
           }}>
-            Verify your identity using secure face verification to mark today's attendance.
+            {!isCheckedIn
+              ? 'Verify your identity using biometric face verification to start work for today.'
+              : !isCheckedOut
+              ? 'Your work session is active. Complete face verification when you are ready to end work.'
+              : 'You have successfully completed both Start Work and End Work sessions for today.'}
           </p>
         </div>
       </div>
@@ -68,21 +72,21 @@ export default function AttendanceMainCard({ onStartVerification, isCheckedIn, i
               color: '#FFFFFF',
               border: 'none',
               borderRadius: '12px',
-              padding: '0 24px',
+              padding: '0 28px',
               height: '50px',
               fontSize: '15px',
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: loading ? 'not-allowed' : 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '10px',
               boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)',
-              transition: 'background 0.2s ease, transform 0.1s ease'
+              transition: 'background 0.2s ease'
             }}
             onMouseOver={(e) => { if (!loading) e.currentTarget.style.background = '#1D4ED8'; }}
             onMouseOut={(e) => { if (!loading) e.currentTarget.style.background = '#2563EB'; }}
           >
-            <Camera size={18} /> Start Face Verification
+            <Play size={18} fill="#FFFFFF" /> START WORK
           </button>
         ) : !isCheckedOut ? (
           <button
@@ -90,23 +94,25 @@ export default function AttendanceMainCard({ onStartVerification, isCheckedIn, i
             onClick={onStartVerification}
             disabled={loading}
             style={{
-              background: '#F59E0B',
+              background: '#EA580C',
               color: '#FFFFFF',
               border: 'none',
               borderRadius: '12px',
-              padding: '0 24px',
+              padding: '0 28px',
               height: '50px',
               fontSize: '15px',
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: loading ? 'not-allowed' : 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '10px',
-              boxShadow: '0 4px 14px rgba(245, 158, 11, 0.3)',
+              boxShadow: '0 4px 14px rgba(234, 88, 12, 0.3)',
               transition: 'background 0.2s ease'
             }}
+            onMouseOver={(e) => { if (!loading) e.currentTarget.style.background = '#C2410C'; }}
+            onMouseOut={(e) => { if (!loading) e.currentTarget.style.background = '#EA580C'; }}
           >
-            <Camera size={18} /> Mark Check-Out Verification
+            <LogOut size={18} /> END WORK
           </button>
         ) : (
           <div style={{
@@ -114,14 +120,14 @@ export default function AttendanceMainCard({ onStartVerification, isCheckedIn, i
             border: '1px solid #BBF7D0',
             color: '#16A34A',
             borderRadius: '12px',
-            padding: '12px 20px',
-            fontSize: '13.5px',
+            padding: '12px 24px',
+            fontSize: '14px',
             fontWeight: 700,
             display: 'inline-flex',
             alignItems: 'center',
             gap: '8px'
           }}>
-            <CheckCircle2 size={18} /> Today's Attendance Completed
+            <CheckCircle2 size={18} /> Work Completed
           </div>
         )}
       </div>

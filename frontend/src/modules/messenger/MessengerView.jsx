@@ -1998,16 +1998,6 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                               {msg.attachments && msg.attachments.length > 0 && (
                                 <div style={{ marginTop: msg.message_text ? '10px' : 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                   {msg.attachments.map((att, idx) => {
-                                    console.log('[MESSENGER ATTACHMENT OBJECT]', att);
-                                    console.log('[MESSENGER ATTACHMENT URL]', {
-                                      id: att?.id,
-                                      attachmentId: att?.attachmentId,
-                                      fileUrl: att?.file_url,
-                                      fileUrlCamel: att?.fileUrl,
-                                      url: att?.url,
-                                      mimeType: att?.mime_type || att?.file_type,
-                                      fileName: att?.file_name
-                                    });
 
                                     const norm = normalizeMessengerAttachment(att);
                                     if (!norm) return null;

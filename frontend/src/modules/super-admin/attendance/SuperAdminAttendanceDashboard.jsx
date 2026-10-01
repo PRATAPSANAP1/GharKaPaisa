@@ -971,9 +971,9 @@ export default function SuperAdminAttendanceDashboard() {
                   {activeTab !== 'today' && (
                     <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 800, color: C.textLight, letterSpacing: '0.5px' }}>DATE</th>
                   )}
-                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 800, color: C.textLight, letterSpacing: '0.5px' }}>CHECK-IN</th>
-                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 800, color: C.textLight, letterSpacing: '0.5px' }}>CHECK-OUT</th>
-                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 800, color: C.textLight, letterSpacing: '0.5px' }}>DURATION</th>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 800, color: C.textLight, letterSpacing: '0.5px' }}>START WORK</th>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 800, color: C.textLight, letterSpacing: '0.5px' }}>END WORK</th>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 800, color: C.textLight, letterSpacing: '0.5px' }}>WORK DURATION</th>
                   <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 800, color: C.textLight, letterSpacing: '0.5px' }}>VERIFICATION</th>
                   <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 800, color: C.textLight, letterSpacing: '0.5px' }}>ENVIRONMENT</th>
                   <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 800, color: C.textLight, letterSpacing: '0.5px' }}>STATUS</th>
