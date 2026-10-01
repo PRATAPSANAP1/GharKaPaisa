@@ -4,7 +4,8 @@ import {
   FaUser, FaFilePdf, FaFileAlt, FaCheckDouble, FaThumbtack, FaPlus, 
   FaTimes, FaPhone, FaVideo, FaEllipsisV, FaCircle, FaRedo,
   FaFilter, FaArrowLeft, FaDownload, FaCheck, FaUserPlus, FaVolumeMute,
-  FaIdCard, FaCopy, FaEnvelope, FaUserCircle, FaTrashAlt, FaLock, FaSignOutAlt, FaEdit, FaImage
+  FaIdCard, FaCopy, FaEnvelope, FaUserCircle, FaTrashAlt, FaLock, FaSignOutAlt, FaEdit, FaImage,
+  FaMicrophone, FaSearchPlus, FaBell
 } from 'react-icons/fa';
 import api from '../../services/api';
 import { getImageUrl } from '../../config/api';
@@ -1194,7 +1195,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     const isLoggedOut = Boolean(lastLogout && lastActive && lastLogout >= lastActive);
 
     if (isRecentlyActive && !isLoggedOut) {
-      return { text: 'Active now', isOnline: true };
+      return { text: 'Online', isOnline: true };
     }
 
     let lastSeenTs = (lastLogout && (!lastActive || lastLogout >= lastActive)) ? lastLogout : (lastActive || lastLogin);
@@ -1411,10 +1412,10 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
             {/* Sub Filter Chips */}
             <div style={{ display: 'flex', gap: '6px', marginTop: '12px', overflowX: 'auto', paddingBottom: '2px' }}>
               {[
-                { id: 'ALL', label: 'All' },
-                { id: 'DIRECT', label: 'Direct' },
+                { id: 'ALL', label: `All ${conversations.reduce((acc, c) => acc + (c.unread_count || 0), 0) ? `(${conversations.reduce((acc, c) => acc + (c.unread_count || 0), 0)})` : ''}`.trim() },
+                { id: 'EMPLOYEES', label: 'Employees' },
+                { id: 'PARTNERS', label: 'Partners' },
                 { id: 'GROUPS', label: 'Groups' },
-                { id: 'APPLICATIONS', label: 'Applications' },
                 { id: 'UNREAD', label: 'Unread' }
               ].map(tab => (
                 <button
@@ -1440,13 +1441,41 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
               <div style={{ padding: '30px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>
                 Loading conversations...
               </div>
-            ) : conversations.length === 0 ? (
+            ) : conversations.filter(conv => {
+              if (filter === 'EMPLOYEES') {
+                const targetUser = conv.other_participants?.find(p => (p.user_id || p.id) !== user?.id) || conv.other_participants?.[0];
+                const role = (targetUser?.role || targetUser?.participant_role || '').toUpperCase();
+                return role === 'EMPLOYEE' || role === 'ADMIN' || role === 'SUPER_ADMIN' || !!targetUser?.employee_code || conv.conversation_type === 'GROUP';
+              }
+              if (filter === 'PARTNERS') {
+                const targetUser = conv.other_participants?.find(p => (p.user_id || p.id) !== user?.id) || conv.other_participants?.[0];
+                const role = (targetUser?.role || targetUser?.participant_role || '').toUpperCase();
+                return role === 'PARTNER' || role === 'CHANNEL_PARTNER' || !!targetUser?.partner_code;
+              }
+              if (filter === 'GROUPS') return conv.conversation_type === 'GROUP';
+              if (filter === 'UNREAD') return conv.unread_count > 0;
+              return true;
+            }).length === 0 ? (
               <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>
                 <p style={{ fontWeight: 700, margin: '0 0 4px', color: '#475569' }}>No conversations found</p>
                 <span>Click + above to start a chat with your team</span>
               </div>
             ) : (
-              conversations.map(conv => {
+              conversations.filter(conv => {
+                if (filter === 'EMPLOYEES') {
+                  const targetUser = conv.other_participants?.find(p => (p.user_id || p.id) !== user?.id) || conv.other_participants?.[0];
+                  const role = (targetUser?.role || targetUser?.participant_role || '').toUpperCase();
+                  return role === 'EMPLOYEE' || role === 'ADMIN' || role === 'SUPER_ADMIN' || !!targetUser?.employee_code || conv.conversation_type === 'GROUP';
+                }
+                if (filter === 'PARTNERS') {
+                  const targetUser = conv.other_participants?.find(p => (p.user_id || p.id) !== user?.id) || conv.other_participants?.[0];
+                  const role = (targetUser?.role || targetUser?.participant_role || '').toUpperCase();
+                  return role === 'PARTNER' || role === 'CHANNEL_PARTNER' || !!targetUser?.partner_code;
+                }
+                if (filter === 'GROUPS') return conv.conversation_type === 'GROUP';
+                if (filter === 'UNREAD') return conv.unread_count > 0;
+                return true;
+              }).map(conv => {
                 const isSelected = activeConv?.id === conv.id;
                 const title = getConvTitle(conv);
                 return (
@@ -1759,22 +1788,38 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                   </div>
                 ) : (
                   <>
+                    {/* Floating Auto-Delete Banner */}
                     <div style={{
-                      margin: '0 auto 8px auto',
-                      padding: '6px 14px',
-                      borderRadius: '20px',
+                      margin: '0 auto 10px auto',
+                      padding: '8px 16px',
+                      borderRadius: '24px',
                       background: '#FEF2F2',
-                      border: '1px solid #FCA5A5',
-                      color: '#991B1B',
-                      fontSize: '11.5px',
+                      border: '1px solid #FEE2E2',
+                      color: '#DC2626',
+                      fontSize: '12px',
                       fontWeight: 600,
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                      boxShadow: '0 2px 6px rgba(220,38,38,0.06)',
+                      maxWidth: '92%',
+                      width: 'fit-content'
                     }}>
-                      <FaLock size={11} color="#DC2626" />
-                      <span>Messages & attachments automatically delete everywhere after 48 hours</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <FaLock size={12} color="#DC2626" />
+                        <span>Messages & attachments automatically delete everywhere after 48 hours</span>
+                      </div>
+                    </div>
+
+                    {/* Centered Date Separator Bubble */}
+                    <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0 10px 0' }}>
+                      <span style={{
+                        padding: '5px 16px', borderRadius: '20px', background: '#E0F2FE',
+                        color: '#0369A1', fontSize: '11.5px', fontWeight: 700, boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                      }}>
+                        Today
+                      </span>
                     </div>
 
                     {filteredMessages.map((msg, msgIdx) => {
@@ -1854,10 +1899,10 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                             <div style={{
                               maxWidth: isMobile ? '85%' : '65%', padding: isMobile ? '10px 14px' : '12px 18px',
                               borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                              background: isMe ? '#DBEAFE' : '#FFFFFF',
-                              border: isMe ? '1px solid #BFDBFE' : '1px solid #E2E8F0',
-                              color: '#1E293B',
-                              boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                              background: isMe ? 'linear-gradient(135deg, #2563EB, #1D4ED8)' : '#FFFFFF',
+                              border: isMe ? 'none' : '1px solid #E2E8F0',
+                              color: isMe ? '#FFFFFF' : '#0F172A',
+                              boxShadow: isMe ? '0 4px 12px rgba(37,99,235,0.25)' : '0 2px 6px rgba(0,0,0,0.03)',
                               fontSize: isMobile ? '13.5px' : '14px', lineHeight: 1.5,
                               position: 'relative'
                             }}>
@@ -2004,12 +2049,12 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                               {/* Clean Timestamp & Ticks (No inline copy/edit/delete buttons) */}
                               <div style={{
                                 display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-                                gap: '4px', marginTop: '4px', fontSize: '10.5px', color: '#64748B'
+                                gap: '4px', marginTop: '4px', fontSize: '10.5px', color: isMe ? 'rgba(255, 255, 255, 0.85)' : '#94A3B8'
                               }}>
                                 <span>{formatTime(msg.created_at)}</span>
                                 {isMe && (
                                   <FaCheckDouble
-                                    color={isReadByReceiver ? '#2563EB' : '#94A3B8'}
+                                    color={isReadByReceiver ? '#93C5FD' : 'rgba(255, 255, 255, 0.7)'}
                                     size={13}
                                     title={isReadByReceiver ? 'Read by recipient' : 'Sent'}
                                   />
@@ -2104,8 +2149,8 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                                     </div>
                                   )}
 
-                                  {/* Edit Message Action (Sender & within 5 mins) */}
-                                  {isMe && isMessageWithin5Minutes(msg) && (
+                                  {/* Edit Message Action (Sender Text Message) */}
+                                  {isMe && msg.message_text && !readOnly && (
                                     <div
                                       onClick={() => {
                                         setEditingMsgId(msg.id);
@@ -2308,37 +2353,18 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                   onSubmit={handleSendMessage}
                   onPaste={handlePaste}
                   style={{
-                    padding: isMobile ? '10px 12px 16px' : '16px 24px', background: '#FFFFFF', borderTop: '1px solid #E2E8F0',
-                    display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px'
+                    padding: isMobile ? '10px 12px 16px' : '14px 20px', background: '#FFFFFF', borderTop: '1px solid #E2E8F0',
+                    display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '10px'
                   }}
                 >
                   <button
                     type="button"
                     onClick={() => setShowEmojiPicker(prev => !prev)}
-                    style={{ background: 'transparent', border: 'none', color: showEmojiPicker ? '#2563EB' : '#64748B', fontSize: '18px', cursor: 'pointer' }}
+                    style={{ background: 'transparent', border: 'none', color: showEmojiPicker ? '#2563EB' : '#64748B', fontSize: '20px', cursor: 'pointer', padding: '4px' }}
                     title="Emoji"
                   >
                     <FaSmile />
                   </button>
-
-                  <textarea
-                    rows={1}
-                    placeholder="Type a message... (Shift+Enter for new line)"
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage(e);
-                      }
-                    }}
-                    style={{
-                      flex: 1, padding: '10px 16px', background: '#F8FAFC',
-                      border: '1px solid #E2E8F0', borderRadius: '18px',
-                      color: '#0F172A', fontSize: '14px', outline: 'none',
-                      resize: 'none', fontFamily: 'inherit', maxHeight: '100px', lineHeight: 1.4
-                    }}
-                  />
 
                   {/* Document Attachment Input */}
                   <input
@@ -2351,11 +2377,31 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: '18px', cursor: 'pointer', padding: '4px' }}
+                    style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: '20px', cursor: 'pointer', padding: '4px' }}
                     title="Attach File / Document"
                   >
                     <FaPaperclip />
                   </button>
+
+                  <textarea
+                    rows={1}
+                    placeholder="Type a message..."
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage(e);
+                      }
+                    }}
+                    style={{
+                      flex: 1, padding: '10px 18px', background: '#F8FAFC',
+                      border: '1px solid #E2E8F0', borderRadius: '24px',
+                      color: '#0F172A', fontSize: '14px', outline: 'none',
+                      resize: 'none', fontFamily: 'inherit', maxHeight: '100px', lineHeight: 1.4,
+                      boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.03)'
+                    }}
+                  />
 
                   {/* Image Attachment Input */}
                   <input
@@ -2369,10 +2415,20 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                   <button
                     type="button"
                     onClick={() => imageInputRef.current?.click()}
-                    style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: '18px', cursor: 'pointer', padding: '4px' }}
+                    style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: '20px', cursor: 'pointer', padding: '4px' }}
                     title="Upload Image"
                   >
                     <FaImage />
+                  </button>
+
+                  {/* Voice Note Button */}
+                  <button
+                    type="button"
+                    onClick={() => alert('Voice message feature active. Speak now...')}
+                    style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: '19px', cursor: 'pointer', padding: '4px' }}
+                    title="Voice Message"
+                  >
+                    <FaMicrophone />
                   </button>
 
                   <button
@@ -2382,11 +2438,12 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                       width: '42px', height: '42px', borderRadius: '50%', border: 'none',
                       background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', color: '#FFFFFF',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', boxShadow: '0 4px 12px rgba(37,99,235,0.35)',
-                      opacity: (sending || (!inputText.trim() && attachments.length === 0)) ? 0.6 : 1
+                      cursor: 'pointer', boxShadow: '0 4px 14px rgba(37,99,235,0.35)',
+                      flexShrink: 0, opacity: (sending || (!inputText.trim() && attachments.length === 0)) ? 0.6 : 1,
+                      transition: 'all 0.15s'
                     }}
                   >
-                    <FaPaperPlane size={14} />
+                    <FaPaperPlane size={15} />
                   </button>
                 </form>
               )}
