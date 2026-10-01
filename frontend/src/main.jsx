@@ -74,16 +74,21 @@ console.timeEnd = function (label) {
   if (typeof origTimeEnd === 'function') origTimeEnd.call(console, label);
 };
 
-// Silence unhandled rejections globally for expected authentication errors
-window.addEventListener('unhandledrejection', (event) => {
-  const reason = event.reason;
-  if (reason) {
-    const msg = reason.message || String(reason);
-    if (SPAM_PATTERNS.some(pat => msg.includes(pat))) {
-      event.preventDefault();
+// Automatically reload page when a Vite module preload or chunk hash error occurs due to new build deployments
+window.addEventListener('vite:preload-error', (event) => {
+  console.warn('Vite module preload error detected. Reloading to fetch latest build bundle...');
+  window.location.reload();
+});
+
+window.addEventListener('error', (event) => {
+  if (event.target && (event.target.tagName === 'SCRIPT' || event.target.tagName === 'LINK')) {
+    const src = event.target.src || event.target.href;
+    if (src && (src.includes('/assets/') || src.includes('.js'))) {
+      console.warn('Script chunk load error detected. Reloading page...');
+      window.location.reload();
     }
   }
-});
+}, true);
 
 import React from 'react'
 import ReactDOM from 'react-dom/client'

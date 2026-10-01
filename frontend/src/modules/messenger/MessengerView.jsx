@@ -49,7 +49,7 @@ export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props
       return;
     }
 
-    if (src.startsWith('data:') || src.startsWith('blob:')) {
+    if (src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http://') || src.startsWith('https://')) {
       setBlobUrl(src);
       setLoading(false);
       return;
