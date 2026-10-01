@@ -105,27 +105,15 @@ export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props
       fetchPath = fetchPath.slice('/api/v1'.length);
     }
 
-    console.log('[MESSENGER MEDIA FETCH START]', src);
-
     api.get(fetchPath, { responseType: 'blob' })
       .then((res) => {
         if (isMounted) {
-          console.log('[MESSENGER MEDIA FETCH SUCCESS]', {
-            src,
-            status: res.status,
-            contentType: res.headers?.['content-type']
-          });
           localUrl = URL.createObjectURL(res.data);
           setBlobUrl(localUrl);
           setLoading(false);
         }
       })
       .catch((err) => {
-        console.error('[MESSENGER MEDIA FETCH FAILED]', {
-          src,
-          status: err?.response?.status,
-          message: err?.message
-        });
         if (isMounted) {
           setLoading(false);
           setBlobUrl(null);
