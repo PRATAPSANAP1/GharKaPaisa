@@ -57,6 +57,7 @@ class FaceLivenessProvider {
         status: 'SESSION_CREATED',
         providerName: this.providerName,
         sessionId: response.SessionId,
+        region: this.region,
       };
     } catch (err) {
       logger.error('[LIVENESS PROVIDER] AWS Rekognition session creation failed:', err.message);
@@ -102,11 +103,17 @@ class FaceLivenessProvider {
       const confidence = Number(response.Confidence || 0);
       const isLive = status === 'SUCCEEDED' && confidence >= 85.0;
 
+      let referenceImageBuffer = null;
+      if (status === 'SUCCEEDED' && response.ReferenceImage?.Bytes) {
+        referenceImageBuffer = Buffer.from(response.ReferenceImage.Bytes);
+      }
+
       return {
         status: status === 'SUCCEEDED' ? (isLive ? 'LIVENESS_PASSED' : 'LIVENESS_FAILED') : `LIVENESS_${status}`,
         isLive,
         confidence,
         statusRaw: status,
+        referenceImageBuffer,
         providerName: this.providerName,
       };
     } catch (err) {

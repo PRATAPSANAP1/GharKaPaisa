@@ -9,7 +9,12 @@ const createSession = async (req, res) => {
     return success(res, result, 'Attendance verification session created');
   } catch (err) {
     logger.error('Error creating verification session:', err.message);
-    return error(res, err.message, err.statusCode || 500);
+    const statusCode = err.statusCode || 500;
+    return res.status(statusCode).json({
+      success: false,
+      reason: err.reason || 'SESSION_CREATION_FAILED',
+      message: err.message,
+    });
   }
 };
 
@@ -18,14 +23,19 @@ const createLivenessSession = async (req, res) => {
   try {
     const { session_id } = req.body;
     if (!session_id) {
-      return error(res, 'session_id is required', 400);
+      return res.status(400).json({ success: false, reason: 'INVALID_REQUEST', message: 'session_id is required' });
     }
 
     const result = await service.initiateLivenessSession({ sessionId: session_id, reqUser: req.user });
     return success(res, result, 'Liveness session initiated');
   } catch (err) {
     logger.error('Error initiating liveness session:', err.message);
-    return error(res, err.message, err.statusCode || 500);
+    const statusCode = err.statusCode || 500;
+    return res.status(statusCode).json({
+      success: false,
+      reason: err.reason || 'LIVENESS_PROVIDER_ERROR',
+      message: err.message,
+    });
   }
 };
 
@@ -34,7 +44,7 @@ const validateLivenessResult = async (req, res) => {
   try {
     const { session_id, provider_session_id } = req.body;
     if (!session_id || !provider_session_id) {
-      return error(res, 'session_id and provider_session_id are required', 400);
+      return res.status(400).json({ success: false, reason: 'INVALID_REQUEST', message: 'session_id and provider_session_id are required' });
     }
 
     const result = await service.validateLivenessResult({
@@ -43,10 +53,15 @@ const validateLivenessResult = async (req, res) => {
       reqUser: req.user,
     });
 
-    return success(res, result, 'Liveness result validated');
+    return success(res, result, 'Attendance verification passed');
   } catch (err) {
     logger.error('Error validating liveness result:', err.message);
-    return error(res, err.message, err.statusCode || 500);
+    const statusCode = err.statusCode || 500;
+    return res.status(statusCode).json({
+      success: false,
+      reason: err.reason || 'VERIFICATION_FAILED',
+      message: err.message || 'Verification process failed',
+    });
   }
 };
 
@@ -55,25 +70,23 @@ const completeVerification = async (req, res) => {
   try {
     const sessionId = req.body.session_id || req.headers['x-verification-session'];
     if (!sessionId) {
-      return error(res, 'session_id is required', 400);
-    }
-
-    if (!req.file || !req.file.buffer) {
-      return error(res, 'Live face image file is required (field name: face_image)', 400);
+      return res.status(400).json({ success: false, reason: 'INVALID_REQUEST', message: 'session_id is required' });
     }
 
     const result = await service.completeAttendanceVerification({
       sessionId,
-      faceImageBuffer: req.file.buffer,
-      originalName: req.file.originalname || 'live_capture.jpg',
-      mimeType: req.file.mimetype || 'image/jpeg',
       reqUser: req.user,
     });
 
-    return success(res, result, result.success ? 'Attendance verification passed' : 'Attendance verification failed');
+    return success(res, result, 'Attendance verification passed');
   } catch (err) {
     logger.error('Error completing verification:', err.message);
-    return error(res, err.message, err.statusCode || 500);
+    const statusCode = err.statusCode || 500;
+    return res.status(statusCode).json({
+      success: false,
+      reason: err.reason || 'VERIFICATION_FAILED',
+      message: err.message || 'Verification process failed',
+    });
   }
 };
 
@@ -85,7 +98,12 @@ const getSessionStatus = async (req, res) => {
     return success(res, result, 'Verification session status loaded');
   } catch (err) {
     logger.error('Error loading session status:', err.message);
-    return error(res, err.message, err.statusCode || 500);
+    const statusCode = err.statusCode || 500;
+    return res.status(statusCode).json({
+      success: false,
+      reason: err.reason || 'SESSION_NOT_FOUND',
+      message: err.message,
+    });
   }
 };
 

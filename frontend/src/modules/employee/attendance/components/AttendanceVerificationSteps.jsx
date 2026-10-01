@@ -5,37 +5,37 @@ import { Camera, ScanFace, UserCheck, CalendarCheck, Check, X } from 'lucide-rea
 export default function AttendanceVerificationSteps({ currentState }) {
   // Determine status of each step: 'pending' | 'active' | 'completed' | 'failed'
   const getStepStatus = (stepIndex) => {
-    // Step 1: Camera
+    // Step 1: Camera Setup & Liveness Session
     if (stepIndex === 1) {
-      if (['CAMERA_READY', 'LIVENESS_STARTING', 'LIVENESS_IN_PROGRESS', 'LIVENESS_PASSED', 'FACE_MATCHING', 'FACE_MATCHED', 'ATTENDANCE_SUBMITTING', 'SUCCESS'].includes(currentState)) {
+      if (['LIVENESS_ACTIVE', 'VERIFYING_RESULTS', 'ATTENDANCE_SUBMITTING', 'SUCCESS'].includes(currentState)) {
         return 'completed';
       }
-      if (['CAMERA_INITIALIZING'].includes(currentState)) return 'active';
+      if (['LIVENESS_INITIATING'].includes(currentState)) return 'active';
       if (['CAMERA_PERMISSION_DENIED', 'CAMERA_ERROR'].includes(currentState)) return 'failed';
       return 'pending';
     }
 
-    // Step 2: Live Verification
+    // Step 2: Live Verification (AWS Face Liveness)
     if (stepIndex === 2) {
-      if (['LIVENESS_PASSED', 'FACE_MATCHING', 'FACE_MATCHED', 'ATTENDANCE_SUBMITTING', 'SUCCESS'].includes(currentState)) {
+      if (['VERIFYING_RESULTS', 'ATTENDANCE_SUBMITTING', 'SUCCESS'].includes(currentState)) {
         return 'completed';
       }
-      if (['LIVENESS_STARTING', 'LIVENESS_IN_PROGRESS'].includes(currentState)) return 'active';
+      if (['LIVENESS_ACTIVE'].includes(currentState)) return 'active';
       if (currentState === 'VERIFICATION_FAILED') return 'failed';
       return 'pending';
     }
 
-    // Step 3: Face Matching
+    // Step 3: Face Matching (KYC Identity)
     if (stepIndex === 3) {
-      if (['FACE_MATCHED', 'ATTENDANCE_SUBMITTING', 'SUCCESS'].includes(currentState)) {
+      if (['ATTENDANCE_SUBMITTING', 'SUCCESS'].includes(currentState)) {
         return 'completed';
       }
-      if (['FACE_MATCHING'].includes(currentState)) return 'active';
+      if (['VERIFYING_RESULTS'].includes(currentState)) return 'active';
       if (currentState === 'VERIFICATION_FAILED') return 'failed';
       return 'pending';
     }
 
-    // Step 4: Attendance
+    // Step 4: Attendance Recording
     if (stepIndex === 4) {
       if (currentState === 'SUCCESS') return 'completed';
       if (currentState === 'ATTENDANCE_SUBMITTING') return 'active';

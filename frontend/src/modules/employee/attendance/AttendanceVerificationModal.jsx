@@ -1,17 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Camera, RefreshCw } from 'lucide-react';
-import attendanceService from '../../../services/attendance.service';
+import { X, RefreshCw, ScanFace, CheckCircle2 } from 'lucide-react';
+import { FaceLivenessDetector } from '@aws-amplify/ui-react-liveness';
+import '@aws-amplify/ui-react-liveness/styles.css';
 
+import attendanceService from '../../../services/attendance.service';
 import AttendanceInstructions from './components/AttendanceInstructions';
-import AttendanceCamera from './components/AttendanceCamera';
 import AttendanceVerificationSteps from './components/AttendanceVerificationSteps';
 import AttendanceTips from './components/AttendanceTips';
 import AttendanceSuccess from './components/AttendanceSuccess';
 import AttendanceFailure from './components/AttendanceFailure';
 import AttendanceServiceUnavailable from './components/AttendanceServiceUnavailable';
-import CameraPermissionError from './components/CameraPermissionError';
-import CameraError from './components/CameraError';
 
 export default function AttendanceVerificationModal({
   isOpen,
@@ -21,203 +20,116 @@ export default function AttendanceVerificationModal({
   user
 }) {
   // State Machine State
+  // 'INSTRUCTIONS' | 'LIVENESS_INITIATING' | 'LIVENESS_ACTIVE' | 'VERIFYING_RESULTS' | 'ATTENDANCE_SUBMITTING' | 'SUCCESS' | 'VERIFICATION_FAILED' | 'SERVICE_UNAVAILABLE'
   const [currentState, setCurrentState] = useState('INSTRUCTIONS');
   const [sessionId, setSessionId] = useState(null);
+  const [awsProviderSessionId, setAwsProviderSessionId] = useState(null);
+  const [awsRegion, setAwsRegion] = useState('ap-south-1');
   const [errorMessage, setErrorMessage] = useState('');
   const [verificationResult, setVerificationResult] = useState(null);
-  const [overlayMessage, setOverlayMessage] = useState('Align your face inside the frame');
+  const [overlayMessage, setOverlayMessage] = useState('Preparing live face verification...');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  const videoRef = useRef(null);
-  const mediaStreamRef = useRef(null);
-
-  // Window resize handler
+  // Window resize listener
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Stop camera tracks cleanly
-  const stopCameraTracks = useCallback(() => {
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach((track) => {
-        track.stop();
-      });
-      mediaStreamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-  }, []);
-
   // Modal close handler
   const handleModalClose = useCallback(() => {
-    stopCameraTracks();
     setCurrentState('INSTRUCTIONS');
     setSessionId(null);
+    setAwsProviderSessionId(null);
     setErrorMessage('');
     setVerificationResult(null);
     onClose();
-  }, [stopCameraTracks, onClose]);
+  }, [onClose]);
 
-  // Cleanup camera on unmount or modal close
+  // Cleanup state when modal closes
   useEffect(() => {
     if (!isOpen) {
-      stopCameraTracks();
       setCurrentState('INSTRUCTIONS');
       setSessionId(null);
+      setAwsProviderSessionId(null);
       setErrorMessage('');
     }
-  }, [isOpen, stopCameraTracks]);
+  }, [isOpen]);
 
-  // Start Camera Stream
-  const startCamera = async () => {
-    try {
-      setCurrentState('CAMERA_INITIALIZING');
-      setErrorMessage('');
-      setOverlayMessage('Initializing camera...');
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user'
-        },
-        audio: false
-      });
-
-      mediaStreamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current.play().catch(() => {});
-          setCurrentState('CAMERA_READY');
-          setOverlayMessage('Align your face inside the frame');
-        };
-      } else {
-        // Retry binding stream once ref mounts
-        setTimeout(() => {
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            videoRef.current.play().catch(() => {});
-            setCurrentState('CAMERA_READY');
-            setOverlayMessage('Align your face inside the frame');
-          }
-        }, 300);
-      }
-    } catch (err) {
-      console.error('Camera initialization error:', err);
-      stopCameraTracks();
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setCurrentState('CAMERA_PERMISSION_DENIED');
-      } else {
-        setCurrentState('CAMERA_ERROR');
-      }
-    }
-  };
-
-  // Helper to capture JPEG blob from video stream
-  const captureFrameBlob = () => {
-    return new Promise((resolve, reject) => {
-      if (!videoRef.current) {
-        return reject(new Error('Video element not available'));
-      }
-      const video = videoRef.current;
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      canvas.toBlob(
-        (blob) => {
-          if (blob) resolve(blob);
-          else reject(new Error('Failed to capture frame blob'));
-        },
-        'image/jpeg',
-        0.92
-      );
-    });
-  };
-
-  // Run Verification Pipeline
+  // Initiate AWS Rekognition Face Liveness Flow
   const handleStartVerification = async () => {
-    if (['LIVENESS_STARTING', 'LIVENESS_IN_PROGRESS', 'LIVENESS_PASSED', 'FACE_MATCHING', 'FACE_MATCHED', 'ATTENDANCE_SUBMITTING'].includes(currentState)) {
-      return; // Prevent double trigger
+    if (['LIVENESS_INITIATING', 'LIVENESS_ACTIVE', 'VERIFYING_RESULTS', 'ATTENDANCE_SUBMITTING'].includes(currentState)) {
+      return; // Prevent duplicate execution
     }
 
     try {
-      // 1. Session Creation (Always create a BRAND NEW verification session)
-      setCurrentState('LIVENESS_STARTING');
-      setOverlayMessage('Starting verification session...');
+      setErrorMessage('');
+      setCurrentState('LIVENESS_INITIATING');
+      setOverlayMessage('Starting secure verification session...');
+
+      // Step 1: Create Backend Verification Session (5 min expiry)
       const sessionRes = await attendanceService.createVerificationSession();
-      const newSessionId = sessionRes?.session_id || sessionRes?.data?.session_id || sessionRes?.sessionId || sessionRes?.data?.sessionId;
+      const newSessionId = sessionRes?.data?.sessionId || sessionRes?.sessionId || sessionRes?.data?.session_id || sessionRes?.session_id;
+
       if (!newSessionId) {
-        throw new Error('Could not create verification session');
+        throw new Error('Failed to create verification session');
       }
+
       setSessionId(newSessionId);
 
-      // 2. Liveness Check
-      setCurrentState('LIVENESS_IN_PROGRESS');
-      setOverlayMessage('Verifying you are live...');
+      // Step 2: Initiate AWS Rekognition Face Liveness Session
+      setOverlayMessage('Initializing AWS Face Liveness...');
       const livenessRes = await attendanceService.initiateLivenessSession(newSessionId);
-      const livenessStatus = livenessRes?.data?.status || livenessRes?.status;
-      const isLivenessFailed = livenessStatus === 'PROVIDER_NOT_CONFIGURED' || livenessRes?.data?.success === false;
+      const livenessData = livenessRes?.data || livenessRes;
+      const providerSessionId = livenessData?.providerSessionId || livenessData?.sessionId;
+      const region = livenessData?.region || import.meta.env.VITE_AWS_REGION || 'ap-south-1';
 
-      if (isLivenessFailed) {
-        stopCameraTracks();
-        const livenessMsg = livenessRes?.data?.message || livenessRes?.message || 'Liveness verification service is not configured in production environment';
-        setErrorMessage(livenessMsg);
+      if (!providerSessionId || livenessData?.status === 'PROVIDER_NOT_CONFIGURED') {
+        setErrorMessage('Liveness verification service is not configured in production environment');
         setCurrentState('SERVICE_UNAVAILABLE');
         return;
       }
 
-      // Capture frame
-      const faceBlob = await captureFrameBlob();
-      const faceFile = new File([faceBlob], `attendance_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      setAwsProviderSessionId(providerSessionId);
+      setAwsRegion(region);
+      setCurrentState('LIVENESS_ACTIVE');
+      setOverlayMessage('Position your face inside the oval frame and follow instructions');
+    } catch (err) {
+      console.error('Verification initiation error:', err);
+      const errReason = err.response?.data?.reason || err.reason;
+      const errText = err.response?.data?.message || err.message || 'Could not initiate face liveness session';
 
-      // 3. Face Matching
-      setCurrentState('LIVENESS_PASSED');
-      setTimeout(() => {
-        setCurrentState('FACE_MATCHING');
-        setOverlayMessage('Matching with your registered KYC identity...');
-      }, 400);
-
-      const completeRes = await attendanceService.completeVerification(newSessionId, faceFile);
-      const completeData = completeRes?.data || completeRes;
-      const isCompleteFailed = !completeRes || completeData.status === 'FAILED' || completeData.success === false || completeRes.success === false;
-
-      if (isCompleteFailed) {
-        const errorMsg = completeData?.message || completeRes?.message || completeData?.error || completeData?.reason || 'Face verification failed';
-        if (errorMsg.toLowerCase().includes('unavailable') || errorMsg.toLowerCase().includes('service') || errorMsg.toLowerCase().includes('configured')) {
-          stopCameraTracks();
-          setErrorMessage('Liveness verification service is not configured in production environment');
-          setCurrentState('SERVICE_UNAVAILABLE');
-          return;
-        }
-        stopCameraTracks();
-        setErrorMessage(errorMsg === 'LIVENESS_PROVIDER_NOT_CONFIGURED' ? 'Liveness verification service is not configured in production environment' : errorMsg);
+      if (errReason === 'LIVENESS_PROVIDER_NOT_CONFIGURED' || err.response?.status === 503) {
+        setErrorMessage('Liveness verification service is not configured in production environment');
+        setCurrentState('SERVICE_UNAVAILABLE');
+      } else {
+        setErrorMessage(errText);
         setCurrentState('VERIFICATION_FAILED');
-        return;
       }
+    }
+  };
 
-      // 4. Attendance Submitting
-      setCurrentState('FACE_MATCHED');
+  // Called when AWS Amplify FaceLivenessDetector completes client-side challenge
+  const handleAnalysisComplete = async () => {
+    try {
+      setCurrentState('VERIFYING_RESULTS');
+      setOverlayMessage('Matching with your registered KYC identity...');
+
+      // Validate AWS Rekognition Liveness + perform server-side KYC Face Matching
+      await attendanceService.validateLivenessResult(sessionId, awsProviderSessionId);
+
+      // Both Liveness & KYC Face Match Passed!
       setCurrentState('ATTENDANCE_SUBMITTING');
       setOverlayMessage(actionType === 'CHECK_OUT' ? 'Ending work session...' : 'Starting work session...');
 
       let attendanceRes;
       if (actionType === 'CHECK_OUT') {
-        attendanceRes = await attendanceService.checkOut(newSessionId);
+        attendanceRes = await attendanceService.checkOut(sessionId);
       } else {
-        attendanceRes = await attendanceService.checkIn(newSessionId);
+        attendanceRes = await attendanceService.checkIn(sessionId);
       }
 
-      stopCameraTracks();
-
-      // 5. Success State
       const finalResult = {
         checkInTime: attendanceRes?.data?.check_in_time || attendanceRes?.check_in_time,
         checkOutTime: attendanceRes?.data?.check_out_time || attendanceRes?.check_out_time,
@@ -233,11 +145,12 @@ export default function AttendanceVerificationModal({
         onSuccess(finalResult);
       }
     } catch (err) {
-      console.error('Verification error:', err);
-      stopCameraTracks();
-      const errText = err.response?.data?.message || err.message || 'Verification process failed';
+      console.error('Liveness analysis error:', err);
+      const errReason = err.response?.data?.reason || err.reason;
+      const errText = err.response?.data?.message || err.message || 'Face verification failed';
 
-      if (errText.toLowerCase().includes('unavailable') || err.response?.status === 503) {
+      if (errReason === 'LIVENESS_PROVIDER_NOT_CONFIGURED' || err.response?.status === 503) {
+        setErrorMessage('Liveness verification service is not configured in production environment');
         setCurrentState('SERVICE_UNAVAILABLE');
       } else {
         setErrorMessage(errText);
@@ -246,12 +159,26 @@ export default function AttendanceVerificationModal({
     }
   };
 
+  // Called on AWS Amplify FaceLivenessDetector error
+  const handleLivenessError = (livenessError) => {
+    console.error('FaceLivenessDetector error:', livenessError);
+    const msg = livenessError?.error?.message || livenessError?.message || 'Liveness verification error occurred';
+    setErrorMessage(msg);
+    setCurrentState('VERIFICATION_FAILED');
+  };
+
+  // Called on AWS Amplify FaceLivenessDetector user cancel
+  const handleLivenessCancel = () => {
+    handleModalClose();
+  };
+
+  // Retry Flow: create completely NEW verification session & AWS liveness session
   const handleRetry = () => {
     setSessionId(null);
-    setVerificationResult(null);
+    setAwsProviderSessionId(null);
     setErrorMessage('');
-    setCurrentState('CAMERA_INITIALIZING');
-    startCamera();
+    setVerificationResult(null);
+    handleStartVerification();
   };
 
   if (!isOpen) return null;
@@ -277,10 +204,7 @@ export default function AttendanceVerificationModal({
           <AttendanceInstructions
             key="instructions"
             actionType={actionType}
-            onContinue={() => {
-              setCurrentState('CAMERA_INITIALIZING');
-              startCamera();
-            }}
+            onContinue={handleStartVerification}
             onClose={handleModalClose}
           />
         )}
@@ -314,37 +238,15 @@ export default function AttendanceVerificationModal({
           />
         )}
 
-        {/* CAMERA PERMISSION ERROR SCREEN */}
-        {currentState === 'CAMERA_PERMISSION_DENIED' && (
-          <CameraPermissionError
-            key="permission_error"
-            onRetry={handleRetry}
-            onClose={handleModalClose}
-          />
-        )}
-
-        {/* CAMERA DISCONNECTED SCREEN */}
-        {currentState === 'CAMERA_ERROR' && (
-          <CameraError
-            key="camera_error"
-            onRetry={handleRetry}
-            onClose={handleModalClose}
-          />
-        )}
-
-        {/* ACTIVE CAMERA & VERIFICATION SCREEN */}
+        {/* ACTIVE LIVENESS & VERIFICATION CONTAINER */}
         {[
-          'CAMERA_INITIALIZING',
-          'CAMERA_READY',
-          'LIVENESS_STARTING',
-          'LIVENESS_IN_PROGRESS',
-          'LIVENESS_PASSED',
-          'FACE_MATCHING',
-          'FACE_MATCHED',
+          'LIVENESS_INITIATING',
+          'LIVENESS_ACTIVE',
+          'VERIFYING_RESULTS',
           'ATTENDANCE_SUBMITTING'
         ].includes(currentState) && (
           <motion.div
-            key="camera_modal"
+            key="liveness_modal"
             initial={{ opacity: 0, scale: 0.98, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.98, y: 10 }}
@@ -375,10 +277,10 @@ export default function AttendanceVerificationModal({
             }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '19px', fontWeight: 700, color: '#0F172A' }}>
-                  {actionType === 'CHECK_OUT' ? 'Face Verification to End Work' : 'Face Verification to Start Work'}
+                  {actionType === 'CHECK_OUT' ? 'AWS Face Verification to End Work' : 'AWS Face Verification to Start Work'}
                 </h3>
                 <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#64748B' }}>
-                  Look into the camera and complete biometric verification.
+                  Complete official AWS Rekognition Face Liveness challenge.
                 </p>
               </div>
 
@@ -404,22 +306,65 @@ export default function AttendanceVerificationModal({
             {/* Desktop 2-Column / Mobile 1-Column Layout */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : '1.2fr 1fr',
+              gridTemplateColumns: isMobile ? '1fr' : '1.3fr 1fr',
               gap: '24px',
               alignItems: 'start'
             }}>
-              {/* Left: Camera Preview Area */}
-              <div>
-                <AttendanceCamera
-                  videoRef={videoRef}
-                  isCameraActive={currentState !== 'CAMERA_INITIALIZING'}
-                  currentState={currentState}
-                  overlayMessage={overlayMessage}
-                  isMobile={isMobile}
-                />
+              {/* Left Column: Official AWS Amplify Face Liveness Component */}
+              <div style={{
+                position: 'relative',
+                width: '100%',
+                minHeight: isMobile ? '380px' : '480px',
+                borderRadius: '16px',
+                overflow: 'hidden',
+                background: '#0F172A',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {currentState === 'LIVENESS_ACTIVE' && awsProviderSessionId ? (
+                  <div style={{ width: '100%', height: '100%', minHeight: isMobile ? '380px' : '480px' }}>
+                    <FaceLivenessDetector
+                      sessionId={awsProviderSessionId}
+                      region={awsRegion}
+                      onAnalysisComplete={handleAnalysisComplete}
+                      onError={handleLivenessError}
+                      onUserCancel={handleLivenessCancel}
+                    />
+                  </div>
+                ) : (
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '16px',
+                    padding: '32px',
+                    color: '#FFFFFF',
+                    textAlign: 'center'
+                  }}>
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+                      style={{ color: '#3B82F6' }}
+                    >
+                      <RefreshCw size={36} />
+                    </motion.div>
+
+                    <div>
+                      <div style={{ fontSize: '16px', fontWeight: 700, marginBottom: '6px' }}>
+                        {overlayMessage}
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#94A3B8' }}>
+                        Please wait while AWS biometric services initialize...
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Right: Verification Steps & Tips */}
+              {/* Right Column: Verification Progress Steps & Tips */}
               <div style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -445,64 +390,20 @@ export default function AttendanceVerificationModal({
               <button
                 type="button"
                 onClick={handleModalClose}
-                disabled={['LIVENESS_IN_PROGRESS', 'FACE_MATCHING', 'ATTENDANCE_SUBMITTING'].includes(currentState)}
+                disabled={['VERIFYING_RESULTS', 'ATTENDANCE_SUBMITTING'].includes(currentState)}
                 style={{
                   padding: '0 20px',
-                  height: '48px',
+                  height: '44px',
                   borderRadius: '12px',
                   border: '1px solid #E2E8F0',
                   background: '#FFFFFF',
                   color: '#0F172A',
                   fontSize: '14px',
                   fontWeight: 600,
-                  cursor: ['LIVENESS_IN_PROGRESS', 'FACE_MATCHING', 'ATTENDANCE_SUBMITTING'].includes(currentState) ? 'not-allowed' : 'pointer'
+                  cursor: ['VERIFYING_RESULTS', 'ATTENDANCE_SUBMITTING'].includes(currentState) ? 'not-allowed' : 'pointer'
                 }}
               >
                 Cancel
-              </button>
-
-              <button
-                type="button"
-                onClick={handleStartVerification}
-                disabled={currentState !== 'CAMERA_READY'}
-                style={{
-                  padding: '0 28px',
-                  height: '48px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  background: currentState === 'CAMERA_READY'
-                    ? (actionType === 'CHECK_OUT' ? '#EA580C' : '#2563EB')
-                    : '#CBD5E1',
-                  color: '#FFFFFF',
-                  fontSize: '15px',
-                  fontWeight: 600,
-                  cursor: currentState === 'CAMERA_READY' ? 'pointer' : 'not-allowed',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  boxShadow: currentState === 'CAMERA_READY'
-                    ? (actionType === 'CHECK_OUT' ? '0 4px 14px rgba(234, 88, 12, 0.3)' : '0 4px 14px rgba(37, 99, 235, 0.3)')
-                    : 'none',
-                  transition: 'background 0.2s ease'
-                }}
-              >
-                {['LIVENESS_STARTING', 'LIVENESS_IN_PROGRESS'].includes(currentState) ? (
-                  <>
-                    <RefreshCw size={18} className="animate-spin" /> Verifying you are live...
-                  </>
-                ) : currentState === 'FACE_MATCHING' ? (
-                  <>
-                    <RefreshCw size={18} className="animate-spin" /> Matching identity...
-                  </>
-                ) : currentState === 'ATTENDANCE_SUBMITTING' ? (
-                  <>
-                    <RefreshCw size={18} className="animate-spin" /> {actionType === 'CHECK_OUT' ? 'Ending work...' : 'Starting work...'}
-                  </>
-                ) : (
-                  <>
-                    <Camera size={18} /> {actionType === 'CHECK_OUT' ? 'Verify & End Work' : 'Verify & Start Work'}
-                  </>
-                )}
               </button>
             </div>
           </motion.div>
