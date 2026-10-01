@@ -2050,26 +2050,27 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                                   background: '#FFFFFF',
                                   border: '1px solid #CBD5E1',
                                   borderRadius: '16px',
-                                  padding: '10px 12px',
+                                  padding: '10px 14px',
                                   boxShadow: '0 10px 30px rgba(0,0,0,0.18)',
                                   zIndex: 100,
-                                  width: '260px',
+                                  width: '285px',
                                   display: 'flex',
                                   flexDirection: 'column',
                                   gap: '8px'
                                 }}
                               >
                                 {/* Top Section: Emoji Reaction Row */}
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '2px', padding: '0 2px' }}>
                                   {REACTION_EMOJIS.map(emoji => (
                                     <span
                                       key={emoji}
                                       onClick={() => handleToggleReaction(msg.id, emoji)}
                                       style={{
-                                        fontSize: '19px', cursor: 'pointer', transition: 'transform 0.1s',
-                                        padding: '2px 4px', borderRadius: '6px', display: 'inline-block'
+                                        fontSize: '18px', cursor: 'pointer', transition: 'transform 0.1s',
+                                        padding: '2px 4px', borderRadius: '6px', display: 'inline-flex',
+                                        alignItems: 'center', justifyContent: 'center', flexShrink: 0
                                       }}
-                                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.3)'}
+                                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.25)'}
                                       onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                                       title={`React with ${emoji}`}
                                     >
