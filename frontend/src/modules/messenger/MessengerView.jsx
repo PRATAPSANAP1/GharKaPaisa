@@ -35,6 +35,32 @@ export function maskSensitiveData(text) {
   return masked;
 }
 
+export function normalizeMessengerAttachment(att) {
+  if (!att) return null;
+  const id = att.id || att.attachmentId || att.attachment_id || att.media_id;
+  let fileUrl = att.file_url || att.url || att.fileUrl || att.media_url;
+  if (!fileUrl && id) {
+    fileUrl = `/api/v1/messenger/media/${id}`;
+  }
+  const fileName = att.file_name || att.fileName || att.name || 'Attachment';
+  const fileType = (att.file_type || att.mime_type || att.fileType || att.mimeType || '').toUpperCase();
+  const fileSize = att.file_size || att.fileSize || att.size || '';
+
+  const isImg = fileType === 'IMAGE' ||
+                fileType.startsWith('IMAGE/') ||
+                /\.(png|jpe?g|gif|webp|bmp|svg)($|\?)/i.test(fileUrl || fileName || '') ||
+                (fileUrl && fileUrl.startsWith('blob:'));
+
+  return {
+    id,
+    fileUrl,
+    fileName,
+    fileType,
+    fileSize,
+    isImg
+  };
+}
+
 export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props }) {
   const [blobUrl, setBlobUrl] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -49,24 +75,61 @@ export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props
       return;
     }
 
-    if (src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http://') || src.startsWith('https://')) {
+    // Direct render for data URIs and local blob URLs
+    if (src.startsWith('data:') || src.startsWith('blob:')) {
       setBlobUrl(src);
       setLoading(false);
       return;
     }
 
-    api.get(src, { responseType: 'blob' })
+    const isMessengerMedia = src.includes('/messenger/media/') || src.includes('/api/v1/messenger/media/');
+
+    // For external non-messenger HTTP/HTTPS URLs, render directly
+    if ((src.startsWith('http://') || src.startsWith('https://')) && !isMessengerMedia) {
+      setBlobUrl(src);
+      setLoading(false);
+      return;
+    }
+
+    // Extract relative endpoint path for api.get (e.g. /messenger/media/:id)
+    let fetchPath = src;
+    if (fetchPath.startsWith('http://') || fetchPath.startsWith('https://')) {
+      try {
+        const parsed = new URL(src);
+        fetchPath = parsed.pathname + parsed.search;
+      } catch (e) {
+        fetchPath = src;
+      }
+    }
+    if (fetchPath.startsWith('/api/v1')) {
+      fetchPath = fetchPath.slice('/api/v1'.length);
+    }
+
+    console.log('[MESSENGER MEDIA FETCH START]', src);
+
+    api.get(fetchPath, { responseType: 'blob' })
       .then((res) => {
         if (isMounted) {
+          console.log('[MESSENGER MEDIA FETCH SUCCESS]', {
+            src,
+            status: res.status,
+            contentType: res.headers?.['content-type']
+          });
           localUrl = URL.createObjectURL(res.data);
           setBlobUrl(localUrl);
           setLoading(false);
         }
       })
       .catch((err) => {
+        console.error('[MESSENGER MEDIA FETCH FAILED]', {
+          src,
+          status: err?.response?.status,
+          message: err?.message
+        });
         if (isMounted) {
           setLoading(false);
-          setBlobUrl(src);
+          setBlobUrl(null);
+          if (onError) onError(err);
         }
       });
 
@@ -95,7 +158,7 @@ export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props
   return (
     <img
       src={blobUrl}
-      alt={alt || ''}
+      alt={alt}
       style={style}
       onClick={onClick}
       onError={onError}
@@ -1935,20 +1998,36 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                               {msg.attachments && msg.attachments.length > 0 && (
                                 <div style={{ marginTop: msg.message_text ? '10px' : 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                   {msg.attachments.map((att, idx) => {
-                                    const isImg = att.file_type === 'IMAGE' || 
-                                                  /\.(png|jpe?g|gif|webp|bmp|svg)($|\?)/i.test(att.file_url || att.file_name || '') ||
-                                                  (att.file_url && att.file_url.startsWith('blob:'));
-                                    const displayUrl = getImageUrl(att.file_url);
-                                    const isFailed = failedImageUrls[displayUrl] || failedImageUrls[att.file_url];
+                                    console.log('[MESSENGER ATTACHMENT OBJECT]', att);
+                                    console.log('[MESSENGER ATTACHMENT URL]', {
+                                      id: att?.id,
+                                      attachmentId: att?.attachmentId,
+                                      fileUrl: att?.file_url,
+                                      fileUrlCamel: att?.fileUrl,
+                                      url: att?.url,
+                                      mimeType: att?.mime_type || att?.file_type,
+                                      fileName: att?.file_name
+                                    });
 
-                                    if (isImg && !isFailed) {
+                                    const norm = normalizeMessengerAttachment(att);
+                                    if (!norm) return null;
+
+                                    const displayUrl = getImageUrl(norm.fileUrl);
+                                    const isFailed = failedImageUrls[displayUrl] || failedImageUrls[norm.fileUrl] || (norm.id && failedImageUrls[norm.id]);
+
+                                    if (norm.isImg && !isFailed) {
                                       return (
                                         <div key={idx} style={{ position: 'relative', display: 'inline-block', maxWidth: '280px' }}>
                                           <AuthenticatedImage
-                                             src={displayUrl}
-                                            alt={att.file_name || 'Attachment'}
+                                            src={displayUrl}
+                                            alt={norm.fileName}
                                             onError={() => {
-                                              setFailedImageUrls(prev => ({ ...prev, [displayUrl]: true, [att.file_url]: true }));
+                                              setFailedImageUrls(prev => ({ 
+                                                ...prev, 
+                                                [displayUrl]: true, 
+                                                [norm.fileUrl]: true,
+                                                ...(norm.id ? { [norm.id]: true } : {})
+                                              }));
                                             }}
                                             onClick={() => openPreviewModal(displayUrl)}
                                             style={{
@@ -1980,7 +2059,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                                               </button>
                                               <button
                                                 type="button"
-                                                onClick={(e) => { e.stopPropagation(); handleDownloadImage(displayUrl, att.file_name); }}
+                                                onClick={(e) => { e.stopPropagation(); handleDownloadImage(displayUrl, norm.fileName); }}
                                                 style={{
                                                   background: 'rgba(15,23,42,0.75)', color: '#FFFFFF',
                                                   borderRadius: '50%', width: '28px', height: '28px', border: 'none',
@@ -2007,18 +2086,18 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                                       >
                                         <div style={{
                                           width: '36px', height: '36px', borderRadius: '8px',
-                                          background: isImg ? '#FEF2F2' : '#FEE2E2',
+                                          background: norm.isImg ? '#FEF2F2' : '#FEE2E2',
                                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                          color: isImg ? '#DC2626' : '#EF4444'
+                                          color: norm.isImg ? '#DC2626' : '#EF4444'
                                         }}>
-                                          {isImg ? <FaImage size={18} /> : <FaFilePdf size={18} />}
+                                          {norm.isImg ? <FaImage size={18} /> : <FaFilePdf size={18} />}
                                         </div>
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                           <div style={{ fontWeight: 700, fontSize: '13px', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                            {att.file_name || 'Attachment'}
+                                            {norm.fileName}
                                           </div>
                                           <div style={{ fontSize: '11px', color: '#64748B' }}>
-                                            {isFailed ? 'Image unavailable' : att.file_size || 'Document'}
+                                            {isFailed ? 'Image unavailable' : norm.fileSize || 'Document'}
                                           </div>
                                         </div>
                                         {!isFailed && displayUrl && (

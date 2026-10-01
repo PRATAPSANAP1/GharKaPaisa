@@ -18,9 +18,17 @@ export function getApiV1Url() {
 export function getImageUrl(url) {
   if (!url) return '';
   const normalizedUrl = String(url).replace(/\\/g, '/');
-  if (normalizedUrl.startsWith('data:') || normalizedUrl.startsWith('blob:') || normalizedUrl.startsWith('http://') || normalizedUrl.startsWith('https://')) {
+  if (
+    normalizedUrl.startsWith('data:') ||
+    normalizedUrl.startsWith('blob:') ||
+    normalizedUrl.startsWith('http://') ||
+    normalizedUrl.startsWith('https://')
+  ) {
     return normalizedUrl;
   }
-  const cleanPath = normalizedUrl.startsWith('/') ? normalizedUrl : `/${normalizedUrl}`;
+  let cleanPath = normalizedUrl.startsWith('/') ? normalizedUrl : `/${normalizedUrl}`;
+  if (cleanPath.startsWith('/messenger/attachments/file/')) {
+    cleanPath = `/api/v1${cleanPath}`;
+  }
   return `${getApiRoot()}${cleanPath}`;
 }
