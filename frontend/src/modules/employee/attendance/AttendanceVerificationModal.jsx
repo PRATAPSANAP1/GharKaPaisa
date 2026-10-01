@@ -142,7 +142,7 @@ export default function AttendanceVerificationModal({
 
   // Run Verification Pipeline
   const handleStartVerification = async () => {
-    if (['LIVENESS_IN_PROGRESS', 'FACE_MATCHING', 'ATTENDANCE_SUBMITTING'].includes(currentState)) {
+    if (['LIVENESS_STARTING', 'LIVENESS_IN_PROGRESS', 'LIVENESS_PASSED', 'FACE_MATCHING', 'FACE_MATCHED', 'ATTENDANCE_SUBMITTING'].includes(currentState)) {
       return; // Prevent double trigger
     }
 

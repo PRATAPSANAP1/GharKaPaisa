@@ -5,7 +5,7 @@ import {
   FaTimes, FaPhone, FaVideo, FaEllipsisV, FaCircle, FaRedo,
   FaFilter, FaArrowLeft, FaDownload, FaCheck, FaUserPlus, FaVolumeMute,
   FaIdCard, FaCopy, FaEnvelope, FaUserCircle, FaTrashAlt, FaLock, FaSignOutAlt, FaEdit, FaImage,
-  FaMicrophone, FaSearchPlus, FaBell
+  FaMicrophone, FaSearchPlus, FaBell, FaMinus
 } from 'react-icons/fa';
 import api from '../../services/api';
 import { getImageUrl } from '../../config/api';
@@ -252,9 +252,11 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   const [editingText, setEditingText] = useState('');
   const [failedImageUrls, setFailedImageUrls] = useState({});
   const [previewImgError, setPreviewImgError] = useState(false);
+  const [zoomScale, setZoomScale] = useState(1);
 
   const openPreviewModal = (url) => {
     setPreviewImgError(false);
+    setZoomScale(1);
     setPreviewImageUrl(url);
   };
 
@@ -3362,10 +3364,10 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
       {/* ── MODAL: IMAGE PREVIEW LIGHTBOX ── */}
       {previewImageUrl && (
         <div 
-          onClick={() => setPreviewImageUrl(null)}
+          onClick={() => { setPreviewImageUrl(null); setZoomScale(1); }}
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.90)',
-            backdropFilter: 'blur(8px)', display: 'flex', flexDirection: 'column',
+            position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.92)',
+            backdropFilter: 'blur(10px)', display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center', zIndex: 999999, padding: '24px'
           }}
         >
@@ -3377,12 +3379,69 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
             {/* Top Action Control Bar */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: '10px',
-              marginBottom: '12px', background: 'rgba(30, 41, 59, 0.85)',
-              padding: '8px 16px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.15)',
-              backdropFilter: 'blur(6px)'
+              marginBottom: '14px', background: 'rgba(30, 41, 59, 0.90)',
+              padding: '8px 18px', borderRadius: '30px', border: '1px solid rgba(255,255,255,0.18)',
+              backdropFilter: 'blur(8px)', boxShadow: '0 8px 30px rgba(0,0,0,0.4)'
             }}>
               {!previewImgError && (
                 <>
+                  {/* Zoom Out Button */}
+                  <button
+                    type="button"
+                    onClick={() => setZoomScale(prev => Math.max(0.5, Number((prev - 0.25).toFixed(2))))}
+                    style={{
+                      background: 'rgba(255,255,255,0.15)', color: '#FFFFFF', border: 'none',
+                      borderRadius: '50%', width: '32px', height: '32px', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                      transition: 'background 0.15s'
+                    }}
+                    title="Zoom Out (-)"
+                  >
+                    <FaMinus size={12} />
+                  </button>
+
+                  {/* Zoom Scale Percentage Badge */}
+                  <span style={{
+                    color: '#60A5FA', fontSize: '12px', fontWeight: 800,
+                    minWidth: '45px', textAlign: 'center'
+                  }}>
+                    {Math.round(zoomScale * 100)}%
+                  </span>
+
+                  {/* Zoom In Button */}
+                  <button
+                    type="button"
+                    onClick={() => setZoomScale(prev => Math.min(4, Number((prev + 0.25).toFixed(2))))}
+                    style={{
+                      background: 'rgba(255,255,255,0.15)', color: '#FFFFFF', border: 'none',
+                      borderRadius: '50%', width: '32px', height: '32px', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                      transition: 'background 0.15s'
+                    }}
+                    title="Zoom In (+)"
+                  >
+                    <FaPlus size={12} />
+                  </button>
+
+                  {/* Reset Zoom Button */}
+                  {zoomScale !== 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setZoomScale(1)}
+                      style={{
+                        background: 'rgba(255,255,255,0.15)', color: '#FFFFFF', border: 'none',
+                        borderRadius: '16px', padding: '4px 10px', fontSize: '11.5px', fontWeight: 700,
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
+                      }}
+                      title="Reset Zoom to 100%"
+                    >
+                      <FaRedo size={10} /> Reset
+                    </button>
+                  )}
+
+                  <div style={{ width: '1px', height: '18px', background: 'rgba(255,255,255,0.2)' }} />
+
+                  {/* Download Image Button */}
                   <button
                     type="button"
                     onClick={() => handleDownloadImage(previewImageUrl, 'chat_image.png')}
@@ -3397,6 +3456,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                     <FaDownload size={13} /> Download
                   </button>
 
+                  {/* Copy Image Button */}
                   <button
                     type="button"
                     onClick={() => handleCopyImage(previewImageUrl)}
@@ -3413,12 +3473,13 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                 </>
               )}
 
+              {/* Close Button */}
               <button
                 type="button"
-                onClick={() => setPreviewImageUrl(null)}
+                onClick={() => { setPreviewImageUrl(null); setZoomScale(1); }}
                 style={{
                   background: '#EF4444', color: '#FFFFFF', border: 'none',
-                  borderRadius: '50%', width: '30px', height: '30px', display: 'flex',
+                  borderRadius: '50%', width: '32px', height: '32px', display: 'flex',
                   alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
                   fontWeight: 900, marginLeft: '6px'
                 }}
@@ -3428,29 +3489,48 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
               </button>
             </div>
 
-            {previewImgError ? (
-              <div style={{
-                padding: '40px 50px', background: '#1E293B', borderRadius: '16px',
-                color: '#94A3B8', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)'
-              }}>
-                <div style={{ fontSize: '18px', fontWeight: 700, color: '#F1F5F9', marginBottom: '8px' }}>
-                  Image Preview Unavailable
+            {/* Image Preview Container with Zoom Transform & Authenticated Blob Loading */}
+            <div 
+              onWheel={(e) => {
+                if (e.deltaY < 0) {
+                  setZoomScale(prev => Math.min(4, Number((prev + 0.15).toFixed(2))));
+                } else {
+                  setZoomScale(prev => Math.max(0.5, Number((prev - 0.15).toFixed(2))));
+                }
+              }}
+              style={{
+                overflow: 'auto', maxWidth: '88vw', maxHeight: '80vh',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '10px'
+              }}
+            >
+              {previewImgError ? (
+                <div style={{
+                  padding: '40px 50px', background: '#1E293B', borderRadius: '16px',
+                  color: '#94A3B8', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)'
+                }}>
+                  <div style={{ fontSize: '18px', fontWeight: 700, color: '#F1F5F9', marginBottom: '8px' }}>
+                    Image Preview Unavailable
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#94A3B8' }}>
+                    The requested image link or local browser preview session has expired.
+                  </div>
                 </div>
-                <div style={{ fontSize: '14px', color: '#94A3B8' }}>
-                  The requested image link or local browser preview session has expired.
-                </div>
-              </div>
-            ) : (
-              <img
-                src={getImageUrl(previewImageUrl)}
-                alt="Full Preview"
-                onError={() => setPreviewImgError(true)}
-                style={{
-                  maxWidth: '90vw', maxHeight: '80vh', borderRadius: '16px', objectFit: 'contain',
-                  boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '2px solid rgba(255,255,255,0.2)'
-                }}
-              />
-            )}
+              ) : (
+                <AuthenticatedImage
+                  src={previewImageUrl}
+                  alt="Full Preview"
+                  onError={() => setPreviewImgError(true)}
+                  style={{
+                    maxWidth: '85vw', maxHeight: '75vh', borderRadius: '16px', objectFit: 'contain',
+                    boxShadow: '0 20px 50px rgba(0,0,0,0.6)', border: '2px solid rgba(255,255,255,0.2)',
+                    transform: `scale(${zoomScale})`,
+                    transformOrigin: 'center center',
+                    transition: 'transform 0.15s cubic-bezier(0.2, 0, 0, 1)'
+                  }}
+                />
+              )}
+            </div>
           </div>
         </div>
       )}
