@@ -163,10 +163,12 @@ export default function AttendanceVerificationModal({
       setCurrentState('LIVENESS_IN_PROGRESS');
       setOverlayMessage('Verifying you are live...');
       const livenessRes = await attendanceService.initiateLivenessSession(newSessionId);
+      const livenessStatus = livenessRes?.data?.status || livenessRes?.status;
+      const isLivenessFailed = livenessStatus === 'PROVIDER_NOT_CONFIGURED' || livenessRes?.data?.success === false;
 
-      if (livenessRes?.status === 'PROVIDER_NOT_CONFIGURED' || livenessRes?.success === false) {
+      if (isLivenessFailed) {
         stopCameraTracks();
-        const livenessMsg = livenessRes?.message || 'Liveness verification service is not configured in production environment';
+        const livenessMsg = livenessRes?.data?.message || livenessRes?.message || 'Liveness verification service is not configured in production environment';
         setErrorMessage(livenessMsg);
         setCurrentState('SERVICE_UNAVAILABLE');
         return;
@@ -184,10 +186,14 @@ export default function AttendanceVerificationModal({
       }, 400);
 
       const completeRes = await attendanceService.completeVerification(newSessionId, faceFile);
-      if (!completeRes || completeRes.status === 'FAILED' || completeRes.success === false) {
-        const errorMsg = completeRes?.message || completeRes?.error || completeRes?.reason || 'Face verification failed';
+      const completeData = completeRes?.data || completeRes;
+      const isCompleteFailed = !completeRes || completeData.status === 'FAILED' || completeData.success === false || completeRes.success === false;
+
+      if (isCompleteFailed) {
+        const errorMsg = completeData?.message || completeRes?.message || completeData?.error || completeData?.reason || 'Face verification failed';
         if (errorMsg.toLowerCase().includes('unavailable') || errorMsg.toLowerCase().includes('service') || errorMsg.toLowerCase().includes('configured')) {
           stopCameraTracks();
+          setErrorMessage('Liveness verification service is not configured in production environment');
           setCurrentState('SERVICE_UNAVAILABLE');
           return;
         }

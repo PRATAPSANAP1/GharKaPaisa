@@ -868,6 +868,21 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
+// POST /api/v1/employees/:id/send-reminder — Send verification reminder to employee
+router.post('/:id/send-reminder', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { message } = req.body || {};
+    const result = await sendVerificationReminder(id, req.user?.id, message);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // POST /api/v1/employees/:id/activate — Super Admin Activate / Deactivate Employee
 router.post('/:id/activate', async (req, res, next) => {
   try {

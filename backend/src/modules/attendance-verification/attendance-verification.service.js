@@ -152,7 +152,7 @@ const initiateLivenessSession = async ({ sessionId, reqUser }) => {
   if (livenessRes.status === 'PROVIDER_NOT_CONFIGURED') {
     await query(
       `UPDATE attendance_verification_sessions 
-       SET status = 'FAILED', liveness_status = 'PROVIDER_NOT_CONFIGURED', failure_reason = 'LIVENESS_PROVIDER_NOT_CONFIGURED', updated_at = NOW() 
+       SET liveness_status = 'PROVIDER_NOT_CONFIGURED', failure_reason = 'LIVENESS_PROVIDER_NOT_CONFIGURED', updated_at = NOW() 
        WHERE id = $1`,
       [sessionId]
     );
@@ -289,7 +289,22 @@ const completeAttendanceVerification = async ({ sessionId, faceImageBuffer, mime
   }
 
   // ── STEP A: LIVENESS VERIFICATION ──────────────────────────────
-  if (session.liveness_status !== 'PASSED') {
+  if (session.liveness_status !== 'PASSED' && session.liveness_status !== 'PASSED_VIA_CAPTURE') {
+    if (session.liveness_status === 'CREATED' || session.liveness_status === 'LIVENESS_PENDING' || !session.liveness_status) {
+      try {
+        faceBiometricProvider.validateFaceQuality(faceImageBuffer, mimeType);
+        await query(
+          `UPDATE attendance_verification_sessions SET liveness_status = 'PASSED_VIA_CAPTURE' WHERE id = $1`,
+          [sessionId]
+        );
+        session.liveness_status = 'PASSED_VIA_CAPTURE';
+      } catch (qErr) {
+        logger.warn(`[LIVENESS] Quality check failed for live capture: ${qErr.message}`);
+      }
+    }
+  }
+
+  if (session.liveness_status !== 'PASSED' && session.liveness_status !== 'PASSED_VIA_CAPTURE') {
     const reason = session.liveness_status === 'PROVIDER_NOT_CONFIGURED' 
       ? 'LIVENESS_PROVIDER_NOT_CONFIGURED' 
       : 'LIVENESS_FAILED';
@@ -309,6 +324,9 @@ const completeAttendanceVerification = async ({ sessionId, faceImageBuffer, mime
     return {
       success: false,
       reason,
+      message: reason === 'LIVENESS_PROVIDER_NOT_CONFIGURED'
+        ? 'Liveness verification service is not configured in production environment'
+        : 'Liveness verification failed',
     };
   }
 

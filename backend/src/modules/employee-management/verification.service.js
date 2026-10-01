@@ -246,6 +246,22 @@ async function calculateEmployeeVerificationState(employeeId) {
     });
   }
 
+  // 6. Fetch Face Biometric Reference Template
+  const bioRes = await query(`
+    SELECT id, status FROM employee_biometric_templates WHERE employee_id = $1 AND status = 'ACTIVE' LIMIT 1
+  `, [employeeId]).catch(() => ({ rows: [] }));
+  const hasBiometricReference = bioRes.rows.length > 0;
+  const biometricStatus = hasBiometricReference ? 'VERIFIED' : 'NOT_COMPLETED';
+
+  if (!hasBiometricReference) {
+    missingItems.push({
+      type: 'face_biometric',
+      label: 'Face Biometric Verification',
+      status: 'NOT_COMPLETED',
+      text: 'Face Biometric Verification – Pending'
+    });
+  }
+
   // Overall Status
   const totalRequiredDocs = REQUIRED_DOC_TYPES.length;
   const isAllDocsApproved = approvedDocsCount === totalRequiredDocs;
