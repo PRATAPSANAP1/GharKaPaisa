@@ -65,3 +65,68 @@ jobs:
       - name: Deployment complete
         run: |
           echo "Backend deployment completed successfully."
+name: Deploy Backend to Production
+
+on:
+  push:
+    branches:
+      - master
+
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: production-backend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy Backend
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::537124932736:role/GharKaPaisa-GitHub-Deploy-Role
+          aws-region: ap-south-1
+
+      - name: Deploy to EC2 backend servers
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          COMMAND_ID=$(aws ssm send-command \
+            --region ap-south-1 \
+            --document-name "AWS-RunShellScript" \
+            --targets \
+              "Key=tag:Application,Values=GharKaPaisa" \
+              "Key=tag:Environment,Values=Production" \
+              "Key=tag:Service,Values=Backend" \
+            --parameters "commands=[\"sudo -iu ubuntu bash -lc 'set -e; cd /home/ubuntu/GharKaPaisa/backend; git fetch origin master; git reset --hard origin/master; npm ci; node --check src/server.js; pm2 reload gharkapaisa-backend; pm2 save'\"]" \
+            --query 'Command.CommandId' \
+            --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+
+          aws ssm wait command-executed \
+            --region ap-south-1 \
+            --command-id "$COMMAND_ID" \
+            --instance-id i-07600948e01bb2aa3
+
+          aws ssm wait command-executed \
+            --region ap-south-1 \
+            --command-id "$COMMAND_ID" \
+            --instance-id i-0541539508bb8afc9
+
+      - name: Deployment complete
+        run: |
+          echo "Backend deployment completed successfully."
