@@ -160,7 +160,15 @@ export default function AttendanceVerificationModal({
       // 2. Liveness Check
       setCurrentState('LIVENESS_IN_PROGRESS');
       setOverlayMessage('Verifying you are live...');
-      await attendanceService.initiateLivenessSession(newSessionId);
+      const livenessRes = await attendanceService.initiateLivenessSession(newSessionId);
+
+      if (livenessRes?.status === 'PROVIDER_NOT_CONFIGURED' || livenessRes?.success === false) {
+        stopCameraTracks();
+        const livenessMsg = livenessRes?.message || 'Liveness verification service is not configured in production environment';
+        setErrorMessage(livenessMsg);
+        setCurrentState('SERVICE_UNAVAILABLE');
+        return;
+      }
 
       // Capture frame
       const faceBlob = await captureFrameBlob();
@@ -175,14 +183,14 @@ export default function AttendanceVerificationModal({
 
       const completeRes = await attendanceService.completeVerification(newSessionId, faceFile);
       if (!completeRes || completeRes.status === 'FAILED' || completeRes.success === false) {
-        const errorMsg = completeRes?.message || completeRes?.error || 'Face verification failed';
-        if (errorMsg.toLowerCase().includes('unavailable') || errorMsg.toLowerCase().includes('service')) {
+        const errorMsg = completeRes?.message || completeRes?.error || completeRes?.reason || 'Face verification failed';
+        if (errorMsg.toLowerCase().includes('unavailable') || errorMsg.toLowerCase().includes('service') || errorMsg.toLowerCase().includes('configured')) {
           stopCameraTracks();
           setCurrentState('SERVICE_UNAVAILABLE');
           return;
         }
         stopCameraTracks();
-        setErrorMessage(errorMsg);
+        setErrorMessage(errorMsg === 'LIVENESS_PROVIDER_NOT_CONFIGURED' ? 'Liveness verification service is not configured in production environment' : errorMsg);
         setCurrentState('VERIFICATION_FAILED');
         return;
       }
