@@ -43,6 +43,27 @@ export const createLivenessSession = async (sessionId) => {
 };
 
 /**
+ * Fetch Temporary AWS Liveness Credentials for session
+ */
+export const getLivenessCredentials = async (sessionId) => {
+  const response = await apiClient.post('/attendance/verification/liveness/credentials', {
+    session_id: sessionId,
+  });
+  return response.data;
+};
+
+/**
+ * Validate AWS Rekognition Liveness Result + Execute KYC Face Matching
+ */
+export const validateLivenessResult = async (sessionId, providerSessionId) => {
+  const response = await apiClient.post('/attendance/verification/liveness/result', {
+    session_id: sessionId,
+    provider_session_id: providerSessionId,
+  });
+  return response.data;
+};
+
+/**
  * Complete Verification Pipeline (Upload live face image)
  */
 export const completeVerificationPipeline = async (sessionId, imageUri) => {
