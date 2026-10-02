@@ -1,15 +1,23 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, ArrowRight } from 'lucide-react';
 
 export default function LivenessSuccess({ onContinue }) {
+  const onContinueRef = useRef(onContinue);
+  
+  useEffect(() => {
+    onContinueRef.current = onContinue;
+  }, [onContinue]);
+
   useEffect(() => {
     // Auto-proceed to Face Match after brief celebratory delay
     const timer = setTimeout(() => {
-      onContinue();
+      if (onContinueRef.current) {
+        onContinueRef.current();
+      }
     }, 1200);
     return () => clearTimeout(timer);
-  }, [onContinue]);
+  }, []);
 
   return (
     <motion.div

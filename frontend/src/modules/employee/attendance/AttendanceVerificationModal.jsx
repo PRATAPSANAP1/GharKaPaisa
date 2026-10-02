@@ -85,7 +85,7 @@ export default function AttendanceVerificationModal({
   }, [isOpen]);
 
   // Step 1: Start Preparation (Panel 2 -> Panel 3 -> Panel 5)
-  const handleStartLivenessSession = async () => {
+  const handleStartLivenessSession = useCallback(async () => {
     if (isInitiatingRef.current) return;
 
     try {
@@ -159,7 +159,7 @@ export default function AttendanceVerificationModal({
     } finally {
       isInitiatingRef.current = false;
     }
-  };
+  }, []);
 
   // Custom AWS Credential Provider for FaceLivenessDetectorCore
   const credentialProvider = useCallback(async () => {
@@ -203,7 +203,7 @@ export default function AttendanceVerificationModal({
   }), [credentialProvider]);
 
   // Called when AWS Amplify FaceLivenessDetectorCore completes client-side challenge (Panel 5/6 -> Panel 7 -> Panel 8 -> Panel 9 -> Panel 10)
-  const handleAnalysisComplete = async () => {
+  const handleAnalysisComplete = useCallback(async () => {
     try {
       const activeSessionId = sessionIdRef.current || sessionId;
       const activeProviderSessionId = providerSessionIdRef.current || awsProviderSessionId;
@@ -219,8 +219,7 @@ export default function AttendanceVerificationModal({
       setCurrentState('LIVENESS_ANALYZING');
 
       // 2. Validate AWS Rekognition Liveness on Backend
-      const validateRes = await attendanceService.validateLivenessResult(activeSessionId, activeProviderSessionId);
-      const validateData = validateRes?.data || validateRes;
+      await attendanceService.validateLivenessResult(activeSessionId, activeProviderSessionId);
 
       // 3. Show Panel 8 (Liveness Check Passed!)
       setCurrentState('LIVENESS_PASSED');
@@ -247,10 +246,10 @@ export default function AttendanceVerificationModal({
       }
       setCurrentState('FAILURE');
     }
-  };
+  }, [sessionId, awsProviderSessionId]);
 
   // Step after Panel 8 (Liveness Passed) -> Panel 9 (KYC Face Match & Environment Progress) -> Panel 10
-  const handleProceedToIdentityVerification = async () => {
+  const handleProceedToIdentityVerification = useCallback(async () => {
     try {
       const activeSessionId = sessionIdRef.current || sessionId;
       setCurrentState('IDENTITY_VERIFICATION');
@@ -310,10 +309,10 @@ export default function AttendanceVerificationModal({
       }
       setCurrentState('FAILURE');
     }
-  };
+  }, [actionType, onSuccess, sessionId]);
 
   // Called on AWS Amplify FaceLivenessDetectorCore error
-  const handleLivenessError = (livenessError) => {
+  const handleLivenessError = useCallback((livenessError) => {
     console.error('FaceLivenessDetector error:', livenessError);
     const msg = livenessError?.error?.message || livenessError?.message || '';
     if (msg.toLowerCase().includes('camera') || msg.toLowerCase().includes('permission') || msg.toLowerCase().includes('notallowed')) {
@@ -324,15 +323,15 @@ export default function AttendanceVerificationModal({
       setErrorMessage(msg || 'Liveness verification error occurred');
     }
     setCurrentState('FAILURE');
-  };
+  }, []);
 
   // Called on AWS Amplify FaceLivenessDetectorCore user cancel
-  const handleLivenessCancel = () => {
+  const handleLivenessCancel = useCallback(() => {
     handleModalClose();
-  };
+  }, [handleModalClose]);
 
   // Retry Flow: create completely NEW verification session & AWS liveness session
-  const handleRetry = () => {
+  const handleRetry = useCallback(() => {
     isInitiatingRef.current = false;
     sessionIdRef.current = null;
     providerSessionIdRef.current = null;
@@ -343,7 +342,7 @@ export default function AttendanceVerificationModal({
     setErrorMessage('');
     setVerificationResult(null);
     handleStartLivenessSession();
-  };
+  }, [handleStartLivenessSession]);
 
   if (!isOpen) return null;
 

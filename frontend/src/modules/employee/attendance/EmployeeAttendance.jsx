@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Clock, Calendar, CheckCircle2, ShieldCheck, MapPin } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowLeft, Clock, Calendar, CheckCircle2, ShieldCheck } from 'lucide-react';
 import useAuthStore from '../../../app/store/authStore';
 import attendanceService from '../../../services/attendance.service';
 
@@ -66,20 +66,20 @@ export default function EmployeeAttendance() {
   const isCheckedIn = !!todayAttendance?.check_in_time;
   const isCheckedOut = !!todayAttendance?.check_out_time;
 
-  const handleStartVerification = () => {
+  const handleStartVerification = useCallback(() => {
     if (!isCheckedIn) {
       setActionType('CHECK_IN');
     } else {
       setActionType('CHECK_OUT');
     }
     setIsModalOpen(true);
-  };
+  }, [isCheckedIn]);
 
-  const handleVerificationSuccess = () => {
+  const handleVerificationSuccess = useCallback(() => {
     fetchAttendanceData();
-  };
+  }, [fetchAttendanceData]);
 
-  const exportCSV = () => {
+  const exportCSV = useCallback(() => {
     if (!history || history.length === 0) return;
     const headers = ['Date', 'Status', 'Start Work Time', 'End Work Time', 'Total Duration', 'Biometric Status'];
     const rows = history.map(item => [
@@ -99,7 +99,7 @@ export default function EmployeeAttendance() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
+  }, [history, selectedMonth, selectedYear]);
 
   const formatTime = (timeStr) => {
     if (!timeStr) return '--:--';
@@ -290,13 +290,15 @@ export default function EmployeeAttendance() {
       )}
 
       {/* Verification Modal (Panels 2 to 10) */}
-      <AttendanceVerificationModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={handleVerificationSuccess}
-        actionType={actionType}
-        user={user}
-      />
+      {isModalOpen && (
+        <AttendanceVerificationModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSuccess={handleVerificationSuccess}
+          actionType={actionType}
+          user={user}
+        />
+      )}
     </div>
   );
 }
