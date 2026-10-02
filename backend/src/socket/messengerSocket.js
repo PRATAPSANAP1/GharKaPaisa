@@ -1,7 +1,7 @@
 const os = require('os');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
-const { createAdapter } = require('@socket.io/redis-adapter');
+const { createAdapter, createShardedAdapter } = require('@socket.io/redis-adapter');
 const logger = require('../config/logger');
 const JWT_SECRET = process.env.JWT_SECRET;
 const { query } = require('../config/database');
