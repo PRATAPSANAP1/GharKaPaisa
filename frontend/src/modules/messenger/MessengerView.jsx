@@ -218,21 +218,24 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   const [msgSearch, setMsgSearch] = useState('');
   const [callStatus, setCallStatus] = useState(null); // { type: 'voice' | 'video', active: true }
   const [activeCall, setActiveCall] = useState(null); // Active WebRTC Call Session
+  const [isInitiatingCall, setIsInitiatingCall] = useState(false);
 
   // Listen for real-time incoming WebRTC call socket events
   useEffect(() => {
     const socket = getMessengerSocket();
     if (!socket) return;
 
-    if (user?.id) {
-      console.log(`[CALL SOCKET] userId=${user.id} socketId=${socket.id} connected=${socket.connected} room=user:${user.id}`);
-    }
-
     const handleIncomingCall = (data) => {
-      console.log('[CALL DEBUG] incoming call event received', data);
-      console.log('[CALL DEBUG] incoming caller ID:', data.caller_id);
-      console.log('[CALL DEBUG] incoming call type:', data.call_type);
-      console.log('[CALL DEBUG] showing incoming call UI');
+      console.log('[CALL] incoming');
+
+      // If user is already on a call, immediately signal busy
+      if (activeCall) {
+        socket.emit('call:busy', {
+          call_id: data.call_id,
+          caller_id: data.caller_id
+        });
+        return;
+      }
 
       setActiveCall({
         callId: data.call_id,
@@ -249,10 +252,12 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     return () => {
       socket.off('call:incoming', handleIncomingCall);
     };
-  }, [user?.id]);
+  }, [user?.id, activeCall]);
 
   const handleInitiateCall = (callType) => {
-    console.log('[CALL DEBUG] initiate');
+    if (isInitiatingCall || activeCall) return;
+    setIsInitiatingCall(true);
+    setTimeout(() => setIsInitiatingCall(false), 1500);
 
     if (!activeConv) return;
     if (activeConv.conversation_type === 'GROUP' || activeConv.conversation_type === 'DEPARTMENT') {
@@ -262,7 +267,6 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
 
     const socket = getMessengerSocket();
     const isSocketConnected = Boolean(socket && socket.connected);
-    console.log('[CALL DEBUG] socket connected:', isSocketConnected);
 
     if (!isSocketConnected) {
       alert('Unable to initiate call. Messenger socket connection is not active.');
@@ -281,8 +285,6 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
       activeConv.target_user_id ||
       activeConv.participant_user_id ||
       (activeConv.user_id !== user?.id ? activeConv.user_id : null);
-
-    console.log('[CALL DEBUG] receiverUserId:', recipientUserId);
 
     if (!recipientUserId) {
       alert('Unable to identify call recipient user ID.');
@@ -1688,14 +1690,30 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                       <button
                         onClick={() => handleInitiateCall('voice')}
                         title="Voice Call"
-                        style={{ background: 'transparent', border: 'none', color: '#64748B', cursor: 'pointer', padding: '6px' }}
+                        disabled={Boolean(isInitiatingCall || activeCall)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: (isInitiatingCall || activeCall) ? '#CBD5E1' : '#64748B',
+                          cursor: (isInitiatingCall || activeCall) ? 'not-allowed' : 'pointer',
+                          padding: '6px',
+                          opacity: (isInitiatingCall || activeCall) ? 0.6 : 1
+                        }}
                       >
                         <FaPhone size={15} />
                       </button>
                       <button
                         onClick={() => handleInitiateCall('video')}
                         title="Video Call"
-                        style={{ background: 'transparent', border: 'none', color: '#64748B', cursor: 'pointer', padding: '6px' }}
+                        disabled={Boolean(isInitiatingCall || activeCall)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: (isInitiatingCall || activeCall) ? '#CBD5E1' : '#64748B',
+                          cursor: (isInitiatingCall || activeCall) ? 'not-allowed' : 'pointer',
+                          padding: '6px',
+                          opacity: (isInitiatingCall || activeCall) ? 0.6 : 1
+                        }}
                       >
                         <FaVideo size={16} />
                       </button>
@@ -1733,17 +1751,33 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                       {isMobile && (
                         <>
                           <div
-                            onClick={() => { handleInitiateCall('voice'); setShowMoreMenu(false); }}
-                            style={{ padding: '10px 16px', fontSize: '13px', color: '#1E293B', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+                            onClick={() => { if (!isInitiatingCall && !activeCall) { handleInitiateCall('voice'); setShowMoreMenu(false); } }}
+                            style={{
+                              padding: '10px 16px',
+                              fontSize: '13px',
+                              color: (isInitiatingCall || activeCall) ? '#94A3B8' : '#1E293B',
+                              cursor: (isInitiatingCall || activeCall) ? 'not-allowed' : 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px'
+                            }}
                           >
-                            <FaPhone size={13} color="#2563EB" />
+                            <FaPhone size={13} color={(isInitiatingCall || activeCall) ? '#94A3B8' : '#2563EB'} />
                             <span>Voice Call</span>
                           </div>
                           <div
-                            onClick={() => { handleInitiateCall('video'); setShowMoreMenu(false); }}
-                            style={{ padding: '10px 16px', fontSize: '13px', color: '#1E293B', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+                            onClick={() => { if (!isInitiatingCall && !activeCall) { handleInitiateCall('video'); setShowMoreMenu(false); } }}
+                            style={{
+                              padding: '10px 16px',
+                              fontSize: '13px',
+                              color: (isInitiatingCall || activeCall) ? '#94A3B8' : '#1E293B',
+                              cursor: (isInitiatingCall || activeCall) ? 'not-allowed' : 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px'
+                            }}
                           >
-                            <FaVideo size={13} color="#2563EB" />
+                            <FaVideo size={13} color={(isInitiatingCall || activeCall) ? '#94A3B8' : '#2563EB'} />
                             <span>Video Call</span>
                           </div>
                         </>

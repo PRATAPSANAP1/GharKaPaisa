@@ -270,7 +270,7 @@ async function init(io) {
     // ── 7. END CALL ──
     socket.on('call:end', (data) => {
       const { call_id, target_user_id } = data || {};
-      activeCalls.delete(call_id);
+      if (call_id) activeCalls.delete(call_id);
       if (target_user_id) {
         io.to(`user:${target_user_id}`).emit('call:ended', {
           call_id,
@@ -279,9 +279,21 @@ async function init(io) {
       }
     });
 
+    // ── 8. BUSY SIGNAL (from client) ──
+    socket.on('call:busy', (data) => {
+      const { call_id, caller_id } = data || {};
+      if (call_id) activeCalls.delete(call_id);
+      if (caller_id) {
+        io.to(`user:${caller_id}`).emit('call:busy', {
+          call_id,
+          recipient_id: userId
+        });
+      }
+    });
+
     // ── DISCONNECT HANDLER ──
     socket.on('disconnect', () => {
-      logger.info(`[CALL SOCKET DISCONNECT]\nhostname=${HOSTNAME}\nuserId=${userId}\nsocketId=${socket.id}`);
+      logger.info(`[CALL SOCKET DISCONNECT] hostname=${HOSTNAME} userId=${userId} socketId=${socket.id}`);
       onlineUsers.delete(userId);
       io.emit('user:offline', { userId });
 
