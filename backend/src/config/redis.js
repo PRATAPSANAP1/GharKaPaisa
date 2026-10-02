@@ -48,25 +48,21 @@ async function initValkeyClients() {
 
     subClient = pubClient.duplicate();
     subClient.on('error', (err) => {
-      if (err && err.message && err.message.includes("unknown command 'psubscribe'")) {
-        logger.warn('[Socket.IO Adapter] Valkey instance does not support PSUBSCRIBE command (pattern matching disabled/restricted). Setting sharded or fallback adapter mode.');
-      } else {
-        logger.error('[Socket.IO Adapter] Valkey Sub Client Error:', err.message);
-      }
+      logger.error('[Socket.IO Adapter] Valkey Sub Client Error:', err.message);
     });
 
     await Promise.all([pubClient.connect(), subClient.connect()]);
 
     isConnected = true;
     logger.info('[Socket.IO Adapter] Valkey connected');
-    logger.info('[Socket.IO Adapter] Pub/Sub ready');
+    logger.info('[Socket.IO Adapter] Sharded Pub/Sub ready');
 
     return { pubClient, subClient, isConnected: true };
   } catch (err) {
     logger.error('[Socket.IO Adapter] Failed to connect to Valkey:', err.message);
     isConnected = false;
-    // In production or when REDIS_URL is explicitly set, fail-closed if adapter initialization fails
-    if (process.env.NODE_ENV === 'production' || process.env.REDIS_URL) {
+    // In production or when REDIS_URL/VALKEY_URL is explicitly set, fail-closed if adapter initialization fails
+    if (process.env.NODE_ENV === 'production' || process.env.REDIS_URL || process.env.VALKEY_URL) {
       throw new Error(`CRITICAL: Valkey adapter connection failed: ${err.message}`);
     }
     return { pubClient: null, subClient: null, isConnected: false };
