@@ -33,6 +33,7 @@
     "react-native-screens": "^4.16.0",
     "react-native-svg": "^15.2.0",
     "react-native-webview": "^14.0.1",
+    "socket.io-client": "^4.8.4",
     "victory-native": "^36.9.2"
   },
   "private": true,

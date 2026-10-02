@@ -780,11 +780,23 @@ const AdminLayout = () => {
         </header>
 
         {/* Dynamic Inner Page Content */}
-        <main style={{ flex: 1, overflowY: 'auto', padding: '16px', boxSizing: 'border-box' }}>
-          <AnnouncementBanner />
-          <Outlet />
-          {!isHR && <Chatbot />}
-        </main>
+        {(() => {
+          const isMessenger = location.pathname.includes('/messenger');
+          return (
+            <main style={{ 
+              flex: 1, 
+              overflowY: isMessenger ? 'hidden' : 'auto', 
+              padding: isMessenger ? 0 : '16px', 
+              boxSizing: 'border-box',
+              display: isMessenger ? 'flex' : 'block',
+              flexDirection: 'column'
+            }}>
+              {!isMessenger && <AnnouncementBanner />}
+              <Outlet />
+              {!isHR && !isMessenger && <Chatbot />}
+            </main>
+          );
+        })()}
       </div>
     </div>
   );

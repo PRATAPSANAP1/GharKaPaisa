@@ -21,7 +21,7 @@ export default function EmployeeMobileBottomNav() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  if (!isMobile || location.pathname.includes('/messenger')) return null;
+  if (!isMobile) return null;
 
   const isActive = (path) => {
     if (path === '/employee/dashboard') {
@@ -37,10 +37,10 @@ export default function EmployeeMobileBottomNav() {
     <div
       style={{
         position: 'fixed',
-        bottom: '10px',
+        bottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
         left: '10px',
         right: '10px',
-        zIndex: 9999,
+        zIndex: 50,
         display: 'flex',
         justifyContent: 'center',
         pointerEvents: 'none'

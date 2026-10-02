@@ -762,10 +762,24 @@ export default function EmployeeLayout() {
       </header>
 
         {/* Page Content Rendered Here */}
-        <main style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '16px 12px 60px' : '24px', boxSizing: 'border-box' }}>
-          <AnnouncementBanner />
-          <Outlet />
-        </main>
+        {(() => {
+          const isMessenger = location.pathname.includes('/messenger');
+          return (
+            <main style={{ 
+              flex: 1, 
+              overflowY: isMessenger ? 'hidden' : 'auto', 
+              padding: isMessenger 
+                ? (isMobile ? '0 0 calc(74px + env(safe-area-inset-bottom, 0px)) 0' : 0)
+                : (isMobile ? '16px 12px calc(80px + env(safe-area-inset-bottom, 0px))' : '24px'), 
+              boxSizing: 'border-box',
+              display: isMessenger ? 'flex' : 'block',
+              flexDirection: 'column'
+            }}>
+              {!isMessenger && <AnnouncementBanner />}
+              <Outlet />
+            </main>
+          );
+        })()}
       </div>
 
       {/* Invite Modal */}

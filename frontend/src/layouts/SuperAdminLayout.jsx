@@ -679,10 +679,12 @@ const SuperAdminLayout = () => {
           {/* ── MOBILE BOTTOM NAVIGATION BAR ── */}
           <nav
             style={{
-              position: 'fixed', bottom: 0, left: 0, right: 0, height: '62px',
+              position: 'fixed', bottom: 0, left: 0, right: 0, height: 'calc(62px + env(safe-area-inset-bottom, 0px))',
+              paddingBottom: 'env(safe-area-inset-bottom, 0px)',
               background: C.card, borderTop: `1px solid ${C.border}`,
               display: 'flex', alignItems: 'center', justifyContent: 'space-around',
-              zIndex: 50, boxShadow: '0 -4px 15px rgba(0,0,0,0.08)'
+              zIndex: 50, boxShadow: '0 -4px 15px rgba(0,0,0,0.08)',
+              boxSizing: 'border-box'
             }}
           >
             {/* Home */}
@@ -946,10 +948,23 @@ const SuperAdminLayout = () => {
         )}
 
         {/* Page Body */}
-        <main style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '12px 14px' : '16px 20px' }}>
-          <AnnouncementBanner />
-          <Outlet />
-        </main>
+        {(() => {
+          const isMessenger = location.pathname.includes('/messenger') || location.pathname.includes('/view-messages');
+          return (
+            <main style={{ 
+              flex: 1, 
+              overflowY: isMessenger ? 'hidden' : 'auto', 
+              padding: isMessenger 
+                ? (isMobile ? '0 0 calc(62px + env(safe-area-inset-bottom, 0px)) 0' : 0)
+                : (isMobile ? '12px 14px calc(72px + env(safe-area-inset-bottom, 0px)) 12px' : '16px 20px'),
+              display: isMessenger ? 'flex' : 'block',
+              flexDirection: 'column'
+            }}>
+              {!isMessenger && <AnnouncementBanner />}
+              <Outlet />
+            </main>
+          );
+        })()}
       </div>
 
       <Chatbot />

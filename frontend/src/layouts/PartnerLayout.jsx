@@ -721,8 +721,8 @@ export default function PartnerLayout() {
         display: 'flex',
         flexDirection: 'column',
         paddingTop: isMobile ? '56px' : 0,
-        paddingBottom: isMobile ? '64px' : 0,
-        overflowY: 'auto',
+        paddingBottom: isMobile ? 'calc(74px + env(safe-area-inset-bottom, 0px))' : 0,
+        overflowY: location.pathname.includes('/messenger') ? 'hidden' : 'auto',
         background: MAIN_BG,
         position: 'relative',
       }}>
@@ -810,19 +810,27 @@ export default function PartnerLayout() {
 
         {/* Main Content Body */}
 
-        <div style={{
-          flex: 1,
-          padding: isMobile ? '12px 12px 80px 12px' : '24px 32px',
-          maxWidth: '1280px',
-          margin: '0 auto',
-          width: '100%',
-          position: 'relative',
-          boxSizing: 'border-box',
-        }}>
-          <AnnouncementBanner />
-          <Outlet />
-          <Chatbot />
-        </div>
+        {(() => {
+          const isMessenger = location.pathname.includes('/messenger');
+          return (
+            <div style={{
+              flex: 1,
+              padding: isMessenger ? 0 : (isMobile ? '12px 12px 16px 12px' : '24px 32px'),
+              maxWidth: isMessenger ? '100%' : '1280px',
+              margin: '0 auto',
+              width: '100%',
+              position: 'relative',
+              boxSizing: 'border-box',
+              display: isMessenger ? 'flex' : 'block',
+              flexDirection: 'column',
+              overflow: isMessenger ? 'hidden' : 'visible'
+            }}>
+              {!isMessenger && <AnnouncementBanner />}
+              <Outlet />
+              {!isMessenger && <Chatbot />}
+            </div>
+          );
+        })()}
       </main>
 
       {/* ──── MOBILE BOTTOM NAVIGATION ──── */}

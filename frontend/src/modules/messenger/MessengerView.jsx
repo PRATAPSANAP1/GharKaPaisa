@@ -1677,15 +1677,17 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   return (
     <div style={{
       display: 'flex',
-      height: isMobile ? 'calc(100dvh - 125px)' : 'calc(100vh - 90px)',
-      maxHeight: isMobile ? 'calc(100dvh - 125px)' : 'none',
+      height: '100%',
+      maxHeight: '100%',
+      width: '100%',
       background: '#F8FAFC',
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
       borderRadius: isMobile ? '0px' : '16px',
       overflow: 'hidden',
       border: isMobile ? 'none' : '1px solid #E2E8F0',
       boxShadow: isMobile ? 'none' : '0 4px 20px rgba(0,0,0,0.06)',
-      position: 'relative'
+      position: 'relative',
+      boxSizing: 'border-box'
     }}>
 
       {/* ── LEFT PANE: CHAT LIST ── */}
@@ -2005,40 +2007,36 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                   >
                     <FaSearch size={isMobile ? 14 : 16} />
                   </button>
-                  {!isMobile && (
-                    <>
-                      <button
-                        onClick={() => handleInitiateCall('voice')}
-                        title="Voice Call"
-                        disabled={Boolean(isInitiatingCall || activeCall)}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: (isInitiatingCall || activeCall) ? '#CBD5E1' : '#64748B',
-                          cursor: (isInitiatingCall || activeCall) ? 'not-allowed' : 'pointer',
-                          padding: '6px',
-                          opacity: (isInitiatingCall || activeCall) ? 0.6 : 1
-                        }}
-                      >
-                        <FaPhone size={15} />
-                      </button>
-                      <button
-                        onClick={() => handleInitiateCall('video')}
-                        title="Video Call"
-                        disabled={Boolean(isInitiatingCall || activeCall)}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: (isInitiatingCall || activeCall) ? '#CBD5E1' : '#64748B',
-                          cursor: (isInitiatingCall || activeCall) ? 'not-allowed' : 'pointer',
-                          padding: '6px',
-                          opacity: (isInitiatingCall || activeCall) ? 0.6 : 1
-                        }}
-                      >
-                        <FaVideo size={16} />
-                      </button>
-                    </>
-                  )}
+                  <button
+                    onClick={() => handleInitiateCall('voice')}
+                    title="Voice Call"
+                    disabled={Boolean(isInitiatingCall || activeCall)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: (isInitiatingCall || activeCall) ? '#CBD5E1' : '#64748B',
+                      cursor: (isInitiatingCall || activeCall) ? 'not-allowed' : 'pointer',
+                      padding: '4px',
+                      opacity: (isInitiatingCall || activeCall) ? 0.6 : 1
+                    }}
+                  >
+                    <FaPhone size={isMobile ? 13 : 15} />
+                  </button>
+                  <button
+                    onClick={() => handleInitiateCall('video')}
+                    title="Video Call"
+                    disabled={Boolean(isInitiatingCall || activeCall)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: (isInitiatingCall || activeCall) ? '#CBD5E1' : '#64748B',
+                      cursor: (isInitiatingCall || activeCall) ? 'not-allowed' : 'pointer',
+                      padding: '4px',
+                      opacity: (isInitiatingCall || activeCall) ? 0.6 : 1
+                    }}
+                  >
+                    <FaVideo size={isMobile ? 14 : 16} />
+                  </button>
                   <button
                     onClick={() => setShowMoreMenu(prev => !prev)}
                     title="More Options"
@@ -2309,14 +2307,17 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                           }}>
                             {/* Message Bubble Container */}
                             <div style={{
-                              maxWidth: isMobile ? '85%' : '65%', padding: isMobile ? '10px 14px' : '12px 18px',
+                              maxWidth: isMobile ? '86%' : '65%', padding: isMobile ? '10px 14px' : '12px 18px',
                               borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                               background: isMe ? 'linear-gradient(135deg, #2563EB, #1D4ED8)' : '#FFFFFF',
                               border: isMe ? 'none' : '1px solid #E2E8F0',
                               color: isMe ? '#FFFFFF' : '#0F172A',
                               boxShadow: isMe ? '0 4px 12px rgba(37,99,235,0.25)' : '0 2px 6px rgba(0,0,0,0.03)',
                               fontSize: isMobile ? '13.5px' : '14px', lineHeight: 1.5,
-                              position: 'relative'
+                              position: 'relative',
+                              overflowWrap: 'anywhere',
+                              wordBreak: 'break-word',
+                              boxSizing: 'border-box'
                             }}>
                               {isEditingThis ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -2813,14 +2814,14 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                   onSubmit={handleSendMessage}
                   onPaste={handlePaste}
                   style={{
-                    padding: isMobile ? '10px 12px 16px' : '14px 20px', background: '#FFFFFF', borderTop: '1px solid #E2E8F0',
-                    display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '10px'
+                    padding: isMobile ? '8px 8px 10px' : '14px 20px', background: '#FFFFFF', borderTop: '1px solid #E2E8F0',
+                    display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '10px', boxSizing: 'border-box'
                   }}
                 >
                   <button
                     type="button"
                     onClick={() => setShowEmojiPicker(prev => !prev)}
-                    style={{ background: 'transparent', border: 'none', color: showEmojiPicker ? '#2563EB' : '#64748B', fontSize: '20px', cursor: 'pointer', padding: '4px' }}
+                    style={{ background: 'transparent', border: 'none', color: showEmojiPicker ? '#2563EB' : '#64748B', fontSize: isMobile ? '18px' : '20px', cursor: 'pointer', padding: isMobile ? '2px' : '4px' }}
                     title="Emoji"
                   >
                     <FaSmile />
@@ -2837,7 +2838,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: '20px', cursor: 'pointer', padding: '4px' }}
+                    style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: isMobile ? '18px' : '20px', cursor: 'pointer', padding: isMobile ? '2px' : '4px' }}
                     title="Attach File / Document"
                   >
                     <FaPaperclip />
@@ -2855,9 +2856,9 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                       }
                     }}
                     style={{
-                      flex: 1, padding: '10px 18px', background: '#F8FAFC',
+                      flex: 1, minWidth: 0, padding: isMobile ? '8px 12px' : '10px 18px', background: '#F8FAFC',
                       border: '1px solid #E2E8F0', borderRadius: '24px',
-                      color: '#0F172A', fontSize: '14px', outline: 'none',
+                      color: '#0F172A', fontSize: isMobile ? '13px' : '14px', outline: 'none',
                       resize: 'none', fontFamily: 'inherit', maxHeight: '100px', lineHeight: 1.4,
                       boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.03)'
                     }}
@@ -2875,7 +2876,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                   <button
                     type="button"
                     onClick={() => imageInputRef.current?.click()}
-                    style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: '20px', cursor: 'pointer', padding: '4px' }}
+                    style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: isMobile ? '18px' : '20px', cursor: 'pointer', padding: isMobile ? '2px' : '4px' }}
                     title="Upload Image"
                   >
                     <FaImage />
@@ -2885,7 +2886,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                   <button
                     type="button"
                     onClick={() => alert('Voice message feature active. Speak now...')}
-                    style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: '19px', cursor: 'pointer', padding: '4px' }}
+                    style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: isMobile ? '17px' : '19px', cursor: 'pointer', padding: isMobile ? '2px' : '4px' }}
                     title="Voice Message"
                   >
                     <FaMicrophone />
@@ -2895,7 +2896,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                     type="submit"
                     disabled={sending || (!inputText.trim() && attachments.length === 0)}
                     style={{
-                      width: '42px', height: '42px', borderRadius: '50%', border: 'none',
+                      width: isMobile ? '36px' : '42px', height: isMobile ? '36px' : '42px', borderRadius: '50%', border: 'none',
                       background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', color: '#FFFFFF',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       cursor: 'pointer', boxShadow: '0 4px 14px rgba(37,99,235,0.35)',
@@ -2903,7 +2904,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                       transition: 'all 0.15s'
                     }}
                   >
-                    <FaPaperPlane size={15} />
+                    <FaPaperPlane size={isMobile ? 13 : 15} />
                   </button>
                 </form>
               )}
