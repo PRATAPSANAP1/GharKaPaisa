@@ -388,7 +388,7 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, reqUser })
   }
 
   // BOTH Liveness AND Face Match PASSED!
-  const envStatus = 'PENDING_INTEGRATION';
+  const envStatus = 'PENDING';
   await query(
     `UPDATE attendance_verification_sessions 
      SET face_status = 'PASSED', environment_status = $1, status = 'PASSED', completed_at = NOW(), updated_at = NOW() 
