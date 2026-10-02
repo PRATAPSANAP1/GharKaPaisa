@@ -1,20 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  Calendar, Download, Clock, CheckCircle2, XCircle, 
-  AlertCircle, ShieldCheck, ChevronRight, UserCheck
-} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Clock, Calendar, CheckCircle2, ShieldCheck, MapPin } from 'lucide-react';
 import useAuthStore from '../../../app/store/authStore';
 import attendanceService from '../../../services/attendance.service';
 
-import AttendanceHeader from './components/AttendanceHeader';
-import AttendanceMainCard from './components/AttendanceMainCard';
-import AttendanceTodayCard from './components/AttendanceTodayCard';
-import AttendanceSecurityCard from './components/AttendanceSecurityCard';
+import AttendanceDashboardCard from './components/AttendanceDashboardCard';
+import AttendanceHistoryView from './components/AttendanceHistoryView';
+import AttendanceSummaryView from './components/AttendanceSummaryView';
 import AttendanceVerificationModal from './AttendanceVerificationModal';
 
 export default function EmployeeAttendance() {
   const user = useAuthStore((state) => state.user);
+
+  // Active view: 'DASHBOARD' | 'HISTORY' | 'SUMMARY'
+  const [activeView, setActiveView] = useState('DASHBOARD');
 
   const [todayAttendance, setTodayAttendance] = useState(null);
   const [history, setHistory] = useState([]);
@@ -84,10 +83,10 @@ export default function EmployeeAttendance() {
     if (!history || history.length === 0) return;
     const headers = ['Date', 'Status', 'Start Work Time', 'End Work Time', 'Total Duration', 'Biometric Status'];
     const rows = history.map(item => [
-      item.date ? new Date(item.date).toLocaleDateString('en-IN') : '--',
+      item.date || item.attendance_date ? new Date(item.date || item.attendance_date).toLocaleDateString('en-US') : '--',
       item.check_in_time && item.check_out_time ? 'Work Completed' : item.check_in_time ? 'Working' : 'Not Started',
-      item.check_in_time ? new Date(item.check_in_time).toLocaleTimeString('en-IN') : '--',
-      item.check_out_time ? new Date(item.check_out_time).toLocaleTimeString('en-IN') : '--',
+      item.check_in_time ? new Date(item.check_in_time).toLocaleTimeString('en-US') : '--',
+      item.check_out_time ? new Date(item.check_out_time).toLocaleTimeString('en-US') : '--',
       item.total_hours ? `${item.total_hours} hrs` : '--',
       item.verification_status || 'VERIFIED'
     ]);
@@ -102,220 +101,195 @@ export default function EmployeeAttendance() {
     document.body.removeChild(link);
   };
 
+  const formatTime = (timeStr) => {
+    if (!timeStr) return '--:--';
+    try {
+      return new Date(timeStr).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch (e) {
+      return timeStr;
+    }
+  };
+
   return (
     <div style={{
-      padding: '24px',
-      maxWidth: '1280px',
+      padding: '24px 20px',
+      maxWidth: '1120px',
       margin: '0 auto',
-      background: '#F8FAFC',
+      background: '#F5F7FA',
       minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
       gap: '24px'
     }}>
-      {/* 1. Header */}
-      <AttendanceHeader />
+      {/* PANEL 1: MAIN ATTENDANCE DASHBOARD VIEW */}
+      {activeView === 'DASHBOARD' && (
+        <motion.div
+          key="dashboard"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}
+        >
+          {/* Top Header */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={() => window.history.back()}
+                aria-label="Go back"
+                style={{
+                  background: '#FFFFFF',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '10px',
+                  padding: '8px 10px',
+                  cursor: 'pointer',
+                  color: '#374151',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                }}
+              >
+                <ArrowLeft size={18} />
+              </button>
 
-      {/* 2. Main Attendance Action Card */}
-      <AttendanceMainCard
-        onStartVerification={handleStartVerification}
-        isCheckedIn={isCheckedIn}
-        isCheckedOut={isCheckedOut}
-        loading={loading}
-      />
-
-      {/* 3. Today's Attendance Summary Card */}
-      <AttendanceTodayCard todayAttendance={todayAttendance} />
-
-      {/* 4. Security Information Card */}
-      <AttendanceSecurityCard />
-
-      {/* 5. Summary Statistics Grid */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, delay: 0.3, ease: 'easeOut' }}
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '16px'
-        }}
-      >
-        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 600 }}>Total Days</span>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Calendar size={18} />
+              <div>
+                <h1 style={{
+                  fontSize: '26px',
+                  fontWeight: 700,
+                  color: '#111827',
+                  margin: 0,
+                  letterSpacing: '-0.4px'
+                }}>
+                  Attendance
+                </h1>
+                <p style={{
+                  fontSize: '13.5px',
+                  color: '#6B7280',
+                  margin: '2px 0 0'
+                }}>
+                  Track your daily attendance
+                </p>
+              </div>
             </div>
           </div>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#0F172A' }}>{summary.total || 0}</div>
-        </div>
 
-        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 600 }}>Present Days</span>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <CheckCircle2 size={18} />
-            </div>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#16A34A' }}>{summary.present || 0}</div>
-        </div>
-
-        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 600 }}>Late Arrivals</span>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FEF3C7', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Clock size={18} />
-            </div>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#D97706' }}>{summary.late || 0}</div>
-        </div>
-
-        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 600 }}>Absent Days</span>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <XCircle size={18} />
-            </div>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#DC2626' }}>{summary.absent || 0}</div>
-        </div>
-      </motion.div>
-
-      {/* 6. Attendance Logs Table Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, delay: 0.36, ease: 'easeOut' }}
-        style={{
-          background: '#FFFFFF',
-          border: '1px solid #E2E8F0',
-          borderRadius: '16px',
-          padding: '24px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.03)'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
-          <div>
-            <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A', margin: 0 }}>Attendance History</h3>
-            <p style={{ fontSize: '13px', color: '#64748B', margin: '2px 0 0' }}>View past attendance records and verification status.</p>
+          {/* Centered Attendance Card (PANEL 1) */}
+          <div style={{ margin: '12px 0 8px', width: '100%' }}>
+            <AttendanceDashboardCard
+              onStartVerification={handleStartVerification}
+              isCheckedIn={isCheckedIn}
+              isCheckedOut={isCheckedOut}
+              loading={loading}
+              onNavigateHistory={() => setActiveView('HISTORY')}
+              onNavigateSummary={() => setActiveView('SUMMARY')}
+            />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(Number(e.target.value))}
-              style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '13px', background: '#FFFFFF', color: '#0F172A' }}
-            >
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  {new Date(2026, i, 1).toLocaleString('en-IN', { month: 'long' })}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '13px', background: '#FFFFFF', color: '#0F172A' }}
-            >
-              <option value={2026}>2026</option>
-              <option value={2025}>2025</option>
-            </select>
-
-            <button
-              type="button"
-              onClick={exportCSV}
-              style={{
-                display: 'inline-flex',
+          {/* Today's Activity Card */}
+          {(isCheckedIn || isCheckedOut) && (
+            <div style={{
+              background: '#FFFFFF',
+              border: '1px solid #E5E7EB',
+              borderRadius: '18px',
+              padding: '20px 24px',
+              maxWidth: '480px',
+              width: '100%',
+              margin: '0 auto',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.02)'
+            }}>
+              <div style={{
+                fontSize: '14px',
+                fontWeight: 700,
+                color: '#111827',
+                marginBottom: '14px',
+                display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                padding: '8px 14px',
-                borderRadius: '10px',
-                border: '1px solid #E2E8F0',
-                background: '#FFFFFF',
-                color: '#0F172A',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              <Download size={14} /> Export CSV
-            </button>
-          </div>
-        </div>
+                gap: '6px'
+              }}>
+                <Clock size={16} color="#0B74F6" /> Today's Session
+              </div>
 
-        {/* Table */}
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
-            <thead>
-              <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B', fontWeight: 600 }}>
-                <th style={{ padding: '12px 16px' }}>Date</th>
-                <th style={{ padding: '12px 16px' }}>Status</th>
-                <th style={{ padding: '12px 16px' }}>Start Work Time</th>
-                <th style={{ padding: '12px 16px' }}>End Work Time</th>
-                <th style={{ padding: '12px 16px' }}>Total Duration</th>
-                <th style={{ padding: '12px 16px' }}>Verification Method</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history && history.length > 0 ? (
-                history.map((row, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #E2E8F0' }}>
-                    <td style={{ padding: '14px 16px', fontWeight: 600, color: '#0F172A' }}>
-                      {row.date ? new Date(row.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '--'}
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span style={{
-                        background: row.check_in_time && row.check_out_time ? '#DCFCE7' : row.check_in_time ? '#FEF3C7' : '#F1F5F9',
-                        color: row.check_in_time && row.check_out_time ? '#16A34A' : row.check_in_time ? '#D97706' : '#64748B',
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: 600
-                      }}>
-                        {row.check_in_time && row.check_out_time ? 'Work Completed' : row.check_in_time ? 'Working' : 'Not Started'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 16px', color: '#0F172A' }}>
-                      {row.check_in_time ? new Date(row.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--'}
-                    </td>
-                    <td style={{ padding: '14px 16px', color: '#0F172A' }}>
-                      {row.check_out_time ? new Date(row.check_out_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--'}
-                    </td>
-                    <td style={{ padding: '14px 16px', color: '#64748B' }}>
-                      {row.total_hours ? `${row.total_hours} hrs` : '--'}
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span style={{
-                        background: '#EFF6FF',
-                        color: '#2563EB',
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}>
-                        <ShieldCheck size={12} /> Live Face Verified
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '32px', color: '#64748B', fontSize: '13.5px' }}>
-                    No attendance records found for this period.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </motion.div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '12px'
+              }}>
+                <div style={{ background: '#F9FAFB', borderRadius: '12px', padding: '12px', border: '1px solid #F3F4F6' }}>
+                  <div style={{ fontSize: '11.5px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase' }}>
+                    Start Time
+                  </div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#111827', marginTop: '4px' }}>
+                    {formatTime(todayAttendance?.check_in_time)}
+                  </div>
+                </div>
 
-      {/* Verification Modal */}
+                <div style={{ background: '#F9FAFB', borderRadius: '12px', padding: '12px', border: '1px solid #F3F4F6' }}>
+                  <div style={{ fontSize: '11.5px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase' }}>
+                    End Time
+                  </div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: isCheckedOut ? '#111827' : '#9CA3AF', marginTop: '4px' }}>
+                    {formatTime(todayAttendance?.check_out_time)}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{
+                marginTop: '12px',
+                paddingTop: '10px',
+                borderTop: '1px solid #F3F4F6',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '12.5px'
+              }}>
+                <span style={{ color: '#6B7280' }}>Verification:</span>
+                <span style={{ color: '#16A34A', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <ShieldCheck size={14} /> Biometric Verified
+                </span>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {/* SECTION 13: ATTENDANCE HISTORY VIEW */}
+      {activeView === 'HISTORY' && (
+        <AttendanceHistoryView
+          history={history}
+          summary={summary}
+          selectedMonth={selectedMonth}
+          setSelectedMonth={setSelectedMonth}
+          selectedYear={selectedYear}
+          setSelectedYear={setSelectedYear}
+          onExportCSV={exportCSV}
+          onBackToDashboard={() => setActiveView('DASHBOARD')}
+        />
+      )}
+
+      {/* SECTION 14: ATTENDANCE SUMMARY VIEW */}
+      {activeView === 'SUMMARY' && (
+        <AttendanceSummaryView
+          summary={summary}
+          history={history}
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+          onBackToDashboard={() => setActiveView('DASHBOARD')}
+        />
+      )}
+
+      {/* Verification Modal (Panels 2 to 10) */}
       <AttendanceVerificationModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

@@ -1,33 +1,82 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { XCircle, RefreshCw, AlertCircle } from 'lucide-react';
+import { XCircle, RefreshCw, AlertCircle, CameraOff, ShieldAlert } from 'lucide-react';
 
-export default function AttendanceFailure({ errorMessage, onRetry, onClose }) {
+export default function AttendanceFailure({
+  failureType = 'LIVENESS_FAILED', // 'CAMERA_DENIED' | 'LIVENESS_FAILED' | 'FACE_MISMATCH' | 'ENVIRONMENT_MISMATCH' | 'SERVICE_UNAVAILABLE' | 'GENERAL'
+  errorMessage,
+  onRetry,
+  onClose
+}) {
+  // Determine title and description based on failure type or error message
+  const getFailureDetails = () => {
+    if (failureType === 'CAMERA_DENIED' || errorMessage?.toLowerCase().includes('camera')) {
+      return {
+        title: 'Camera Access Required',
+        description: 'Please allow camera access in your browser settings and try again.',
+        icon: <CameraOff size={42} />
+      };
+    }
+
+    if (failureType === 'FACE_MISMATCH' || errorMessage?.toLowerCase().includes('match') || errorMessage?.toLowerCase().includes('kyc')) {
+      return {
+        title: 'Face Verification Failed',
+        description: 'Your face could not be matched with your registered KYC photo.',
+        icon: <ShieldAlert size={42} />
+      };
+    }
+
+    if (failureType === 'ENVIRONMENT_MISMATCH' || errorMessage?.toLowerCase().includes('environment') || errorMessage?.toLowerCase().includes('workplace')) {
+      return {
+        title: 'Workplace Verification Failed',
+        description: 'Your workspace environment could not be verified for attendance.',
+        icon: <AlertCircle size={42} />
+      };
+    }
+
+    if (failureType === 'SERVICE_UNAVAILABLE' || errorMessage?.toLowerCase().includes('unavailable') || errorMessage?.toLowerCase().includes('service')) {
+      return {
+        title: 'Verification Service Temporarily Unavailable',
+        description: 'Biometric verification is temporarily unavailable. Please try again.',
+        icon: <AlertCircle size={42} />
+      };
+    }
+
+    // Default Liveness Failed
+    return {
+      title: 'Liveness Verification Failed',
+      description: errorMessage || 'Please try again with your face clearly visible and follow the instructions.',
+      icon: <XCircle size={42} />
+    };
+  };
+
+  const details = getFailureDetails();
+
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.25 }}
+      initial={{ opacity: 0, scale: 0.96, y: 10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96, y: 10 }}
+      transition={{ duration: 0.28, ease: 'easeOut' }}
       style={{
         background: '#FFFFFF',
         borderRadius: '20px',
-        padding: '36px 28px',
+        padding: '36px 28px 28px',
         width: '100%',
-        maxWidth: '480px',
-        textAlign: 'center',
+        maxWidth: '460px',
         position: 'relative',
-        boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
-        border: '1px solid #E2E8F0'
+        boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.15)',
+        border: '1px solid #E5E7EB',
+        textAlign: 'center'
       }}
     >
-      {/* Red circle with shake animation */}
+      {/* Red Circle Icon */}
       <motion.div
-        animate={{ x: [0, -8, 8, -6, 6, -3, 3, 0] }}
+        animate={{ x: [0, -6, 6, -4, 4, 0] }}
         transition={{ duration: 0.35, ease: 'easeInOut' }}
         style={{
-          width: '80px',
-          height: '80px',
+          width: '76px',
+          height: '76px',
           borderRadius: '50%',
           background: '#FEE2E2',
           color: '#DC2626',
@@ -38,65 +87,67 @@ export default function AttendanceFailure({ errorMessage, onRetry, onClose }) {
           boxShadow: '0 4px 16px rgba(220, 38, 38, 0.15)'
         }}
       >
-        <XCircle size={48} />
+        {details.icon}
       </motion.div>
 
-      <h3 style={{ margin: '0 0 8px', fontSize: '22px', fontWeight: 700, color: '#0F172A' }}>
-        Verification Unsuccessful
+      {/* Title */}
+      <h3 style={{
+        margin: '0 0 8px',
+        fontSize: '22px',
+        fontWeight: 700,
+        color: '#111827'
+      }}>
+        {details.title}
       </h3>
 
-      <p style={{ margin: '0 0 20px', fontSize: '14px', color: '#64748B', lineHeight: 1.4 }}>
-        We couldn't verify your identity. <strong style={{ color: '#DC2626' }}>Your attendance has not been marked.</strong>
+      {/* Description */}
+      <p style={{
+        margin: '0 0 24px',
+        fontSize: '14px',
+        color: '#6B7280',
+        lineHeight: 1.45
+      }}>
+        {details.description}
       </p>
 
-      {/* Specific error or default guidance box */}
+      {/* Info notice */}
       <div style={{
         background: '#FEF2F2',
         border: '1px solid #FCA5A5',
-        borderRadius: '14px',
-        padding: '16px 18px',
-        margin: '0 auto 24px',
-        maxWidth: '400px',
-        textAlign: 'left'
+        borderRadius: '12px',
+        padding: '12px 14px',
+        marginBottom: '24px',
+        fontSize: '13px',
+        color: '#991B1B',
+        fontWeight: 600,
+        textAlign: 'left',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
       }}>
-        {errorMessage ? (
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '13px', color: '#991B1B', fontWeight: 600 }}>
-            <AlertCircle size={16} color="#DC2626" style={{ flexShrink: 0, marginTop: '2px' }} />
-            <div>{errorMessage}</div>
-          </div>
-        ) : (
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: '#991B1B', marginBottom: '6px' }}>
-              Please make sure:
-            </div>
-            <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '12.5px', color: '#7F1D1D', lineHeight: 1.55 }}>
-              <li>Your face is clearly visible</li>
-              <li>Lighting is sufficient</li>
-              <li>You are looking at the camera</li>
-              <li>You are not wearing sunglasses or face covering</li>
-              <li>Your face remains inside the frame</li>
-            </ul>
-          </div>
-        )}
+        <AlertCircle size={16} color="#DC2626" style={{ flexShrink: 0 }} />
+        <span>Your attendance has not been marked.</span>
       </div>
 
-      {/* Buttons */}
-      <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+      {/* Buttons: Try Again & Cancel */}
+      <div style={{ display: 'flex', gap: '12px' }}>
         <button
           type="button"
           onClick={onClose}
           style={{
             flex: 1,
-            maxWidth: '160px',
             height: '48px',
             borderRadius: '12px',
-            border: '1px solid #E2E8F0',
+            border: '1px solid #E5E7EB',
             background: '#FFFFFF',
-            color: '#0F172A',
-            fontSize: '14px',
+            color: '#374151',
+            fontSize: '14.5px',
             fontWeight: 600,
-            cursor: 'pointer'
+            cursor: 'pointer',
+            transition: 'background 0.15s ease'
           }}
+          onMouseOver={(e) => { e.currentTarget.style.background = '#F9FAFB'; }}
+          onMouseOut={(e) => { e.currentTarget.style.background = '#FFFFFF'; }}
         >
           Cancel
         </button>
@@ -106,21 +157,23 @@ export default function AttendanceFailure({ errorMessage, onRetry, onClose }) {
           onClick={onRetry}
           style={{
             flex: 1.5,
-            maxWidth: '220px',
             height: '48px',
             borderRadius: '12px',
             border: 'none',
-            background: '#2563EB',
+            background: '#0B74F6',
             color: '#FFFFFF',
-            fontSize: '14px',
-            fontWeight: 600,
+            fontSize: '14.5px',
+            fontWeight: 700,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
-            boxShadow: '0 4px 14px rgba(37, 99, 235, 0.25)'
+            boxShadow: '0 4px 14px rgba(11, 116, 246, 0.25)',
+            transition: 'background 0.2s ease'
           }}
+          onMouseOver={(e) => { e.currentTarget.style.background = '#0963D2'; }}
+          onMouseOut={(e) => { e.currentTarget.style.background = '#0B74F6'; }}
         >
           <RefreshCw size={16} /> Try Again
         </button>
