@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { UserProfile, UserRole } from '../types';
 import { getSecureItem, setSecureItem } from '../services/storage.service';
 import { fetchCurrentUser, logoutSession } from '../services/auth.service';
+import { disconnectMessengerSocket } from '../services/messengerSocket';
 import {
   getAndClearPendingDestination,
   clearPendingDestination,
@@ -93,6 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    disconnectMessengerSocket();
     await clearPendingDestination();
     await logoutSession();
     setToken(null);

@@ -29,6 +29,9 @@ import {
   MessengerMessage
 } from '../../services/messenger.service';
 
+import { AppState } from 'react-native';
+import { getMessengerSocket } from '../../services/messengerSocket';
+
 export default function MessengerScreen() {
   const { user, userRole } = useAuth();
   const [conversations, setConversations] = useState<MessengerConversation[]>([]);
@@ -41,7 +44,13 @@ export default function MessengerScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [typingUser, setTypingUser] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
+
+  const activeConvRef = useRef<MessengerConversation | null>(null);
+  useEffect(() => {
+    activeConvRef.current = activeConv;
+  }, [activeConv]);
 
   const fetchConvs = async () => {
     try {
@@ -56,9 +65,172 @@ export default function MessengerScreen() {
   };
 
   useEffect(() => {
+    let isMounted = true;
+
+    // Initial fetch
     fetchConvs();
-    const interval = setInterval(fetchConvs, 12000);
-    return () => clearInterval(interval);
+
+    // Subscribe to Socket.IO real-time updates (no polling loop)
+    const setupSocketListeners = async () => {
+      const socket = await getMessengerSocket();
+      if (!socket || !isMounted) return;
+
+      const handleNewMessage = (data: { conversation_id: string; message: MessengerMessage }) => {
+        if (!data || !data.conversation_id || !data.message) return;
+        const { conversation_id, message } = data;
+
+        // 1. If message belongs to active thread
+        if (activeConvRef.current && activeConvRef.current.id === conversation_id) {
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === message.id)) {
+              return prev;
+            }
+            return [...prev, message];
+          });
+          setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+
+          if (String(message.sender_id).toLowerCase() !== String(user?.id).toLowerCase()) {
+            markRead(conversation_id).catch(() => {});
+          }
+        }
+
+        // 2. Incrementally update conversation list without refetching all
+        setConversations((prevConvs) => {
+          const targetIndex = prevConvs.findIndex((c) => c.id === conversation_id);
+          const isCurrentActive = activeConvRef.current?.id === conversation_id;
+          const isOtherSender = String(message.sender_id).toLowerCase() !== String(user?.id).toLowerCase();
+
+          if (targetIndex !== -1) {
+            const targetConv = { ...prevConvs[targetIndex] };
+            targetConv.last_message = {
+              id: message.id,
+              message_text: message.message_text,
+              message_type: message.message_type,
+              created_at: message.created_at,
+              sender_name: message.sender_name,
+            };
+            targetConv.updated_at = message.created_at;
+
+            if (!isCurrentActive && isOtherSender) {
+              targetConv.unread_count = (targetConv.unread_count || 0) + 1;
+            }
+
+            const updatedList = [...prevConvs];
+            updatedList.splice(targetIndex, 1);
+            return [targetConv, ...updatedList];
+          } else {
+            // New conversation arrived, fetch updated list
+            fetchConvs();
+            return prevConvs;
+          }
+        });
+      };
+
+      const handleMessageRead = (data: { conversation_id: string; user_id: string }) => {
+        if (!data || !data.conversation_id) return;
+        if (String(data.user_id).toLowerCase() === String(user?.id).toLowerCase()) {
+          setConversations((prevConvs) =>
+            prevConvs.map((c) => (c.id === data.conversation_id ? { ...c, unread_count: 0 } : c))
+          );
+        }
+      };
+
+      const handleMessageEdited = (data: { conversation_id: string; message: MessengerMessage }) => {
+        if (!data || !data.message) return;
+        if (activeConvRef.current?.id === data.conversation_id) {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === data.message.id ? { ...m, ...data.message } : m))
+          );
+        }
+        setConversations((prev) =>
+          prev.map((c) => {
+            if (c.id === data.conversation_id && c.last_message?.id === data.message.id) {
+              return {
+                ...c,
+                last_message: {
+                  ...c.last_message,
+                  message_text: data.message.message_text,
+                },
+              };
+            }
+            return c;
+          })
+        );
+      };
+
+      const handleMessageDeleted = (data: { conversation_id: string; message_id: string }) => {
+        if (!data || !data.message_id) return;
+        if (activeConvRef.current?.id === data.conversation_id) {
+          setMessages((prev) => prev.filter((m) => m.id !== data.message_id));
+        }
+        setConversations((prev) =>
+          prev.map((c) => {
+            if (c.id === data.conversation_id && c.last_message?.id === data.message_id) {
+              return {
+                ...c,
+                last_message: {
+                  ...c.last_message,
+                  message_text: 'Message deleted',
+                },
+              };
+            }
+            return c;
+          })
+        );
+      };
+
+      const handleTypingUpdate = (data: { conversation_id: string; user_id: string; user_name: string; is_typing: boolean }) => {
+        if (!data) return;
+        if (activeConvRef.current?.id === data.conversation_id && String(data.user_id).toLowerCase() !== String(user?.id).toLowerCase()) {
+          setTypingUser(data.is_typing ? data.user_name || 'Someone' : null);
+        }
+      };
+
+      const handleReconnect = () => {
+        fetchConvs();
+        if (activeConvRef.current) {
+          getMessages(activeConvRef.current.id)
+            .then((msgs) => setMessages(msgs))
+            .catch(() => {});
+        }
+      };
+
+      socket.on('message:new', handleNewMessage);
+      socket.on('message:read', handleMessageRead);
+      socket.on('message:edited', handleMessageEdited);
+      socket.on('message:deleted', handleMessageDeleted);
+      socket.on('typing:update', handleTypingUpdate);
+      socket.on('connect', handleReconnect);
+
+      const appStateSub = AppState.addEventListener('change', (nextState) => {
+        if (nextState === 'active') {
+          fetchConvs();
+          if (!socket.connected) {
+            socket.connect();
+          }
+        }
+      });
+
+      return () => {
+        appStateSub.remove();
+        socket.off('message:new', handleNewMessage);
+        socket.off('message:read', handleMessageRead);
+        socket.off('message:edited', handleMessageEdited);
+        socket.off('message:deleted', handleMessageDeleted);
+        socket.off('typing:update', handleTypingUpdate);
+        socket.off('connect', handleReconnect);
+      };
+    };
+
+    let cleanupFn: (() => void) | undefined;
+    setupSocketListeners().then((cleanup) => {
+      cleanupFn = cleanup;
+    });
+
+    return () => {
+      isMounted = false;
+      if (cleanupFn) cleanupFn();
+    };
   }, []);
 
   const openConversation = async (conv: MessengerConversation) => {
@@ -68,7 +240,9 @@ export default function MessengerScreen() {
       const msgs = await getMessages(conv.id);
       setMessages(msgs);
       await markRead(conv.id);
-      fetchConvs();
+      setConversations((prev) =>
+        prev.map((c) => (c.id === conv.id ? { ...c, unread_count: 0 } : c))
+      );
     } catch (e) {
       console.error(e);
     } finally {

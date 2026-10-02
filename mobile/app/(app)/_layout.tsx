@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, Redirect } from 'expo-router';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet, AppState } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { LoadingState } from '../../components/LoadingState';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { getUnreadCount } from '../../services/messenger.service';
+import { getMessengerSocket } from '../../services/messengerSocket';
 
 const TabIcon = ({ label, focused, badgeCount }: { label: string; focused: boolean; badgeCount?: number }) => {
   const getSymbol = () => {
@@ -38,14 +39,61 @@ export default function AppLayout() {
   useEffect(() => {
     if (!isAuthenticated) return;
     
+    let isMounted = true;
+    let socketInstance: any = null;
+
     const fetchUnread = async () => {
       const count = await getUnreadCount();
-      setUnreadCount(count);
+      if (isMounted) {
+        setUnreadCount(count);
+      }
     };
 
+    // Initial fetch
     fetchUnread();
-    const interval = setInterval(fetchUnread, 10000);
-    return () => clearInterval(interval);
+
+    // Subscribe to Socket.IO real-time updates (no polling loop)
+    const initSocketListener = async () => {
+      const socket = await getMessengerSocket();
+      if (!socket || !isMounted) return;
+      socketInstance = socket;
+
+      const handleRealtimeUpdate = () => {
+        fetchUnread();
+      };
+
+      socket.on('message:new', handleRealtimeUpdate);
+      socket.on('message:read', handleRealtimeUpdate);
+      socket.on('conversation:update', handleRealtimeUpdate);
+      socket.on('connect', handleRealtimeUpdate);
+
+      const appStateSub = AppState.addEventListener('change', (nextState) => {
+        if (nextState === 'active') {
+          fetchUnread();
+          if (!socket.connected) {
+            socket.connect();
+          }
+        }
+      });
+
+      return () => {
+        appStateSub.remove();
+        socket.off('message:new', handleRealtimeUpdate);
+        socket.off('message:read', handleRealtimeUpdate);
+        socket.off('conversation:update', handleRealtimeUpdate);
+        socket.off('connect', handleRealtimeUpdate);
+      };
+    };
+
+    let cleanupFn: (() => void) | undefined;
+    initSocketListener().then((cleanup) => {
+      cleanupFn = cleanup;
+    });
+
+    return () => {
+      isMounted = false;
+      if (cleanupFn) cleanupFn();
+    };
   }, [isAuthenticated]);
 
   if (isLoading) {
