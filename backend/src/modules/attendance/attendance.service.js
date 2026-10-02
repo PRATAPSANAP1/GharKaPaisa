@@ -70,7 +70,7 @@ const checkIn = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
 
   // 1. Validate Phase 6-3 verification session
   const { rows: [session] } = await query(
-    `SELECT id, employee_id, status, liveness_status, face_status, environment_status, matched_environment_code, expires_at 
+    `SELECT id, employee_id, status, liveness_status, face_status, environment_status, matched_environment_code, expires_at, consumed_at 
      FROM attendance_verification_sessions 
      WHERE id = $1 LIMIT 1`,
     [verificationSessionId]
@@ -91,6 +91,13 @@ const checkIn = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
   if (session.status !== 'PASSED') {
     const error = new Error(`Verification session is not PASSED (Current status: ${session.status}). Check-in rejected.`);
     error.statusCode = 403;
+    throw error;
+  }
+
+  if (session.consumed_at) {
+    const error = new Error('Verification session has already been consumed. Please perform verification again.');
+    error.statusCode = 409;
+    error.code = 'VERIFICATION_SESSION_ALREADY_USED';
     throw error;
   }
 
@@ -162,11 +169,19 @@ const checkIn = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
       record = updRec;
     }
 
-    // Mark verification session as CONSUMED
-    await client.query(
-      `UPDATE attendance_verification_sessions SET status = 'CONSUMED', updated_at = NOW() WHERE id = $1`,
+    // Mark verification session as consumed atomically
+    const { rowCount } = await client.query(
+      `UPDATE attendance_verification_sessions SET consumed_at = NOW(), updated_at = NOW() WHERE id = $1 AND consumed_at IS NULL`,
       [session.id]
     );
+
+    if (rowCount === 0) {
+      await client.query('ROLLBACK');
+      const error = new Error('Verification session has already been consumed.');
+      error.statusCode = 409;
+      error.code = 'VERIFICATION_SESSION_ALREADY_USED';
+      throw error;
+    }
 
     await client.query('COMMIT');
 
@@ -207,7 +222,7 @@ const checkOut = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
 
   // 1. Validate Phase 6-3 verification session
   const { rows: [session] } = await query(
-    `SELECT id, employee_id, status, expires_at FROM attendance_verification_sessions WHERE id = $1 LIMIT 1`,
+    `SELECT id, employee_id, status, expires_at, consumed_at FROM attendance_verification_sessions WHERE id = $1 LIMIT 1`,
     [verificationSessionId]
   );
 
@@ -226,6 +241,13 @@ const checkOut = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
   if (session.status !== 'PASSED') {
     const error = new Error(`Verification session is not PASSED (Current status: ${session.status}). Check-out rejected.`);
     error.statusCode = 403;
+    throw error;
+  }
+
+  if (session.consumed_at) {
+    const error = new Error('Verification session has already been consumed. Please perform verification again.');
+    error.statusCode = 409;
+    error.code = 'VERIFICATION_SESSION_ALREADY_USED';
     throw error;
   }
 
@@ -271,11 +293,19 @@ const checkOut = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
       [existing.id]
     );
 
-    // Mark verification session as CONSUMED
-    await client.query(
-      `UPDATE attendance_verification_sessions SET status = 'CONSUMED', updated_at = NOW() WHERE id = $1`,
+    // Mark verification session as consumed atomically
+    const { rowCount } = await client.query(
+      `UPDATE attendance_verification_sessions SET consumed_at = NOW(), updated_at = NOW() WHERE id = $1 AND consumed_at IS NULL`,
       [session.id]
     );
+
+    if (rowCount === 0) {
+      await client.query('ROLLBACK');
+      const error = new Error('Verification session has already been consumed.');
+      error.statusCode = 409;
+      error.code = 'VERIFICATION_SESSION_ALREADY_USED';
+      throw error;
+    }
 
     await client.query('COMMIT');
 

@@ -5101,6 +5101,14 @@ const migrate = async () => {
     logger.error('Attendance Environment Status V1 migration error note:', envStatusErr.message);
   }
 
+  // Attendance Consumed At V1 Migration
+  try {
+    const { migrateAttendanceConsumedAtV1 } = require('./migrate_attendance_consumed_at_v1');
+    await migrateAttendanceConsumedAtV1();
+  } catch (consumedAtErr) {
+    logger.error('Attendance Consumed At V1 migration error note:', consumedAtErr.message);
+  }
+
   if (require.main === module) {
     process.exit(0);
   }
