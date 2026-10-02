@@ -128,6 +128,19 @@ export const notificationService = {
       console.error('Error updating notification preferences:', error);
       throw error;
     }
+  },
+
+  /**
+   * Register push notification token for current device
+   */
+  registerDevicePushToken: async (token: string, deviceType: string = 'mobile'): Promise<boolean> => {
+    try {
+      const response = await apiClient.post('/notifications/device-token', { token, deviceType });
+      return response.data?.success === true;
+    } catch (error) {
+      console.warn('Push token registration omitted/failed:', error);
+      return false;
+    }
   }
 };
 

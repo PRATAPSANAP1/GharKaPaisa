@@ -10,6 +10,7 @@ export interface DeepLinkRoute {
 
 // Whitelisted route patterns
 const WHITELISTED_PATHS: Record<string, string> = {
+  '/attendance': '/(app)/attendance',
   '/applications': '/(app)/application-details',
   '/application-details': '/(app)/application-details',
   '/leads': '/(app)/lead-details',

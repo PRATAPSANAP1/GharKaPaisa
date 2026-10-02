@@ -21,7 +21,7 @@ export default function EmployeeMobileBottomNav() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  if (!isMobile) return null;
+  if (!isMobile || location.pathname.includes('/messenger')) return null;
 
   const isActive = (path) => {
     if (path === '/employee/dashboard') {

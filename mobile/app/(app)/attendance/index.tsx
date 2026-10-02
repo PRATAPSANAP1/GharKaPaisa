@@ -13,9 +13,9 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useAuth } from '../../../contexts/AuthContext';
-import { colors } from '../../theme/colors';
-import { typography } from '../../theme/typography';
-import { spacing } from '../../theme/spacing';
+import { colors } from '../../../theme/colors';
+import { typography } from '../../../theme/typography';
+import { spacing } from '../../../theme/spacing';
 import { Button, Card, LoadingState, ErrorState } from '../../../components';
 import { Icon } from '../../../components/Icon';
 import * as ImagePicker from 'expo-image-picker';
@@ -71,7 +71,7 @@ export default function AttendanceScreen() {
   const [showDetailModal, setShowDetailModal] = useState(false);
 
   const checkAttendanceAccess = () => {
-    return isAttendanceEnabledForEmployee(user?.employee_code);
+    return isAttendanceEnabledForEmployee((user as any)?.employee_code || (user as any)?.employee_id || '');
   };
 
   const fetchTodayAttendance = async () => {

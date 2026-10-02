@@ -29,7 +29,7 @@ export type IconName =
   | 'x';
 
 interface IconProps {
-  name: IconName;
+  name: IconName | string;
   size?: number;
   color?: string;
   style?: TextStyle;
@@ -63,6 +63,10 @@ export const Icon: React.FC<IconProps> = ({ name, size = 16, color = '#000', sty
       case 'arrow-up-right': return '↗';
       case 'device': return '📱';
       case 'x': return '✕';
+      case 'lock': return '🔒';
+      case 'calendar': return '📅';
+      case 'camera': return '📷';
+      case 'x-circle': return '❌';
       default: return '•';
     }
   };

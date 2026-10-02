@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuthStore } from '../../app/store/authStore';
 import * as chatbotAPI from './chatbotService';
@@ -91,7 +91,12 @@ const REDIRECT_ACTIONS = {
 export default function Chatbot() {
   const { isDark, C } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const user = useAuthStore((s) => s.user);
+
+  if (location.pathname.includes('/messenger') || location.pathname.includes('/view-messages')) {
+    return null;
+  }
 
   const userRole = user?.role?.toUpperCase() || 'PUBLIC';
   const panel = userRole.toLowerCase();
