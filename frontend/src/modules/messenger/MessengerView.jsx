@@ -218,7 +218,12 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   const [msgSearch, setMsgSearch] = useState('');
   const [callStatus, setCallStatus] = useState(null); // { type: 'voice' | 'video', active: true }
   const [activeCall, setActiveCall] = useState(null); // Active WebRTC Call Session
+  const activeCallRef = useRef(activeCall);
   const [isInitiatingCall, setIsInitiatingCall] = useState(false);
+
+  useEffect(() => {
+    activeCallRef.current = activeCall;
+  }, [activeCall]);
 
   // Listen for real-time incoming WebRTC call socket events
   useEffect(() => {
@@ -229,7 +234,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
       console.log('[CALL] incoming');
 
       // If user is already on a call, immediately signal busy
-      if (activeCall) {
+      if (activeCallRef.current) {
         socket.emit('call:busy', {
           call_id: data.call_id,
           caller_id: data.caller_id
@@ -252,7 +257,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     return () => {
       socket.off('call:incoming', handleIncomingCall);
     };
-  }, [user?.id, activeCall]);
+  }, [user?.id]);
 
   const handleInitiateCall = (callType) => {
     if (isInitiatingCall || activeCall) return;
