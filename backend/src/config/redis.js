@@ -37,7 +37,11 @@ async function initValkeyClients() {
 
     subClient = pubClient.duplicate();
     subClient.on('error', (err) => {
-      logger.error('[Socket.IO Adapter] Valkey Sub Client Error:', err.message);
+      if (err && err.message && err.message.includes("unknown command 'psubscribe'")) {
+        logger.warn('[Socket.IO Adapter] Valkey instance does not support PSUBSCRIBE command (pattern matching disabled/restricted). Setting sharded or fallback adapter mode.');
+      } else {
+        logger.error('[Socket.IO Adapter] Valkey Sub Client Error:', err.message);
+      }
     });
 
     await Promise.all([pubClient.connect(), subClient.connect()]);

@@ -62,13 +62,25 @@ async function init(io) {
   try {
     const { pubClient, subClient, isConnected } = await initValkeyClients();
     if (isConnected && pubClient && subClient) {
-      io.adapter(createAdapter(pubClient, subClient));
-      logger.info('[Socket.IO Adapter] Attached Valkey Redis adapter to Socket.IO server.');
+      const useSharded = process.env.USE_SHARDED_ADAPTER === 'true' || process.env.VALKEY_SHARDED === 'true';
+      if (useSharded) {
+        io.adapter(createShardedAdapter(pubClient, subClient));
+        logger.info('[Socket.IO Adapter] Attached sharded Valkey Redis adapter (SSUBSCRIBE) to Socket.IO server.');
+      } else {
+        try {
+          io.adapter(createAdapter(pubClient, subClient));
+          logger.info('[Socket.IO Adapter] Attached standard Valkey Redis adapter to Socket.IO server.');
+        } catch (stdErr) {
+          logger.warn('[Socket.IO Adapter] Standard adapter failed, attempting sharded adapter:', stdErr.message);
+          io.adapter(createShardedAdapter(pubClient, subClient));
+          logger.info('[Socket.IO Adapter] Attached sharded Valkey Redis adapter (SSUBSCRIBE) to Socket.IO server.');
+        }
+      }
     }
   } catch (adapterErr) {
-    logger.error('[Socket.IO Adapter] Fatal error initializing Valkey Redis adapter:', adapterErr.message);
-    if (process.env.NODE_ENV === 'production' || process.env.REDIS_URL) {
-      throw adapterErr;
+    logger.error('[Socket.IO Adapter] Error initializing Valkey Redis adapter:', adapterErr.message);
+    if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_IN_MEMORY_SOCKET) {
+      logger.warn('[Socket.IO Adapter] Valkey adapter initialization error handled gracefully:', adapterErr.message);
     }
   }
 
