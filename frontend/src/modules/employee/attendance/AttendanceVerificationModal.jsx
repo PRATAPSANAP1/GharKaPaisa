@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, RefreshCw } from 'lucide-react';
 import { FaceLivenessDetectorCore } from '@aws-amplify/ui-react-liveness';
@@ -34,6 +34,8 @@ export default function AttendanceVerificationModal({
   // Authoritative Session ID Refs to avoid stale closure issues during async callbacks
   const sessionIdRef = useRef(null);
   const providerSessionIdRef = useRef(null);
+  const credentialsRef = useRef(null);
+  const isInitiatingRef = useRef(false);
 
   // Window resize listener
   useEffect(() => {
@@ -44,9 +46,11 @@ export default function AttendanceVerificationModal({
 
   // Modal close handler
   const handleModalClose = useCallback(() => {
+    isInitiatingRef.current = false;
     setCurrentState('INSTRUCTIONS');
     sessionIdRef.current = null;
     providerSessionIdRef.current = null;
+    credentialsRef.current = null;
     setSessionId(null);
     setAwsProviderSessionId(null);
     setAwsCredentials(null);
@@ -58,9 +62,11 @@ export default function AttendanceVerificationModal({
   // Cleanup state when modal closes
   useEffect(() => {
     if (!isOpen) {
+      isInitiatingRef.current = false;
       setCurrentState('INSTRUCTIONS');
       sessionIdRef.current = null;
       providerSessionIdRef.current = null;
+      credentialsRef.current = null;
       setSessionId(null);
       setAwsProviderSessionId(null);
       setAwsCredentials(null);
@@ -70,11 +76,12 @@ export default function AttendanceVerificationModal({
 
   // Initiate AWS Rekognition Face Liveness Flow
   const handleStartVerification = async () => {
-    if (['LIVENESS_INITIATING', 'LIVENESS_ACTIVE', 'VERIFYING_RESULTS', 'ATTENDANCE_SUBMITTING'].includes(currentState)) {
+    if (isInitiatingRef.current || ['LIVENESS_INITIATING', 'LIVENESS_ACTIVE', 'VERIFYING_RESULTS', 'ATTENDANCE_SUBMITTING'].includes(currentState)) {
       return; // Prevent duplicate execution
     }
 
     try {
+      isInitiatingRef.current = true;
       setErrorMessage('');
       setCurrentState('LIVENESS_INITIATING');
       setOverlayMessage('Starting secure verification session...');
@@ -119,6 +126,7 @@ export default function AttendanceVerificationModal({
       setAwsProviderSessionId(cleanProviderSessionId);
       setAwsRegion(region);
       if (tempCredentials) {
+        credentialsRef.current = tempCredentials;
         setAwsCredentials(tempCredentials);
       }
 
@@ -137,22 +145,29 @@ export default function AttendanceVerificationModal({
     } catch (err) {
       console.error('Verification initiation error:', err);
       const errReason = err.response?.data?.reason || err.reason;
-      const errText = err.response?.data?.message || err.message || 'Could not initiate face liveness session';
+      const isExpired = errReason === 'LIVENESS_EXPIRED' || err.response?.status === 410;
+      const errText = err.response?.data?.message || err.message || (isExpired ? 'Face verification session expired. Please retry.' : 'Could not initiate face liveness session');
 
-      if (errReason === 'LIVENESS_PROVIDER_NOT_CONFIGURED' || err.response?.status === 503) {
+      if (isExpired) {
+        setErrorMessage('Face verification session expired. Please retry.');
+        setCurrentState('VERIFICATION_FAILED');
+      } else if (errReason === 'LIVENESS_PROVIDER_NOT_CONFIGURED' || err.response?.status === 503) {
         setErrorMessage('Liveness verification service is not configured in production environment');
         setCurrentState('SERVICE_UNAVAILABLE');
       } else {
         setErrorMessage(errText);
         setCurrentState('VERIFICATION_FAILED');
       }
+    } finally {
+      isInitiatingRef.current = false;
     }
   };
 
   // Custom AWS Credential Provider for FaceLivenessDetectorCore
   const credentialProvider = useCallback(async () => {
-    const currentSessionId = sessionIdRef.current || sessionId;
-    const currentProviderSessionId = providerSessionIdRef.current || awsProviderSessionId;
+    const currentSessionId = sessionIdRef.current;
+    const currentProviderSessionId = providerSessionIdRef.current;
+    const currentCreds = credentialsRef.current;
 
     // Safe Diagnostic Log (NO SECRETS, ACCESS KEYS, TOKENS, OR FULL SESSION IDS LOGGED)
     console.log('[LIVENESS DIAGNOSTIC]', {
@@ -160,15 +175,15 @@ export default function AttendanceVerificationModal({
       providerSessionIdPresent: !!currentProviderSessionId,
       providerSessionIdLength: currentProviderSessionId ? currentProviderSessionId.length : 0,
       credentialProviderInvoked: true,
-      expiration: awsCredentials?.expiration
+      expiration: currentCreds?.expiration
     });
 
-    if (awsCredentials?.accessKeyId && awsCredentials?.secretAccessKey) {
+    if (currentCreds?.accessKeyId && currentCreds?.secretAccessKey) {
       return {
-        accessKeyId: awsCredentials.accessKeyId,
-        secretAccessKey: awsCredentials.secretAccessKey,
-        sessionToken: awsCredentials.sessionToken,
-        expiration: awsCredentials.expiration ? new Date(awsCredentials.expiration) : undefined,
+        accessKeyId: currentCreds.accessKeyId,
+        secretAccessKey: currentCreds.secretAccessKey,
+        sessionToken: currentCreds.sessionToken,
+        expiration: currentCreds.expiration ? new Date(currentCreds.expiration) : undefined,
       };
     }
 
@@ -184,6 +199,7 @@ export default function AttendanceVerificationModal({
       throw new Error('Could not obtain temporary AWS credentials for liveness challenge');
     }
 
+    credentialsRef.current = credsData;
     setAwsCredentials(credsData);
 
     return {
@@ -192,7 +208,11 @@ export default function AttendanceVerificationModal({
       sessionToken: credsData.sessionToken,
       expiration: credsData.expiration ? new Date(credsData.expiration) : undefined,
     };
-  }, [sessionId, awsProviderSessionId, awsCredentials]);
+  }, []);
+
+  const livenessConfig = useMemo(() => ({
+    credentialProvider
+  }), [credentialProvider]);
 
   // Called when AWS Amplify FaceLivenessDetectorCore completes client-side challenge
   const handleAnalysisComplete = async () => {
@@ -254,9 +274,13 @@ export default function AttendanceVerificationModal({
     } catch (err) {
       console.error('Liveness analysis error:', err);
       const errReason = err.response?.data?.reason || err.reason;
-      const errText = err.response?.data?.message || err.message || 'Face verification failed';
+      const isExpired = errReason === 'LIVENESS_EXPIRED' || err.response?.status === 410;
+      const errText = err.response?.data?.message || err.message || (isExpired ? 'Face verification session expired. Please retry.' : 'Face verification failed');
 
-      if (errReason === 'LIVENESS_PROVIDER_NOT_CONFIGURED' || err.response?.status === 503) {
+      if (isExpired) {
+        setErrorMessage('Face verification session expired. Please retry.');
+        setCurrentState('VERIFICATION_FAILED');
+      } else if (errReason === 'LIVENESS_PROVIDER_NOT_CONFIGURED' || err.response?.status === 503) {
         setErrorMessage('Liveness verification service is not configured in production environment');
         setCurrentState('SERVICE_UNAVAILABLE');
       } else {
@@ -281,8 +305,10 @@ export default function AttendanceVerificationModal({
 
   // Retry Flow: create completely NEW verification session & AWS liveness session
   const handleRetry = () => {
+    isInitiatingRef.current = false;
     sessionIdRef.current = null;
     providerSessionIdRef.current = null;
+    credentialsRef.current = null;
     setSessionId(null);
     setAwsProviderSessionId(null);
     setAwsCredentials(null);
@@ -441,9 +467,7 @@ export default function AttendanceVerificationModal({
                       onAnalysisComplete={handleAnalysisComplete}
                       onError={handleLivenessError}
                       onUserCancel={handleLivenessCancel}
-                      config={{
-                        credentialProvider
-                      }}
+                      config={livenessConfig}
                     />
                   </div>
                 ) : (

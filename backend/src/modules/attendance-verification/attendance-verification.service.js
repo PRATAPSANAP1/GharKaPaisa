@@ -279,28 +279,34 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, reqUser })
   const livenessResult = await faceLivenessProvider.getLivenessSessionResult(providerSessionId);
 
   if (!livenessResult.isLive) {
+    const isExpired = livenessResult.status === 'LIVENESS_EXPIRED';
     const failureReason = livenessResult.status === 'LIVENESS_PROVIDER_NOT_CONFIGURED'
       ? 'LIVENESS_PROVIDER_NOT_CONFIGURED'
-      : (livenessResult.status === 'LIVENESS_PROVIDER_ERROR' ? 'LIVENESS_PROVIDER_ERROR' : 'LIVENESS_FAILED');
+      : (isExpired ? 'LIVENESS_EXPIRED' : (livenessResult.status === 'LIVENESS_PROVIDER_ERROR' ? 'LIVENESS_PROVIDER_ERROR' : 'LIVENESS_FAILED'));
+
+    const dbLivenessStatus = isExpired ? 'EXPIRED' : 'FAILED';
+    const dbSessionStatus = isExpired ? 'EXPIRED' : 'FAILED';
 
     await query(
       `UPDATE attendance_verification_sessions 
-       SET liveness_status = 'FAILED', status = 'FAILED', failure_reason = $1, updated_at = NOW() 
-       WHERE id = $2`,
-      [failureReason, sessionId]
+       SET liveness_status = $1, status = $2, failure_reason = $3, updated_at = NOW() 
+       WHERE id = $4`,
+      [dbLivenessStatus, dbSessionStatus, failureReason, sessionId]
     );
 
-    await logAction(reqUser, 'ATTENDANCE_LIVENESS_FAILED', authEmpId, {
+    await logAction(reqUser, isExpired ? 'ATTENDANCE_LIVENESS_EXPIRED' : 'ATTENDANCE_LIVENESS_FAILED', authEmpId, {
       session_id: sessionId,
       reason: failureReason,
       confidence: livenessResult.confidence,
     });
 
-    const statusCode = failureReason === 'LIVENESS_PROVIDER_NOT_CONFIGURED' ? 503 : 400;
+    const statusCode = failureReason === 'LIVENESS_PROVIDER_NOT_CONFIGURED' ? 503 : (isExpired ? 410 : 400);
     const error = new Error(
       failureReason === 'LIVENESS_PROVIDER_NOT_CONFIGURED'
         ? 'Liveness verification service is not configured in production environment'
-        : 'Liveness verification failed. Please align face inside the frame and retry.'
+        : (isExpired
+          ? 'Face verification session expired. Please retry.'
+          : 'Liveness verification failed. Please align face inside the frame and retry.')
     );
     error.statusCode = statusCode;
     error.reason = failureReason;
