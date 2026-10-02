@@ -38,10 +38,7 @@ jobs:
           COMMAND_ID=$(aws ssm send-command \
             --region ap-south-1 \
             --document-name "AWS-RunShellScript" \
-            --targets \
-              "Key=tag:Application,Values=GharKaPaisa" \
-              "Key=tag:Environment,Values=Production" \
-              "Key=tag:Service,Values=Backend" \
+            --instance-ids "i-07600948e01bb2aa3" "i-0541539508bb8afc9" \
             --parameters "commands=[\"sudo -u ubuntu -H bash -c 'cd /home/ubuntu/GharKaPaisa/backend && git fetch origin master && git reset --hard origin/master && npm ci && node --check src/server.js && pm2 reload gharkapaisa-backend && pm2 save'\"]" \
             --query 'Command.CommandId' \
             --output text)
