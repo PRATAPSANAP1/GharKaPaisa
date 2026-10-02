@@ -5093,6 +5093,14 @@ const migrate = async () => {
     logger.error('Phase 6-9 Biometric Enrollment migration error note:', bioErr.message);
   }
 
+  // Attendance Environment Status V1 Migration
+  try {
+    const { migrateAttendanceEnvironmentStatusV1 } = require('./migrate_attendance_environment_status_v1');
+    await migrateAttendanceEnvironmentStatusV1();
+  } catch (envStatusErr) {
+    logger.error('Attendance Environment Status V1 migration error note:', envStatusErr.message);
+  }
+
   if (require.main === module) {
     process.exit(0);
   }
