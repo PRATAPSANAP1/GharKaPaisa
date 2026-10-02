@@ -103,7 +103,9 @@ function NotificationSettings({ onMuteChange }) {
       padding: '16px',
       background: isDark ? '#1a1a1a' : '#f8fafc',
       borderRadius: '12px',
-      border: `1px solid ${C.border}`
+      border: `1px solid ${C.border}`,
+      boxSizing: 'border-box',
+      width: '100%'
     }}>
       {showSuccess && (
         <div style={{
@@ -128,14 +130,18 @@ function NotificationSettings({ onMuteChange }) {
       {/* Notification Toggle */}
       <div style={{ 
         display: 'flex', 
+        flexWrap: 'wrap',
         alignItems: 'center', 
         justifyContent: 'space-between',
+        gap: '10px',
         padding: '12px',
         background: isDark ? '#222' : '#fff',
         borderRadius: '8px',
-        border: `1px solid ${C.border}`
+        border: `1px solid ${C.border}`,
+        boxSizing: 'border-box',
+        width: '100%'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '160px' }}>
           <div style={{
             width: '36px',
             height: '36px',
@@ -179,14 +185,18 @@ function NotificationSettings({ onMuteChange }) {
       {/* Email Toggle */}
       <div style={{ 
         display: 'flex', 
+        flexWrap: 'wrap',
         alignItems: 'center', 
         justifyContent: 'space-between',
+        gap: '10px',
         padding: '12px',
         background: isDark ? '#222' : '#fff',
         borderRadius: '8px',
-        border: `1px solid ${C.border}`
+        border: `1px solid ${C.border}`,
+        boxSizing: 'border-box',
+        width: '100%'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '160px' }}>
           <div style={{
             width: '36px',
             height: '36px',
