@@ -384,14 +384,22 @@ async function uploadAttachment(req, res, next) {
   }
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 async function getMediaAttachment(req, res, next) {
   try {
     const { attachmentId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user?.id;
+
+    if (!attachmentId || !UUID_REGEX.test(attachmentId)) {
+      return res.status(404).json({ success: false, message: 'Attachment not found' });
+    }
+
     const media = await service.getMediaAttachmentStream(attachmentId, userId, req.user);
 
+    const safeFileName = require('path').basename(media.fileName || 'attachment').replace(/["\r\n\\]/g, '');
     res.setHeader('Cache-Control', 'private, max-age=3600, no-transform');
-    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(media.fileName || 'attachment')}"`);
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(safeFileName)}"`);
 
     if (media.isLocal) {
       if (media.contentType) {
@@ -407,16 +415,23 @@ async function getMediaAttachment(req, res, next) {
       res.setHeader('Content-Length', media.contentLength);
     }
 
+    media.stream.on('error', (streamErr) => {
+      logger.warn('[Messenger Media Stream Error]:', streamErr.message);
+      if (!res.headersSent) {
+        res.status(500).json({ success: false, message: 'Failed to stream media attachment' });
+      }
+    });
+
     return media.stream.pipe(res);
   } catch (err) {
-    if (err.message && err.message.includes('Access denied')) {
-      return res.status(403).json({ success: false, message: err.message });
+    if (err.message && (err.message.includes('Access denied') || err.message.includes('permission'))) {
+      return res.status(403).json({ success: false, message: 'Access denied to this attachment' });
     }
-    if (err.message && err.message.includes('not found')) {
-      return res.status(404).json({ success: false, message: err.message });
+    if (err.message && (err.message.includes('not found') || err.message.includes('unavailable') || err.message.includes('invalid input syntax'))) {
+      return res.status(404).json({ success: false, message: 'Attachment not found' });
     }
-    logger.error('[Messenger Media Error]:', err.message);
-    return res.status(404).json({ success: false, message: 'Media attachment unavailable' });
+    logger.warn('[Messenger Media Error]:', err.message);
+    return res.status(404).json({ success: false, message: 'Attachment not found' });
   }
 }
 

@@ -39,7 +39,7 @@ export function normalizeMessengerAttachment(att) {
   if (!att) return null;
   const id = att.id || att.attachmentId || att.attachment_id || att.media_id;
   let fileUrl = att.file_url || att.url || att.fileUrl || att.media_url;
-  if (!fileUrl && id) {
+  if (id) {
     fileUrl = `/api/v1/messenger/media/${id}`;
   }
   const fileName = att.file_name || att.fileName || att.name || 'Attachment';
@@ -48,7 +48,7 @@ export function normalizeMessengerAttachment(att) {
 
   const isImg = fileType === 'IMAGE' ||
                 fileType.startsWith('IMAGE/') ||
-                /\.(png|jpe?g|gif|webp|bmp|svg)($|\?)/i.test(fileUrl || fileName || '') ||
+                /\.(png|jpe?g|gif|webp|bmp)$/i.test(fileName || fileUrl || '') ||
                 (fileUrl && fileUrl.startsWith('blob:'));
 
   return {
@@ -75,7 +75,7 @@ export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props
       return;
     }
 
-    // Direct render for data URIs and local blob URLs
+    // Direct render for local data URIs and local blob URLs
     if (src.startsWith('data:') || src.startsWith('blob:')) {
       setBlobUrl(src);
       setLoading(false);
@@ -141,7 +141,17 @@ export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props
     );
   }
 
-  if (!blobUrl) return null;
+  if (!blobUrl) {
+    return (
+      <div style={{
+        width: '180px', height: '100px', background: '#F8FAFC', border: '1px solid #E2E8F0',
+        borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        color: '#94A3B8', fontSize: '11px', fontWeight: 600, padding: '8px', textAlign: 'center', gap: '4px'
+      }}>
+        <span>📷 Unable to load image</span>
+      </div>
+    );
+  }
 
   return (
     <img
@@ -651,18 +661,46 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     };
   }, []);
 
+  const FORBIDDEN_FILE_EXTS = [
+    '.exe', '.bat', '.cmd', '.sh', '.php', '.pl', '.cgi',
+    '.jar', '.vbs', '.js', '.ts', '.html', '.htm', '.xhtml',
+    '.scr', '.pif', '.application', '.gadget', '.msi', '.msp',
+    '.com', '.hta', '.cpl', '.msc'
+  ];
+
   // File Input Selection Handler
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
-    const newAttachments = files.map(file => {
-      const isImg = file.type?.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg)$/i.test(file.name);
+    const validFiles = [];
+    for (const file of files) {
+      const extMatch = file.name.match(/\.[^.]+$/);
+      const ext = extMatch ? extMatch[0].toLowerCase() : '';
+      if (FORBIDDEN_FILE_EXTS.includes(ext)) {
+        alert(`"${file.name}" cannot be uploaded: Executable and script files are forbidden.`);
+        continue;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`"${file.name}" exceeds the maximum allowed upload limit of 10 MB.`);
+        continue;
+      }
+      validFiles.push(file);
+    }
+
+    if (!validFiles.length) {
+      if (e.target) e.target.value = '';
+      return;
+    }
+
+    const newAttachments = validFiles.map(file => {
+      const isImg = file.type?.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp)$/i.test(file.name);
       const isPdf = file.type === 'application/pdf' || file.name.endsWith('.pdf');
+      const isMedia = file.type?.startsWith('video/') || file.type?.startsWith('audio/') || /\.(mp4|webm|mov|mp3|wav|ogg|m4a)$/i.test(file.name);
       const objectUrl = createTrackedBlobUrl(file);
       return {
         file_name: file.name,
-        file_type: isImg ? 'IMAGE' : isPdf ? 'PDF' : 'DOCUMENT',
+        file_type: isImg ? 'IMAGE' : isPdf ? 'PDF' : isMedia ? 'MEDIA' : 'DOCUMENT',
         file_size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
         file_url: objectUrl,
         previewUrl: objectUrl,
@@ -686,6 +724,10 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
       if (item.type && item.type.indexOf('image') !== -1) {
         const file = item.getAsFile();
         if (file) {
+          if (file.size > 10 * 1024 * 1024) {
+            alert('Pasted image exceeds the 10 MB maximum allowed size.');
+            continue;
+          }
           hasPastedImage = true;
           const objectUrl = createTrackedBlobUrl(file);
           const newAtt = {
@@ -717,22 +759,35 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     });
   };
 
-  // Image Download Helper
-  const handleDownloadImage = async (rawUrl, fileName = 'image.png') => {
+  // Image / File Download Helper via Authenticated Blob Request
+  const handleDownloadImage = async (rawUrl, fileName = 'attachment') => {
     if (!rawUrl) return;
     try {
-      const response = await api.get(rawUrl, { responseType: 'blob' });
+      let fetchPath = rawUrl;
+      if (fetchPath.startsWith('http://') || fetchPath.startsWith('https://')) {
+        try {
+          const parsed = new URL(rawUrl);
+          fetchPath = parsed.pathname + parsed.search;
+        } catch (e) {
+          fetchPath = rawUrl;
+        }
+      }
+      if (fetchPath.startsWith('/api/v1')) {
+        fetchPath = fetchPath.slice('/api/v1'.length);
+      }
+
+      const response = await api.get(fetchPath, { responseType: 'blob' });
       const blob = response.data;
       const blobUrl = createTrackedBlobUrl(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = fileName || `downloaded_image_${Date.now()}.png`;
+      a.download = fileName || `downloaded_file_${Date.now()}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       setTimeout(() => revokeTrackedBlobUrl(blobUrl), 10000);
     } catch (err) {
-      alert('Failed to download image. Session may have expired or access denied.');
+      alert('File download failed. Please try again.');
     }
   };
 
@@ -2118,9 +2173,14 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                                           </div>
                                         </div>
                                         {!isFailed && displayUrl && (
-                                          <a href={displayUrl} target="_blank" rel="noreferrer" style={{ color: '#2563EB' }}>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); handleDownloadImage(displayUrl, norm.fileName); }}
+                                            style={{ background: 'transparent', border: 'none', color: '#2563EB', cursor: 'pointer', padding: '6px' }}
+                                            title="Download File"
+                                          >
                                             <FaDownload size={14} />
-                                          </a>
+                                          </button>
                                         )}
                                       </div>
                                     );

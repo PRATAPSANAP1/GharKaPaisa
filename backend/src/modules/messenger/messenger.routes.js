@@ -34,11 +34,44 @@ router.post('/conversations/:id/clear', messengerLimiter, controller.clearChat);
 router.post('/conversations/:id/leave', messengerLimiter, controller.leaveGroup);
 router.delete('/conversations/:id', messengerLimiter, controller.deleteConversation);
 
+const path = require('path');
 const multer = require('multer');
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+const FORBIDDEN_EXTS = [
+  '.exe', '.bat', '.cmd', '.sh', '.php', '.pl', '.cgi',
+  '.jar', '.vbs', '.js', '.ts', '.html', '.htm', '.xhtml',
+  '.scr', '.pif', '.application', '.gadget', '.msi', '.msp',
+  '.com', '.hta', '.cpl', '.msc'
+];
+
+const fileFilter = (req, file, cb) => {
+  const ext = path.extname(file?.originalname || '').toLowerCase();
+  if (FORBIDDEN_EXTS.includes(ext)) {
+    return cb(new Error('Forbidden file type: Executable and script files are not allowed.'), false);
+  }
+  cb(null, true);
+};
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter,
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+});
+
+const handleUploadMiddleware = (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ success: false, message: 'File size exceeds maximum allowed limit of 10 MB.' });
+      }
+      return res.status(400).json({ success: false, message: err.message || 'File upload error' });
+    }
+    next();
+  });
+};
 
 router.post('/messages', messengerLimiter, controller.sendMessage);
-router.post('/attachments/upload', messengerLimiter, upload.single('file'), controller.uploadAttachment);
+router.post('/attachments/upload', messengerLimiter, handleUploadMiddleware, controller.uploadAttachment);
 router.get('/media/:attachmentId', controller.getMediaAttachment);
 router.put('/messages/:id', messengerLimiter, controller.editMessage);
 router.delete('/messages/:id', messengerLimiter, controller.deleteMessage);

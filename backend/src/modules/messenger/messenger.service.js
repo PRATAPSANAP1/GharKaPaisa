@@ -617,6 +617,49 @@ async function removeGroupMember(conversationId, currentUserId, targetUserId, us
   return await repo.getConversationParticipants(conversationId);
 }
 
+const FORBIDDEN_EXTENSIONS = [
+  '.exe', '.bat', '.cmd', '.sh', '.php', '.pl', '.cgi',
+  '.jar', '.vbs', '.js', '.ts', '.html', '.htm', '.xhtml',
+  '.scr', '.pif', '.application', '.gadget', '.msi', '.msp',
+  '.com', '.hta', '.cpl', '.msc'
+];
+
+function validateAttachmentBuffer(buffer, originalName, mimeType) {
+  if (!buffer || buffer.length < 4) {
+    throw new Error('Invalid or empty file data.');
+  }
+
+  const ext = require('path').extname(originalName || '').toLowerCase();
+  if (FORBIDDEN_EXTENSIONS.includes(ext)) {
+    throw new Error('Forbidden file type: Executable and script files are not allowed.');
+  }
+
+  const header = buffer.slice(0, 12);
+  const isJpg = header[0] === 0xFF && header[1] === 0xD8 && header[2] === 0xFF;
+  const isPng = header[0] === 0x89 && header[1] === 0x50 && header[2] === 0x4E && header[3] === 0x47;
+  const isGif = header[0] === 0x47 && header[1] === 0x46 && header[2] === 0x49 && header[3] === 0x38;
+  const isPdf = header[0] === 0x25 && header[1] === 0x50 && header[2] === 0x44 && header[3] === 0x46; // %PDF
+  const isRiff = header[0] === 0x52 && header[1] === 0x49 && header[2] === 0x46 && header[3] === 0x46; // RIFF (WebP, etc.)
+
+  if (['.jpg', '.jpeg'].includes(ext) && !isJpg) {
+    throw new Error('File content does not match JPEG image format.');
+  }
+  if (ext === '.png' && !isPng) {
+    throw new Error('File content does not match PNG image format.');
+  }
+  if (ext === '.gif' && !isGif) {
+    throw new Error('File content does not match GIF image format.');
+  }
+  if (ext === '.pdf' && !isPdf) {
+    throw new Error('File content does not match PDF document format.');
+  }
+  if (ext === '.webp' && !isRiff) {
+    throw new Error('File content does not match WebP image format.');
+  }
+
+  return true;
+}
+
 async function uploadAttachment(file) {
   const fs = require('fs');
   const path = require('path');
@@ -626,12 +669,17 @@ async function uploadAttachment(file) {
 
   if (!file || !file.buffer) throw new Error('File object is required');
 
-  const originalName = file.originalname || 'attachment';
+  const originalName = path.basename(file.originalname || 'attachment').replace(/["\r\n\\]/g, '');
   const ext = path.extname(originalName).toLowerCase() || '.png';
   const mimeType = file.mimetype || 'image/png';
-  const isImage = mimeType.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(originalName);
+
+  // Perform validation on file buffer
+  validateAttachmentBuffer(file.buffer, originalName, mimeType);
+
+  const isImage = mimeType.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp)$/i.test(originalName);
   const isPdf = mimeType === 'application/pdf' || originalName.endsWith('.pdf');
-  const fileType = isImage ? 'IMAGE' : isPdf ? 'PDF' : 'DOCUMENT';
+  const isAudioVideo = mimeType.startsWith('video/') || mimeType.startsWith('audio/') || /\.(mp4|webm|mov|mp3|wav|ogg|m4a)$/i.test(originalName);
+  const fileType = isImage ? 'IMAGE' : isPdf ? 'PDF' : isAudioVideo ? 'MEDIA' : 'DOCUMENT';
   const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
 
   let fileUrl = null;
