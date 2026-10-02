@@ -4,7 +4,10 @@ import { getApiV1Url } from '../config/api';
 let socket = null;
 
 export function getMessengerSocket() {
-  if (socket && socket.connected) {
+  if (socket) {
+    if (!socket.connected) {
+      socket.connect();
+    }
     return socket;
   }
 

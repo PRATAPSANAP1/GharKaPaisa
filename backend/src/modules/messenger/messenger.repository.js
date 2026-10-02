@@ -340,6 +340,74 @@ async function getMessageById(messageId) {
 }
 
 /**
+ * Get single message with full sender, attachment, and reply details
+ */
+async function getMessageDetails(messageId) {
+  const sql = `
+    SELECT 
+      m.id,
+      m.conversation_id,
+      m.sender_id,
+      m.message_type,
+      m.message_text,
+      m.reply_to_message_id,
+      m.is_edited,
+      m.edited_at,
+      m.deleted_at,
+      m.created_at,
+      COALESCE(NULLIF(TRIM(emp.full_name), ''), NULLIF(TRIM(CONCAT(pp.first_name, ' ', pp.last_name)), ''), NULLIF(TRIM(u.full_name), ''), u.email, 'User Profile') AS sender_name,
+      u.role AS sender_role,
+      u.mobile AS sender_mobile,
+      u.email AS sender_email,
+      pp.partner_code AS sender_partner_code,
+      emp.employee_id AS sender_employee_code,
+      (
+        SELECT json_agg(json_build_object(
+          'id', ma.id,
+          'file_name', ma.file_name,
+          'file_url', CONCAT('/api/v1/messenger/media/', ma.id),
+          'file_type', ma.file_type,
+          'file_size', ma.file_size
+        ))
+        FROM message_attachments ma
+        WHERE ma.message_id = m.id
+      ) AS attachments,
+      (
+        SELECT json_build_object(
+          'id', rm.id,
+          'sender_id', rm.sender_id,
+          'sender_name', COALESCE(ru.full_name, 'User'),
+          'message_text', rm.message_text
+        )
+        FROM messages rm
+        LEFT JOIN users ru ON ru.id = rm.sender_id
+        WHERE rm.id = m.reply_to_message_id
+      ) AS reply_to,
+      (
+        SELECT json_agg(json_build_object(
+          'user_id', mr.user_id,
+          'read_at', mr.read_at
+        ))
+        FROM message_reads mr
+        WHERE mr.message_id = m.id
+      ) AS reads,
+      (
+        EXISTS (
+          SELECT 1 FROM message_reads mr 
+          WHERE mr.message_id = m.id AND mr.user_id != m.sender_id
+        )
+      ) AS is_read
+    FROM messages m
+    LEFT JOIN users u ON u.id = m.sender_id
+    LEFT JOIN partner_profiles pp ON pp.user_id = u.id
+    LEFT JOIN employees emp ON emp.user_id = u.id
+    WHERE m.id = $1 AND m.deleted_at IS NULL
+  `;
+  const { rows } = await query(sql, [messageId]);
+  return rows[0] || null;
+}
+
+/**
  * Edit message text
  */
 async function editMessage(messageId, userId, messageText) {
@@ -915,6 +983,7 @@ module.exports = {
   leaveConversationForUser,
   deleteConversationForUser,
   getMessageById,
+  getMessageDetails,
   editMessage,
   deleteMessage,
   assignMessengers,

@@ -179,13 +179,50 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
 
   const [conversations, setConversations] = useState([]);
   const [activeConv, setActiveConv] = useState(null);
+  const activeConvRef = useRef(activeConv);
   const [messages, setMessages] = useState([]);
   const [filter, setFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
+  const [isTypingMap, setIsTypingMap] = useState({}); // { [userId]: { user_name, timestamp } }
+  const [newUnreadCount, setNewUnreadCount] = useState(0);
+
+  const draftsRef = useRef({});
+  const typingThrottleRef = useRef(null);
+  const typingStopTimeoutRef = useRef(null);
+  const userRef = useRef(user);
+
+  useEffect(() => {
+    activeConvRef.current = activeConv;
+  }, [activeConv]);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  // Clean up stale typing indicators after 4 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setIsTypingMap(prev => {
+        let changed = false;
+        const next = { ...prev };
+        for (const [uid, info] of Object.entries(next)) {
+          if (now - (info.timestamp || 0) > 4000) {
+            delete next[uid];
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Edit Group Name State (Super Admin Only)
   const [showEditGroupNameModal, setShowEditGroupNameModal] = useState(false);
@@ -876,30 +913,6 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     }
   }, [initialAppId, readOnly]);
 
-  // Auto-poll conversations & active chat messages with visibility awareness to save bandwidth/DB load
-  useEffect(() => {
-    let interval = null;
-    const pollUpdates = () => {
-      if (document.hidden) return;
-      fetchConversations(false);
-      if (activeConv) {
-        fetchMessages(activeConv.id, false);
-      }
-    };
-
-    interval = setInterval(pollUpdates, 5000);
-
-    const handleVisibilityChange = () => {
-      if (!document.hidden) pollUpdates();
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      if (interval) clearInterval(interval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [activeConv, filter, search, targetUserId, readOnly]);
-
   // 2. Fetch Messages for Active Conversation
   const fetchMessages = async (convId, showLoader = true) => {
     if (showLoader) setLoadingMsgs(true);
@@ -907,16 +920,19 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
       let res;
       if (readOnly && targetUserId) {
         res = await api.get(`/messenger/admin/messages/${convId}`, {
-          params: { target_user_id: targetUserId, limit: 5000 }
+          params: { target_user_id: targetUserId, limit: 50, offset: 0 }
         });
       } else {
         res = await api.get(`/messenger/conversations/${convId}/messages`, {
-          params: { limit: 5000 }
+          params: { limit: 50, offset: 0 }
         });
       }
       if (res.data?.success) {
-        setMessages(res.data.data || []);
+        const msgs = res.data.data || [];
+        setMessages(msgs);
+        setHasMoreMessages(msgs.length >= 50);
         if (!readOnly) {
+          api.post(`/messenger/conversations/${convId}/read`).catch(() => {});
           window.dispatchEvent(new CustomEvent('messenger:unread_updated'));
         }
       }
@@ -930,6 +946,191 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     }
   };
 
+  // Upward Pagination: Fetch Older Messages
+  const fetchOlderMessages = async () => {
+    if (!activeConvRef.current || loadingOlder || !hasMoreMessages) return;
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const prevScrollHeight = container.scrollHeight;
+    const prevScrollTop = container.scrollTop;
+
+    setLoadingOlder(true);
+    try {
+      let res;
+      const currentCount = messages.length;
+      if (readOnly && targetUserId) {
+        res = await api.get(`/messenger/admin/messages/${activeConvRef.current.id}`, {
+          params: { target_user_id: targetUserId, limit: 50, offset: currentCount }
+        });
+      } else {
+        res = await api.get(`/messenger/conversations/${activeConvRef.current.id}/messages`, {
+          params: { limit: 50, offset: currentCount }
+        });
+      }
+      if (res.data?.success) {
+        const olderMsgs = res.data.data || [];
+        if (olderMsgs.length < 50) {
+          setHasMoreMessages(false);
+        }
+        if (olderMsgs.length > 0) {
+          setMessages(prev => {
+            const existingIds = new Set(prev.map(m => m.id));
+            const uniqueOlder = olderMsgs.filter(m => !existingIds.has(m.id));
+            return [...uniqueOlder, ...prev];
+          });
+
+          // Maintain visual scroll position seamlessly
+          requestAnimationFrame(() => {
+            if (messagesContainerRef.current) {
+              const newScrollHeight = messagesContainerRef.current.scrollHeight;
+              messagesContainerRef.current.scrollTop = newScrollHeight - prevScrollHeight + prevScrollTop;
+            }
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load older messages:', err);
+    } finally {
+      setLoadingOlder(false);
+    }
+  };
+
+  // Centralized real-time socket subscriptions
+  useEffect(() => {
+    const socket = getMessengerSocket();
+    if (!socket) return;
+
+    const handleNewMessage = (payload) => {
+      const { conversation_id, message } = payload || {};
+      if (!message || !conversation_id) return;
+
+      const currentConv = activeConvRef.current;
+      const currentUser = userRef.current;
+      const isCurrentActive = currentConv && currentConv.id === conversation_id;
+      const isSentByMe = String(message.sender_id || '').toLowerCase() === String(currentUser?.id || '').toLowerCase();
+
+      // Update conversation list snippet & unread count
+      setConversations(prev => {
+        const existingIndex = prev.findIndex(c => c.id === conversation_id);
+        let targetConv;
+        if (existingIndex !== -1) {
+          targetConv = prev[existingIndex];
+        } else {
+          fetchConversations(false);
+          return prev;
+        }
+
+        const newUnread = (isCurrentActive || isSentByMe) ? 0 : (targetConv.unread_count || 0) + 1;
+        const updated = {
+          ...targetConv,
+          last_message_text: message.message_text || (message.attachments?.length ? `📷 [${message.attachments.length} Attachment${message.attachments.length > 1 ? 's' : ''}]` : ''),
+          last_message_at: message.created_at || new Date().toISOString(),
+          updated_at: message.created_at || new Date().toISOString(),
+          unread_count: newUnread
+        };
+
+        const rest = prev.filter(c => c.id !== conversation_id);
+        return sortConversationsList([updated, ...rest]);
+      });
+
+      // If this is the active conversation
+      if (isCurrentActive) {
+        setMessages(prev => {
+          if (prev.some(m => m.id === message.id)) return prev;
+
+          const tempIdx = prev.findIndex(m => String(m.id).startsWith('temp-') && m.message_text === message.message_text && String(m.sender_id) === String(message.sender_id));
+          if (tempIdx !== -1) {
+            const copy = [...prev];
+            copy[tempIdx] = message;
+            return copy;
+          }
+          return [...prev, message];
+        });
+
+        if (!isSentByMe && !readOnly) {
+          api.post(`/messenger/conversations/${conversation_id}/read`).catch(() => {});
+          window.dispatchEvent(new CustomEvent('messenger:unread_updated'));
+        }
+      }
+    };
+
+    const handleMessageRead = (payload) => {
+      const { conversation_id, user_id, read_at } = payload || {};
+      if (!conversation_id) return;
+
+      if (activeConvRef.current && activeConvRef.current.id === conversation_id) {
+        setMessages(prev => prev.map(m => {
+          if (String(m.sender_id || '').toLowerCase() === String(userRef.current?.id || '').toLowerCase()) {
+            const reads = Array.isArray(m.reads) ? [...m.reads] : [];
+            if (!reads.some(r => String(r.user_id).toLowerCase() === String(user_id).toLowerCase())) {
+              reads.push({ user_id, read_at });
+            }
+            return { ...m, is_read: true, reads };
+          }
+          return m;
+        }));
+      }
+
+      if (String(user_id).toLowerCase() === String(userRef.current?.id || '').toLowerCase()) {
+        setConversations(prev => prev.map(c => c.id === conversation_id ? { ...c, unread_count: 0 } : c));
+        window.dispatchEvent(new CustomEvent('messenger:unread_updated'));
+      }
+    };
+
+    const handleTypingUpdate = (payload) => {
+      const { conversation_id, user_id, user_name, is_typing } = payload || {};
+      if (activeConvRef.current && activeConvRef.current.id === conversation_id && String(user_id).toLowerCase() !== String(userRef.current?.id || '').toLowerCase()) {
+        setIsTypingMap(prev => {
+          const copy = { ...prev };
+          if (is_typing) {
+            copy[user_id] = { user_name: user_name || 'Someone', timestamp: Date.now() };
+          } else {
+            delete copy[user_id];
+          }
+          return copy;
+        });
+      }
+    };
+
+    const handleMessageEdited = (payload) => {
+      const { conversation_id, message } = payload || {};
+      if (activeConvRef.current && activeConvRef.current.id === conversation_id && message) {
+        setMessages(prev => prev.map(m => m.id === message.id ? { ...m, ...message, is_edited: true } : m));
+      }
+    };
+
+    const handleMessageDeleted = (payload) => {
+      const { conversation_id, message_id } = payload || {};
+      if (activeConvRef.current && activeConvRef.current.id === conversation_id && message_id) {
+        setMessages(prev => prev.filter(m => m.id !== message_id));
+      }
+    };
+
+    const handleSocketReconnect = () => {
+      fetchConversations(false);
+      if (activeConvRef.current) {
+        fetchMessages(activeConvRef.current.id, false);
+      }
+    };
+
+    socket.on('message:new', handleNewMessage);
+    socket.on('message:read', handleMessageRead);
+    socket.on('typing:update', handleTypingUpdate);
+    socket.on('message:edited', handleMessageEdited);
+    socket.on('message:deleted', handleMessageDeleted);
+    socket.on('connect', handleSocketReconnect);
+
+    return () => {
+      socket.off('message:new', handleNewMessage);
+      socket.off('message:read', handleMessageRead);
+      socket.off('typing:update', handleTypingUpdate);
+      socket.off('message:edited', handleMessageEdited);
+      socket.off('message:deleted', handleMessageDeleted);
+      socket.off('connect', handleSocketReconnect);
+    };
+  }, [readOnly]);
+
   // Centralized scroll helper
   const scrollToLatest = useCallback(({ behavior = 'smooth' } = {}) => {
     if (messagesContainerRef.current) {
@@ -942,9 +1143,10 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     }
     setIsAtBottom(true);
     setShowNewMessages(false);
+    setNewUnreadCount(0);
   }, []);
 
-  // Passive scroll position listener for threshold detection
+  // Passive scroll position listener for threshold detection & pagination
   const handleScroll = useCallback(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
@@ -955,8 +1157,13 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     setIsAtBottom(isNearBottom);
     if (isNearBottom) {
       setShowNewMessages(false);
+      setNewUnreadCount(0);
     }
-  }, []);
+
+    if (container.scrollTop <= 40 && hasMoreMessages && !loadingOlder) {
+      fetchOlderMessages();
+    }
+  }, [hasMoreMessages, loadingOlder, fetchOlderMessages]);
 
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -969,13 +1176,26 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   }, [handleScroll]);
 
   const handleSelectConv = (conv) => {
+    // Preserve draft text of active conversation before switching
+    if (activeConv) {
+      draftsRef.current[activeConv.id] = inputText;
+      const socket = getMessengerSocket();
+      if (socket) socket.emit('typing:stop', { conversation_id: activeConv.id });
+    }
+
     hasInitialScrolledRef.current = false;
     setIsAtBottom(true);
     setShowNewMessages(false);
+    setNewUnreadCount(0);
+    setIsTypingMap({});
     setActiveConv(conv);
     setMobileShowChat(true);
     setShowMoreMenu(false);
     setShowChatSearch(false);
+    
+    // Restore draft if any
+    setInputText(draftsRef.current[conv.id] || '');
+    
     fetchMessages(conv.id, true);
     setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c));
     window.dispatchEvent(new CustomEvent('messenger:unread_updated'));
@@ -995,6 +1215,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
       hasInitialScrolledRef.current = false;
       setIsAtBottom(true);
       setShowNewMessages(false);
+      setNewUnreadCount(0);
       prevMessagesRef.current = messages;
       return;
     }
@@ -1038,17 +1259,47 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
           });
         } else {
           setShowNewMessages(true);
+          setNewUnreadCount(prev => prev + 1);
         }
       }
     }
   }, [messages, activeConv, isAtBottom, scrollToLatest, user?.id]);
 
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setInputText(val);
 
-  // 3. Send Message
-  const handleSendMessage = async (e) => {
+    if (activeConv && !readOnly) {
+      const socket = getMessengerSocket();
+      if (socket) {
+        if (!typingThrottleRef.current) {
+          socket.emit('typing:start', { conversation_id: activeConv.id });
+          typingThrottleRef.current = setTimeout(() => {
+            typingThrottleRef.current = null;
+          }, 2000);
+        }
+
+        if (typingStopTimeoutRef.current) clearTimeout(typingStopTimeoutRef.current);
+        typingStopTimeoutRef.current = setTimeout(() => {
+          socket.emit('typing:stop', { conversation_id: activeConv.id });
+        }, 3000);
+      }
+    }
+  };
+
+  // 3. Send Message (with Retry support)
+  const handleSendMessage = async (e, retryPayload = null, retryTempId = null) => {
     e?.preventDefault();
     if (!activeConv) return;
-    if (!inputText.trim() && attachments.length === 0) return;
+    
+    const textToSend = retryPayload ? retryPayload.message_text : inputText.trim();
+    const attachmentsToSend = retryPayload ? retryPayload.attachments : attachments;
+
+    if (!textToSend && (!attachmentsToSend || attachmentsToSend.length === 0)) return;
+
+    if (typingStopTimeoutRef.current) clearTimeout(typingStopTimeoutRef.current);
+    const socket = getMessengerSocket();
+    if (socket) socket.emit('typing:stop', { conversation_id: activeConv.id });
 
     setSending(true);
 
@@ -1056,8 +1307,8 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     let processedAttachments = [];
     const pendingBlobUrls = [];
     try {
-      if (attachments.length > 0) {
-        for (const att of attachments) {
+      if (!retryPayload && attachmentsToSend.length > 0) {
+        for (const att of attachmentsToSend) {
           if (att.file_blob || (att.file_url && att.file_url.startsWith('blob:'))) {
             if (att.file_url && att.file_url.startsWith('blob:')) {
               pendingBlobUrls.push(att.file_url);
@@ -1086,6 +1337,8 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
             processedAttachments.push(att);
           }
         }
+      } else if (retryPayload) {
+        processedAttachments = retryPayload.attachments || [];
       }
     } catch (uploadErr) {
       console.error('Attachment upload failed:', uploadErr);
@@ -1094,30 +1347,37 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
       return;
     }
 
-    const payload = {
+    const payload = retryPayload || {
       conversation_id: activeConv.id,
-      message_text: inputText.trim(),
+      message_text: textToSend,
       message_type: processedAttachments.length > 0 ? 'FILE' : 'TEXT',
       attachments: processedAttachments
     };
 
     const nowIso = new Date().toISOString();
-    const msgSnippet = inputText.trim() || (processedAttachments.length > 0 ? `📷 [${processedAttachments.length} File Attachment]` : '');
+    const msgSnippet = textToSend || (processedAttachments.length > 0 ? `📷 [${processedAttachments.length} Attachment${processedAttachments.length > 1 ? 's' : ''}]` : '');
+    const tempId = retryTempId || `temp-${Date.now()}`;
 
-    const tempMsg = {
-      id: `temp-${Date.now()}`,
-      sender_id: user?.id,
-      sender_name: user?.full_name || 'You',
-      message_text: inputText.trim(),
-      message_type: processedAttachments.length > 0 ? 'FILE' : 'TEXT',
-      attachments: processedAttachments,
-      created_at: nowIso,
-      reads: []
-    };
-    setMessages(prev => [...prev, tempMsg]);
-    setInputText('');
-    setAttachments([]);
-    setShowEmojiPicker(false);
+    if (!retryPayload) {
+      const tempMsg = {
+        id: tempId,
+        sender_id: user?.id,
+        sender_name: user?.full_name || 'You',
+        message_text: textToSend,
+        message_type: processedAttachments.length > 0 ? 'FILE' : 'TEXT',
+        attachments: processedAttachments,
+        created_at: nowIso,
+        reads: [],
+        is_sending: true
+      };
+      setMessages(prev => [...prev, tempMsg]);
+      setInputText('');
+      delete draftsRef.current[activeConv.id];
+      setAttachments([]);
+      setShowEmojiPicker(false);
+    } else {
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, failed: false, is_sending: true } : m));
+    }
 
     // Schedule safe delayed revocation of temporary blob URLs after 15 seconds
     if (pendingBlobUrls.length > 0) {
@@ -1126,7 +1386,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
       }, 15000);
     }
 
-    // Optimistically update conversation snippet & move to top of conversation list!
+    // Optimistically update conversation snippet & move to top of conversation list
     setConversations(prev => {
       const updatedList = prev.map(c => {
         if (c.id === activeConv.id) {
@@ -1145,12 +1405,12 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     try {
       const res = await api.post('/messenger/messages', payload);
       if (res.data?.success) {
-        fetchMessages(activeConv.id, false);
-        fetchConversations(false);
+        const saved = res.data.data;
+        setMessages(prev => prev.map(m => m.id === tempId ? saved : m));
       }
     } catch (err) {
       console.error('Send message failed:', err);
-      alert(err.response?.data?.message || 'Failed to send message.');
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, is_sending: false, failed: true, failedPayload: payload } : m));
     } finally {
       setSending(false);
     }
@@ -1959,7 +2219,12 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                       </div>
                     </div>
 
-                    {/* Centered Date Separator Bubble */}
+                    {/* Centered Date Separator Bubble & Older Loading */}
+                    {loadingOlder && (
+                      <div style={{ textAlign: 'center', margin: '4px 0', color: '#64748B', fontSize: '11.5px', fontWeight: 600 }}>
+                        <span>Loading older messages...</span>
+                      </div>
+                    )}
                     <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0 10px 0' }}>
                       <span style={{
                         padding: '5px 16px', borderRadius: '20px', background: '#E0F2FE',
@@ -2210,7 +2475,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                                 gap: '4px', marginTop: '4px', fontSize: '10.5px', color: isMe ? 'rgba(255, 255, 255, 0.85)' : '#94A3B8'
                               }}>
                                 <span>{formatTime(msg.created_at)}</span>
-                                {isMe && (
+                                {isMe && !msg.failed && (
                                   <FaCheckDouble
                                     color={isReadByReceiver ? '#93C5FD' : 'rgba(255, 255, 255, 0.7)'}
                                     size={13}
@@ -2218,6 +2483,22 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                                   />
                                 )}
                               </div>
+
+                              {/* Failed Send Retry Bar */}
+                              {msg.failed && (
+                                <div
+                                  onClick={() => handleSendMessage(null, msg.failedPayload, msg.id)}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', gap: '5px', color: '#DC2626',
+                                    fontSize: '11px', fontWeight: 700, marginTop: '4px', cursor: 'pointer',
+                                    background: 'rgba(254, 242, 242, 0.95)', padding: '3px 8px', borderRadius: '6px'
+                                  }}
+                                  title="Click to retry sending"
+                                >
+                                  <FaRedo size={10} />
+                                  <span>Failed to send. Click to retry</span>
+                                </div>
+                              )}
                             </div>
 
                             {/* Hover Smile Emoji Trigger Button */}
@@ -2386,8 +2667,29 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    <span>↓ New messages</span>
+                    <span>↓ {newUnreadCount > 1 ? `${newUnreadCount} new messages` : 'New messages'}</span>
                   </button>
+                </div>
+              )}
+
+              {/* Live Typing Indicator Bar */}
+              {Object.keys(isTypingMap).length > 0 && (
+                <div style={{
+                  padding: '5px 18px',
+                  background: '#EFF6FF',
+                  borderTop: '1px solid #DBEAFE',
+                  color: '#1D4ED8',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  fontStyle: 'italic',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <span style={{ fontSize: '12px' }}>💬</span>
+                  <span>
+                    {Object.values(isTypingMap).map(u => u.user_name).join(', ')} {Object.keys(isTypingMap).length > 1 ? 'are' : 'is'} typing...
+                  </span>
                 </div>
               )}
 
@@ -2545,7 +2847,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                     rows={1}
                     placeholder="Type a message..."
                     value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
+                    onChange={handleInputChange}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();

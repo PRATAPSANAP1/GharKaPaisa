@@ -408,11 +408,19 @@ async function postMessage(senderId, { conversation_id, message_type = 'TEXT', m
   await repo.updateConversationLastMessage(conversation_id, message.id, snippet);
   await repo.markMessagesAsRead(conversation_id, senderId);
 
-  return message;
+  const fullMessage = (await repo.getMessageDetails(message.id)) || message;
+
+  // Real-time broadcast to conversation participants across cluster
+  const messengerSocket = require('../../socket/messengerSocket');
+  messengerSocket.emitNewMessage(conversation_id, fullMessage, senderId);
+
+  return fullMessage;
 }
 
 async function markConversationAsRead(conversationId, userId) {
   await repo.markMessagesAsRead(conversationId, userId);
+  const messengerSocket = require('../../socket/messengerSocket');
+  messengerSocket.emitReadReceipt(conversationId, userId, new Date().toISOString());
   return { success: true };
 }
 
@@ -516,7 +524,10 @@ async function editUserMessage(userId, messageId, messageText) {
   if (updated && updated.message_text) {
     updated.message_text = maskSensitiveData(updated.message_text);
   }
-  return updated;
+  const fullMessage = (await repo.getMessageDetails(messageId)) || updated;
+  const messengerSocket = require('../../socket/messengerSocket');
+  messengerSocket.emitMessageEdited(msg.conversation_id, fullMessage);
+  return fullMessage;
 }
 
 async function deleteUserMessage(userId, messageId) {
@@ -527,7 +538,10 @@ async function deleteUserMessage(userId, messageId) {
   if (msg.sender_id !== userId) {
     throw new Error('Access denied. You can only delete your own messages.');
   }
-  return await repo.deleteMessage(messageId, userId);
+  const res = await repo.deleteMessage(messageId, userId);
+  const messengerSocket = require('../../socket/messengerSocket');
+  messengerSocket.emitMessageDeleted(msg.conversation_id, messageId);
+  return res;
 }
 
 async function assignMessengers(accountUserId, assignedMessengerUserIds, assignedBy) {

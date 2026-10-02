@@ -291,6 +291,53 @@ async function init(io) {
       }
     });
 
+    // ── 9. TYPING EVENTS ──
+    socket.on('typing:start', async (data) => {
+      const { conversation_id } = data || {};
+      if (!conversation_id) return;
+      try {
+        const { rows: participants } = await query(
+          `SELECT user_id FROM conversation_participants WHERE conversation_id = $1 AND left_at IS NULL`,
+          [conversation_id]
+        );
+        for (const p of participants) {
+          if (p.user_id !== userId) {
+            io.to(`user:${p.user_id}`).emit('typing:update', {
+              conversation_id,
+              user_id: userId,
+              user_name: socket.user.full_name || 'User',
+              is_typing: true
+            });
+          }
+        }
+      } catch (err) {
+        // Safe fail
+      }
+    });
+
+    socket.on('typing:stop', async (data) => {
+      const { conversation_id } = data || {};
+      if (!conversation_id) return;
+      try {
+        const { rows: participants } = await query(
+          `SELECT user_id FROM conversation_participants WHERE conversation_id = $1 AND left_at IS NULL`,
+          [conversation_id]
+        );
+        for (const p of participants) {
+          if (p.user_id !== userId) {
+            io.to(`user:${p.user_id}`).emit('typing:update', {
+              conversation_id,
+              user_id: userId,
+              user_name: socket.user.full_name || 'User',
+              is_typing: false
+            });
+          }
+        }
+      } catch (err) {
+        // Safe fail
+      }
+    });
+
     // ── DISCONNECT HANDLER ──
     socket.on('disconnect', () => {
       logger.info(`[CALL SOCKET DISCONNECT] hostname=${HOSTNAME} userId=${userId} socketId=${socket.id}`);
@@ -313,4 +360,101 @@ async function init(io) {
   });
 }
 
-module.exports = { init };
+let ioInstance = null;
+
+function setIo(io) {
+  ioInstance = io;
+}
+
+async function emitNewMessage(conversationId, messageData, senderId) {
+  if (!ioInstance || !conversationId || !messageData) return;
+  try {
+    const { rows: participants } = await query(
+      `SELECT user_id FROM conversation_participants WHERE conversation_id = $1 AND left_at IS NULL`,
+      [conversationId]
+    );
+
+    for (const p of participants) {
+      ioInstance.to(`user:${p.user_id}`).emit('message:new', {
+        conversation_id: conversationId,
+        message: messageData
+      });
+      ioInstance.to(`user:${p.user_id}`).emit('conversation:update', {
+        conversation_id: conversationId,
+        last_message: messageData,
+        sender_id: senderId
+      });
+    }
+  } catch (err) {
+    logger.warn('[Socket Messenger] Failed to broadcast new message:', err.message);
+  }
+}
+
+async function emitReadReceipt(conversationId, userId, readAt) {
+  if (!ioInstance || !conversationId) return;
+  try {
+    const { rows: participants } = await query(
+      `SELECT user_id FROM conversation_participants WHERE conversation_id = $1 AND left_at IS NULL`,
+      [conversationId]
+    );
+
+    for (const p of participants) {
+      ioInstance.to(`user:${p.user_id}`).emit('message:read', {
+        conversation_id: conversationId,
+        user_id: userId,
+        read_at: readAt || new Date().toISOString()
+      });
+    }
+  } catch (err) {
+    logger.warn('[Socket Messenger] Failed to broadcast read receipt:', err.message);
+  }
+}
+
+async function emitMessageEdited(conversationId, messageData) {
+  if (!ioInstance || !conversationId || !messageData) return;
+  try {
+    const { rows: participants } = await query(
+      `SELECT user_id FROM conversation_participants WHERE conversation_id = $1 AND left_at IS NULL`,
+      [conversationId]
+    );
+
+    for (const p of participants) {
+      ioInstance.to(`user:${p.user_id}`).emit('message:edited', {
+        conversation_id: conversationId,
+        message: messageData
+      });
+    }
+  } catch (err) {
+    logger.warn('[Socket Messenger] Failed to broadcast edited message:', err.message);
+  }
+}
+
+async function emitMessageDeleted(conversationId, messageId) {
+  if (!ioInstance || !conversationId || !messageId) return;
+  try {
+    const { rows: participants } = await query(
+      `SELECT user_id FROM conversation_participants WHERE conversation_id = $1 AND left_at IS NULL`,
+      [conversationId]
+    );
+
+    for (const p of participants) {
+      ioInstance.to(`user:${p.user_id}`).emit('message:deleted', {
+        conversation_id: conversationId,
+        message_id: messageId
+      });
+    }
+  } catch (err) {
+    logger.warn('[Socket Messenger] Failed to broadcast deleted message:', err.message);
+  }
+}
+
+module.exports = {
+  init: (io) => {
+    setIo(io);
+    return init(io);
+  },
+  emitNewMessage,
+  emitReadReceipt,
+  emitMessageEdited,
+  emitMessageDeleted
+};
