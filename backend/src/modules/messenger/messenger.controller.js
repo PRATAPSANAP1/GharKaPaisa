@@ -1,6 +1,51 @@
+const crypto = require('crypto');
 const service = require('./messenger.service');
 const { success, error, unauthorized } = require('../../utils/response/response');
 const logger = require('../../config/logger');
+
+async function getTurnCredentials(req, res, next) {
+  try {
+    const turnSecret = process.env.TURN_SHARED_SECRET;
+    const turnDomain = process.env.TURN_DOMAIN || 'turn.gharkapaisa.in';
+    const turnPort = process.env.TURN_PORT || '3478';
+    const turnsPort = process.env.TURNS_PORT || '5349';
+
+    const iceServers = [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ];
+
+    let expiresAtIso = new Date(Date.now() + 86400 * 1000).toISOString();
+
+    if (turnSecret) {
+      const ttlSeconds = 86400; // 24 hours
+      const expiresAtUnix = Math.floor(Date.now() / 1000) + ttlSeconds;
+      expiresAtIso = new Date(expiresAtUnix * 1000).toISOString();
+      const username = `${expiresAtUnix}:${req.user.id}`;
+      const credential = crypto
+        .createHmac('sha1', turnSecret)
+        .update(username)
+        .digest('base64');
+
+      iceServers.push({
+        urls: [
+          `turn:${turnDomain}:${turnPort}?transport=udp`,
+          `turn:${turnDomain}:${turnPort}?transport=tcp`,
+          `turns:${turnDomain}:${turnsPort}?transport=tcp`
+        ],
+        username,
+        credential
+      });
+    }
+
+    return success(res, {
+      iceServers,
+      expiresAt: expiresAtIso
+    }, 'TURN credentials generated successfully');
+  } catch (err) {
+    next(err);
+  }
+}
 
 async function getConversations(req, res, next) {
   try {
@@ -376,6 +421,7 @@ async function getMediaAttachment(req, res, next) {
 }
 
 module.exports = {
+  getTurnCredentials,
   getConversations,
   createDirectChat,
   createApplicationChat,

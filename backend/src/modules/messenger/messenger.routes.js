@@ -44,5 +44,6 @@ router.put('/messages/:id', messengerLimiter, controller.editMessage);
 router.delete('/messages/:id', messengerLimiter, controller.deleteMessage);
 router.get('/unread-count', controller.getUnreadCount);
 router.get('/contacts', controller.getContacts);
+router.get('/turn-credentials', controller.getTurnCredentials);
 
 module.exports = router;

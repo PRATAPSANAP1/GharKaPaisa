@@ -4,13 +4,12 @@ import {
   FaMicrophone, FaMicrophoneSlash, FaExclamationTriangle, FaCheck
 } from 'react-icons/fa';
 import { getMessengerSocket } from '../../services/messengerSocket';
+import api from '../../services/api';
 
-const RTC_CONFIG = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' }
-  ]
-};
+const DEFAULT_STUN_CONFIG = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' }
+];
 
 export default function MessengerCallModal({
   activeCall, // { callId, recipientId, recipientName, callType: 'voice' | 'video', isIncoming: boolean, callerId, conversationId }
@@ -32,6 +31,20 @@ export default function MessengerCallModal({
 
   const isVideoCall = activeCall?.callType === 'video';
   const peerName = activeCall?.isIncoming ? (activeCall.callerName || 'Caller') : (activeCall.recipientName || 'User');
+
+  // Helper to dynamically fetch STUN/TURN credentials from backend
+  const fetchIceServers = async () => {
+    try {
+      const res = await api.get('/messenger/turn-credentials');
+      if (res.data?.success && res.data?.data?.iceServers) {
+        console.log('[WebRTC] Fetched TURN credentials successfully');
+        return res.data.data.iceServers;
+      }
+    } catch (err) {
+      console.warn('[WebRTC] Could not fetch TURN credentials, using default STUN fallbacks:', err.message);
+    }
+    return DEFAULT_STUN_CONFIG;
+  };
 
   // Helper to safely stop all media tracks
   const stopLocalMedia = () => {
@@ -72,10 +85,14 @@ export default function MessengerCallModal({
   };
 
   // ── Initialize WebRTC Peer Connection ──
-  const createPeerConnection = (socket, targetUserId) => {
+  const createPeerConnection = (socket, targetUserId, iceServersConfig) => {
     if (pcRef.current) return pcRef.current;
 
-    const pc = new RTCPeerConnection(RTC_CONFIG);
+    const rtcConfig = {
+      iceServers: iceServersConfig || DEFAULT_STUN_CONFIG
+    };
+
+    const pc = new RTCPeerConnection(rtcConfig);
     pcRef.current = pc;
 
     // Send local ICE candidates to peer
@@ -96,14 +113,23 @@ export default function MessengerCallModal({
       }
     };
 
-    // Connection state changes
-    pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'connected') {
+    // Diagnostics for ICE states
+    pc.onicegatheringstatechange = () => {
+      console.log(`[WebRTC] ICE gathering: ${pc.iceGatheringState}`);
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      console.log(`[WebRTC] ICE connection: ${pc.iceConnectionState}`);
+      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
         setCallState('CONNECTED');
         startTimer();
-      } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+      } else if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
         endCallSession('ENDED', 'Connection lost with peer.');
       }
+    };
+
+    pc.onconnectionstatechange = () => {
+      console.log(`[WebRTC] Peer connection state: ${pc.connectionState}`);
     };
 
     return pc;
@@ -154,8 +180,11 @@ export default function MessengerCallModal({
 
     try {
       console.log('[CALL DEBUG] emitting call:initiate');
-      const stream = await startLocalStream(isVideoCall);
-      const pc = createPeerConnection(socket, activeCall.recipientId);
+      const [stream, iceServers] = await Promise.all([
+        startLocalStream(isVideoCall),
+        fetchIceServers()
+      ]);
+      const pc = createPeerConnection(socket, activeCall.recipientId, iceServers);
 
       // Add local stream tracks to WebRTC peer connection
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
@@ -195,8 +224,11 @@ export default function MessengerCallModal({
 
     try {
       setCallState('CONNECTING');
-      const stream = await startLocalStream(isVideoCall);
-      const pc = createPeerConnection(socket, activeCall.callerId);
+      const [stream, iceServers] = await Promise.all([
+        startLocalStream(isVideoCall),
+        fetchIceServers()
+      ]);
+      const pc = createPeerConnection(socket, activeCall.callerId, iceServers);
 
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
