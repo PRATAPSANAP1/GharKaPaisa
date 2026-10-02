@@ -69,6 +69,17 @@ const commitFaceEnrollment = async (req, res) => {
   }
 };
 
+// GET /api/v1/attendance/enrollment/status (Current authenticated user)
+const getMyStatus = async (req, res) => {
+  try {
+    const result = await service.getMyBiometricStatus(req.user);
+    return success(res, result, 'Biometric enrollment status retrieved');
+  } catch (err) {
+    logger.error('Error fetching own biometric status:', err.message);
+    return error(res, err.message, err.statusCode || 500);
+  }
+};
+
 // GET /api/v1/attendance/enrollment/employee/:employeeId
 const getEmployeeStatus = async (req, res) => {
   try {
@@ -78,6 +89,69 @@ const getEmployeeStatus = async (req, res) => {
     return success(res, result, 'Employee biometric status retrieved');
   } catch (err) {
     logger.error('Error fetching employee biometric status:', err.message);
+    return error(res, err.message, err.statusCode || 500);
+  }
+};
+
+// GET /api/v1/attendance/enrollment/missing (Super Admin only)
+const getMissingList = async (req, res) => {
+  try {
+    const { search, status, page, limit } = req.query;
+    const result = await service.getMissingBiometrics({
+      search,
+      status,
+      page,
+      limit,
+    });
+    return success(res, result, 'Missing face verification list retrieved');
+  } catch (err) {
+    logger.error('Error fetching missing face verification list:', err.message);
+    return error(res, err.message, err.statusCode || 500);
+  }
+};
+
+// POST /api/v1/attendance/enrollment/reminder (Super Admin only)
+const sendReminder = async (req, res) => {
+  try {
+    const { employee_id, message } = req.body;
+
+    if (!employee_id) {
+      return error(res, 'employee_id is required', 400);
+    }
+
+    const result = await service.sendFaceVerificationReminder({
+      employeeId: employee_id,
+      message,
+      reqUser: req.user,
+    });
+
+    return success(res, result.reminder, result.message);
+  } catch (err) {
+    logger.error('Error sending face verification reminder:', err.message);
+    return error(res, err.message, err.statusCode || 500);
+  }
+};
+
+// GET /api/v1/attendance/enrollment/reminders/:employeeId (Super Admin only)
+const getReminderHistory = async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    const result = await service.getReminderHistory(employeeId);
+    return success(res, result, 'Reminder history retrieved');
+  } catch (err) {
+    logger.error('Error fetching reminder history:', err.message);
+    return error(res, err.message, err.statusCode || 500);
+  }
+};
+
+// POST /api/v1/attendance/enrollment/reminders/:id/seen
+const markReminderSeen = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await service.markReminderSeen(id, req.user);
+    return success(res, result, 'Reminder marked as seen');
+  } catch (err) {
+    logger.error('Error marking reminder as seen:', err.message);
     return error(res, err.message, err.statusCode || 500);
   }
 };
@@ -103,9 +177,9 @@ const createReEnrollmentSession = async (req, res) => {
       reqUser: req.user,
     });
 
-    return success(res, result, 'Re-enrollment session created successfully');
+    return success(res, result, 'Super Admin biometric re-enrollment session initiated');
   } catch (err) {
-    logger.error('Error creating re-enrollment session:', err.message);
+    logger.error('Error initiating re-enrollment session:', err.message);
     return error(res, err.message, err.statusCode || 500);
   }
 };
@@ -113,9 +187,27 @@ const createReEnrollmentSession = async (req, res) => {
 // POST /api/v1/attendance/enrollment/re-enrollment/commit
 const commitReEnrollment = async (req, res) => {
   try {
-    return await commitFaceEnrollment(req, res);
+    const sessionToken = req.body.session_token || req.headers['x-enrollment-session'];
+
+    if (!sessionToken) {
+      return error(res, 'session_token is required', 400);
+    }
+
+    if (!req.file || !req.file.buffer) {
+      return error(res, 'Face image file is required (field name: face_image)', 400);
+    }
+
+    const result = await service.commitFaceEnrollment({
+      sessionToken,
+      imageBuffer: req.file.buffer,
+      originalName: req.file.originalname || 'face.jpg',
+      mimeType: req.file.mimetype || 'image/jpeg',
+      reqUser: req.user,
+    });
+
+    return success(res, result.template, result.message);
   } catch (err) {
-    logger.error('Error committing re-enrollment:', err.message);
+    logger.error('Error committing re-enrollment face image:', err.message);
     return error(res, err.message, err.statusCode || 500);
   }
 };
@@ -125,9 +217,9 @@ const getPreviewUrl = async (req, res) => {
   try {
     const { employeeId } = req.params;
     const result = await service.getSignedPreviewUrl(employeeId, req.user);
-    return success(res, result, 'Temporary signed preview URL generated');
+    return success(res, result, 'Signed preview URL generated');
   } catch (err) {
-    logger.error('Error generating signed preview URL:', err.message);
+    logger.error('Error generating preview URL:', err.message);
     return error(res, err.message, err.statusCode || 500);
   }
 };
@@ -135,10 +227,10 @@ const getPreviewUrl = async (req, res) => {
 // GET /api/v1/attendance/enrollment/environment
 const getEnvironmentReferences = async (req, res) => {
   try {
-    const result = await service.getEnvironmentReferences(req.user);
-    return success(res, result, 'Office environment references loaded');
+    const result = await service.getEnvironmentReferences();
+    return success(res, result, 'Environment references retrieved');
   } catch (err) {
-    logger.error('Error loading environment references:', err.message);
+    logger.error('Error fetching environment references:', err.message);
     return error(res, err.message, err.statusCode || 500);
   }
 };
@@ -148,8 +240,8 @@ const registerEnvironmentReference = async (req, res) => {
   try {
     const { reference_code, reference_name, capture_description } = req.body;
 
-    if (!reference_code || !reference_name) {
-      return error(res, 'reference_code and reference_name are required', 400);
+    if (!reference_code) {
+      return error(res, 'reference_code is required (BKG1-BKG4)', 400);
     }
 
     if (!req.file || !req.file.buffer) {
@@ -158,15 +250,15 @@ const registerEnvironmentReference = async (req, res) => {
 
     const result = await service.registerEnvironmentReference({
       referenceCode: reference_code,
-      referenceName: reference_name,
-      captureDescription: capture_description,
+      referenceName: reference_name || `Office Environment ${reference_code}`,
+      captureDescription: capture_description || null,
       imageBuffer: req.file.buffer,
-      originalName: req.file.originalname || `${reference_code}.png`,
-      mimeType: req.file.mimetype || 'image/png',
+      originalName: req.file.originalname || 'env.jpg',
+      mimeType: req.file.mimetype || 'image/jpeg',
       reqUser: req.user,
     });
 
-    return success(res, result, 'Environment reference registered successfully');
+    return success(res, result, 'Office environment reference registered successfully');
   } catch (err) {
     logger.error('Error registering environment reference:', err.message);
     return error(res, err.message, err.statusCode || 500);
@@ -180,7 +272,7 @@ const revokeEnvironmentReference = async (req, res) => {
     const { reason } = req.body;
 
     const result = await service.revokeEnvironmentReference(referenceCode, reason, req.user);
-    return success(res, result, `Environment reference ${referenceCode} revoked successfully`);
+    return success(res, result, 'Environment reference revoked successfully');
   } catch (err) {
     logger.error('Error revoking environment reference:', err.message);
     return error(res, err.message, err.statusCode || 500);
@@ -190,7 +282,12 @@ const revokeEnvironmentReference = async (req, res) => {
 module.exports = {
   createSession,
   commitFaceEnrollment,
+  getMyStatus,
   getEmployeeStatus,
+  getMissingList,
+  sendReminder,
+  getReminderHistory,
+  markReminderSeen,
   createReEnrollmentSession,
   commitReEnrollment,
   getPreviewUrl,

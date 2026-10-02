@@ -29,6 +29,7 @@ export default function EmployeeManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [designationFilter, setDesignationFilter] = useState('');
+  const [faceFilter, setFaceFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(100);
   const [totalEmployees, setTotalEmployees] = useState(0);
@@ -855,7 +856,8 @@ export default function EmployeeManagement() {
           limit: pageSize,
           search: searchTerm,
           status: statusFilter,
-          designation: designationFilter
+          designation: designationFilter,
+          face_status: faceFilter
         } 
       });
       if (empRes.data.success) {
@@ -879,7 +881,7 @@ export default function EmployeeManagement() {
 
   useEffect(() => {
     fetchData();
-  }, [currentPage, pageSize, searchTerm, statusFilter, designationFilter]);
+  }, [currentPage, pageSize, searchTerm, statusFilter, designationFilter, faceFilter]);
 
   const handleActivateEmployee = async (empId, currentActivation) => {
     const newActivation = currentActivation === 'APPROVED' ? 'PENDING' : 'APPROVED';
@@ -1447,7 +1449,7 @@ export default function EmployeeManagement() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                 <select 
                   value={designationFilter} 
                   onChange={(e) => {
@@ -1484,6 +1486,21 @@ export default function EmployeeManagement() {
                   <option value="ONBOARDING">Onboarding</option>
                   <option value="INACTIVE">Inactive</option>
                 </select>
+
+                <select 
+                  value={faceFilter} 
+                  onChange={(e) => {
+                    setFaceFilter(e.target.value);
+                    setCurrentPage(1);
+                  }} 
+                  style={{ padding: '9px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }}
+                >
+                  <option value="">All Face Biometrics</option>
+                  <option value="VERIFIED">✓ Verified</option>
+                  <option value="MISSING">⚠ Missing</option>
+                  <option value="PENDING">⏳ Pending</option>
+                  <option value="REVOKED">🔒 Revoked</option>
+                </select>
               </div>
             </div>
 
@@ -1495,7 +1512,12 @@ export default function EmployeeManagement() {
                 ) : employees.length === 0 ? (
                   <div style={{ padding: '30px', textAlign: 'center', color: C.textMid }}>No employees found matching criteria.</div>
                 ) : (
-                  employees.map(emp => (
+                  employees.map(emp => {
+                    const isFaceVerified = emp.face_verification_status === 'VERIFIED' || emp.biometric_enrolled || emp.face_enrolled;
+                    const isFaceRevoked = emp.face_verification_status === 'REVOKED';
+                    const isFacePending = emp.face_verification_status === 'PENDING';
+
+                    return (
                     <div 
                       key={emp.id}
                       style={{
@@ -1518,16 +1540,28 @@ export default function EmployeeManagement() {
                             Code: {emp.employee_code || emp.employee_id || emp.emp_code || emp.code || (emp.id ? String(emp.id).slice(0, 8) : 'N/A')} • {emp.mobile_number}
                           </div>
                         </div>
-                        <span 
-                          style={{ 
-                            padding: '3px 8px', borderRadius: '8px', fontSize: '10.5px', fontWeight: 800,
-                            background: emp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7',
-                            color: emp.activation_status === 'APPROVED' ? '#065F46' : '#92400E',
-                            flexShrink: 0
-                          }}
-                        >
-                          {emp.activation_status === 'APPROVED' ? 'Active' : 'Pending'}
-                        </span>
+                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                          <span 
+                            style={{ 
+                              padding: '3px 8px', borderRadius: '8px', fontSize: '10.5px', fontWeight: 800,
+                              background: emp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7',
+                              color: emp.activation_status === 'APPROVED' ? '#065F46' : '#92400E',
+                              flexShrink: 0
+                            }}
+                          >
+                            {emp.activation_status === 'APPROVED' ? 'Active' : 'Pending'}
+                          </span>
+                          <span 
+                            style={{ 
+                              padding: '3px 8px', borderRadius: '8px', fontSize: '10.5px', fontWeight: 800,
+                              background: isFaceVerified ? '#D1FAE5' : isFaceRevoked ? '#F3F4F6' : '#FEF3C7',
+                              color: isFaceVerified ? '#065F46' : isFaceRevoked ? '#4B5563' : '#92400E',
+                              border: `1px solid ${isFaceVerified ? '#A7F3D0' : '#FDE68A'}`
+                            }}
+                          >
+                            {isFaceVerified ? '✓ Face Enrolled' : isFaceRevoked ? '🔒 Face Revoked' : '⚠ Face Missing'}
+                          </span>
+                        </div>
                       </div>
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: C.textMid, borderTop: `1px solid ${C.border}`, paddingTop: '8px' }}>
@@ -1548,7 +1582,17 @@ export default function EmployeeManagement() {
                       </div>
 
                       <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: `1px dashed ${C.border}` }}>
-                        <div>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            onClick={() => { setBiometricModalEmp(emp); setBiometricModalOpen(true); }}
+                            style={{
+                              padding: '6px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 800,
+                              background: `${C.teal}15`, color: C.teal, border: `1px solid ${C.teal}40`, cursor: 'pointer',
+                              display: 'inline-flex', alignItems: 'center', gap: '4px'
+                            }}
+                          >
+                            <FaCamera /> Biometrics
+                          </button>
                           {emp.activation_status !== 'APPROVED' && (
                             <button
                               onClick={() => handleKycVerify(emp.id, 'VERIFIED')}
@@ -1559,7 +1603,7 @@ export default function EmployeeManagement() {
                               }}
                               title="Approve KYC and activate employee account"
                             >
-                              <FaCheckCircle /> Approve KYC
+                              <FaCheckCircle /> Approve
                             </button>
                           )}
                         </div>
@@ -1586,7 +1630,8 @@ export default function EmployeeManagement() {
                         </button>
                       </div>
                     </div>
-                  ))
+                  );
+                  })
                 )}
               </div>
             ) : (
@@ -1597,7 +1642,8 @@ export default function EmployeeManagement() {
                       <th style={{ padding: '14px 20px' }}>Employee Code</th>
                       <th style={{ padding: '14px 20px' }}>Employee Name</th>
                       <th style={{ padding: '14px 20px' }}>Designation</th>
-                      <th style={{ padding: '14px 20px' }}>KYC / Verification Status</th>
+                      <th style={{ padding: '14px 20px' }}>KYC Status</th>
+                      <th style={{ padding: '14px 20px' }}>Face Verification (Screen 7)</th>
                       <th style={{ padding: '14px 20px' }}>Missing Documents</th>
                       <th style={{ padding: '14px 20px' }}>Account Status</th>
                       <th style={{ padding: '14px 20px', textAlign: 'right' }}>Actions</th>
@@ -1605,11 +1651,14 @@ export default function EmployeeManagement() {
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr><td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>Loading records...</td></tr>
+                      <tr><td colSpan="8" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>Loading records...</td></tr>
                     ) : employees.length === 0 ? (
-                      <tr><td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>No employees found matching criteria.</td></tr>
+                      <tr><td colSpan="8" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>No employees found matching criteria.</td></tr>
                     ) : employees.map(emp => {
                       const isVerified = emp.overall_verification_status === 'VERIFIED';
+                      const isFaceVerified = emp.face_verification_status === 'VERIFIED' || emp.biometric_enrolled || emp.face_enrolled;
+                      const isFaceRevoked = emp.face_verification_status === 'REVOKED';
+                      const isFacePending = emp.face_verification_status === 'PENDING';
                       const missingDocs = emp.missing_documents || [];
 
                       return (
@@ -1637,6 +1686,26 @@ export default function EmployeeManagement() {
                               <div style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 700 }}>
                                 Docs: <strong>{emp.documents_summary || '0/6'}</strong>
                               </div>
+                            </div>
+                          </td>
+                          <td style={{ padding: '14px 20px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                              <span 
+                                style={{ 
+                                  padding: '3px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 900,
+                                  background: isFaceVerified ? '#D1FAE5' : isFaceRevoked ? '#F3F4F6' : isFacePending ? '#FEF9C3' : '#FEF3C7',
+                                  color: isFaceVerified ? '#065F46' : isFaceRevoked ? '#4B5563' : isFacePending ? '#854D0E' : '#92400E',
+                                  border: `1px solid ${isFaceVerified ? '#A7F3D0' : isFaceRevoked ? '#E5E7EB' : '#FDE68A'}`
+                                }}
+                              >
+                                {isFaceVerified ? '✓ Verified' : isFaceRevoked ? '🔒 Revoked' : isFacePending ? '⏳ Pending' : '⚠ Missing'}
+                              </span>
+                              <button
+                                onClick={() => { setBiometricModalEmp(emp); setBiometricModalOpen(true); }}
+                                style={{ background: 'none', border: 'none', color: C.teal, fontSize: '11px', fontWeight: 800, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
+                              >
+                                Biometric Desk →
+                              </button>
                             </div>
                           </td>
                           <td style={{ padding: '14px 20px' }}>
@@ -1682,6 +1751,25 @@ export default function EmployeeManagement() {
                           </td>
                           <td style={{ padding: '14px 20px', textAlign: 'right' }}>
                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                              <button
+                                onClick={() => { setBiometricModalEmp(emp); setBiometricModalOpen(true); }}
+                                style={{
+                                  background: `${C.teal}15`,
+                                  color: C.teal,
+                                  border: `1px solid ${C.teal}40`,
+                                  padding: '7px 12px',
+                                  borderRadius: '10px',
+                                  fontSize: '12px',
+                                  fontWeight: 800,
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px'
+                                }}
+                                title="Manage Biometric Reference, Signed Previews & Reminders"
+                              >
+                                <FaCamera /> Biometrics
+                              </button>
                               <button 
                                 onClick={() => setActionModalEmp(emp)}
                                 style={{ 

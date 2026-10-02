@@ -42,6 +42,35 @@ const attendanceService = {
     return response.data;
   },
 
+  // Biometric Enrollment Endpoints
+  getEnrollmentStatus: async () => {
+    const response = await api.get('/attendance/enrollment/status');
+    return response.data;
+  },
+
+  getEmployeeEnrollmentStatus: async (employeeId) => {
+    const response = await api.get(`/attendance/enrollment/employee/${employeeId}`);
+    return response.data;
+  },
+
+  getMissingEnrollments: async (params) => {
+    const response = await api.get('/attendance/enrollment/missing', { params });
+    return response.data;
+  },
+
+  sendEnrollmentReminder: async (employeeId, message) => {
+    const response = await api.post('/attendance/enrollment/reminder', {
+      employee_id: employeeId,
+      message,
+    });
+    return response.data;
+  },
+
+  getReminderHistory: async (employeeId) => {
+    const response = await api.get(`/attendance/enrollment/reminders/${employeeId}`);
+    return response.data;
+  },
+
   // Attendance actions
   checkIn: async (verificationSessionId) => {
     const response = await api.post('/attendance/check-in', {

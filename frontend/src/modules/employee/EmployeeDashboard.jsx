@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { 
   FaFileAlt, FaVideo, FaIdCard, FaCheckCircle, FaSignOutAlt,
-  FaExclamationTriangle, FaShieldAlt, FaArrowRight
+  FaExclamationTriangle, FaShieldAlt, FaArrowRight, FaCamera
 } from 'react-icons/fa';
 import axios from 'axios';
 import { getApiV1Url } from '../../config/api';
 import PartnerDashboardComponent from '../partner/dashboard/PartnerDashboardComponent';
+import FaceVerificationModal from './profile/FaceVerificationModal';
 
 export default function EmployeeDashboard() {
   const { C } = useTheme();
@@ -16,6 +17,8 @@ export default function EmployeeDashboard() {
   const [employee, setEmployee] = useState(null);
   const [verState, setVerState] = useState(null);
   const [checklist, setChecklist] = useState({});
+  const [biometricStatus, setBiometricStatus] = useState(null);
+  const [faceModalOpen, setFaceModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
@@ -48,6 +51,15 @@ export default function EmployeeDashboard() {
       const statusRes = await axios.get(`${getApiV1Url()}/employee/onboarding-status`);
       if (statusRes.data.success) {
         setChecklist(statusRes.data.data);
+      }
+
+      try {
+        const bioRes = await axios.get(`${getApiV1Url()}/attendance/enrollment/status`);
+        if (bioRes.data?.success) {
+          setBiometricStatus(bioRes.data.data);
+        }
+      } catch (bioErr) {
+        console.warn('Biometric status fetch error:', bioErr);
       }
     } catch (err) {
       console.error('Employee Dashboard fetch error:', err);
@@ -128,6 +140,69 @@ export default function EmployeeDashboard() {
             </button>
           </div>
         </div>
+
+        {/* Screen 11: Dedicated Face Verification Required Banner */}
+        {biometricStatus && !biometricStatus.is_enrolled && (
+          <div style={{
+            background: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)',
+            border: '2px solid #F59E0B',
+            borderRadius: '24px',
+            padding: isMobile ? '20px' : '28px',
+            marginBottom: '24px',
+            boxShadow: '0 6px 24px rgba(245, 158, 11, 0.15)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: '20px'
+          }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: '#F59E0B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
+                  <FaCamera />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#92400E', margin: 0 }}>
+                    Face Verification Required
+                  </h3>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#B45309', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Attendance Biometric Reference Missing
+                  </span>
+                </div>
+              </div>
+              
+              <p style={{ fontSize: '13.5px', color: '#92400E', margin: '0 0 12px 0', lineHeight: 1.5, fontWeight: 600 }}>
+                Your KYC face verification reference is missing. You must complete biometric face verification before you can mark daily attendance.
+              </p>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#78350F', fontWeight: 700 }}>
+                <FaShieldAlt color="#D97706" /> Note: This dedicated reference is securely locked for AWS Face Liveness matching.
+              </div>
+            </div>
+
+            <button
+              onClick={() => setFaceModalOpen(true)}
+              style={{
+                background: 'linear-gradient(135deg, #D97706 0%, #B45309 100%)',
+                color: '#ffffff',
+                border: 'none',
+                padding: '14px 26px',
+                borderRadius: '14px',
+                fontWeight: 900,
+                fontSize: '14px',
+                cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(217, 119, 6, 0.35)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                whiteSpace: 'nowrap',
+                flexShrink: 0
+              }}
+            >
+              <FaCamera /> Complete Face Verification <FaArrowRight />
+            </button>
+          </div>
+        )}
 
         {/* Dynamic Verification Banners */}
         {!isOverallVerified && verState && (() => {
@@ -383,7 +458,7 @@ export default function EmployeeDashboard() {
           </div>
 
           {/* Steps Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
             <div onClick={() => navigate('/employee/verification')} style={{ background: C.bgSecondary, border: `1px solid ${checklist?.joining_form_completed ? C.teal : C.border}`, borderRadius: '16px', padding: '16px', cursor: 'pointer' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <FaFileAlt style={{ color: checklist?.joining_form_completed ? C.teal : C.textMid, fontSize: '20px' }} />
@@ -413,16 +488,47 @@ export default function EmployeeDashboard() {
               <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>Teleprompter agreement video</p>
             </div>
 
+            <div 
+              onClick={() => setFaceModalOpen(true)}
+              style={{ 
+                background: C.bgSecondary, 
+                border: `1px solid ${biometricStatus?.is_enrolled ? C.teal : '#F59E0B'}`, 
+                borderRadius: '16px', 
+                padding: '16px',
+                cursor: 'pointer'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <FaCamera style={{ color: biometricStatus?.is_enrolled ? C.teal : '#D97706', fontSize: '20px' }} />
+                {biometricStatus?.is_enrolled ? (
+                  <FaCheckCircle style={{ color: C.teal }} />
+                ) : (
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#D97706', background: '#FEF3C7', padding: '2px 6px', borderRadius: '6px' }}>Missing</span>
+                )}
+              </div>
+              <h4 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 4px 0', color: C.text }}>4. Face Biometric</h4>
+              <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>Attendance biometric reference</p>
+            </div>
+
             <div style={{ background: C.bgSecondary, border: `1px solid ${isOverallVerified ? C.teal : C.border}`, borderRadius: '16px', padding: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <FaShieldAlt style={{ color: isOverallVerified ? C.teal : C.textMid, fontSize: '20px' }} />
                 {isOverallVerified ? <FaCheckCircle style={{ color: C.teal }} /> : <span style={{ fontSize: '11px', fontWeight: 800, color: C.textMid }}>Under Review</span>}
               </div>
-              <h4 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 4px 0', color: C.text }}>4. Overall Approval</h4>
+              <h4 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 4px 0', color: C.text }}>5. Overall Approval</h4>
               <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>Super Admin activation</p>
             </div>
           </div>
         </div>
+
+        {/* Face Verification Modal for Attendance Reference Enrollment */}
+        <FaceVerificationModal
+          isOpen={faceModalOpen}
+          onClose={() => setFaceModalOpen(false)}
+          onSuccess={() => {
+            fetchDashboardData();
+          }}
+        />
 
       </div>
     </div>

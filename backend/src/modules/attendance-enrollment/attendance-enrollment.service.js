@@ -9,6 +9,36 @@ const { JWT_SECRET } = require('../../config/jwt');
 const BUCKET_NAME = process.env.AWS_S3_BUCKET || 'gharkapaisa-production-storage';
 
 /**
+ * Ensure face_verification_reminders table exists lazily
+ */
+let remindersTableInitialized = false;
+const ensureRemindersTable = async () => {
+  if (remindersTableInitialized) return;
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS face_verification_reminders (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+        sent_by UUID REFERENCES users(id),
+        message TEXT,
+        status VARCHAR(20) NOT NULL DEFAULT 'SENT' CHECK (status IN ('SENT', 'SEEN', 'COMPLETED', 'CANCELLED')),
+        sent_at TIMESTAMPTZ DEFAULT NOW(),
+        seen_at TIMESTAMPTZ,
+        completed_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_face_reminders_emp_id ON face_verification_reminders(employee_id);
+      CREATE INDEX IF NOT EXISTS idx_face_reminders_status ON face_verification_reminders(status);
+      CREATE INDEX IF NOT EXISTS idx_face_reminders_sent_at ON face_verification_reminders(sent_at DESC);
+    `);
+    remindersTableInitialized = true;
+  } catch (err) {
+    logger.warn('Lazy table init warning (face_verification_reminders):', err.message);
+  }
+};
+
+/**
  * Helper to resolve employeeId from reqUser or user_id mapping
  * Handles both employee_id (UUID) and employee_code (string) by mapping to UUID
  */
@@ -55,8 +85,10 @@ const createEnrollmentSession = async ({ userId, employeeId, isReEnrollment = fa
   const isAdminRole = ['SUPER_ADMIN', 'ADMIN', 'HR'].includes(userRole);
   const authEmpId = await resolveEmployeeId(reqUser);
 
+  const targetEmpId = employeeId || authEmpId;
+
   // Non-administrative users cannot target other employees
-  if (!isAdminRole && authEmpId && String(employeeId).toLowerCase() !== String(authEmpId).toLowerCase()) {
+  if (!isAdminRole && authEmpId && String(targetEmpId).toLowerCase() !== String(authEmpId).toLowerCase()) {
     const error = new Error('Unauthorized to create biometric enrollment session for another employee');
     error.statusCode = 403;
     throw error;
@@ -65,7 +97,7 @@ const createEnrollmentSession = async ({ userId, employeeId, isReEnrollment = fa
   // Check employee existence
   const { rows: [employee] } = await query(
     `SELECT id, employee_id, full_name, designation, department, employee_status FROM employees WHERE id = $1`,
-    [employeeId]
+    [targetEmpId]
   );
 
   if (!employee) {
@@ -109,6 +141,13 @@ const createEnrollmentSession = async ({ userId, employeeId, isReEnrollment = fa
   };
 
   const sessionToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '5m' });
+
+  // Audit session start
+  const startAuditAction = isReEnrollment ? 'FACE_VERIFICATION_RE_ENROLLMENT_STARTED' : 'FACE_ENROLLMENT_STARTED';
+  await logAction(reqUser, startAuditAction, employee.id, {
+    reason: reason || null,
+    is_re_enrollment: !!isReEnrollment,
+  }).catch(() => {});
 
   return {
     sessionToken,
@@ -196,6 +235,12 @@ const commitFaceEnrollment = async ({ sessionToken, imageBuffer, originalName, m
         [reqUser.id, session.reason || 'Super Admin Re-enrollment', existingTemplate.id]
       );
 
+      await logAction(reqUser, 'FACE_BIOMETRIC_REVOKED', session.employeeId, {
+        previous_template_id: existingTemplate.id,
+        previous_version: existingTemplate.version,
+        reason: session.reason || 'Replaced by new enrollment'
+      }).catch(() => {});
+
       nextVersion = (existingTemplate.version || 1) + 1;
     }
 
@@ -238,10 +283,19 @@ const commitFaceEnrollment = async ({ sessionToken, imageBuffer, originalName, m
       ]
     );
 
+    // 6. Complete any pending reminders for this employee
+    await ensureRemindersTable();
+    await client.query(
+      `UPDATE face_verification_reminders 
+       SET status = 'COMPLETED', completed_at = NOW(), updated_at = NOW() 
+       WHERE employee_id = $1 AND status IN ('SENT', 'SEEN')`,
+      [session.employeeId]
+    ).catch(() => {});
+
     await client.query('COMMIT');
 
-    // 6. Write audit log
-    const auditAction = session.isReEnrollment ? 'FACE_RE_ENROLLMENT' : 'FACE_ENROLLMENT';
+    // 7. Write audit log
+    const auditAction = session.isReEnrollment ? 'FACE_RE_ENROLLMENT_COMPLETED' : 'FACE_ENROLLMENT_COMPLETED';
     await logAction(reqUser, auditAction, session.employeeId, {
       template_id: newTemplate.id,
       version: newTemplate.version,
@@ -268,7 +322,7 @@ const commitFaceEnrollment = async ({ sessionToken, imageBuffer, originalName, m
       }
     };
   } catch (err) {
-    await client.query('ROLLBACK');
+    await client.query('ROLLBACK').catch(() => {});
     logger.error('Error committing biometric face enrollment:', err.message);
 
     // Audit failed enrollment
@@ -314,8 +368,241 @@ const getEmployeeBiometricStatus = async (employeeId, reqUser) => {
       enrolled_at: activeTemplate.enrolled_at,
       enrolled_by_name: activeTemplate.enrolled_by_name
     } : null,
-    history: (reqUser.role || '').toUpperCase() === 'SUPER_ADMIN' ? templates : []
+    history: (reqUser?.role || '').toUpperCase() === 'SUPER_ADMIN' ? templates : []
   };
+};
+
+/**
+ * Get authenticated employee's own biometric status
+ */
+const getMyBiometricStatus = async (reqUser) => {
+  const authEmpId = await resolveEmployeeId(reqUser);
+  if (!authEmpId) {
+    return {
+      is_enrolled: false,
+      status: 'NOT_ENROLLED',
+      message: 'No employee profile associated with current user context'
+    };
+  }
+  return getEmployeeBiometricStatus(authEmpId, reqUser);
+};
+
+/**
+ * Super Admin: List employees with missing face verification + status breakdown
+ */
+const getMissingBiometrics = async ({ search = '', status = 'ALL', page = 1, limit = 50 }) => {
+  await ensureRemindersTable();
+
+  const offset = (Math.max(1, parseInt(page, 10)) - 1) * parseInt(limit, 10);
+  const searchPattern = search ? `%${search.trim()}%` : null;
+
+  let whereClauses = [`e.employee_status != 'TERMINATED'`];
+  let params = [];
+
+  if (searchPattern) {
+    params.push(searchPattern);
+    whereClauses.push(`(e.full_name ILIKE $${params.length} OR e.employee_id ILIKE $${params.length} OR e.mobile_number ILIKE $${params.length} OR e.email_id ILIKE $${params.length})`);
+  }
+
+  // Filter based on Face Verification status: 'ALL' | 'VERIFIED' | 'MISSING' | 'PENDING' | 'REVOKED'
+  const normStatus = status.toUpperCase();
+  if (normStatus === 'VERIFIED') {
+    whereClauses.push(`t.status = 'ACTIVE'`);
+  } else if (normStatus === 'MISSING' || normStatus === 'PENDING') {
+    whereClauses.push(`t.status IS NULL OR t.status != 'ACTIVE'`);
+  } else if (normStatus === 'REVOKED') {
+    whereClauses.push(`t.status = 'REVOKED'`);
+  }
+
+  const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+  const countQuery = `
+    SELECT COUNT(DISTINCT e.id) as total
+    FROM employees e
+    LEFT JOIN employee_biometric_templates t ON t.employee_id = e.id AND t.status = 'ACTIVE'
+    ${whereSql}
+  `;
+  const { rows: [countResult] } = await query(countQuery, params);
+  const total = parseInt(countResult?.total || 0, 10);
+
+  params.push(parseInt(limit, 10), offset);
+  const limitParamIdx = params.length - 1;
+  const offsetParamIdx = params.length;
+
+  const dataQuery = `
+    SELECT 
+      e.id, 
+      e.employee_id as employee_code, 
+      e.full_name, 
+      e.designation, 
+      e.department, 
+      e.mobile_number, 
+      e.email_id, 
+      e.employee_status,
+      e.activation_status as kyc_status,
+      t.id as active_template_id,
+      t.version as active_template_version,
+      t.enrolled_at as active_enrolled_at,
+      r.id as latest_reminder_id,
+      r.sent_at as latest_reminder_sent_at,
+      r.status as latest_reminder_status,
+      CASE 
+        WHEN t.status = 'ACTIVE' THEN 'VERIFIED'
+        WHEN EXISTS(SELECT 1 FROM employee_biometric_templates rev WHERE rev.employee_id = e.id AND rev.status = 'REVOKED') AND t.status IS NULL THEN 'REVOKED'
+        ELSE 'MISSING'
+      END as face_verification_status,
+      CASE 
+        WHEN t.status = 'ACTIVE' THEN 'ENABLED'
+        ELSE 'RESTRICTED'
+      END as attendance_access
+    FROM employees e
+    LEFT JOIN employee_biometric_templates t ON t.employee_id = e.id AND t.status = 'ACTIVE'
+    LEFT JOIN LATERAL (
+      SELECT id, sent_at, status 
+      FROM face_verification_reminders rem 
+      WHERE rem.employee_id = e.id 
+      ORDER BY sent_at DESC 
+      LIMIT 1
+    ) r ON true
+    ${whereSql}
+    ORDER BY e.created_at DESC
+    LIMIT $${limitParamIdx} OFFSET $${offsetParamIdx}
+  `;
+
+  const { rows: employees } = await query(dataQuery, params);
+
+  return {
+    employees,
+    pagination: {
+      total,
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      totalPages: Math.ceil(total / parseInt(limit, 10)) || 1
+    }
+  };
+};
+
+/**
+ * Super Admin: Send Face Verification Reminder to an employee
+ */
+const sendFaceVerificationReminder = async ({ employeeId, message, reqUser }) => {
+  await ensureRemindersTable();
+
+  // Validate employee
+  const { rows: [emp] } = await query(
+    `SELECT id, employee_id, full_name, user_id FROM employees WHERE id = $1`,
+    [employeeId]
+  );
+
+  if (!emp) {
+    const error = new Error('Employee record not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Anti-Spam Check: Disallow sending reminder if one was sent in the last 10 minutes
+  const { rows: [recentReminder] } = await query(
+    `SELECT id, sent_at FROM face_verification_reminders 
+     WHERE employee_id = $1 AND sent_at > NOW() - INTERVAL '10 minutes' AND status = 'SENT'
+     LIMIT 1`,
+    [employeeId]
+  );
+
+  if (recentReminder) {
+    const error = new Error('A reminder was already sent to this employee recently. Please wait before sending another.');
+    error.statusCode = 429;
+    throw error;
+  }
+
+  const defaultMsg = message && message.trim()
+    ? message.trim()
+    : 'Please complete your KYC face verification from your employee dashboard to enable biometric attendance.';
+
+  // 1. Insert into face_verification_reminders table
+  const { rows: [reminder] } = await query(
+    `INSERT INTO face_verification_reminders 
+     (employee_id, sent_by, message, status, sent_at, created_at, updated_at)
+     VALUES ($1, $2, $3, 'SENT', NOW(), NOW(), NOW())
+     RETURNING id, employee_id, sent_by, message, status, sent_at`,
+    [employeeId, reqUser.id, defaultMsg]
+  );
+
+  // 2. Dispatch in-app notification if user_id exists
+  if (emp.user_id) {
+    try {
+      await query(
+        `INSERT INTO notifications (user_id, title, message, type, is_read, created_at)
+         VALUES ($1, $2, $3, 'FACE_VERIFICATION_REMINDER', false, NOW())`,
+        [
+          emp.user_id,
+          'Face Verification Required',
+          defaultMsg
+        ]
+      );
+    } catch (e) {
+      // Non-critical fallback
+      logger.warn('Failed to insert into notifications table:', e.message);
+    }
+  }
+
+  // 3. Audit Action
+  await logAction(reqUser, 'FACE_VERIFICATION_REMINDER_SENT', employeeId, {
+    reminder_id: reminder.id,
+    message: defaultMsg,
+  });
+
+  return {
+    success: true,
+    message: 'Face verification reminder sent successfully',
+    reminder: {
+      id: reminder.id,
+      employee_id: reminder.employee_id,
+      employee_name: emp.full_name,
+      employee_code: emp.employee_id,
+      sent_at: reminder.sent_at,
+      status: reminder.status,
+    }
+  };
+};
+
+/**
+ * Super Admin: Get reminder history for an employee
+ */
+const getReminderHistory = async (employeeId) => {
+  await ensureRemindersTable();
+
+  const { rows: history } = await query(
+    `SELECT r.id, r.employee_id, r.message, r.status, r.sent_at, r.seen_at, r.completed_at,
+            u.full_name as sent_by_name
+     FROM face_verification_reminders r
+     LEFT JOIN users u ON u.id = r.sent_by
+     WHERE r.employee_id = $1
+     ORDER BY r.sent_at DESC`,
+    [employeeId]
+  );
+
+  return history;
+};
+
+/**
+ * Mark a reminder as seen by employee
+ */
+const markReminderSeen = async (reminderId, reqUser) => {
+  await ensureRemindersTable();
+
+  const { rows: [updated] } = await query(
+    `UPDATE face_verification_reminders
+     SET status = 'SEEN', seen_at = NOW(), updated_at = NOW()
+     WHERE id = $1 AND status = 'SENT'
+     RETURNING id, status, seen_at`,
+    [reminderId]
+  );
+
+  if (updated) {
+    await logAction(reqUser, 'FACE_VERIFICATION_REMINDER_SEEN', null, { reminder_id: reminderId }).catch(() => {});
+  }
+
+  return updated || { id: reminderId, status: 'SEEN' };
 };
 
 /**
@@ -457,6 +744,11 @@ module.exports = {
   createEnrollmentSession,
   commitFaceEnrollment,
   getEmployeeBiometricStatus,
+  getMyBiometricStatus,
+  getMissingBiometrics,
+  sendFaceVerificationReminder,
+  getReminderHistory,
+  markReminderSeen,
   getSignedPreviewUrl,
   getEnvironmentReferences,
   registerEnvironmentReference,

@@ -8,14 +8,23 @@ const ctrl = require('./attendance-enrollment.controller');
 router.use(authenticate, syncUser);
 
 // ── Employee Biometric Face Enrollment ───────────────────────────
-// Session creation (Admin, HR, or Employee initiating initial session)
+// Session creation (Employee self-service or Admin/HR)
 router.post('/session', ctrl.createSession);
 
 // Commit face capture (upload face_image file with session_token)
 router.post('/commit', upload.single('face_image'), ctrl.commitFaceEnrollment);
 
-// Get biometric status for employee
+// Current authenticated employee's own biometric status
+router.get('/status', ctrl.getMyStatus);
+
+// Get biometric status for specific employee
 router.get('/employee/:employeeId', ctrl.getEmployeeStatus);
+
+// ── Super Admin Missing Enrollments & Reminders ──────────────────
+router.get('/missing', authorize('SUPER_ADMIN', 'ADMIN', 'HR'), ctrl.getMissingList);
+router.post('/reminder', authorize('SUPER_ADMIN', 'ADMIN'), ctrl.sendReminder);
+router.get('/reminders/:employeeId', authorize('SUPER_ADMIN', 'ADMIN', 'HR'), ctrl.getReminderHistory);
+router.post('/reminders/:id/seen', ctrl.markReminderSeen);
 
 // ── Super Admin Re-Enrollment ────────────────────────────────────
 router.post('/re-enrollment/session', authorize('SUPER_ADMIN'), ctrl.createReEnrollmentSession);
