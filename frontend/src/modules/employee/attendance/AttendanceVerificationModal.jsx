@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, RefreshCw } from 'lucide-react';
 import { FaceLivenessDetectorCore } from '@aws-amplify/ui-react-liveness';
@@ -31,6 +31,10 @@ export default function AttendanceVerificationModal({
   const [overlayMessage, setOverlayMessage] = useState('Preparing live face verification...');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
+  // Authoritative Session ID Refs to avoid stale closure issues during async callbacks
+  const sessionIdRef = useRef(null);
+  const providerSessionIdRef = useRef(null);
+
   // Window resize listener
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -41,6 +45,8 @@ export default function AttendanceVerificationModal({
   // Modal close handler
   const handleModalClose = useCallback(() => {
     setCurrentState('INSTRUCTIONS');
+    sessionIdRef.current = null;
+    providerSessionIdRef.current = null;
     setSessionId(null);
     setAwsProviderSessionId(null);
     setAwsCredentials(null);
@@ -53,6 +59,8 @@ export default function AttendanceVerificationModal({
   useEffect(() => {
     if (!isOpen) {
       setCurrentState('INSTRUCTIONS');
+      sessionIdRef.current = null;
+      providerSessionIdRef.current = null;
       setSessionId(null);
       setAwsProviderSessionId(null);
       setAwsCredentials(null);
@@ -75,27 +83,40 @@ export default function AttendanceVerificationModal({
       const sessionRes = await attendanceService.createVerificationSession();
       const newSessionId = sessionRes?.data?.sessionId || sessionRes?.sessionId || sessionRes?.data?.session_id || sessionRes?.session_id;
 
-      if (!newSessionId) {
+      if (!newSessionId || typeof newSessionId !== 'string') {
         throw new Error('Failed to create verification session');
       }
 
+      sessionIdRef.current = newSessionId;
       setSessionId(newSessionId);
 
       // Step 2: Initiate AWS Rekognition Face Liveness Session + fetch short-lived temporary AWS credentials
       setOverlayMessage('Initializing AWS Face Liveness...');
       const livenessRes = await attendanceService.initiateLivenessSession(newSessionId);
       const livenessData = livenessRes?.data || livenessRes;
-      const providerSessionId = livenessData?.providerSessionId || livenessData?.sessionId;
+      const rawProviderSessionId = livenessData?.providerSessionId || livenessData?.provider_session_id;
       const region = livenessData?.region || import.meta.env.VITE_AWS_REGION || 'ap-south-1';
       const tempCredentials = livenessData?.credentials;
 
-      if (!providerSessionId || livenessData?.status === 'PROVIDER_NOT_CONFIGURED') {
-        setErrorMessage('Liveness verification service is not configured in production environment');
-        setCurrentState('SERVICE_UNAVAILABLE');
+      if (!rawProviderSessionId || typeof rawProviderSessionId !== 'string' || rawProviderSessionId.length < 36 || livenessData?.status === 'PROVIDER_NOT_CONFIGURED') {
+        if (livenessData?.status === 'PROVIDER_NOT_CONFIGURED') {
+          setErrorMessage('Liveness verification service is not configured in production environment');
+          setCurrentState('SERVICE_UNAVAILABLE');
+        } else {
+          console.error('[LIVENESS DIAGNOSTIC] Invalid providerSessionId received from backend:', {
+            providerSessionIdPresent: !!rawProviderSessionId,
+            providerSessionIdLength: rawProviderSessionId ? String(rawProviderSessionId).length : 0,
+          });
+          setErrorMessage('Failed to initialize AWS Face Liveness session. Please retry.');
+          setCurrentState('VERIFICATION_FAILED');
+        }
         return;
       }
 
-      setAwsProviderSessionId(providerSessionId);
+      // Preserve untruncated 36-char AWS Rekognition SessionId in ref & state
+      const cleanProviderSessionId = String(rawProviderSessionId).trim();
+      providerSessionIdRef.current = cleanProviderSessionId;
+      setAwsProviderSessionId(cleanProviderSessionId);
       setAwsRegion(region);
       if (tempCredentials) {
         setAwsCredentials(tempCredentials);
@@ -104,10 +125,11 @@ export default function AttendanceVerificationModal({
       setCurrentState('LIVENESS_ACTIVE');
       setOverlayMessage('Position your face inside the oval frame and follow instructions');
 
-      // Safe Diagnostic Log (NO SECRETS OR KEYS LOGGED)
+      // Safe Diagnostic Log (NO SECRETS, FULL SESSION IDS, OR KEYS LOGGED)
       console.log('[LIVENESS DIAGNOSTIC]', {
-        verificationSessionId: newSessionId,
-        awsLivenessSessionId: providerSessionId,
+        sessionIdPresent: true,
+        providerSessionIdPresent: true,
+        providerSessionIdLength: cleanProviderSessionId.length,
         credentialProviderInvoked: false,
         expiration: tempCredentials?.expiration,
         livenessFlowStatus: 'started'
@@ -129,10 +151,14 @@ export default function AttendanceVerificationModal({
 
   // Custom AWS Credential Provider for FaceLivenessDetectorCore
   const credentialProvider = useCallback(async () => {
-    // Safe Diagnostic Log (NO SECRETS, ACCESS KEYS, OR TOKENS LOGGED)
+    const currentSessionId = sessionIdRef.current || sessionId;
+    const currentProviderSessionId = providerSessionIdRef.current || awsProviderSessionId;
+
+    // Safe Diagnostic Log (NO SECRETS, ACCESS KEYS, TOKENS, OR FULL SESSION IDS LOGGED)
     console.log('[LIVENESS DIAGNOSTIC]', {
-      verificationSessionId: sessionId,
-      awsLivenessSessionId: awsProviderSessionId,
+      sessionIdPresent: !!currentSessionId,
+      providerSessionIdPresent: !!currentProviderSessionId,
+      providerSessionIdLength: currentProviderSessionId ? currentProviderSessionId.length : 0,
       credentialProviderInvoked: true,
       expiration: awsCredentials?.expiration
     });
@@ -146,8 +172,12 @@ export default function AttendanceVerificationModal({
       };
     }
 
+    if (!currentSessionId) {
+      throw new Error('Verification session lost. Please restart verification.');
+    }
+
     // Fetch fresh temporary credentials from backend if not present
-    const credsRes = await attendanceService.getLivenessCredentials(sessionId);
+    const credsRes = await attendanceService.getLivenessCredentials(currentSessionId);
     const credsData = credsRes?.data?.credentials || credsRes?.credentials;
 
     if (!credsData || !credsData.accessKeyId) {
@@ -167,10 +197,26 @@ export default function AttendanceVerificationModal({
   // Called when AWS Amplify FaceLivenessDetectorCore completes client-side challenge
   const handleAnalysisComplete = async () => {
     try {
-      // Safe Diagnostic Log
+      const activeSessionId = sessionIdRef.current || sessionId;
+      const activeProviderSessionId = providerSessionIdRef.current || awsProviderSessionId;
+
+      // Defensive validation before calling /liveness/result:
+      if (!activeSessionId || !activeProviderSessionId || typeof activeProviderSessionId !== 'string' || activeProviderSessionId.length < 36) {
+        console.error('[LIVENESS DIAGNOSTIC] Pre-submission validation failed:', {
+          sessionIdPresent: !!activeSessionId,
+          providerSessionIdPresent: !!activeProviderSessionId,
+          providerSessionIdLength: activeProviderSessionId ? String(activeProviderSessionId).length : 0,
+        });
+        setErrorMessage('Face liveness session context was lost or invalid. Please retry.');
+        setCurrentState('VERIFICATION_FAILED');
+        return;
+      }
+
+      // Safe Diagnostic Log (NO SECRETS OR FULL SESSION IDS LOGGED)
       console.log('[LIVENESS DIAGNOSTIC]', {
-        verificationSessionId: sessionId,
-        awsLivenessSessionId: awsProviderSessionId,
+        sessionIdPresent: true,
+        providerSessionIdPresent: true,
+        providerSessionIdLength: activeProviderSessionId.length,
         livenessFlowStatus: 'completed'
       });
 
@@ -178,7 +224,7 @@ export default function AttendanceVerificationModal({
       setOverlayMessage('Matching with your registered KYC identity...');
 
       // Validate AWS Rekognition Liveness + perform server-side KYC Face Matching
-      await attendanceService.validateLivenessResult(sessionId, awsProviderSessionId);
+      await attendanceService.validateLivenessResult(activeSessionId, activeProviderSessionId);
 
       // Both Liveness & KYC Face Match Passed!
       setCurrentState('ATTENDANCE_SUBMITTING');
@@ -186,9 +232,9 @@ export default function AttendanceVerificationModal({
 
       let attendanceRes;
       if (actionType === 'CHECK_OUT') {
-        attendanceRes = await attendanceService.checkOut(sessionId);
+        attendanceRes = await attendanceService.checkOut(activeSessionId);
       } else {
-        attendanceRes = await attendanceService.checkIn(sessionId);
+        attendanceRes = await attendanceService.checkIn(activeSessionId);
       }
 
       const finalResult = {
@@ -235,6 +281,8 @@ export default function AttendanceVerificationModal({
 
   // Retry Flow: create completely NEW verification session & AWS liveness session
   const handleRetry = () => {
+    sessionIdRef.current = null;
+    providerSessionIdRef.current = null;
     setSessionId(null);
     setAwsProviderSessionId(null);
     setAwsCredentials(null);
