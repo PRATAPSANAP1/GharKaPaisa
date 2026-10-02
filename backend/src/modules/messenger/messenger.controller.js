@@ -15,10 +15,10 @@ async function getTurnCredentials(req, res, next) {
       { urls: 'stun:stun1.l.google.com:19302' }
     ];
 
-    let expiresAtIso = new Date(Date.now() + 86400 * 1000).toISOString();
+    let expiresAtIso = new Date(Date.now() + 3600 * 1000).toISOString();
 
     if (turnSecret) {
-      const ttlSeconds = 86400; // 24 hours
+      const ttlSeconds = 3600; // 1 hour
       const expiresAtUnix = Math.floor(Date.now() / 1000) + ttlSeconds;
       expiresAtIso = new Date(expiresAtUnix * 1000).toISOString();
       const username = `${expiresAtUnix}:${req.user.id}`;
