@@ -41,7 +41,7 @@ export const fetchApplicationTimeline = async (appId) => {
 
 export const trackPublicApplication = async (appNumber, mobile) => {
   try {
-    const response = await apiClient.all('/customer-portal/public/track-application', {
+    const response = await apiClient.get('/customer-portal/public/track-application', {
       params: { app_number: appNumber, mobile }
     });
     return response.data;
