@@ -1,9 +1,11 @@
 const os = require('os');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
+const { createAdapter } = require('@socket.io/redis-adapter');
 const logger = require('../config/logger');
 const JWT_SECRET = process.env.JWT_SECRET;
 const { query } = require('../config/database');
+const { initValkeyClients } = require('../config/redis');
 
 const HOSTNAME = os.hostname();
 const INSTANCE_ID = process.env.EC2_INSTANCE_ID || process.env.HOSTNAME || HOSTNAME;
@@ -50,10 +52,24 @@ async function resolveTargetUserId(recipientInput) {
   return inputStr;
 }
 
-function init(io) {
+async function init(io) {
   // Verify JWT_SECRET is configured
   if (!JWT_SECRET) {
     logger.error('[CALL SOCKET] CRITICAL: JWT_SECRET environment variable is missing for socket auth!');
+  }
+
+  // Attach Valkey Redis Pub/Sub Adapter for Cross-EC2 Multi-Instance Synchronization
+  try {
+    const { pubClient, subClient, isConnected } = await initValkeyClients();
+    if (isConnected && pubClient && subClient) {
+      io.adapter(createAdapter(pubClient, subClient));
+      logger.info('[Socket.IO Adapter] Attached Valkey Redis adapter to Socket.IO server.');
+    }
+  } catch (adapterErr) {
+    logger.error('[Socket.IO Adapter] Fatal error initializing Valkey Redis adapter:', adapterErr.message);
+    if (process.env.NODE_ENV === 'production' || process.env.REDIS_URL) {
+      throw adapterErr;
+    }
   }
 
   // Authentication middleware for Socket.IO (enforce Authorization payload token)
@@ -88,13 +104,13 @@ function init(io) {
 
     logger.info(`[CALL SOCKET]\nhostname=${HOSTNAME}\ninstanceId=${INSTANCE_ID}\nuserId=${userId}\nsocketId=${socket.id}\nroom=user:${userId}`);
 
-    // Broadcast online status
+    // Broadcast online status across all EC2 nodes via Redis adapter
     io.emit('user:online', { userId });
 
     // ── 1. CALL INITIATE ──
     socket.on('call:initiate', async (data, ack) => {
       const { recipient_id, conversation_id, call_type } = data || {};
-      logger.info(`[CALL SIGNAL] call:initiate received`);
+      logger.info(`[CALL SIGNAL] call:initiate received on instance ${HOSTNAME}`);
       logger.info(`[CALL SIGNAL] callerUserId=${userId}`);
       logger.info(`[CALL SIGNAL] rawRecipientInput=${recipient_id}`);
 
@@ -106,14 +122,16 @@ function init(io) {
       // Resolve canonical user ID
       const targetUserId = await resolveTargetUserId(recipient_id);
       
-      // Check room presence in Socket.IO adapter & onlineUsers Map
-      const roomSocketsSet = io.sockets.adapter.rooms.get(`user:${targetUserId}`);
-      const roomSocketIds = roomSocketsSet ? Array.from(roomSocketsSet) : [];
-      const hasRoomSockets = roomSocketIds.length > 0;
-      const isOnlineMap = onlineUsers.has(targetUserId);
-      const recipientFound = hasRoomSockets || isOnlineMap;
-
-      logger.info(`[CALL SIGNAL]\nhostname=${HOSTNAME}\ncallerUserId=${userId}\nreceiverUserId=${targetUserId}\nreceiver socket found=${recipientFound}\nroom exists=${hasRoomSockets}\nonlineMap contains receiver=${isOnlineMap}\nroomSocketIds=${JSON.stringify(roomSocketIds)}`);
+      // Check room presence across ALL EC2 instances using fetchSockets()
+      let recipientFound = false;
+      try {
+        const targetSockets = await io.in(`user:${targetUserId}`).fetchSockets();
+        recipientFound = targetSockets.length > 0 || onlineUsers.has(targetUserId);
+        logger.info(`[CALL SIGNAL]\nhostname=${HOSTNAME}\ncallerUserId=${userId}\nreceiverUserId=${targetUserId}\nremoteSocketsCount=${targetSockets.length}\nrecipientFound=${recipientFound}`);
+      } catch (fetchErr) {
+        logger.warn(`[CALL SIGNAL] Error fetching remote sockets via adapter: ${fetchErr.message}`);
+        recipientFound = onlineUsers.has(targetUserId);
+      }
 
       // Check if recipient or caller is already in an active call
       let recipientBusy = false;
@@ -149,7 +167,7 @@ function init(io) {
       }
 
       if (!recipientFound) {
-        logger.warn(`[CALL SIGNAL] Recipient ${targetUserId} socket NOT found / OFFLINE on instance ${HOSTNAME}`);
+        logger.warn(`[CALL SIGNAL] Recipient ${targetUserId} socket NOT found / OFFLINE across cluster`);
         socket.emit('call:unavailable', {
           call_id: callId,
           recipient_id: targetUserId,
@@ -160,7 +178,7 @@ function init(io) {
         return;
       }
 
-      // Notify recipient of incoming call
+      // Notify recipient of incoming call across EC2 cluster via Valkey Redis Adapter
       logger.info(`[CALL SIGNAL] emitting call:incoming to room user:${targetUserId}`);
       io.to(`user:${targetUserId}`).emit('call:incoming', {
         call_id: callId,

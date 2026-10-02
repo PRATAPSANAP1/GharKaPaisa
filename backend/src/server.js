@@ -178,6 +178,8 @@ app.use(morgan('combined', {
 }));
 
 // ── Health Check ───────────────────────────────────────────────
+const { getValkeyStatus, closeValkeyClients } = require('./config/redis');
+
 app.get('/health', async (req, res) => {
   try {
     await db.query('SELECT 1');
@@ -188,6 +190,7 @@ app.get('/health', async (req, res) => {
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV,
       database: 'connected',
+      socket_adapter: getValkeyStatus() ? 'ready' : 'not_ready',
       pool: {
         total: db.pool.totalCount,
         idle: db.pool.idleCount,
@@ -203,6 +206,7 @@ app.get('/health', async (req, res) => {
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV,
       database: 'disconnected',
+      socket_adapter: getValkeyStatus() ? 'ready' : 'not_ready',
       error: err.message,
       pool: {
         total: db.pool ? db.pool.totalCount : 0,
@@ -438,24 +442,29 @@ const gracefulShutdown = (signal) => {
     server.close(async () => {
       logger.info('HTTP server closed.');
       try {
+        await closeValkeyClients();
         await db.pool.end();
         logger.info('Database connection pool closed.');
         clearTimeout(timeoutId);
         process.exit(0);
       } catch (err) {
-        logger.error('Error closing database connection pool:', err);
+        logger.error('Error closing database connection pool / Valkey:', err);
         process.exit(1);
       }
     });
   } else {
-    db.pool.end().then(() => {
-      logger.info('Database connection pool closed.');
-      clearTimeout(timeoutId);
-      process.exit(0);
-    }).catch((err) => {
-      logger.error('Error closing database connection pool:', err);
-      process.exit(1);
-    });
+    (async () => {
+      try {
+        await closeValkeyClients();
+        await db.pool.end();
+        logger.info('Database connection pool closed.');
+        clearTimeout(timeoutId);
+        process.exit(0);
+      } catch (err) {
+        logger.error('Error closing database connection pool / Valkey:', err);
+        process.exit(1);
+      }
+    })();
   }
 };
 
