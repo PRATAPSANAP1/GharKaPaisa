@@ -1,4 +1,10 @@
-const { createClient } = require('redis');
+let createClient = null;
+try {
+  const redisModule = require('redis');
+  createClient = redisModule.createClient;
+} catch (err) {
+  // Graceful fallback if redis or @redis/client module is missing
+}
 const logger = require('./logger');
 
 let pubClient = null;
@@ -9,6 +15,11 @@ let isConnected = false;
  * Initialize Valkey/Redis Pub/Sub clients for Socket.IO multi-instance scaling
  */
 async function initValkeyClients() {
+  if (!createClient) {
+    logger.warn('[Socket.IO Adapter] redis package or @redis/client module not available. Valkey adapter disabled.');
+    return { pubClient: null, subClient: null, isConnected: false };
+  }
+
   const rawUrl = process.env.REDIS_URL || process.env.VALKEY_URL || 'rediss://gharkapaisa-messenger-i7mh8d.serverless.aps1.cache.amazonaws.com:6379';
   
   let url = rawUrl.trim();

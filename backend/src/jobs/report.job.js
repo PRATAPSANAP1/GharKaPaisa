@@ -1,4 +1,9 @@
-const cron = require('node-cron');
+let cron = null;
+try {
+  cron = require('node-cron');
+} catch (err) {
+  // node-cron is optional
+}
 const { query } = require('../config/database');
 const logger = require('../config/logger');
 
@@ -24,6 +29,10 @@ const compileDailyReports = async () => {
 
 // 0 23 * * * = Every day at 11:00 PM
 const initReportJobs = () => {
+  if (!cron) {
+    logger.warn('[Report Job] node-cron package not loaded. Skipping scheduled report job.');
+    return;
+  }
   cron.schedule('0 23 * * *', compileDailyReports);
   logger.info('Daily report CRON job scheduled (11 PM).');
 };
