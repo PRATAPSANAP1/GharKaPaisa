@@ -6,7 +6,8 @@ import {
   FaPlus, FaCheckCircle, FaTimesCircle, FaEye, FaEdit, FaCheck, FaLock,
   FaFileAlt, FaVideo, FaUniversity, FaBuilding, FaBriefcase, FaIdCard, FaPhone, FaEnvelope, FaClock, FaUserCircle,
   FaUserTimes, FaUnlink, FaChartLine, FaTrophy, FaEllipsisV, FaDownload, FaRedo, FaInfoCircle, FaChevronRight,
-  FaCoins, FaBullseye, FaTrash, FaCalendarAlt, FaExclamationCircle, FaCamera, FaUserShield
+  FaCoins, FaBullseye, FaTrash, FaCalendarAlt, FaExclamationCircle, FaCamera, FaUserShield,
+  FaFileUpload, FaBell, FaCog, FaKey
 } from 'react-icons/fa';
 import api from '../../../services/api';
 import BiometricManagementModal from '../biometrics/BiometricManagementModal';
