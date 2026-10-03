@@ -25,12 +25,97 @@ export default function EmployeeManagement() {
   const [activeTab, setActiveTab] = useState('employees'); // 'employees', 'hierarchy', 'bonus'
   const [drawerEmp, setDrawerEmp] = useState(null); // Right-side drawer / mobile modal selected employee
   const [drawerTab, setDrawerTab] = useState('overview'); // 'overview', 'kyc', 'face', 'access', 'attendance', 'activity'
-  const [recordsViewTab, setRecordsViewTab] = useState('directory'); // 'directory', 'recent'
+  const [recordsViewTab, setRecordsViewTab] = useState('recent'); // 'recent', 'processed'
   const [showReminderHistory, setShowReminderHistory] = useState(false);
   const [actionRequiredFilter, setActionRequiredFilter] = useState(''); // '', 'face_missing', 'kyc_pending', 'docs_missing', 'activation_pending'
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [attendanceFilter, setAttendanceFilter] = useState('');
   const [activeActionMenuId, setActiveActionMenuId] = useState(null);
+
+  // Drawer Employee Editing State
+  const [isEditingEmpInfo, setIsEditingEmpInfo] = useState(false);
+  const [editEmpForm, setEditEmpForm] = useState({
+    full_name: '', mobile_number: '', email_id: '', designation: '', department: '', manager_name: ''
+  });
+
+  // Inline 360 Document Inspection & Verification State
+  const [docStatuses, setDocStatuses] = useState({
+    aadhaar: { status: 'Submitted', reason: '' },
+    pan: { status: 'Submitted', reason: '' },
+    bank: { status: 'Submitted', reason: '' },
+    photo: { status: 'Submitted', reason: '' },
+    offer_letter: { status: 'Submitted', reason: '' }
+  });
+  const [rejectingDocKey, setRejectingDocKey] = useState(null);
+  const [docRejectReasonInput, setDocRejectReasonInput] = useState('');
+  const [docIdentityFields, setDocIdentityFields] = useState({
+    aadhaar_number: '4521 8892 1045',
+    pan_number: 'ABCDE1234F',
+    bank_account: '918230918231',
+    ifsc_code: 'HDFC0001234',
+    admin_remarks: 'All verified during video KYC.'
+  });
+  const [viewingDocModal, setViewingDocModal] = useState(null);
+
+  useEffect(() => {
+    if (drawerEmp) {
+      setIsEditingEmpInfo(false);
+      setEditEmpForm({
+        full_name: drawerEmp.full_name || '',
+        mobile_number: drawerEmp.mobile_number || '',
+        email_id: drawerEmp.email_id || drawerEmp.email || '',
+        designation: drawerEmp.designation || 'Branch Head',
+        department: drawerEmp.department || 'Sales & Support',
+        manager_name: drawerEmp.manager_name || 'Suresh Yadav'
+      });
+      setDocIdentityFields({
+        aadhaar_number: drawerEmp.aadhaar_number || '4521 8892 1045',
+        pan_number: drawerEmp.pan_number || 'ABCDE1234F',
+        bank_account: drawerEmp.bank_account || '918230918231',
+        ifsc_code: drawerEmp.ifsc_code || 'HDFC0001234',
+        admin_remarks: drawerEmp.admin_remarks || 'All verified during video KYC.'
+      });
+      setDocStatuses({
+        aadhaar: { status: 'Submitted', reason: '' },
+        pan: { status: 'Submitted', reason: '' },
+        bank: { status: 'Submitted', reason: '' },
+        photo: { status: 'Submitted', reason: '' },
+        offer_letter: { status: 'Submitted', reason: '' }
+      });
+      setRejectingDocKey(null);
+    }
+  }, [drawerEmp?.id]);
+
+  // Credentials Modal State & Handlers
+  const [credentialsModalEmp, setCredentialsModalEmp] = useState(null);
+  const [credentialsTempPassword, setCredentialsTempPassword] = useState('GharKaPaisa@2026');
+  const [credentialsCopied, setCredentialsCopied] = useState(false);
+
+  const handleResendCreds = (emp) => {
+    setCredentialsTempPassword('GharKaPaisa@2026');
+    setCredentialsCopied(false);
+    setCredentialsModalEmp(emp || drawerEmp);
+  };
+
+  const getCredentialMessageTemplate = (emp, pwd) => {
+    if (!emp) return '';
+    const empCode = emp.employee_code || emp.employee_id || emp.emp_code || 'EMP10001';
+    return `*GharKaPaisa Employee Access Credentials*\n\nDear ${emp.full_name},\n\nWelcome to GharKaPaisa! Your employee portal login credentials have been configured:\n\n👤 *Username / ID:* ${empCode}\n📱 *Registered Mobile:* ${emp.mobile_number || 'N/A'}\n🔑 *Temporary Password:* ${pwd}\n🌐 *Portal URL:* https://gharkapaisa.in/login\n\nPlease log in and update your password on your first access.\n\nBest regards,\nGharKaPaisa Operations & HR Team`;
+  };
+
+  const handleSendWhatsAppCredentials = (emp, pwd) => {
+    const mobile = (emp.mobile_number || '').replace(/\D/g, '');
+    const cleanMobile = mobile.length === 10 ? `91${mobile}` : mobile;
+    const msg = getCredentialMessageTemplate(emp, pwd);
+    window.open(`https://wa.me/${cleanMobile}?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
+  const handleSendSmsCredentials = (emp, pwd) => {
+    const mobile = (emp.mobile_number || '').replace(/\D/g, '');
+    const empCode = emp.employee_code || emp.employee_id || emp.emp_code || 'EMP10001';
+    const msg = `GharKaPaisa Credentials: Dear ${emp.full_name}, your login ID: ${empCode}, Password: ${pwd}. Login at https://gharkapaisa.in/login`;
+    window.open(`sms:${mobile}?body=${encodeURIComponent(msg)}`, '_self');
+  };
 
   const [employees, setEmployees] = useState([]);
   const [allEmployees, setAllEmployees] = useState([]);
@@ -1249,15 +1334,15 @@ export default function EmployeeManagement() {
                       Recent Activity
                     </button>
                     <button 
-                      onClick={() => setRecordsViewTab('directory')}
+                      onClick={() => setRecordsViewTab('processed')}
                       style={{
                         padding: '6px 14px', fontSize: '12px', fontWeight: 800, border: 'none',
-                        background: recordsViewTab === 'directory' ? C.teal : 'transparent',
-                        color: recordsViewTab === 'directory' ? '#fff' : C.textMid,
+                        background: recordsViewTab === 'processed' ? C.teal : 'transparent',
+                        color: recordsViewTab === 'processed' ? '#fff' : C.textMid,
                         cursor: 'pointer', borderRadius: '0px', transition: 'all 0.15s ease'
                       }}
                     >
-                      Employee Directory
+                      Processed Accounts
                     </button>
                   </div>
                 </div>
@@ -1362,6 +1447,12 @@ export default function EmployeeManagement() {
                     if (dateA !== dateB) return dateB - dateA;
                     return (b.id || 0) - (a.id || 0);
                   });
+                } else if (recordsViewTab === 'processed') {
+                  list = list.filter(e => {
+                    const act = String(e.activation_status || '').toUpperCase();
+                    const ver = String(e.overall_verification_status || e.kyc_status || '').toUpperCase();
+                    return act === 'APPROVED' || ver === 'VERIFIED' || ver === 'APPROVED';
+                  });
                 }
                 return list;
               })();
@@ -1396,9 +1487,14 @@ export default function EmployeeManagement() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <div style={{
                             width: '42px', height: '42px', borderRadius: '50%', background: `${C.teal}20`, color: C.teal,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '16px', flexShrink: 0
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '16px', flexShrink: 0,
+                            overflow: 'hidden', border: `1px solid ${C.teal}40`
                           }}>
-                            {emp.full_name ? emp.full_name[0].toUpperCase() : 'E'}
+                            {emp.profile_photo_url || emp.face_reference_url || emp.avatar_url || emp.photo ? (
+                              <img src={emp.profile_photo_url || emp.face_reference_url || emp.avatar_url || emp.photo} alt={emp.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              emp.full_name ? emp.full_name[0].toUpperCase() : 'E'
+                            )}
                           </div>
                           <div>
                             <div style={{ fontSize: '14.5px', fontWeight: 900, color: C.text }}>
@@ -1509,10 +1605,15 @@ export default function EmployeeManagement() {
                               style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
                             >
                               <div style={{
-                                width: '34px', height: '34px', borderRadius: '50%', background: `${C.teal}20`, color: C.teal,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px', flexShrink: 0
+                                width: '36px', height: '36px', borderRadius: '50%', background: `${C.teal}20`, color: C.teal,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px', flexShrink: 0,
+                                overflow: 'hidden', border: `1px solid ${C.teal}40`
                               }}>
-                                {emp.full_name ? emp.full_name[0].toUpperCase() : 'E'}
+                                {emp.profile_photo_url || emp.face_reference_url || emp.avatar_url || emp.photo ? (
+                                  <img src={emp.profile_photo_url || emp.face_reference_url || emp.avatar_url || emp.photo} alt={emp.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                  emp.full_name ? emp.full_name[0].toUpperCase() : 'E'
+                                )}
                               </div>
                               <div>
                                 <div style={{ fontWeight: 800, color: C.text, fontSize: '13.5px' }}>{emp.full_name}</div>
@@ -4005,8 +4106,8 @@ export default function EmployeeManagement() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '24px', flexShrink: 0,
                       border: `2px solid ${C.teal}30`, overflow: 'hidden'
                     }}>
-                      {drawerEmp.profile_photo_url ? (
-                        <img src={drawerEmp.profile_photo_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      {drawerEmp.profile_photo_url || drawerEmp.face_reference_url || drawerEmp.avatar_url || drawerEmp.photo ? (
+                        <img src={drawerEmp.profile_photo_url || drawerEmp.face_reference_url || drawerEmp.avatar_url || drawerEmp.photo} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
                         drawerEmp.full_name ? drawerEmp.full_name[0].toUpperCase() : 'E'
                       )}
@@ -4075,75 +4176,191 @@ export default function EmployeeManagement() {
                 {drawerTab === 'overview' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     
-                    {/* Employee Information Card */}
-                    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                        <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Information</h4>
-                        <button style={{ background: '#EEF2FF', border: 'none', color: '#4F46E5', padding: '4px 10px', borderRadius: '0px', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          ✏ Edit
-                        </button>
+                    {/* Employee Information Card (View vs Edit Mode) */}
+                    {!isEditingEmpInfo ? (
+                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                          <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Information</h4>
+                          <button 
+                            onClick={() => setIsEditingEmpInfo(true)}
+                            style={{ background: '#EEF2FF', border: 'none', color: '#4F46E5', padding: '4px 10px', borderRadius: '0px', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            ✏ Edit
+                          </button>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', fontSize: '12.5px' }}>
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Full Name</span>
+                            <strong style={{ color: C.text }}>{drawerEmp.full_name}</strong>
+                          </div>
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Date of Joining</span>
+                            <strong style={{ color: C.text }}>{drawerEmp.created_at ? new Date(drawerEmp.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Oct 2, 2026'}</strong>
+                          </div>
+
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Employee Code</span>
+                            <strong style={{ color: C.text }}>{drawerEmp.employee_code || drawerEmp.employee_id || drawerEmp.emp_code || 'CAND10001'}</strong>
+                          </div>
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Account Status</span>
+                            <span style={{ padding: '2px 8px', borderRadius: '0px', fontSize: '11px', fontWeight: 800, background: '#D1FAE5', color: '#065F46', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              ✓ Active
+                            </span>
+                          </div>
+
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Mobile Number</span>
+                            <strong style={{ color: C.text }}>{drawerEmp.mobile_number || '+91 98765 43210'}</strong>
+                          </div>
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Reporting Manager</span>
+                            <strong style={{ color: C.text }}>{drawerEmp.manager_name || 'Suresh Yadav'}</strong>
+                          </div>
+
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Email Address</span>
+                            <strong style={{ color: C.text }}>{drawerEmp.email_id || drawerEmp.email || 'pratap.sanap@gharkapaisa.in'}</strong>
+                          </div>
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Team</span>
+                            <strong style={{ color: C.text }}>Team Alpha</strong>
+                          </div>
+
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Designation</span>
+                            <strong style={{ color: C.text }}>{drawerEmp.designation || 'Branch Head'}</strong>
+                          </div>
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Attendance Access</span>
+                            <span style={{ padding: '2px 8px', borderRadius: '0px', fontSize: '11px', fontWeight: 800, background: '#D1FAE5', color: '#065F46', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              ✓ Enabled
+                            </span>
+                          </div>
+
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Department</span>
+                            <strong style={{ color: C.text }}>{drawerEmp.department || 'Sales & Support'}</strong>
+                          </div>
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Bank Access</span>
+                            <strong style={{ color: C.text }}>2 Banks Assigned</strong>
+                          </div>
+                        </div>
                       </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', fontSize: '12.5px' }}>
-                        <div>
-                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Full Name</span>
-                          <strong style={{ color: C.text }}>{drawerEmp.full_name}</strong>
-                        </div>
-                        <div>
-                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Date of Joining</span>
-                          <strong style={{ color: C.text }}>{drawerEmp.created_at ? new Date(drawerEmp.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Oct 2, 2026'}</strong>
+                    ) : (
+                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                          <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.teal, margin: 0 }}>✏ Edit Employee Information</h4>
+                          <span style={{ fontSize: '11.5px', fontWeight: 800, color: C.textMid }}>ID: {drawerEmp.employee_code || drawerEmp.employee_id || drawerEmp.emp_code}</span>
                         </div>
 
-                        <div>
-                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Employee Code</span>
-                          <strong style={{ color: C.text }}>{drawerEmp.employee_code || drawerEmp.employee_id || drawerEmp.emp_code || 'CAND10001'}</strong>
-                        </div>
-                        <div>
-                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Account Status</span>
-                          <span style={{ padding: '2px 8px', borderRadius: '0px', fontSize: '11px', fontWeight: 800, background: '#D1FAE5', color: '#065F46', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                            ✓ Active
-                          </span>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12.5px' }}>
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>Full Name *</label>
+                            <input 
+                              type="text" 
+                              value={editEmpForm.full_name || ''} 
+                              onChange={(e) => setEditEmpForm({ ...editEmpForm, full_name: e.target.value })}
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>Mobile Number *</label>
+                            <input 
+                              type="text" 
+                              value={editEmpForm.mobile_number || ''} 
+                              onChange={(e) => setEditEmpForm({ ...editEmpForm, mobile_number: e.target.value })}
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>Email Address *</label>
+                            <input 
+                              type="email" 
+                              value={editEmpForm.email_id || ''} 
+                              onChange={(e) => setEditEmpForm({ ...editEmpForm, email_id: e.target.value })}
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>Designation *</label>
+                            <select 
+                              value={editEmpForm.designation || ''} 
+                              onChange={(e) => setEditEmpForm({ ...editEmpForm, designation: e.target.value })}
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12.5px', fontWeight: 700 }}
+                            >
+                              <option value="TC">TC (Telecaller)</option>
+                              <option value="TL">TL (Team Leader)</option>
+                              <option value="Manager">Manager</option>
+                              <option value="Senior Manager">Senior Manager</option>
+                              <option value="Branch Head">Branch Head</option>
+                              <option value="KYC Operator">KYC Operator</option>
+                              <option value="QD Operator">QD Operator</option>
+                              <option value="Remark Operator">Remark Operator</option>
+                              <option value="Final Status Operator">Final Status Operator</option>
+                              <option value="PAN Checker">PAN Checker</option>
+                              <option value="Administrative Operator">Administrative Operator</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>Department</label>
+                            <input 
+                              type="text" 
+                              value={editEmpForm.department || ''} 
+                              onChange={(e) => setEditEmpForm({ ...editEmpForm, department: e.target.value })}
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>Reporting Manager</label>
+                            <input 
+                              type="text" 
+                              value={editEmpForm.manager_name || ''} 
+                              onChange={(e) => setEditEmpForm({ ...editEmpForm, manager_name: e.target.value })}
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
+                            />
+                          </div>
                         </div>
 
-                        <div>
-                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Mobile Number</span>
-                          <strong style={{ color: C.text }}>{drawerEmp.mobile_number || '+91 98765 43210'}</strong>
-                        </div>
-                        <div>
-                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Reporting Manager</span>
-                          <strong style={{ color: C.text }}>{drawerEmp.manager_name || 'Suresh Yadav'}</strong>
-                        </div>
-
-                        <div>
-                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Email Address</span>
-                          <strong style={{ color: C.text }}>{drawerEmp.email_id || drawerEmp.email || 'pratap.sanap@gharkapaisa.in'}</strong>
-                        </div>
-                        <div>
-                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Team</span>
-                          <strong style={{ color: C.text }}>Team Alpha</strong>
-                        </div>
-
-                        <div>
-                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Designation</span>
-                          <strong style={{ color: C.text }}>{drawerEmp.designation || 'Branch Head'}</strong>
-                        </div>
-                        <div>
-                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Attendance Access</span>
-                          <span style={{ padding: '2px 8px', borderRadius: '0px', fontSize: '11px', fontWeight: 800, background: '#D1FAE5', color: '#065F46', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                            ✓ Enabled
-                          </span>
-                        </div>
-
-                        <div>
-                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Department</span>
-                          <strong style={{ color: C.text }}>{drawerEmp.department || 'Sales & Support'}</strong>
-                        </div>
-                        <div>
-                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Bank Access</span>
-                          <strong style={{ color: C.text }}>2 Banks Assigned</strong>
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '16px' }}>
+                          <button 
+                            type="button" 
+                            onClick={() => setIsEditingEmpInfo(false)}
+                            style={{ padding: '6px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', fontSize: '12px', fontWeight: 700, color: C.text, cursor: 'pointer' }}
+                          >
+                            Cancel
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={() => {
+                              const updatedEmp = {
+                                ...drawerEmp,
+                                full_name: editEmpForm.full_name,
+                                mobile_number: editEmpForm.mobile_number,
+                                email_id: editEmpForm.email_id,
+                                email: editEmpForm.email_id,
+                                designation: editEmpForm.designation,
+                                department: editEmpForm.department,
+                                manager_name: editEmpForm.manager_name
+                              };
+                              setDrawerEmp(updatedEmp);
+                              setEmployees(prev => prev.map(e => e.id === updatedEmp.id ? updatedEmp : e));
+                              setAllEmployees(prev => prev.map(e => e.id === updatedEmp.id ? updatedEmp : e));
+                              setIsEditingEmpInfo(false);
+                            }}
+                            style={{ padding: '6px 16px', background: C.teal, color: '#fff', border: 'none', borderRadius: '0px', fontSize: '12px', fontWeight: 900, cursor: 'pointer' }}
+                          >
+                            Save Changes
+                          </button>
                         </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* 4 Status Summary Cards Grid */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
@@ -4239,7 +4456,7 @@ export default function EmployeeManagement() {
                   </div>
                 )}
 
-                {/* 2. KYC & DOCS TAB */}
+                {/* 2. KYC & DOCS TAB (EMBEDDED 360° INSPECTION) */}
                 {drawerTab === 'kyc' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div style={{ background: drawerEmp.activation_status === 'APPROVED' ? '#D1FAE515' : '#FEF3C715', border: `1px solid ${drawerEmp.activation_status === 'APPROVED' ? '#A7F3D0' : '#FDE68A'}`, borderRadius: '0px', padding: '14px' }}>
@@ -4256,26 +4473,193 @@ export default function EmployeeManagement() {
                       )}
                     </div>
 
-                    <button
-                      onClick={() => setSelectedEmp(drawerEmp)}
-                      style={{
-                        padding: '12px 16px', background: '#3B82F610', border: '1px solid #3B82F640',
-                        borderRadius: '0px', color: '#2563EB', fontWeight: 800, fontSize: '13px',
-                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                      }}
-                    >
-                      <FaEye /> View 360° Profile & Document Inspection
-                    </button>
+                    {/* 360° Identity Form Fields */}
+                    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '16px' }}>
+                      <div style={{ fontSize: '14px', fontWeight: 900, color: C.text, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <FaIdCard style={{ color: C.teal }} /> 360° Profile & Identity Details
+                      </div>
 
-                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '14px' }}>
-                      <div style={{ fontSize: '13px', fontWeight: 900, color: C.text, marginBottom: '10px' }}>Required Verification Documents</div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {['Aadhaar Card', 'PAN Card', 'Bank Passbook / Cheque', 'Profile Photograph', 'Signed Offer Letter'].map((docName, idx) => (
-                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', fontSize: '12.5px' }}>
-                            <span style={{ color: C.text, fontWeight: 700 }}>📄 {docName}</span>
-                            <span style={{ fontSize: '11px', fontWeight: 800, color: '#10B981' }}>Submitted ✓</span>
-                          </div>
-                        ))}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12.5px' }}>
+                        <div>
+                          <label style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, display: 'block', marginBottom: '3px' }}>Aadhaar Number</label>
+                          <input 
+                            type="text" 
+                            value={docIdentityFields.aadhaar_number} 
+                            onChange={(e) => setDocIdentityFields({ ...docIdentityFields, aadhaar_number: e.target.value })}
+                            style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12px', fontWeight: 700 }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, display: 'block', marginBottom: '3px' }}>PAN Number</label>
+                          <input 
+                            type="text" 
+                            value={docIdentityFields.pan_number} 
+                            onChange={(e) => setDocIdentityFields({ ...docIdentityFields, pan_number: e.target.value })}
+                            style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12px', fontWeight: 700 }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, display: 'block', marginBottom: '3px' }}>Bank Account No.</label>
+                          <input 
+                            type="text" 
+                            value={docIdentityFields.bank_account} 
+                            onChange={(e) => setDocIdentityFields({ ...docIdentityFields, bank_account: e.target.value })}
+                            style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12px', fontWeight: 700 }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, display: 'block', marginBottom: '3px' }}>IFSC Code</label>
+                          <input 
+                            type="text" 
+                            value={docIdentityFields.ifsc_code} 
+                            onChange={(e) => setDocIdentityFields({ ...docIdentityFields, ifsc_code: e.target.value })}
+                            style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12px', fontWeight: 700 }}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: '12px' }}>
+                        <label style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, display: 'block', marginBottom: '3px' }}>Verification Notes / Inspection Remarks</label>
+                        <textarea 
+                          rows="2"
+                          value={docIdentityFields.admin_remarks}
+                          onChange={(e) => setDocIdentityFields({ ...docIdentityFields, admin_remarks: e.target.value })}
+                          style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12px', fontWeight: 600, outline: 'none' }}
+                          placeholder="Add KYC notes or verification remarks..."
+                        />
+                      </div>
+                    </div>
+
+                    {/* 360° Document Inspection & Action Center */}
+                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '16px' }}>
+                      <div style={{ fontSize: '14px', fontWeight: 900, color: C.text, marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span>Required Documents Inspection</span>
+                        <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>5 Documents</span>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {[
+                          { key: 'aadhaar', name: 'Aadhaar Card (Front & Back)' },
+                          { key: 'pan', name: 'PAN Card' },
+                          { key: 'bank', name: 'Bank Passbook / Cheque' },
+                          { key: 'photo', name: 'Profile Photograph' },
+                          { key: 'offer_letter', name: 'Signed Offer Letter' }
+                        ].map((docItem) => {
+                          const docInfo = docStatuses[docItem.key] || { status: 'Submitted', reason: '' };
+                          const isRejectingThis = rejectingDocKey === docItem.key;
+
+                          return (
+                            <div key={docItem.key} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                                <div>
+                                  <div style={{ color: C.text, fontWeight: 800, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    📄 {docItem.name}
+                                  </div>
+                                  {docInfo.reason && (
+                                    <div style={{ fontSize: '11px', color: '#DC2626', fontWeight: 700, marginTop: '2px' }}>
+                                      Rejection Reason: {docInfo.reason}
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ 
+                                    padding: '2px 8px', borderRadius: '0px', fontSize: '11px', fontWeight: 900,
+                                    background: docInfo.status === 'Verified' ? '#D1FAE5' : docInfo.status === 'Rejected' ? '#FEE2E2' : '#FEF3C7',
+                                    color: docInfo.status === 'Verified' ? '#065F46' : docInfo.status === 'Rejected' ? '#991B1B' : '#92400E'
+                                  }}>
+                                    {docInfo.status === 'Verified' ? 'Verified ✓' : docInfo.status === 'Rejected' ? 'Rejected ❌' : 'Submitted'}
+                                  </span>
+
+                                  {/* View Document Button */}
+                                  <button
+                                    onClick={() => setViewingDocModal({ name: docItem.name, key: docItem.key })}
+                                    style={{ padding: '4px 8px', background: '#3B82F615', color: '#2563EB', border: '1px solid #3B82F640', borderRadius: '0px', fontSize: '11px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                  >
+                                    <FaEye /> View
+                                  </button>
+
+                                  {/* Approve Document Button */}
+                                  <button
+                                    onClick={() => {
+                                      setDocStatuses(prev => ({
+                                        ...prev,
+                                        [docItem.key]: { status: 'Verified', reason: '' }
+                                      }));
+                                      if (rejectingDocKey === docItem.key) setRejectingDocKey(null);
+                                    }}
+                                    style={{ padding: '4px 8px', background: '#10B98115', color: '#059669', border: '1px solid #10B98140', borderRadius: '0px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                                  >
+                                    ✓ Approve
+                                  </button>
+
+                                  {/* Reject Document Button */}
+                                  <button
+                                    onClick={() => {
+                                      if (isRejectingThis) {
+                                        setRejectingDocKey(null);
+                                      } else {
+                                        setRejectingDocKey(docItem.key);
+                                        setDocRejectReasonInput('');
+                                      }
+                                    }}
+                                    style={{ padding: '4px 8px', background: '#EF444415', color: '#DC2626', border: '1px solid #EF444440', borderRadius: '0px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                                  >
+                                    ✕ Reject
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Inline Rejection Reason Box */}
+                              {isRejectingThis && (
+                                <div style={{ background: '#FFF5F5', border: '1px solid #FCA5A5', borderRadius: '0px', padding: '10px', marginTop: '4px' }}>
+                                  <div style={{ fontSize: '11.5px', fontWeight: 800, color: '#991B1B', marginBottom: '6px' }}>
+                                    Specify Rejection Reason for {docItem.name}:
+                                  </div>
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                                    {['Blurry Image', 'Document Expired', 'Name Mismatch', 'Signature Missing'].map((preset) => (
+                                      <button
+                                        key={preset}
+                                        onClick={() => setDocRejectReasonInput(preset)}
+                                        style={{ padding: '3px 8px', background: '#ffffff', border: '1px solid #FCA5A5', borderRadius: '0px', fontSize: '10.5px', color: '#991B1B', fontWeight: 700, cursor: 'pointer' }}
+                                      >
+                                        {preset}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '8px' }}>
+                                    <input 
+                                      type="text" 
+                                      placeholder="Enter custom rejection reason..."
+                                      value={docRejectReasonInput}
+                                      onChange={(e) => setDocRejectReasonInput(e.target.value)}
+                                      style={{ flex: 1, padding: '6px 10px', background: '#ffffff', border: '1px solid #FCA5A5', borderRadius: '0px', fontSize: '12px', color: C.text }}
+                                    />
+                                    <button
+                                      onClick={() => {
+                                        if (!docRejectReasonInput.trim()) {
+                                          alert('Please select or enter a rejection reason');
+                                          return;
+                                        }
+                                        setDocStatuses(prev => ({
+                                          ...prev,
+                                          [docItem.key]: { status: 'Rejected', reason: docRejectReasonInput.trim() }
+                                        }));
+                                        setRejectingDocKey(null);
+                                      }}
+                                      style={{ padding: '6px 14px', background: '#DC2626', color: '#ffffff', border: 'none', borderRadius: '0px', fontSize: '11.5px', fontWeight: 900, cursor: 'pointer' }}
+                                    >
+                                      Confirm Rejection
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -4517,6 +4901,132 @@ export default function EmployeeManagement() {
           onClose={() => setBiometricModalOpen(false)}
           employee={biometricModalEmp}
         />
+
+        {/* Send Login Credentials via SMS / WhatsApp Modal */}
+        {credentialsModalEmp && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', width: '100%', maxWidth: '560px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: `1px solid ${C.border}`, paddingBottom: '12px' }}>
+                <div>
+                  <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FaKey style={{ color: '#F59E0B' }} /> Send Login Credentials
+                  </h3>
+                  <div style={{ fontSize: '12px', color: C.textMid, marginTop: '2px' }}>
+                    Recipient: <strong>{credentialsModalEmp.full_name}</strong> ({credentialsModalEmp.mobile_number || 'Mobile not provided'})
+                  </div>
+                </div>
+                <button onClick={() => setCredentialsModalEmp(null)} style={{ background: 'transparent', border: 'none', fontSize: '18px', cursor: 'pointer', color: C.textMid }}>✕</button>
+              </div>
+
+              {/* Form Controls for Credentials */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                <div>
+                  <label style={{ fontSize: '11.5px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>Username / Employee ID</label>
+                  <input 
+                    type="text" 
+                    readOnly
+                    value={credentialsModalEmp.employee_code || credentialsModalEmp.employee_id || credentialsModalEmp.emp_code || 'EMP10001'}
+                    style={{ width: '100%', padding: '8px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12.5px', fontWeight: 800 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '11.5px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>Temporary Password</label>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <input 
+                      type="text" 
+                      value={credentialsTempPassword}
+                      onChange={(e) => setCredentialsTempPassword(e.target.value)}
+                      style={{ flex: 1, padding: '8px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12.5px', fontWeight: 800 }}
+                    />
+                    <button 
+                      onClick={() => setCredentialsTempPassword(`Pass#${Math.floor(1000 + Math.random() * 9000)}`)}
+                      style={{ padding: '8px 10px', background: C.teal, color: '#fff', border: 'none', borderRadius: '0px', fontSize: '11px', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    >
+                      🎲 Auto
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Template Preview Box */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '11.5px', fontWeight: 800, color: C.textMid }}>Message Template Preview (SMS & WhatsApp):</label>
+                  {credentialsCopied && <span style={{ fontSize: '11px', fontWeight: 800, color: '#059669' }}>✓ Copied to Clipboard!</span>}
+                </div>
+                <textarea 
+                  rows="7"
+                  readOnly
+                  value={getCredentialMessageTemplate(credentialsModalEmp, credentialsTempPassword)}
+                  style={{ width: '100%', padding: '10px 12px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12px', fontFamily: 'monospace', lineHeight: 1.4, resize: 'none' }}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center' }}>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(getCredentialMessageTemplate(credentialsModalEmp, credentialsTempPassword));
+                    setCredentialsCopied(true);
+                    setTimeout(() => setCredentialsCopied(false), 3000);
+                  }}
+                  style={{ padding: '9px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', fontSize: '12px', fontWeight: 800, color: C.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  📋 Copy Template
+                </button>
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    onClick={() => {
+                      handleSendSmsCredentials(credentialsModalEmp, credentialsTempPassword);
+                      toast.success('SMS application opened with pre-filled credentials template!');
+                    }}
+                    style={{ padding: '9px 16px', background: '#3B82F6', color: '#fff', border: 'none', borderRadius: '0px', fontSize: '12.5px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    💬 Send via SMS
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      handleSendWhatsAppCredentials(credentialsModalEmp, credentialsTempPassword);
+                      toast.success('WhatsApp opened with pre-filled credentials template!');
+                    }}
+                    style={{ padding: '9px 16px', background: '#25D366', color: '#fff', border: 'none', borderRadius: '0px', fontSize: '12.5px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 8px rgba(37, 211, 102, 0.3)' }}
+                  >
+                    📲 Send via WhatsApp
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Document Inspection Preview Modal */}
+        {viewingDocModal && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', width: '100%', maxWidth: '550px', padding: '20px', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
+                <h4 style={{ fontSize: '16px', fontWeight: 900, color: C.text, margin: 0 }}>
+                  📄 Document Preview: {viewingDocModal.name}
+                </h4>
+                <button onClick={() => setViewingDocModal(null)} style={{ background: 'transparent', border: 'none', fontSize: '18px', cursor: 'pointer', color: C.textMid }}>✕</button>
+              </div>
+
+              <div style={{ width: '100%', height: '260px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', textAlign: 'center' }}>
+                <div style={{ fontSize: '48px', marginBottom: '8px' }}>📄</div>
+                <div style={{ fontSize: '14px', fontWeight: 800, color: C.text }}>{viewingDocModal.name}</div>
+                <div style={{ fontSize: '12px', color: C.textMid, marginTop: '4px' }}>
+                  Submitted by {drawerEmp?.full_name || 'Employee'} • Verified Document File
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                <button onClick={() => setViewingDocModal(null)} style={{ padding: '8px 18px', background: C.teal, color: '#fff', border: 'none', borderRadius: '0px', fontWeight: 800, cursor: 'pointer' }}>Close Preview</button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

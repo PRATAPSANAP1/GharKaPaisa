@@ -359,59 +359,20 @@ export default function BiometricManagementModal({ isOpen, onClose, employee = n
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: `1px solid ${C.border}`, paddingBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <FaUserShield style={{ fontSize: '26px', color: C.teal || '#0F766E' }} />
+            <FaUserShield style={{ fontSize: '24px', color: C.teal || '#0F766E' }} />
             <div>
-              <h2 style={{ fontSize: '18px', fontWeight: 900, margin: 0, color: C.text }}>
-                BIOMETRIC ENROLLMENT & ENVIRONMENT DESK
+              <h2 style={{ fontSize: '17px', fontWeight: 900, margin: 0, color: C.text }}>
+                BIOMETRIC ENROLLMENT DESK
               </h2>
               <span style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>
-                Super Admin Biometric Reference Management & Missing Queue
+                Employee Face Reference Management {selectedEmp ? `• ${selectedEmp.full_name}` : ''}
               </span>
             </div>
           </div>
           <button onClick={onClose} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontWeight: 900 }}>✕</button>
         </div>
 
-        {/* Navigation Tabs */}
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => setActiveTab('employee')}
-            style={{
-              flex: 1, minWidth: '180px', padding: '12px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-              background: activeTab === 'employee' ? (C.teal || '#0F766E') : C.bgSecondary,
-              color: activeTab === 'employee' ? '#fff' : C.text, fontWeight: 800, fontSize: '13px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-            }}
-          >
-            <FaCamera /> Employee Face Reference {selectedEmp ? `(${selectedEmp.full_name})` : ''}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('missing_queue')}
-            style={{
-              flex: 1, minWidth: '180px', padding: '12px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-              background: activeTab === 'missing_queue' ? (C.teal || '#0F766E') : C.bgSecondary,
-              color: activeTab === 'missing_queue' ? '#fff' : C.text, fontWeight: 800, fontSize: '13px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-            }}
-          >
-            <FaBell /> Missing Face Queue {missingList.length > 0 ? `(${missingList.length})` : ''}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('environment')}
-            style={{
-              flex: 1, minWidth: '180px', padding: '12px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-              background: activeTab === 'environment' ? (C.teal || '#0F766E') : C.bgSecondary,
-              color: activeTab === 'environment' ? '#fff' : C.text, fontWeight: 800, fontSize: '13px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-            }}
-          >
-            <FaBuilding /> Approved Office Environments
-          </button>
-        </div>
-
-        {/* TAB 1: EMPLOYEE BIOMETRIC REFERENCE */}
+        {/* TAB 1: EMPLOYEE BIOMETRIC REFERENCE ONLY */}
         {activeTab === 'employee' && (
           <div>
             {!selectedEmp ? (
@@ -664,183 +625,6 @@ export default function BiometricManagementModal({ isOpen, onClose, employee = n
                     </div>
                   </div>
                 )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 2: MISSING FACE QUEUE */}
-        {activeTab === 'missing_queue' && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ position: 'relative', width: '280px' }}>
-                  <FaSearch style={{ position: 'absolute', left: '12px', top: '12px', color: C.textMid }} />
-                  <input
-                    type="text"
-                    placeholder="Search missing employees..."
-                    value={missingSearch}
-                    onChange={(e) => setMissingSearch(e.target.value)}
-                    style={{ width: '100%', padding: '9px 12px 9px 36px', borderRadius: '10px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '12.5px' }}
-                  />
-                </div>
-                <span style={{ fontSize: '12.5px', color: C.textMid, fontWeight: 700 }}>
-                  {filteredMissing.length} Missing
-                </span>
-              </div>
-
-              <button
-                onClick={handleBatchRemindAll}
-                disabled={batchSending || filteredMissing.length === 0}
-                style={{
-                  background: '#D97706', color: '#fff', border: 'none', padding: '9px 16px',
-                  borderRadius: '10px', fontWeight: 800, fontSize: '12.5px', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '6px'
-                }}
-              >
-                <FaPaperPlane /> {batchSending ? 'Sending Reminders...' : 'Send Reminder to All Missing'}
-              </button>
-            </div>
-
-            {loadingMissing ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>Loading missing face queue...</div>
-            ) : filteredMissing.length === 0 ? (
-              <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '16px', padding: '32px', textAlign: 'center', color: '#166534' }}>
-                <FaCheckCircle style={{ fontSize: '32px', marginBottom: '8px' }} />
-                <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: 900 }}>All Employees Enrolled!</h4>
-                <p style={{ margin: 0, fontSize: '13px' }}>Every active employee has completed Face Verification enrollment.</p>
-              </div>
-            ) : (
-              <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
-                  <thead>
-                    <tr style={{ borderBottom: `1px solid ${C.border}`, color: C.textMid, fontWeight: 700 }}>
-                      <th style={{ padding: '12px 16px' }}>Employee</th>
-                      <th style={{ padding: '12px 16px' }}>Designation</th>
-                      <th style={{ padding: '12px 16px' }}>Face Verification</th>
-                      <th style={{ padding: '12px 16px' }}>Last Reminder Sent</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredMissing.map(emp => (
-                      <tr key={emp.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                        <td style={{ padding: '12px 16px' }}>
-                          <strong style={{ display: 'block', color: C.text }}>{emp.full_name}</strong>
-                          <span style={{ fontSize: '11px', color: C.textMid }}>{emp.employee_code || emp.employee_id} • {emp.mobile_number}</span>
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>{emp.designation || 'Staff'}</td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <span style={{ padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, background: '#FEF3C7', color: '#92400E', border: '1px solid #FDE68A' }}>
-                            ⚠ Missing
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 16px', fontSize: '11.5px', color: C.textMid }}>
-                          {emp.last_reminder_sent_at ? (
-                            <span>{new Date(emp.last_reminder_sent_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
-                          ) : (
-                            <span style={{ color: '#94A3B8' }}>Never</span>
-                          )}
-                        </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                            <button
-                              onClick={() => openReminderModal(emp)}
-                              style={{
-                                background: '#D97706', color: '#fff', border: 'none',
-                                padding: '6px 12px', borderRadius: '8px', fontWeight: 800, fontSize: '11.5px',
-                                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px'
-                              }}
-                            >
-                              <FaBell /> Send Reminder
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedEmp(emp);
-                                setActiveTab('employee');
-                              }}
-                              style={{
-                                background: C.card, border: `1px solid ${C.border}`, color: C.text,
-                                padding: '6px 12px', borderRadius: '8px', fontWeight: 800, fontSize: '11.5px',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              Inspect
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 3: ENVIRONMENT REFERENCES */}
-        {activeTab === 'environment' && (
-          <div>
-            <div style={{ background: `${C.teal || '#0F766E'}10`, border: `1px solid ${C.teal || '#0F766E'}30`, borderRadius: '14px', padding: '14px 16px', marginBottom: '20px', fontSize: '12.5px', color: C.text }}>
-              <strong>Approved Office Environment Reference Desk:</strong> Register and maintain official background reference images (BKG1-BKG4) stored securely in private S3.
-            </div>
-
-            {loadingEnv ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>Loading office environment references...</div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
-                {[
-                  { code: 'BKG1', name: 'Reception / Front Desk Environment', desc: 'Reception/front desk area reference view' },
-                  { code: 'BKG2', name: 'Elevator / Waiting Area Environment', desc: 'Elevator and waiting area reference view' },
-                  { code: 'BKG3', name: 'Office Entrance / Corridor Environment', desc: 'Office entrance and corridor reference view' },
-                  { code: 'BKG4', name: 'Reception / Workstation / Interior Environment', desc: 'Reception, workstation and office interior reference view' }
-                ].map(item => {
-                  const existing = envReferences.find(r => r.reference_code === item.code);
-                  return (
-                    <div key={item.code} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '18px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                        <strong style={{ fontSize: '14px', color: C.teal || '#0F766E' }}>{item.code}</strong>
-                        <span style={{
-                          fontSize: '11px', fontWeight: 800, padding: '2px 8px', borderRadius: '6px',
-                          background: existing?.environment_status === 'ACTIVE' ? '#D1FAE5' : '#FEF3C7',
-                          color: existing?.environment_status === 'ACTIVE' ? '#065F46' : '#92400E'
-                        }}>
-                          {existing ? existing.environment_status : 'NOT REGISTERED'}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '13px', fontWeight: 800, marginBottom: '4px' }}>{item.name}</div>
-                      <div style={{ fontSize: '11.5px', color: C.textMid, marginBottom: '12px' }}>{item.desc}</div>
-
-                      {existing && (
-                        <div style={{ fontSize: '11px', color: C.textMid, marginBottom: '12px' }}>
-                          Hash: <code>{(existing.image_hash || '').substring(0, 16)}...</code>
-                          <br />
-                          Updated: {new Date(existing.updated_at).toLocaleDateString()}
-                        </div>
-                      )}
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <input
-                          type="file"
-                          accept="image/png,image/jpeg"
-                          onChange={(e) => setEnvFileMap(prev => ({ ...prev, [item.code]: e.target.files[0] }))}
-                          style={{ fontSize: '11.5px' }}
-                        />
-                        <button
-                          onClick={() => handleUploadEnvRef(item.code, item.name, item.desc)}
-                          disabled={uploadingEnvCode === item.code}
-                          style={{
-                            background: C.teal || '#0F766E', color: '#fff', border: 'none',
-                            padding: '8px 14px', borderRadius: '8px', fontWeight: 800, fontSize: '12px',
-                            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
-                          }}
-                        >
-                          <FaUpload /> {uploadingEnvCode === item.code ? 'Uploading...' : 'Upload Reference Image'}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
               </div>
             )}
           </div>
