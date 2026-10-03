@@ -51,8 +51,8 @@ export default function EmployeeSmartEmi() {
             const cat = String(p.category || '').toLowerCase();
             const subCat = String(p.sub_category || '').toLowerCase();
             const pName = String(p.name || '').toLowerCase();
-            return cat.includes('smart_emi') || 
-                   subCat.includes('smart emi') || 
+            return cat.includes('loc_eoc') || cat.includes('smart_emi') || 
+                   subCat.includes('eoc') || subCat.includes('smart emi') || 
                    pName.includes('emi') || 
                    pName.includes('flexipay') || 
                    pName.includes('convert') ||

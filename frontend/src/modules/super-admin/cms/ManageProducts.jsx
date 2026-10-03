@@ -11,8 +11,9 @@ import {
 
 const PRODUCT_CATEGORIES = [
   { id: "credit_card", label: "Credit Cards" },
-  { id: "loan_on_credit_card", label: "Loan on Credit Card" },
-  { id: "smart_emi", label: "Smart EMI on Credit Card" },
+  { id: "loc_eoc", label: "LOC/EOC" },
+  { id: "loan_on_credit_card", label: "Loan on Credit Card (LOC)" },
+  { id: "smart_emi", label: "Smart EMI on Credit Card (EOC)" },
   { id: "personal_loan", label: "Personal Loans" },
   { id: "business_loan", label: "Business Loans" },
   { id: "home_loan", label: "Home Loans" },
@@ -67,6 +68,7 @@ export default function ManageProducts() {
 
   const getInitialCategory = () => {
     if (typeParam === 'credit_card') return '%card%';
+    if (typeParam === 'loc_eoc') return 'loc_eoc';
     if (typeParam === 'loan_on_credit_card') return 'loan_on_credit_card';
     if (typeParam === 'smart_emi') return 'smart_emi';
     if (typeParam === 'loans') return '%loan%';

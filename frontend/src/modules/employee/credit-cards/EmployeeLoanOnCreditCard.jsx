@@ -51,8 +51,8 @@ export default function EmployeeLoanOnCreditCard() {
             const cat = String(p.category || '').toLowerCase();
             const subCat = String(p.sub_category || '').toLowerCase();
             const pName = String(p.name || '').toLowerCase();
-            return cat.includes('loan_on_credit_card') || 
-                   subCat.includes('loan on credit card') || 
+            return cat.includes('loc_eoc') || cat.includes('loan_on_credit_card') || 
+                   subCat.includes('loc') || subCat.includes('loan on credit card') || 
                    (cat.includes('loan') && (pName.includes('credit card') || pName.includes('insta') || pName.includes('jumbo') || pName.includes('encash') || pName.includes('dial') || subCat.includes('loan')));
           });
 

@@ -1984,8 +1984,9 @@ const listApplications = async (req, res, next) => {
         AND ($13::uuid IS NULL OR combined.submitted_by = $13::uuid OR combined.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $13::uuid OR id = $13::uuid))
         AND (
           $14::text IS NULL OR $14::text = '' OR $14::text = 'all'
-          OR ($14::text = 'credit_card' AND (LOWER(combined.category::text) LIKE '%credit%' OR LOWER(combined.category::text) LIKE '%card%'))
-          OR ($14::text = 'personal_loan' AND (LOWER(combined.category::text) LIKE '%personal%'))
+          OR ($14::text IN ('loc_eoc', 'LOC/EOC', 'loc-eoc') AND (LOWER(combined.category::text) IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi') OR LOWER(combined.category::text) LIKE '%loc%'))
+          OR ($14::text = 'credit_card' AND (LOWER(combined.category::text) LIKE '%credit%' OR LOWER(combined.category::text) LIKE '%card%') AND LOWER(combined.category::text) NOT IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi'))
+          OR ($14::text IN ('loan', 'loans', 'personal_loan') AND (LOWER(combined.category::text) LIKE '%loan%' OR LOWER(combined.category::text) LIKE '%personal%') AND LOWER(combined.category::text) NOT IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi'))
           OR ($14::text = 'business_loan' AND (LOWER(combined.category::text) LIKE '%business%'))
           OR ($14::text = 'insurance' AND (LOWER(combined.category::text) LIKE '%insurance%'))
           OR ($14::text = 'utility' AND (LOWER(combined.category::text) LIKE '%utilit%' OR LOWER(combined.category::text) LIKE '%recharge%'))
@@ -2070,8 +2071,9 @@ const listApplications = async (req, res, next) => {
         AND ($11::uuid IS NULL OR combined.submitted_by = $11::uuid OR combined.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $11::uuid OR id = $11::uuid))
         AND (
           $12::text IS NULL OR $12::text = '' OR $12::text = 'all'
-          OR ($12::text = 'credit_card' AND (LOWER(combined.category::text) LIKE '%credit%' OR LOWER(combined.category::text) LIKE '%card%'))
-          OR ($12::text = 'personal_loan' AND (LOWER(combined.category::text) LIKE '%personal%'))
+          OR ($12::text IN ('loc_eoc', 'LOC/EOC', 'loc-eoc') AND (LOWER(combined.category::text) IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi') OR LOWER(combined.category::text) LIKE '%loc%'))
+          OR ($12::text = 'credit_card' AND (LOWER(combined.category::text) LIKE '%credit%' OR LOWER(combined.category::text) LIKE '%card%') AND LOWER(combined.category::text) NOT IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi'))
+          OR ($12::text IN ('loan', 'loans', 'personal_loan') AND (LOWER(combined.category::text) LIKE '%loan%' OR LOWER(combined.category::text) LIKE '%personal%') AND LOWER(combined.category::text) NOT IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi'))
           OR ($12::text = 'business_loan' AND (LOWER(combined.category::text) LIKE '%business%'))
           OR ($12::text = 'insurance' AND (LOWER(combined.category::text) LIKE '%insurance%'))
           OR ($12::text = 'utility' AND (LOWER(combined.category::text) LIKE '%utilit%' OR LOWER(combined.category::text) LIKE '%recharge%'))

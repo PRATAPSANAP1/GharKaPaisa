@@ -13,8 +13,9 @@ import {
 
 const CATEGORY_MAP = {
   credit_card: "Credit Cards",
-  loan_on_credit_card: "Loan on Credit Card",
-  smart_emi: "Credit Card EMI & Smart EMI",
+  loc_eoc: "LOC/EOC",
+  loan_on_credit_card: "Loan on Credit Card (LOC)",
+  smart_emi: "Credit Card EMI & Smart EMI (EOC)",
   loans: "Loans",
   insurance: "Insurance",
   savings_account: "Savings Account",
@@ -160,6 +161,7 @@ export default function ManageAdminProducts() {
           category: activeCategory === 'credit_card' ? '%card%' :
                     activeCategory === 'loans' ? '%loan%' :
                     activeCategory === 'insurance' ? '%insurance%' :
+                    activeCategory === 'loc_eoc' ? 'loc_eoc' :
                     activeCategory === 'loan_on_credit_card' ? 'loan_on_credit_card' :
                     activeCategory === 'smart_emi' ? 'smart_emi' :
                     activeCategory,

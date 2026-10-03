@@ -64,6 +64,7 @@ export function normalizeMessengerAttachment(att) {
 export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props }) {
   const [blobUrl, setBlobUrl] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -71,7 +72,7 @@ export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props
 
     if (!src) {
       setLoading(false);
-      if (onError) onError();
+      setHasError(true);
       return;
     }
 
@@ -79,6 +80,7 @@ export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props
     if (src.startsWith('data:') || src.startsWith('blob:')) {
       setBlobUrl(src);
       setLoading(false);
+      setHasError(false);
       return;
     }
 
@@ -88,6 +90,7 @@ export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props
     if ((src.startsWith('http://') || src.startsWith('https://')) && !isMessengerMedia) {
       setBlobUrl(src);
       setLoading(false);
+      setHasError(false);
       return;
     }
 
@@ -105,6 +108,9 @@ export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props
       fetchPath = fetchPath.slice('/api/v1'.length);
     }
 
+    setLoading(true);
+    setHasError(false);
+
     api.get(fetchPath, { responseType: 'blob' })
       .then((res) => {
         if (isMounted) {
@@ -117,7 +123,7 @@ export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props
         if (isMounted) {
           setLoading(false);
           setBlobUrl(null);
-          if (onError) onError(err);
+          setHasError(true);
         }
       });
 
@@ -141,7 +147,7 @@ export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props
     );
   }
 
-  if (!blobUrl) {
+  if (hasError || !blobUrl) {
     return (
       <div style={{
         width: '180px', height: '100px', background: '#F8FAFC', border: '1px solid #E2E8F0',
@@ -159,7 +165,10 @@ export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props
       alt={alt}
       style={style}
       onClick={onClick}
-      onError={onError}
+      onError={() => {
+        setHasError(true);
+        if (onError) onError();
+      }}
       {...props}
     />
   );
@@ -355,7 +364,6 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   // Message Editing & Deletion State
   const [editingMsgId, setEditingMsgId] = useState(null);
   const [editingText, setEditingText] = useState('');
-  const [failedImageUrls, setFailedImageUrls] = useState({});
   const [previewImgError, setPreviewImgError] = useState(false);
   const [zoomScale, setZoomScale] = useState(1);
 
@@ -2351,22 +2359,13 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                                     if (!norm) return null;
 
                                     const displayUrl = getImageUrl(norm.fileUrl);
-                                    const isFailed = failedImageUrls[displayUrl] || failedImageUrls[norm.fileUrl] || (norm.id && failedImageUrls[norm.id]);
 
-                                    if (norm.isImg && !isFailed) {
+                                    if (norm.isImg) {
                                       return (
                                         <div key={idx} style={{ position: 'relative', display: 'inline-block', maxWidth: '280px' }}>
                                           <AuthenticatedImage
                                             src={displayUrl}
                                             alt={norm.fileName}
-                                            onError={() => {
-                                              setFailedImageUrls(prev => ({ 
-                                                ...prev, 
-                                                [displayUrl]: true, 
-                                                [norm.fileUrl]: true,
-                                                ...(norm.id ? { [norm.id]: true } : {})
-                                              }));
-                                            }}
                                             onClick={() => openPreviewModal(displayUrl)}
                                             style={{
                                               maxWidth: '100%',
@@ -2435,10 +2434,10 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                                             {norm.fileName}
                                           </div>
                                           <div style={{ fontSize: '11px', color: '#64748B' }}>
-                                            {isFailed ? 'Image unavailable' : norm.fileSize || 'Document'}
+                                            {norm.fileSize || 'Document'}
                                           </div>
                                         </div>
-                                        {!isFailed && displayUrl && (
+                                        {displayUrl && (
                                           <button
                                             type="button"
                                             onClick={(e) => { e.stopPropagation(); handleDownloadImage(displayUrl, norm.fileName); }}

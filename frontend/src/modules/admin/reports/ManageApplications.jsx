@@ -607,8 +607,9 @@ export default function ManageApplications() {
                 >
                   <option value="all">All Categories</option>
                   <option value="credit_card">Credit Card</option>
-                  <option value="smart_emi">Smart EMI on Credit Card</option>
-                  <option value="loan_on_credit_card">Loan on Credit Card</option>
+                  <option value="loc_eoc">LOC/EOC</option>
+                  <option value="loan_on_credit_card">Loan on Credit Card (LOC)</option>
+                  <option value="smart_emi">Smart EMI on Credit Card (EOC)</option>
                   <option value="personal_loan">Personal Loan</option>
                   <option value="business_loan">Business Loan</option>
                   <option value="insurance">Insurance</option>

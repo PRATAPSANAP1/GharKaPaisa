@@ -1218,7 +1218,7 @@ export default function EmployeeManagement() {
   const activationPendingCount = targetEmployeeList.filter(e => String(e.activation_status || '').toUpperCase() !== 'APPROVED').length;
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', padding: '16px 20px 32px', fontFamily: "'Inter', sans-serif", color: C.text }}>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: isMobile ? '12px 10px 24px' : '16px 20px 32px', fontFamily: "'Inter', sans-serif", color: C.text }}>
       <div style={{ maxWidth: '1360px', margin: '0 auto' }}>
         
         {/* Header */}
@@ -1229,18 +1229,18 @@ export default function EmployeeManagement() {
                 Super Admin Operations
               </span>
             </div>
-            <h1 style={{ fontSize: '24px', fontWeight: 900, color: C.text, margin: 0, letterSpacing: '-0.3px' }}>Employee Management Center</h1>
-            <p style={{ fontSize: '13px', color: C.textMid, margin: '3px 0 0 0', fontWeight: 500 }}>
+            <h1 style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 900, color: C.text, margin: 0, letterSpacing: '-0.3px' }}>Employee Management Center</h1>
+            <p style={{ fontSize: '12.5px', color: C.textMid, margin: '3px 0 0 0', fontWeight: 500 }}>
               Manage employee onboarding, KYC, access, verification and team assignments.
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
             <button
               onClick={() => { setBiometricModalEmp(null); setBiometricModalOpen(true); }}
               style={{
-                background: C.bgSecondary, color: C.text, border: `1px solid ${C.border}`, padding: '10px 18px', borderRadius: '0px',
-                fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.03)', transition: 'all 0.15s ease'
+                background: C.bgSecondary, color: C.text, border: `1px solid ${C.border}`, padding: '10px 16px', borderRadius: '0px',
+                fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '12.5px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.03)', transition: 'all 0.15s ease', flex: isMobile ? '1 1 140px' : 'none'
               }}
             >
               <FaUserShield style={{ color: C.teal, fontSize: '15px' }} /> Biometric & Office Desk
@@ -1248,9 +1248,9 @@ export default function EmployeeManagement() {
             <button
               onClick={() => setCreateEmpModalOpen(true)}
               style={{
-                background: `linear-gradient(135deg, ${C.teal} 0%, #0D9488 100%)`, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '0px',
-                fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px',
-                boxShadow: '0 4px 14px rgba(13, 148, 136, 0.3)', transition: 'all 0.15s ease'
+                background: `linear-gradient(135deg, ${C.teal} 0%, #0D9488 100%)`, color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '0px',
+                fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '12.5px',
+                boxShadow: '0 4px 14px rgba(13, 148, 136, 0.3)', transition: 'all 0.15s ease', flex: isMobile ? '1 1 140px' : 'none'
               }}
             >
               <FaPlus /> Add New Employee
@@ -1259,7 +1259,7 @@ export default function EmployeeManagement() {
         </div>
 
         {/* Operational Top Summary Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '12px', marginBottom: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: isMobile ? '8px' : '12px', marginBottom: '20px' }}>
           {[
             { label: 'Total Employees', count: stats.total_employees || targetEmployeeList.length, icon: <FaUsers />, color: C.teal, bg: `${C.teal}10` },
             { label: 'KYC Pending', count: kycPendingCount, icon: <FaClock />, color: '#D97706', bg: '#FEF3C7' },
@@ -1267,13 +1267,13 @@ export default function EmployeeManagement() {
             { label: 'Attendance Active', count: targetEmployeeList.filter(e => e.attendance_enabled !== false).length, icon: <FaCheckCircle />, color: '#10B981', bg: '#D1FAE5' },
             { label: 'Active Employees', count: targetEmployeeList.filter(e => String(e.activation_status || '').toUpperCase() === 'APPROVED').length, icon: <FaUserCheck />, color: '#6366F1', bg: '#EEF2FF' }
           ].map((st, i) => (
-            <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '0px', background: st.bg, color: st.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
+            <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: isMobile ? '10px 12px' : '14px 16px', display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+              <div style={{ width: isMobile ? '32px' : '40px', height: isMobile ? '32px' : '40px', borderRadius: '0px', background: st.bg, color: st.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isMobile ? '15px' : '18px', flexShrink: 0 }}>
                 {st.icon}
               </div>
               <div style={{ minWidth: 0 }}>
-                <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{st.label}</span>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: C.text, lineHeight: 1.2 }}>{st.count}</div>
+                <span style={{ fontSize: isMobile ? '10px' : '11px', color: C.textMid, fontWeight: 700, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{st.label}</span>
+                <div style={{ fontSize: isMobile ? '16px' : '20px', fontWeight: 900, color: C.text, lineHeight: 1.2 }}>{st.count}</div>
               </div>
             </div>
           ))}
@@ -1317,10 +1317,10 @@ export default function EmployeeManagement() {
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
               
               {/* Directory Header & Filters Toolbar */}
-              <div style={{ padding: '18px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '14px', background: C.bgSecondary }}>
+              <div style={{ padding: isMobile ? '12px 14px' : '18px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '14px', background: C.bgSecondary }}>
                 {/* Line 1: Heading & Working View Tabs */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Records</h3>
+                  <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Records</h3>
                   <div style={{ display: 'inline-flex', width: 'fit-content', background: C.card, borderRadius: '0px', padding: '3px', border: `1px solid ${C.border}` }}>
                     <button 
                       onClick={() => setRecordsViewTab('recent')}
@@ -1348,9 +1348,9 @@ export default function EmployeeManagement() {
                 </div>
 
                 {/* Line 2: Searchbar on Left, Filter buttons on Right in the same row */}
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
                   {/* Left: Searchbar */}
-                  <div style={{ position: 'relative', flex: '1 1 280px', minWidth: '240px' }}>
+                  <div style={{ position: 'relative', flex: '1 1 240px', minWidth: isMobile ? '100%' : '240px' }}>
                     <FaSearch style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: C.textMid }} />
                     <input 
                       type="text" 
@@ -1360,19 +1360,19 @@ export default function EmployeeManagement() {
                         setSearchTerm(e.target.value);
                         setCurrentPage(1);
                       }}
-                      style={{ width: '100%', padding: '9px 14px 9px 38px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, outline: 'none', fontSize: '13.5px' }}
+                      style={{ width: '100%', padding: '9px 14px 9px 38px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, outline: 'none', fontSize: '13px', boxSizing: 'border-box' }}
                     />
                   </div>
 
                   {/* Right: Filters */}
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', width: isMobile ? '100%' : 'auto' }}>
                     <select 
                       value={designationFilter} 
                       onChange={(e) => {
                         setDesignationFilter(e.target.value);
                         setCurrentPage(1);
                       }} 
-                      style={{ padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '13px', fontWeight: 700 }}
+                      style={{ padding: '8px 10px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12.5px', fontWeight: 700, flex: isMobile ? '1 1 120px' : 'none' }}
                     >
                       <option value="">All Designations</option>
                       <option value="KYC Operator">KYC Operator</option>
@@ -1395,7 +1395,7 @@ export default function EmployeeManagement() {
                         setStatusFilter(e.target.value);
                         setCurrentPage(1);
                       }} 
-                      style={{ padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '13px', fontWeight: 700 }}
+                      style={{ padding: '8px 10px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12.5px', fontWeight: 700, flex: isMobile ? '1 1 120px' : 'none' }}
                     >
                       <option value="">All Statuses</option>
                       <option value="ACTIVE">Active</option>
@@ -1409,7 +1409,7 @@ export default function EmployeeManagement() {
                         setFaceFilter(e.target.value);
                         setCurrentPage(1);
                       }} 
-                      style={{ padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '13px', fontWeight: 700 }}
+                      style={{ padding: '8px 10px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12.5px', fontWeight: 700, flex: isMobile ? '1 1 120px' : 'none' }}
                     >
                       <option value="">All Face Biometrics</option>
                       <option value="VERIFIED">✓ Verified</option>
@@ -1427,7 +1427,7 @@ export default function EmployeeManagement() {
                           setSearchTerm('');
                           setCurrentPage(1);
                         }}
-                        style={{ padding: '9px 12px', background: `${C.teal}15`, color: C.teal, border: `1px solid ${C.teal}40`, borderRadius: '0px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}
+                        style={{ padding: '8px 12px', background: `${C.teal}15`, color: C.teal, border: `1px solid ${C.teal}40`, borderRadius: '0px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', flex: isMobile ? '1 1 100%' : 'none' }}
                       >
                         Clear Filters
                       </button>
@@ -3137,7 +3137,7 @@ export default function EmployeeManagement() {
               </div>
 
               <form onSubmit={handleCreateEmployeeSubmit}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px', marginBottom: '16px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 800, marginBottom: '6px', color: C.text }}>Full Name *</label>
                     <input type="text" required value={createForm.full_name} onChange={(e) => setCreateForm({ ...createForm, full_name: e.target.value })} placeholder="e.g. Ramesh Kumar" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }} />
@@ -3148,7 +3148,7 @@ export default function EmployeeManagement() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px', marginBottom: '16px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 800, marginBottom: '6px', color: C.text }}>Email Address (Optional)</label>
                     <input type="email" value={createForm.email_id} onChange={(e) => setCreateForm({ ...createForm, email_id: e.target.value })} placeholder="auto-generated if empty" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }} />
@@ -3736,7 +3736,7 @@ export default function EmployeeManagement() {
                 <button onClick={() => setPerfModalEmp(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', color: C.textMid, fontWeight: 900 }}>✕</button>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px', marginBottom: '20px' }}>
                 <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px' }}>
                   <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Total Applications</div>
                   <div style={{ fontSize: '22px', fontWeight: 900, color: C.teal, marginTop: '4px' }}>{perfModalEmp.total_applications || 0}</div>
@@ -3811,7 +3811,7 @@ export default function EmployeeManagement() {
                 {loadingDepts ? (
                   <div style={{ padding: '24px', textAlign: 'center', color: C.textMid }}>Loading bank departments...</div>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', maxHeight: '280px', overflowY: 'auto', paddingRight: '4px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '10px', maxHeight: '280px', overflowY: 'auto', paddingRight: '4px' }}>
                     {deptBanksList.map(bank => {
                       const isChecked = selectedBankIds.includes(bank.bank_id);
                       return (
@@ -4068,7 +4068,7 @@ export default function EmployeeManagement() {
               }}
             />
 
-            {/* Profile Drawer Body (Desktop Right Drawer / Mobile Centered Modal) */}
+            {/* Profile Drawer Body (Desktop Right Drawer / Mobile Full-Screen Modal Sheet) */}
             <div style={{
               position: 'fixed',
               zIndex: 9999,
@@ -4079,31 +4079,32 @@ export default function EmployeeManagement() {
               overflow: 'hidden',
               transition: 'all 0.25s ease',
               ...(isMobile ? {
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: '92%',
-                maxWidth: '480px',
-                maxHeight: '90vh',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                width: '100%',
+                maxWidth: '100%',
+                maxHeight: '100vh',
                 borderRadius: '0px',
-                border: `1px solid ${C.border}`
+                border: 'none'
               } : {
                 top: 0,
                 right: 0,
                 bottom: 0,
-                width: '480px',
+                width: '500px',
                 maxWidth: '100vw',
                 borderLeft: `1px solid ${C.border}`
               })
             }}>
               
               {/* Drawer / Modal Header */}
-              <div style={{ padding: '18px 20px', borderBottom: `1px solid ${C.border}`, background: C.card }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                  <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+              <div style={{ padding: isMobile ? '12px 14px' : '18px 20px', borderBottom: `1px solid ${C.border}`, background: C.card }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                  <div style={{ display: 'flex', gap: isMobile ? '10px' : '14px', alignItems: 'center' }}>
                     <div style={{
-                      width: '64px', height: '64px', borderRadius: '50%', background: `${C.teal}15`, color: C.teal,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '24px', flexShrink: 0,
+                      width: isMobile ? '46px' : '64px', height: isMobile ? '46px' : '64px', borderRadius: '50%', background: `${C.teal}15`, color: C.teal,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: isMobile ? '18px' : '24px', flexShrink: 0,
                       border: `2px solid ${C.teal}30`, overflow: 'hidden'
                     }}>
                       {drawerEmp.profile_photo_url || drawerEmp.face_reference_url || drawerEmp.avatar_url || drawerEmp.photo ? (
@@ -4113,20 +4114,20 @@ export default function EmployeeManagement() {
                       )}
                     </div>
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0 }}>{drawerEmp.full_name}</h3>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: 0 }}>{drawerEmp.full_name}</h3>
                         <span style={{ padding: '2px 8px', borderRadius: '0px', fontSize: '11px', fontWeight: 800, background: drawerEmp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7', color: drawerEmp.activation_status === 'APPROVED' ? '#065F46' : '#92400E', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                           ✓ {drawerEmp.activation_status === 'APPROVED' ? 'Active' : 'Pending'}
                         </span>
                       </div>
-                      <div style={{ fontSize: '12.5px', fontWeight: 700, color: C.textMid, marginTop: '3px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, marginTop: '2px' }}>
                         ID: {drawerEmp.employee_code || drawerEmp.employee_id || drawerEmp.emp_code || (drawerEmp.id ? String(drawerEmp.id).slice(0, 8) : 'CAND10001')} • {drawerEmp.designation || 'Branch Head'}
                       </div>
-                      <div style={{ fontSize: '12px', color: C.textMid, marginTop: '4px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+                      <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '3px', display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
                         <span>📞 {drawerEmp.mobile_number || '+91 98765 43210'}</span>
                         <span>✉ {drawerEmp.email_id || drawerEmp.email || 'pratap.sanap@gharkapaisa.in'}</span>
                       </div>
-                      <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px', display: 'flex', gap: '12px' }}>
+                      <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                         <span>Department: <strong style={{ color: C.text }}>{drawerEmp.department || 'Sales & Support'}</strong></span>
                         <span>Joined: <strong style={{ color: C.text }}>{drawerEmp.created_at ? new Date(drawerEmp.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Oct 2, 2026'}</strong></span>
                       </div>
@@ -4143,7 +4144,7 @@ export default function EmployeeManagement() {
               </div>
 
               {/* Drawer Tabs Header */}
-              <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, background: C.card, padding: '0 12px', overflowX: 'auto' }}>
+              <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, background: C.card, padding: '0 8px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
                 {[
                   { id: 'overview', label: 'Overview' },
                   { id: 'kyc', label: 'KYC Details' },
@@ -4156,12 +4157,12 @@ export default function EmployeeManagement() {
                     key={t.id}
                     onClick={() => setDrawerTab(t.id)}
                     style={{
-                      padding: '12px 14px', border: 'none', background: 'transparent',
+                      padding: '10px 12px', border: 'none', background: 'transparent',
                       borderBottom: drawerTab === t.id ? `3px solid #4F46E5` : '3px solid transparent',
                       color: drawerTab === t.id ? '#4F46E5' : C.textMid,
                       fontWeight: drawerTab === t.id ? 900 : 700,
-                      fontSize: '12.5px', cursor: 'pointer',
-                      whiteSpace: 'nowrap', transition: 'all 0.15s ease'
+                      fontSize: '12px', cursor: 'pointer',
+                      whiteSpace: 'nowrap', transition: 'all 0.15s ease', flexShrink: 0
                     }}
                   >
                     {t.label}
@@ -4170,7 +4171,7 @@ export default function EmployeeManagement() {
               </div>
 
               {/* Drawer Tab Content */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '20px', background: '#F8FAFC' }}>
+              <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '12px' : '20px', background: '#F8FAFC' }}>
                 
                 {/* 1. OVERVIEW TAB */}
                 {drawerTab === 'overview' && (
@@ -4178,9 +4179,9 @@ export default function EmployeeManagement() {
                     
                     {/* Employee Information Card (View vs Edit Mode) */}
                     {!isEditingEmpInfo ? (
-                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: isMobile ? '14px' : '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                          <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Information</h4>
+                          <h4 style={{ fontSize: isMobile ? '14px' : '15px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Information</h4>
                           <button 
                             onClick={() => setIsEditingEmpInfo(true)}
                             style={{ background: '#EEF2FF', border: 'none', color: '#4F46E5', padding: '4px 10px', borderRadius: '0px', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -4189,7 +4190,7 @@ export default function EmployeeManagement() {
                           </button>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', fontSize: '12.5px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '10px' : '14px', fontSize: '12.5px' }}>
                           <div>
                             <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Full Name</span>
                             <strong style={{ color: C.text }}>{drawerEmp.full_name}</strong>
@@ -4256,7 +4257,7 @@ export default function EmployeeManagement() {
                           <span style={{ fontSize: '11.5px', fontWeight: 800, color: C.textMid }}>ID: {drawerEmp.employee_code || drawerEmp.employee_id || drawerEmp.emp_code}</span>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12.5px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px', fontSize: '12.5px' }}>
                           <div>
                             <label style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>Full Name *</label>
                             <input 
@@ -4479,7 +4480,7 @@ export default function EmployeeManagement() {
                         <FaIdCard style={{ color: C.teal }} /> 360° Profile & Identity Details
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12.5px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px', fontSize: '12.5px' }}>
                         <div>
                           <label style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, display: 'block', marginBottom: '3px' }}>Aadhaar Number</label>
                           <input 
@@ -4719,7 +4720,7 @@ export default function EmployeeManagement() {
                       </div>
 
                       {/* Side by Side Reference Grid */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
                         {/* Captured Face Photo */}
                         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '14px' }}>
                           <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, marginBottom: '10px' }}>Captured Face Photo</div>
@@ -4920,7 +4921,7 @@ export default function EmployeeManagement() {
               </div>
 
               {/* Form Controls for Credentials */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                 <div>
                   <label style={{ fontSize: '11.5px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>Username / Employee ID</label>
                   <input 

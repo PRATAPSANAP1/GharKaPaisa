@@ -34,9 +34,13 @@ export default function SuperAdminOverview() {
   const { C, isDark } = useTheme();
   const navigate = useNavigate();
 
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isTablet, setIsTablet] = useState(window.innerWidth < 1024);
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      setIsTablet(window.innerWidth < 1024);
+    };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -426,8 +430,8 @@ export default function SuperAdminOverview() {
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(7, 1fr)',
-        gap: '12px'
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(4, 1fr)' : 'repeat(7, 1fr)',
+        gap: isMobile ? '8px' : '12px'
       }}>
         {topMetricsRow.map((card) => (
           <div
@@ -437,26 +441,26 @@ export default function SuperAdminOverview() {
               background: C.card,
               borderRadius: '14px',
               border: `1px solid ${activeTab === card.tabId ? card.color : card.border}`,
-              padding: '14px',
+              padding: isMobile ? '10px 12px' : '14px',
               cursor: 'pointer',
               display: 'flex',
               flexDirection: 'column',
-              justify: 'space-between',
+              justifyContent: 'space-between',
               transition: 'all 0.2s ease',
               boxShadow: activeTab === card.tabId ? `0 4px 14px ${card.color}30` : 'none'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isMobile ? '4px' : '8px' }}>
               <span style={{ fontSize: '10px', fontWeight: 800, color: card.color, background: card.bg, padding: '2px 6px', borderRadius: '4px' }}>
                 VIEW
               </span>
             </div>
 
             <div>
-              <div style={{ fontSize: '20px', fontWeight: 900, color: C.text, lineHeight: 1.1, marginBottom: '4px' }}>
+              <div style={{ fontSize: isMobile ? '16px' : '20px', fontWeight: 900, color: C.text, lineHeight: 1.1, marginBottom: '4px' }}>
                 {loading ? '...' : card.value}
               </div>
-              <div style={{ fontSize: '12px', fontWeight: 800, color: C.textMid, lineHeight: 1.2 }}>
+              <div style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: 800, color: C.textMid, lineHeight: 1.2 }}>
                 {card.label}
               </div>
             </div>
@@ -470,6 +474,7 @@ export default function SuperAdminOverview() {
         borderBottom: `1px solid ${C.border}`,
         gap: '4px',
         overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch',
         paddingBottom: '2px'
       }}>
         {[
@@ -491,13 +496,14 @@ export default function SuperAdminOverview() {
                 background: isActive ? `${C.teal}15` : 'transparent',
                 border: 'none',
                 borderBottom: isActive ? `3px solid ${C.teal}` : '3px solid transparent',
-                padding: '10px 16px',
+                padding: isMobile ? '8px 12px' : '10px 16px',
                 borderRadius: '8px 8px 0 0',
                 color: isActive ? C.teal : C.textMid,
                 fontWeight: isActive ? 800 : 600,
-                fontSize: '13.5px',
+                fontSize: isMobile ? '12.5px' : '13.5px',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                flexShrink: 0
               }}
             >
               {tab.label}
@@ -513,22 +519,22 @@ export default function SuperAdminOverview() {
           {/* Master 11-KPI Metrics Grid */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-            gap: '14px'
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)',
+            gap: isMobile ? '10px' : '14px'
           }}>
             {[
-              { label: 'Total Admins', value: stats.admins, color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.3)', icon: <ShieldCheck size={22} color="#F59E0B" />, action: () => setActiveTab('admins') },
-              { label: 'Active Admins', value: stats.activeAdmins, color: '#10B981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.3)', icon: <Zap size={22} color="#10B981" />, action: () => setActiveTab('admins') },
-              { label: 'Total Employees', value: stats.employees, color: '#6366F1', bg: 'rgba(99, 102, 241, 0.12)', border: 'rgba(99, 102, 241, 0.3)', icon: <Users size={22} color="#6366F1" />, action: () => navigate('/super-admin/employees') },
-              { label: 'Pending KYC', value: stats.pendingKycPartners, color: '#F97316', bg: 'rgba(249, 115, 22, 0.12)', border: 'rgba(249, 115, 22, 0.3)', icon: <Clock size={22} color="#F97316" />, action: () => navigate('/super-admin/partners?kyc_status=pending') },
-              { label: 'Total Leads', value: stats.totalApps, color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)', border: 'rgba(59, 130, 246, 0.3)', icon: <FileText size={22} color="#3B82F6" />, action: () => navigate('/super-admin/leads') },
-              { label: 'Pending Leads', value: stats.pendingApps, color: '#EAB308', bg: 'rgba(234, 179, 8, 0.12)', border: 'rgba(234, 179, 8, 0.3)', icon: <Clock size={22} color="#EAB308" />, action: () => navigate('/super-admin/leads?status=pending') },
-              { label: 'Approved Leads', value: stats.approvedApps, color: '#059669', bg: 'rgba(5, 150, 105, 0.12)', border: 'rgba(5, 150, 105, 0.3)', icon: <CheckCircle size={22} color="#059669" />, action: () => navigate('/super-admin/leads?status=approved') },
-              { label: 'Rejected Leads', value: stats.rejectedApps, color: '#EF4444', bg: 'rgba(239, 68, 68, 0.12)', border: 'rgba(239, 68, 68, 0.3)', icon: <XCircle size={22} color="#EF4444" />, action: () => navigate('/super-admin/leads?status=rejected') },
-              { label: 'Total Withdrawals', value: `₹${parseFloat(stats.totalWithdrawalAmount).toLocaleString('en-IN')}`, color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.12)', border: 'rgba(139, 92, 246, 0.3)', icon: <Coins size={22} color="#8B5CF6" />, action: () => navigate('/super-admin/wallet?tab=withdrawals') },
-              { label: 'Pending Withdrawals', value: stats.pendingWithdrawals, color: '#EC4899', bg: 'rgba(236, 72, 153, 0.12)', border: 'rgba(236, 72, 153, 0.3)', icon: <CreditCard size={22} color="#EC4899" />, action: () => navigate('/super-admin/wallet?tab=withdrawals') },
-              { label: 'Total Banks', value: stats.banks, color: '#06B6D4', bg: 'rgba(6, 182, 212, 0.12)', border: 'rgba(6, 182, 212, 0.3)', icon: <Landmark size={22} color="#06B6D4" />, action: () => navigate('/super-admin/banks') },
-              { label: 'Total Products', value: stats.products, color: '#6366F1', bg: 'rgba(99, 102, 241, 0.12)', border: 'rgba(99, 102, 241, 0.3)', icon: <Package size={22} color="#6366F1" />, action: () => navigate('/super-admin/products') },
+              { label: 'Total Admins', value: stats.admins, color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.3)', icon: <ShieldCheck size={isMobile ? 18 : 22} color="#F59E0B" />, action: () => setActiveTab('admins') },
+              { label: 'Active Admins', value: stats.activeAdmins, color: '#10B981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.3)', icon: <Zap size={isMobile ? 18 : 22} color="#10B981" />, action: () => setActiveTab('admins') },
+              { label: 'Total Employees', value: stats.employees, color: '#6366F1', bg: 'rgba(99, 102, 241, 0.12)', border: 'rgba(99, 102, 241, 0.3)', icon: <Users size={isMobile ? 18 : 22} color="#6366F1" />, action: () => navigate('/super-admin/employees') },
+              { label: 'Pending KYC', value: stats.pendingKycPartners, color: '#F97316', bg: 'rgba(249, 115, 22, 0.12)', border: 'rgba(249, 115, 22, 0.3)', icon: <Clock size={isMobile ? 18 : 22} color="#F97316" />, action: () => navigate('/super-admin/partners?kyc_status=pending') },
+              { label: 'Total Leads', value: stats.totalApps, color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)', border: 'rgba(59, 130, 246, 0.3)', icon: <FileText size={isMobile ? 18 : 22} color="#3B82F6" />, action: () => navigate('/super-admin/leads') },
+              { label: 'Pending Leads', value: stats.pendingApps, color: '#EAB308', bg: 'rgba(234, 179, 8, 0.12)', border: 'rgba(234, 179, 8, 0.3)', icon: <Clock size={isMobile ? 18 : 22} color="#EAB308" />, action: () => navigate('/super-admin/leads?status=pending') },
+              { label: 'Approved Leads', value: stats.approvedApps, color: '#059669', bg: 'rgba(5, 150, 105, 0.12)', border: 'rgba(5, 150, 105, 0.3)', icon: <CheckCircle size={isMobile ? 18 : 22} color="#059669" />, action: () => navigate('/super-admin/leads?status=approved') },
+              { label: 'Rejected Leads', value: stats.rejectedApps, color: '#EF4444', bg: 'rgba(239, 68, 68, 0.12)', border: 'rgba(239, 68, 68, 0.3)', icon: <XCircle size={isMobile ? 18 : 22} color="#EF4444" />, action: () => navigate('/super-admin/leads?status=rejected') },
+              { label: 'Total Withdrawals', value: `₹${parseFloat(stats.totalWithdrawalAmount).toLocaleString('en-IN')}`, color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.12)', border: 'rgba(139, 92, 246, 0.3)', icon: <Coins size={isMobile ? 18 : 22} color="#8B5CF6" />, action: () => navigate('/super-admin/wallet?tab=withdrawals') },
+              { label: 'Pending Withdrawals', value: stats.pendingWithdrawals, color: '#EC4899', bg: 'rgba(236, 72, 153, 0.12)', border: 'rgba(236, 72, 153, 0.3)', icon: <CreditCard size={isMobile ? 18 : 22} color="#EC4899" />, action: () => navigate('/super-admin/wallet?tab=withdrawals') },
+              { label: 'Total Banks', value: stats.banks, color: '#06B6D4', bg: 'rgba(6, 182, 212, 0.12)', border: 'rgba(6, 182, 212, 0.3)', icon: <Landmark size={isMobile ? 18 : 22} color="#06B6D4" />, action: () => navigate('/super-admin/banks') },
+              { label: 'Total Products', value: stats.products, color: '#6366F1', bg: 'rgba(99, 102, 241, 0.12)', border: 'rgba(99, 102, 241, 0.3)', icon: <Package size={isMobile ? 18 : 22} color="#6366F1" />, action: () => navigate('/super-admin/products') },
             ].map((kpi, idx) => (
               <div
                 key={idx}
@@ -537,10 +543,10 @@ export default function SuperAdminOverview() {
                   background: C.card,
                   borderRadius: '14px',
                   border: `1px solid ${kpi.border}`,
-                  padding: '16px',
+                  padding: isMobile ? '12px' : '16px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '14px',
+                  gap: isMobile ? '10px' : '14px',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
                   position: 'relative',
@@ -558,43 +564,45 @@ export default function SuperAdminOverview() {
                 }}
               >
                 <div style={{
-                  width: '44px',
-                  height: '44px',
+                  width: isMobile ? '36px' : '44px',
+                  height: isMobile ? '36px' : '44px',
                   borderRadius: '12px',
                   background: kpi.bg,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '22px',
+                  fontSize: isMobile ? '16px' : '22px',
                   flexShrink: 0,
                   boxShadow: `inset 0 0 0 1px ${kpi.border}`
                 }}>
                   {kpi.icon}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: '20px', fontWeight: 900, color: C.text, lineHeight: 1.1 }}>
+                  <div style={{ fontSize: isMobile ? '16px' : '20px', fontWeight: 900, color: C.text, lineHeight: 1.1 }}>
                     {loading ? '...' : kpi.value}
                   </div>
-                  <div style={{ fontSize: '12px', fontWeight: 800, color: C.textMid, marginTop: '3px' }}>
+                  <div style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: 800, color: C.textMid, marginTop: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {kpi.label}
                   </div>
                 </div>
-                <div style={{
-                  fontSize: '11px',
-                  fontWeight: 800,
-                  color: kpi.color,
-                  opacity: 0.8,
-                  alignSelf: 'flex-start'
-                }}>
-                  ➔
-                </div>
+                {!isMobile && (
+                  <div style={{
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    color: kpi.color,
+                    opacity: 0.8,
+                    alignSelf: 'flex-start'
+                  }}>
+                    ➔
+                  </div>
+                )}
               </div>
             ))}
           </div>
 
           {/* Quick Platform Status Breakdown */}
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '16px' }}>
-            <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '16px' }}>
+            <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: isMobile ? '14px' : '20px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 14px 0' }}>Applications Process Breakdown</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', background: C.bg, borderRadius: '8px', fontSize: '12px' }}>
@@ -702,11 +710,11 @@ export default function SuperAdminOverview() {
 
       {/* TAB 2: CUSTOMERS OVERVIEW */}
       {activeTab === 'customers' && (
-        <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
+        <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: isMobile ? '14px 12px' : '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>Registered Customers Directory</h3>
-              <p style={{ fontSize: '13px', color: C.textLight, margin: '2px 0 0 0' }}>View details of all customers and their applications across the system.</p>
+              <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 800, color: C.text, margin: 0 }}>Registered Customers Directory</h3>
+              <p style={{ fontSize: '12.5px', color: C.textLight, margin: '2px 0 0 0' }}>View details of all customers and their applications across the system.</p>
             </div>
 
             <input
@@ -714,12 +722,12 @@ export default function SuperAdminOverview() {
               placeholder="Search customer name, mobile, email..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              style={{ padding: '8px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: '13px', width: '280px' }}
+              style={{ padding: '8px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: '13px', width: isMobile ? '100%' : '280px', boxSizing: 'border-box' }}
             />
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', minWidth: '600px' }}>
               <thead>
                 <tr style={{ background: C.bg, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase' }}>
                   <th style={{ padding: '12px 16px' }}>Customer Name</th>
@@ -758,11 +766,11 @@ export default function SuperAdminOverview() {
 
       {/* TAB 3: PARTNERS OVERVIEW */}
       {activeTab === 'partners' && (
-        <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
+        <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: isMobile ? '14px 12px' : '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>Partner Directory & 360 Info</h3>
-              <p style={{ fontSize: '13px', color: C.textLight, margin: '2px 0 0 0' }}>View details, team members, total applications, and commission for each partner.</p>
+              <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 800, color: C.text, margin: 0 }}>Partner Directory & 360 Info</h3>
+              <p style={{ fontSize: '12.5px', color: C.textLight, margin: '2px 0 0 0' }}>View details, team members, total applications, and commission for each partner.</p>
             </div>
 
             <input
@@ -770,12 +778,12 @@ export default function SuperAdminOverview() {
               placeholder="Search partner code, name, mobile..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              style={{ padding: '8px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: '13px', width: '280px' }}
+              style={{ padding: '8px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: '13px', width: isMobile ? '100%' : '280px', boxSizing: 'border-box' }}
             />
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', minWidth: '680px' }}>
               <thead>
                 <tr style={{ background: C.bg, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase' }}>
                   <th style={{ padding: '12px 16px' }}>Partner Code</th>
@@ -838,32 +846,32 @@ export default function SuperAdminOverview() {
 
       {/* TAB: EMPLOYEES OVERVIEW */}
       {activeTab === 'employees' && (
-        <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
+        <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: isMobile ? '14px 12px' : '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>Employees Directory</h3>
-              <p style={{ fontSize: '13px', color: C.textLight, margin: '2px 0 0 0' }}>All registered employees, sales executives, and internal team staff across GharKaPaisa.</p>
+              <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 800, color: C.text, margin: 0 }}>Employees Directory</h3>
+              <p style={{ fontSize: '12.5px', color: C.textLight, margin: '2px 0 0 0' }}>All registered employees, sales executives, and internal team staff across GharKaPaisa.</p>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', width: isMobile ? '100%' : 'auto', flexWrap: 'wrap' }}>
               <input
                 type="text"
                 placeholder="Search employee code, name, mobile..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                style={{ padding: '8px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: '13px', width: '260px' }}
+                style={{ padding: '8px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: '13px', width: isMobile ? '100%' : '260px', boxSizing: 'border-box' }}
               />
               <button
                 onClick={() => navigate('/super-admin/employees')}
-                style={{ background: '#6366F1', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}
+                style={{ background: '#6366F1', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', width: isMobile ? '100%' : 'auto' }}
               >
                 ⚙️ Employee Operations
               </button>
             </div>
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', minWidth: '680px' }}>
               <thead>
                 <tr style={{ background: C.bg, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase' }}>
                   <th style={{ padding: '12px 16px' }}>Employee Code</th>
@@ -933,11 +941,11 @@ export default function SuperAdminOverview() {
 
       {/* TAB 4: TEAM MEMBERS OVERVIEW */}
       {activeTab === 'team' && (
-        <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
+        <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: isMobile ? '14px 12px' : '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>Team Members Directory</h3>
-              <p style={{ fontSize: '13px', color: C.textLight, margin: '2px 0 0 0' }}>All sub-agents and team members across partner networks with full performance records.</p>
+              <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 800, color: C.text, margin: 0 }}>Team Members Directory</h3>
+              <p style={{ fontSize: '12.5px', color: C.textLight, margin: '2px 0 0 0' }}>All sub-agents and team members across partner networks with full performance records.</p>
             </div>
 
             <input
@@ -945,12 +953,12 @@ export default function SuperAdminOverview() {
               placeholder="Search member name, code, mobile..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              style={{ padding: '8px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: '13px', width: '280px' }}
+              style={{ padding: '8px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: '13px', width: isMobile ? '100%' : '280px', boxSizing: 'border-box' }}
             />
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', minWidth: '680px' }}>
               <thead>
                 <tr style={{ background: C.bg, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase' }}>
                   <th style={{ padding: '12px 16px' }}>Member Name</th>
@@ -993,18 +1001,18 @@ export default function SuperAdminOverview() {
 
       {/* TAB 5: APPLICATIONS OVERVIEW */}
       {activeTab === 'applications' && (
-        <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
+        <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: isMobile ? '14px 12px' : '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>All Applications Tracking (Unified Single Source of Truth)</h3>
-              <p style={{ fontSize: '13px', color: C.textLight, margin: '2px 0 0 0' }}>Real-time 360° traceability across all 4 application processes.</p>
+              <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 800, color: C.text, margin: 0 }}>All Applications Tracking</h3>
+              <p style={{ fontSize: '12.5px', color: C.textLight, margin: '2px 0 0 0' }}>Real-time 360° traceability across all 4 application processes.</p>
             </div>
             
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
               <select
                 value={processFilter}
                 onChange={e => setProcessFilter(e.target.value)}
-                style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: '13px', fontWeight: 700 }}
+                style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: '13px', fontWeight: 700, flex: isMobile ? '1 1 140px' : 'none' }}
               >
                 <option value="all">All Processes ({stats.totalApps})</option>
                 <option value="lead_punching">Partner Punch ({stats.leadPunchingApps})</option>
@@ -1016,7 +1024,7 @@ export default function SuperAdminOverview() {
               <select
                 value={statusFilter}
                 onChange={e => setStatusFilter(e.target.value)}
-                style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: '13px', fontWeight: 700 }}
+                style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: '13px', fontWeight: 700, flex: isMobile ? '1 1 140px' : 'none' }}
               >
                 <option value="all">All Statuses</option>
                 <option value="pending">Pending</option>
@@ -1034,10 +1042,10 @@ export default function SuperAdminOverview() {
                 placeholder="Search app#, customer, partner, product..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: '13px', width: '220px' }}
+                style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: '13px', width: isMobile ? '100%' : '220px', boxSizing: 'border-box' }}
               />
 
-              <button onClick={() => navigate('/super-admin/crm')} style={{ background: C.teal, color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}>
+              <button onClick={() => navigate('/super-admin/crm')} style={{ background: C.teal, color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', width: isMobile ? '100%' : 'auto' }}>
                 Open Full CRM →
               </button>
             </div>
@@ -1459,17 +1467,17 @@ export default function SuperAdminOverview() {
 
       {/* ── CUSTOMER DETAILS MODAL ── */}
       {selectedCustomer && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ width: '100%', maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto', background: C.card, borderRadius: '20px', padding: '24px', border: `1px solid ${C.border}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${C.border}`, paddingBottom: '16px', marginBottom: '20px' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '10px' : '20px' }}>
+          <div style={{ width: '100%', maxWidth: '700px', maxHeight: '92vh', overflowY: 'auto', background: C.card, borderRadius: isMobile ? '14px' : '20px', padding: isMobile ? '16px' : '24px', border: `1px solid ${C.border}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px', marginBottom: '16px' }}>
               <div>
-                <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0 }}>👤 Customer Detailed Record</h3>
+                <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: 0 }}>👤 Customer Detailed Record</h3>
                 <span style={{ fontSize: '12px', color: C.textLight }}>{selectedCustomer.customer_name}</span>
               </div>
               <button onClick={() => setSelectedCustomer(null)} style={{ background: 'none', border: 'none', fontSize: '20px', color: C.textLight, cursor: 'pointer' }}>✕</button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '10px', marginBottom: '16px' }}>
               <div style={{ background: C.bg, padding: '10px 14px', borderRadius: '10px' }}>
                 <span style={{ fontSize: '11px', color: C.textLight, display: 'block' }}>Full Name</span>
                 <strong style={{ fontSize: '13px', color: C.text }}>{selectedCustomer.customer_name}</strong>
@@ -1522,17 +1530,17 @@ export default function SuperAdminOverview() {
 
       {/* ── PARTNER 360 DETAILS MODAL ── */}
       {selectedPartner && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ width: '100%', maxWidth: '760px', maxHeight: '90vh', overflowY: 'auto', background: C.card, borderRadius: '20px', padding: '24px', border: `1px solid ${C.border}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${C.border}`, paddingBottom: '16px', marginBottom: '20px' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '10px' : '20px' }}>
+          <div style={{ width: '100%', maxWidth: '760px', maxHeight: '92vh', overflowY: 'auto', background: C.card, borderRadius: isMobile ? '14px' : '20px', padding: isMobile ? '16px' : '24px', border: `1px solid ${C.border}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px', marginBottom: '16px' }}>
               <div>
-                <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0 }}>Partner 360 Master Record</h3>
+                <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: 0 }}>Partner 360 Master Record</h3>
                 <span style={{ fontSize: '12px', color: C.teal, fontWeight: 800 }}>Code: {selectedPartner.partner_code}</span>
               </div>
               <button onClick={() => setSelectedPartner(null)} style={{ background: 'none', border: 'none', fontSize: '20px', color: C.textLight, cursor: 'pointer' }}>✕</button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '10px', marginBottom: '16px' }}>
               <div style={{ background: C.bg, padding: '10px 14px', borderRadius: '10px' }}>
                 <span style={{ fontSize: '11px', color: C.textLight, display: 'block' }}>Partner Name</span>
                 <strong style={{ fontSize: '13px', color: C.text }}>{selectedPartner.first_name} {selectedPartner.last_name || ''}</strong>
@@ -1549,9 +1557,9 @@ export default function SuperAdminOverview() {
 
             <h4 style={{ fontSize: '14px', fontWeight: 800, color: C.text, marginBottom: '10px' }}>👔 Team Members under Partner ({partnerTeam.length})</h4>
             {partnerTeam.length === 0 ? (
-              <div style={{ padding: '10px 14px', background: C.bg, borderRadius: '10px', color: C.textLight, fontSize: '12px', marginBottom: '20px' }}>No sub-team members assigned.</div>
+              <div style={{ padding: '10px 14px', background: C.bg, borderRadius: '10px', color: C.textLight, fontSize: '12px', marginBottom: '16px' }}>No sub-team members assigned.</div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px' }}>
                 {partnerTeam.map(tm => (
                   <div key={tm.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px', fontSize: '12px' }}>
                     <span><strong>{tm.first_name} {tm.last_name || ''}</strong> ({tm.partner_code})</span>
@@ -1582,17 +1590,17 @@ export default function SuperAdminOverview() {
 
       {/* ── TEAM MEMBER DETAILS MODAL ── */}
       {selectedTeamMember && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ width: '100%', maxWidth: '650px', maxHeight: '90vh', overflowY: 'auto', background: C.card, borderRadius: '20px', padding: '24px', border: `1px solid ${C.border}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${C.border}`, paddingBottom: '16px', marginBottom: '20px' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '10px' : '20px' }}>
+          <div style={{ width: '100%', maxWidth: '650px', maxHeight: '92vh', overflowY: 'auto', background: C.card, borderRadius: isMobile ? '14px' : '20px', padding: isMobile ? '16px' : '24px', border: `1px solid ${C.border}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px', marginBottom: '16px' }}>
               <div>
-                <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0 }}>👔 Team Member Detailed View</h3>
+                <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: 0 }}>👔 Team Member Detailed View</h3>
                 <span style={{ fontSize: '12px', color: C.teal }}>Code: {selectedTeamMember.partner_code}</span>
               </div>
               <button onClick={() => setSelectedTeamMember(null)} style={{ background: 'none', border: 'none', fontSize: '20px', color: C.textLight, cursor: 'pointer' }}>✕</button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '10px', marginBottom: '16px' }}>
               <div style={{ background: C.bg, padding: '10px 14px', borderRadius: '10px' }}>
                 <span style={{ fontSize: '11px', color: C.textLight, display: 'block' }}>Member Name</span>
                 <strong style={{ fontSize: '13px', color: C.text }}>{selectedTeamMember.first_name || selectedTeamMember.full_name} {selectedTeamMember.last_name || ''}</strong>
@@ -1635,44 +1643,44 @@ export default function SuperAdminOverview() {
       {/* ── APPLICATION 360° TRACEABILITY MODAL ── */}
 
       {selectedAppTrace && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(15,23,42,0.8)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ width: '100%', maxWidth: '900px', maxHeight: '92vh', overflowY: 'auto', background: C.card, borderRadius: '20px', padding: '28px', border: `1px solid ${C.border}`, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(15,23,42,0.8)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '8px' : '20px' }}>
+          <div style={{ width: '100%', maxWidth: '900px', maxHeight: '92vh', overflowY: 'auto', background: C.card, borderRadius: isMobile ? '14px' : '20px', padding: isMobile ? '16px' : '28px', border: `1px solid ${C.border}`, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
             
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${C.border}`, paddingBottom: '16px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px', marginBottom: '16px' }}>
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <h3 style={{ fontSize: '20px', fontWeight: 900, color: C.text, margin: 0 }}>⚡ Application 360° Traceability Record</h3>
-                  <span style={{ fontSize: '12px', fontWeight: 800, padding: '3px 10px', borderRadius: '6px', background: getProcessMeta(selectedAppTrace.application?.application_process_type).bg, color: getProcessMeta(selectedAppTrace.application?.application_process_type).color }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <h3 style={{ fontSize: isMobile ? '16px' : '20px', fontWeight: 900, color: C.text, margin: 0 }}>⚡ Application 360° Traceability</h3>
+                  <span style={{ fontSize: '11px', fontWeight: 800, padding: '2px 8px', borderRadius: '6px', background: getProcessMeta(selectedAppTrace.application?.application_process_type).bg, color: getProcessMeta(selectedAppTrace.application?.application_process_type).color }}>
                     {getProcessMeta(selectedAppTrace.application?.application_process_type).label}
                   </span>
                 </div>
-                <span style={{ fontSize: '13px', color: C.teal, fontWeight: 800, marginTop: '4px', display: 'block' }}>
+                <span style={{ fontSize: '12px', color: C.teal, fontWeight: 800, marginTop: '4px', display: 'block' }}>
                   App Number: {selectedAppTrace.application?.app_number} • ID: {selectedAppTrace.application?.application_id}
                 </span>
               </div>
-              <button onClick={() => setSelectedAppTrace(null)} style={{ background: C.bg, border: `1px solid ${C.border}`, width: '36px', height: '36px', borderRadius: '50%', fontSize: '18px', color: C.text, cursor: 'pointer' }}>✕</button>
+              <button onClick={() => setSelectedAppTrace(null)} style={{ background: C.bg, border: `1px solid ${C.border}`, width: '32px', height: '32px', borderRadius: '50%', fontSize: '16px', color: C.text, cursor: 'pointer' }}>✕</button>
             </div>
 
             {/* Relational Mapping Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '10px', marginBottom: '16px' }}>
               <div style={{ background: C.bg, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
                 <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase' }}>👤 Customer Profile</span>
-                <div style={{ fontWeight: 800, color: C.text, fontSize: '14px', marginTop: '4px' }}>{selectedAppTrace.application?.customer_name || 'N/A'}</div>
+                <div style={{ fontWeight: 800, color: C.text, fontSize: '13.5px', marginTop: '4px' }}>{selectedAppTrace.application?.customer_name || 'N/A'}</div>
                 <div style={{ fontSize: '12px', color: C.textMid }}>Mobile: {selectedAppTrace.application?.customer_mobile || 'N/A'}</div>
                 <div style={{ fontSize: '11px', color: C.textLight }}>Email: {selectedAppTrace.application?.customer_email || 'N/A'}</div>
               </div>
 
               <div style={{ background: C.bg, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
                 <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase' }}>Partner & Channel</span>
-                <div style={{ fontWeight: 800, color: C.purple, fontSize: '14px', marginTop: '4px' }}>{selectedAppTrace.application?.partner_code || 'DIRECT'}</div>
+                <div style={{ fontWeight: 800, color: C.purple, fontSize: '13.5px', marginTop: '4px' }}>{selectedAppTrace.application?.partner_code || 'DIRECT'}</div>
                 <div style={{ fontSize: '12px', color: C.textMid }}>{selectedAppTrace.application?.partner_name || 'Direct Bank Flow'}</div>
                 <div style={{ fontSize: '11px', color: C.textLight }}>Lead ID: {selectedAppTrace.application?.lead_id || 'N/A'}</div>
               </div>
 
               <div style={{ background: C.bg, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
                 <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase' }}>🏦 Product & Bank URL</span>
-                <div style={{ fontWeight: 800, color: C.text, fontSize: '14px', marginTop: '4px' }}>{selectedAppTrace.application?.product_name || 'Credit Product'}</div>
+                <div style={{ fontWeight: 800, color: C.text, fontSize: '13.5px', marginTop: '4px' }}>{selectedAppTrace.application?.product_name || 'Credit Product'}</div>
                 <div style={{ fontSize: '12px', color: C.textMid }}>{selectedAppTrace.application?.bank_name || 'Bank'}</div>
                 {selectedAppTrace.application?.partner_url ? (
                   <a href={selectedAppTrace.application.partner_url} target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: C.teal, fontWeight: 800, display: 'inline-block', marginTop: '4px' }}>
@@ -1685,9 +1693,9 @@ export default function SuperAdminOverview() {
             </div>
 
             {/* Bank Operational Tracking */}
-            <div style={{ background: C.bg, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}`, marginBottom: '20px' }}>
-              <h4 style={{ fontSize: '13px', fontWeight: 800, color: C.text, margin: '0 0 10px 0', textTransform: 'uppercase' }}>🏦 Bank Processing & Operations Tracking</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', fontSize: '12px' }}>
+            <div style={{ background: C.bg, padding: '12px', borderRadius: '12px', border: `1px solid ${C.border}`, marginBottom: '16px' }}>
+              <h4 style={{ fontSize: '12.5px', fontWeight: 800, color: C.text, margin: '0 0 10px 0', textTransform: 'uppercase' }}>🏦 Bank Processing & Operations Tracking</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '10px', fontSize: '12px' }}>
                 <div><span style={{ color: C.textLight, display: 'block', fontSize: '11px' }}>Bank Ref #</span><strong>{selectedAppTrace.application?.bank_ref_number || 'Not Generated'}</strong></div>
                 <div><span style={{ color: C.textLight, display: 'block', fontSize: '11px' }}>Soft Approval</span><strong>{selectedAppTrace.application?.soft_approval_status || 'N/A'}</strong></div>
                 <div><span style={{ color: C.textLight, display: 'block', fontSize: '11px' }}>VKYC Stage</span><strong>{selectedAppTrace.application?.vkyc_stage || 'N/A'}</strong></div>
@@ -1702,9 +1710,9 @@ export default function SuperAdminOverview() {
 
             {/* Process Specific Detailed Section */}
             {selectedAppTrace.application?.application_process_type === 'physical_process' && selectedAppTrace.physical_details && (
-              <div style={{ background: '#FFFBEB', padding: '14px', borderRadius: '12px', border: '1px solid #FDE68A', marginBottom: '20px' }}>
-                <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#92400E', margin: '0 0 10px 0' }}>Physical Process Application Details</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', fontSize: '12px' }}>
+              <div style={{ background: '#FFFBEB', padding: '12px', borderRadius: '12px', border: '1px solid #FDE68A', marginBottom: '16px' }}>
+                <h4 style={{ fontSize: '12.5px', fontWeight: 800, color: '#92400E', margin: '0 0 10px 0' }}>Physical Process Application Details</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '10px', fontSize: '12px' }}>
                   <div><span style={{ color: '#B45309', display: 'block', fontSize: '11px' }}>Employer Company</span><strong>{selectedAppTrace.physical_details.company_name || 'N/A'}</strong></div>
                   <div><span style={{ color: '#B45309', display: 'block', fontSize: '11px' }}>Net Monthly Income</span><strong>₹{selectedAppTrace.physical_details.monthly_income ? parseFloat(selectedAppTrace.physical_details.monthly_income).toLocaleString('en-IN') : 'N/A'}</strong></div>
                   <div><span style={{ color: '#B45309', display: 'block', fontSize: '11px' }}>Courier / Docket #</span><strong>{selectedAppTrace.physical_details.courier_docket_number || 'N/A'}</strong></div>
@@ -1713,8 +1721,8 @@ export default function SuperAdminOverview() {
             )}
 
             {selectedAppTrace.application?.application_process_type === 'linked_share' && (
-              <div style={{ background: '#F5F3FF', padding: '14px', borderRadius: '12px', border: '1px solid #DDD6FE', marginBottom: '20px' }}>
-                <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#6D28D9', margin: '0 0 10px 0' }}>🔗 Linked Share Process Details</h4>
+              <div style={{ background: '#F5F3FF', padding: '12px', borderRadius: '12px', border: '1px solid #DDD6FE', marginBottom: '16px' }}>
+                <h4 style={{ fontSize: '12.5px', fontWeight: 800, color: '#6D28D9', margin: '0 0 10px 0' }}>🔗 Linked Share Process Details</h4>
                 <div style={{ fontSize: '12px', color: '#5B21B6' }}>
                   <strong>Share Token:</strong> {selectedAppTrace.application?.share_token || 'N/A'} | 
                   <strong> SMS Log Count:</strong> {selectedAppTrace.sms_logs?.length || 0} dispatches
@@ -1723,11 +1731,11 @@ export default function SuperAdminOverview() {
             )}
 
             {/* Timeline Audit Trail */}
-            <h4 style={{ fontSize: '14px', fontWeight: 800, color: C.text, marginBottom: '10px' }}>⏱️ Application Status Audit Timeline ({selectedAppTrace.timeline?.length || 0})</h4>
+            <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.text, marginBottom: '8px' }}>⏱️ Status Audit Timeline ({selectedAppTrace.timeline?.length || 0})</h4>
             {selectedAppTrace.timeline?.length === 0 ? (
-              <div style={{ padding: '12px', background: C.bg, borderRadius: '8px', fontSize: '12px', color: C.textLight, marginBottom: '20px' }}>No timeline audit events logged yet.</div>
+              <div style={{ padding: '12px', background: C.bg, borderRadius: '8px', fontSize: '12px', color: C.textLight, marginBottom: '16px' }}>No timeline audit events logged yet.</div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '20px', maxHeight: '180px', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px', maxHeight: '180px', overflowY: 'auto' }}>
                 {selectedAppTrace.timeline?.map((evt, idx) => (
                   <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px', fontSize: '12px' }}>
                     <div>
@@ -1745,7 +1753,7 @@ export default function SuperAdminOverview() {
             )}
 
             {/* Wallet & Financial Ledger */}
-            <h4 style={{ fontSize: '14px', fontWeight: 800, color: C.text, marginBottom: '10px' }}>💰 Wallet Ledger & Commission Entries ({selectedAppTrace.wallet_ledger?.length || 0})</h4>
+            <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.text, marginBottom: '8px' }}>💰 Wallet Ledger & Commission Entries ({selectedAppTrace.wallet_ledger?.length || 0})</h4>
             {selectedAppTrace.wallet_ledger?.length === 0 ? (
               <div style={{ padding: '12px', background: C.bg, borderRadius: '8px', fontSize: '12px', color: C.textLight }}>No wallet transactions logged for this application yet.</div>
             ) : (

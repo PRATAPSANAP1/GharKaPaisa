@@ -493,6 +493,21 @@ async function getApplicationReportData(filters = {}) {
     paramIdx++;
   }
 
+  if (filters.category && filters.category !== 'all') {
+    const cat = filters.category.toLowerCase();
+    if (cat === 'loc_eoc' || cat === 'loc/eoc' || cat === 'loc-eoc') {
+      whereClauses.push(`(p.category IN ('loc_eoc', 'loc', 'eoc', 'loan_on_credit_card', 'smart_emi') OR p.sub_category IN ('loc', 'eoc') OR a.product_category IN ('loc_eoc', 'loc', 'eoc'))`);
+    } else if (cat === 'credit_card') {
+      whereClauses.push(`p.category = 'credit_card' AND COALESCE(p.category, '') NOT IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi') AND COALESCE(p.sub_category, '') NOT IN ('loc', 'eoc')`);
+    } else if (cat === 'loan' || cat === 'personal_loan') {
+      whereClauses.push(`p.category ILIKE '%loan%' AND COALESCE(p.category, '') NOT IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi') AND COALESCE(p.sub_category, '') NOT IN ('loc', 'eoc')`);
+    } else {
+      whereClauses.push(`p.category = $${paramIdx}`);
+      params.push(cat);
+      paramIdx++;
+    }
+  }
+
   const dateFromApp = formatDateFilter(filters.date_from || filters.from_date || filters.startDate, '00:00:00');
   if (dateFromApp) {
     whereClauses.push(`a.created_at >= $${paramIdx}`);
