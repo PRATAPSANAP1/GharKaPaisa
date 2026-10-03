@@ -57,6 +57,122 @@ export default function EmployeeManagement() {
   });
   const [viewingDocModal, setViewingDocModal] = useState(null);
 
+  const [drawer360Data, setDrawer360Data] = useState(null);
+  const [loadingDrawer360, setLoadingDrawer360] = useState(false);
+
+  const fetchDrawerEmp360 = async (empId) => {
+    if (!empId) return;
+    setLoadingDrawer360(true);
+    try {
+      const res = await api.get(`/employees/${empId}`);
+      if (res.data?.success) {
+        const data = res.data.data;
+        setDrawer360Data(data);
+        if (data.employee) {
+          setDrawerEmp(prev => (prev ? { ...prev, ...data.employee } : data.employee));
+        }
+        const kyc = data.kyc || {};
+        const emp = data.employee || {};
+        const docs = data.documents || [];
+
+        setDocIdentityFields({
+          aadhaar_number: kyc.aadhaar_number || emp.aadhaar_number || 'N/A',
+          pan_number: kyc.pan_number || emp.pan_number || 'N/A',
+          bank_account: kyc.bank_account_number || emp.bank_account_number || 'N/A',
+          ifsc_code: kyc.ifsc_code || emp.ifsc_code || 'N/A',
+          admin_remarks: kyc.review_notes || 'KYC profile updated.'
+        });
+
+        const findDoc = (types) => docs.find(d => types.includes(String(d.document_type || '').toLowerCase().trim()));
+
+        const aadhaarDoc = findDoc(['aadhaar', 'aadhaar_card', 'aadhaar_front', 'aadhaar_back']);
+        const panDoc = findDoc(['pan', 'pan_card']);
+        const bankDoc = findDoc(['bank', 'bank_proof', 'bank_passbook', 'cheque', 'passbook']);
+        const photoDoc = findDoc(['photo', 'photograph', 'profile_photo']);
+        const offerDoc = findDoc(['offer_letter', 'joining_form', 'terms_video', 'resume']);
+
+        const parseStatus = (statusStr, isVerifiedFlag, url) => {
+          if (isVerifiedFlag || statusStr === 'VERIFIED' || statusStr === 'APPROVED') return 'Verified';
+          if (statusStr === 'REJECTED') return 'Rejected';
+          if (url || statusStr === 'SUBMITTED' || statusStr === 'UNDER_REVIEW' || statusStr === 'PENDING') return 'Submitted';
+          return 'Not Uploaded';
+        };
+
+        const aadhaarUrl = kyc.aadhaar_document_url || aadhaarDoc?.document_url || null;
+        const panUrl = kyc.pan_document_url || panDoc?.document_url || null;
+        const bankUrl = kyc.bank_document_url || bankDoc?.document_url || null;
+        const photoUrl = emp.profile_photo_url || emp.face_reference_url || photoDoc?.document_url || null;
+        const offerUrl = offerDoc?.document_url || emp.resume_url || null;
+
+        setDocStatuses({
+          aadhaar: {
+            status: parseStatus(kyc.aadhaar_status || aadhaarDoc?.verification_status, kyc.aadhaar_verified, aadhaarUrl),
+            reason: kyc.aadhaar_rejection_reason || aadhaarDoc?.rejection_reason || '',
+            url: aadhaarUrl
+          },
+          pan: {
+            status: parseStatus(kyc.pan_status || panDoc?.verification_status, kyc.pan_verified, panUrl),
+            reason: kyc.pan_rejection_reason || panDoc?.rejection_reason || '',
+            url: panUrl
+          },
+          bank: {
+            status: parseStatus(kyc.bank_status || bankDoc?.verification_status, kyc.bank_verified, bankUrl),
+            reason: kyc.bank_rejection_reason || bankDoc?.rejection_reason || '',
+            url: bankUrl
+          },
+          photo: {
+            status: parseStatus(photoDoc?.verification_status || (photoUrl ? 'SUBMITTED' : 'NOT_UPLOADED'), false, photoUrl),
+            reason: photoDoc?.rejection_reason || '',
+            url: photoUrl
+          },
+          offer_letter: {
+            status: parseStatus(offerDoc?.verification_status || (offerUrl ? 'SUBMITTED' : 'NOT_UPLOADED'), false, offerUrl),
+            reason: offerDoc?.rejection_reason || '',
+            url: offerUrl
+          }
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch drawer employee 360 data:', err);
+    } finally {
+      setLoadingDrawer360(false);
+    }
+  };
+
+  const handleSingleDocAction = async (empId, docKey, action, reasonText = '') => {
+    const isApprove = action === 'VERIFIED';
+    const payload = {
+      kyc_status: isApprove ? 'UNDER_REVIEW' : 'REJECTED'
+    };
+
+    if (docKey === 'aadhaar') {
+      payload.aadhaar_action = action;
+      if (!isApprove) payload.aadhaar_reason = reasonText;
+    } else if (docKey === 'pan') {
+      payload.pan_action = action;
+      if (!isApprove) payload.pan_reason = reasonText;
+    } else if (docKey === 'bank') {
+      payload.bank_action = action;
+      if (!isApprove) payload.bank_reason = reasonText;
+    } else if (docKey === 'photo') {
+      payload.photo_action = action;
+      if (!isApprove) payload.photo_reason = reasonText;
+    } else if (docKey === 'offer_letter') {
+      payload.education_certificate_action = action;
+      if (!isApprove) payload.education_certificate_reason = reasonText;
+    }
+
+    try {
+      const res = await api.post(`/employees/${empId}/kyc-verify`, payload);
+      if (res.data?.success) {
+        fetchDrawerEmp360(empId);
+        fetchData();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update document status');
+    }
+  };
+
   useEffect(() => {
     if (drawerEmp) {
       setIsEditingEmpInfo(false);
@@ -69,20 +185,21 @@ export default function EmployeeManagement() {
         manager_name: drawerEmp.manager_name || 'Suresh Yadav'
       });
       setDocIdentityFields({
-        aadhaar_number: drawerEmp.aadhaar_number || '4521 8892 1045',
-        pan_number: drawerEmp.pan_number || 'ABCDE1234F',
-        bank_account: drawerEmp.bank_account || '918230918231',
-        ifsc_code: drawerEmp.ifsc_code || 'HDFC0001234',
-        admin_remarks: drawerEmp.admin_remarks || 'All verified during video KYC.'
+        aadhaar_number: drawerEmp.aadhaar_number || 'N/A',
+        pan_number: drawerEmp.pan_number || 'N/A',
+        bank_account: drawerEmp.bank_account || 'N/A',
+        ifsc_code: drawerEmp.ifsc_code || 'N/A',
+        admin_remarks: drawerEmp.admin_remarks || 'KYC Profile Loaded.'
       });
       setDocStatuses({
-        aadhaar: { status: 'Submitted', reason: '' },
-        pan: { status: 'Submitted', reason: '' },
-        bank: { status: 'Submitted', reason: '' },
-        photo: { status: 'Submitted', reason: '' },
-        offer_letter: { status: 'Submitted', reason: '' }
+        aadhaar: { status: 'Submitted', reason: '', url: null },
+        pan: { status: 'Submitted', reason: '', url: null },
+        bank: { status: 'Submitted', reason: '', url: null },
+        photo: { status: 'Submitted', reason: '', url: null },
+        offer_letter: { status: 'Submitted', reason: '', url: null }
       });
       setRejectingDocKey(null);
+      fetchDrawerEmp360(drawerEmp.id);
     }
   }, [drawerEmp?.id]);
 
@@ -4165,74 +4282,102 @@ export default function EmployeeManagement() {
               
               {/* Drawer / Modal Header */}
               <div style={{ padding: isMobile ? '12px 14px' : '18px 20px', borderBottom: `1px solid ${C.border}`, background: C.card }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                  <div style={{ display: 'flex', gap: isMobile ? '10px' : '14px', alignItems: 'center' }}>
-                    <div style={{
-                      width: isMobile ? '46px' : '64px', height: isMobile ? '46px' : '64px', borderRadius: '50%', background: `${C.teal}15`, color: C.teal,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: isMobile ? '18px' : '24px', flexShrink: 0,
-                      border: `2px solid ${C.teal}30`, overflow: 'hidden'
-                    }}>
-                      {drawerEmp.profile_photo_url || drawerEmp.face_reference_url || drawerEmp.avatar_url || drawerEmp.photo ? (
-                        <img src={drawerEmp.profile_photo_url || drawerEmp.face_reference_url || drawerEmp.avatar_url || drawerEmp.photo} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        drawerEmp.full_name ? drawerEmp.full_name[0].toUpperCase() : 'E'
-                      )}
-                    </div>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: 0 }}>{drawerEmp.full_name}</h3>
-                        <span style={{ padding: '2px 8px', borderRadius: '0px', fontSize: '11px', fontWeight: 800, background: drawerEmp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7', color: drawerEmp.activation_status === 'APPROVED' ? '#065F46' : '#92400E', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          ✓ {drawerEmp.activation_status === 'APPROVED' ? 'Active' : 'Pending'}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, marginTop: '2px' }}>
-                        ID: {drawerEmp.employee_code || drawerEmp.employee_id || drawerEmp.emp_code || (drawerEmp.id ? String(drawerEmp.id).slice(0, 8) : 'CAND10001')} • {drawerEmp.designation || 'Branch Head'}
-                      </div>
-                      <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '3px', display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                        <span>📞 {drawerEmp.mobile_number || '+91 98765 43210'}</span>
-                        <span>✉ {drawerEmp.email_id || drawerEmp.email || 'pratap.sanap@gharkapaisa.in'}</span>
-                      </div>
-                      <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        <span>Department: <strong style={{ color: C.text }}>{drawerEmp.department || 'Sales & Support'}</strong></span>
-                        <span>Joined: <strong style={{ color: C.text }}>{drawerEmp.created_at ? new Date(drawerEmp.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Oct 2, 2026'}</strong></span>
-                      </div>
-                    </div>
+                {/* Top Section Title Banner */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FaUserShield style={{ color: C.teal, fontSize: '18px' }} />
+                    <h2 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: 0 }}>
+                      Employee Details
+                    </h2>
                   </div>
-
                   <button 
                     onClick={() => setDrawerEmp(null)}
-                    style={{ background: 'transparent', border: 'none', borderRadius: '0px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textMid, cursor: 'pointer', fontSize: '18px', flexShrink: 0 }}
+                    style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textMid, cursor: 'pointer', fontSize: '16px', fontWeight: 900, flexShrink: 0 }}
+                    title="Close Popup"
                   >
                     ✕
                   </button>
                 </div>
+
+                <div style={{ display: 'flex', gap: isMobile ? '10px' : '14px', alignItems: 'center' }}>
+                  <div style={{
+                    width: isMobile ? '46px' : '64px', height: isMobile ? '46px' : '64px', borderRadius: '50%', background: `${C.teal}15`, color: C.teal,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: isMobile ? '18px' : '24px', flexShrink: 0,
+                    border: `2px solid ${C.teal}30`, overflow: 'hidden'
+                  }}>
+                    {drawerEmp.profile_photo_url || drawerEmp.face_reference_url || drawerEmp.avatar_url || drawerEmp.photo ? (
+                      <img src={drawerEmp.profile_photo_url || drawerEmp.face_reference_url || drawerEmp.avatar_url || drawerEmp.photo} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      drawerEmp.full_name ? drawerEmp.full_name[0].toUpperCase() : 'E'
+                    )}
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <h3 style={{ fontSize: isMobile ? '15px' : '17px', fontWeight: 900, color: C.text, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{drawerEmp.full_name}</h3>
+                      <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 900, background: drawerEmp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7', color: drawerEmp.activation_status === 'APPROVED' ? '#065F46' : '#92400E', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        ✓ {drawerEmp.activation_status === 'APPROVED' ? 'Active' : 'Pending'}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '11.5px', fontWeight: 700, color: C.teal, marginTop: '2px' }}>
+                      ID: {drawerEmp.employee_code || drawerEmp.employee_id || drawerEmp.emp_code || (drawerEmp.id ? String(drawerEmp.id).slice(0, 8) : 'CAND10001')} • {drawerEmp.designation || 'Branch Head'}
+                    </div>
+                    <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px', display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                      <span>📞 {drawerEmp.mobile_number || 'N/A'}</span>
+                      <span>✉ {drawerEmp.email_id || drawerEmp.email || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Drawer Tabs Header */}
-              <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, background: C.card, padding: '0 8px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              {/* Drawer Navigation Tabs Header */}
+              <div style={{ 
+                display: 'flex', 
+                borderBottom: `1px solid ${C.border}`, 
+                background: C.card, 
+                padding: isMobile ? '8px 10px' : '0 12px', 
+                overflowX: 'auto', 
+                WebkitOverflowScrolling: 'touch',
+                gap: isMobile ? '6px' : '4px',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                flexShrink: 0
+              }}>
                 {[
-                  { id: 'overview', label: 'Overview' },
-                  { id: 'kyc', label: 'KYC Details' },
-                  { id: 'biometric', label: 'Face Verification' },
-                  { id: 'team', label: 'Access & Team' },
-                  { id: 'attendance', label: 'Attendance' },
-                  { id: 'actions', label: 'Actions' }
-                ].map(t => (
-                  <button
-                    key={t.id}
-                    onClick={() => setDrawerTab(t.id)}
-                    style={{
-                      padding: '10px 12px', border: 'none', background: 'transparent',
-                      borderBottom: drawerTab === t.id ? `3px solid #4F46E5` : '3px solid transparent',
-                      color: drawerTab === t.id ? '#4F46E5' : C.textMid,
-                      fontWeight: drawerTab === t.id ? 900 : 700,
-                      fontSize: '12px', cursor: 'pointer',
-                      whiteSpace: 'nowrap', transition: 'all 0.15s ease', flexShrink: 0
-                    }}
-                  >
-                    {t.label}
-                  </button>
-                ))}
+                  { id: 'overview', label: 'Overview', icon: '📊' },
+                  { id: 'kyc', label: 'KYC Details', icon: '📜' },
+                  { id: 'biometric', label: 'Face Verification', icon: '👤' },
+                  { id: 'team', label: 'Access & Team', icon: '👥' },
+                  { id: 'attendance', label: 'Attendance', icon: '📅' },
+                  { id: 'actions', label: 'Actions', icon: '⚡' }
+                ].map(t => {
+                  const isActive = drawerTab === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => setDrawerTab(t.id)}
+                      style={{
+                        padding: isMobile ? '7px 12px' : '11px 16px',
+                        border: 'none',
+                        borderRadius: isMobile ? '16px' : '0px',
+                        background: isMobile ? (isActive ? C.teal : C.bgSecondary) : 'transparent',
+                        borderBottom: isMobile ? 'none' : (isActive ? `3px solid ${C.teal}` : '3px solid transparent'),
+                        color: isMobile ? (isActive ? '#FFFFFF' : C.text) : (isActive ? C.teal : C.textMid),
+                        fontWeight: isActive ? 900 : 700,
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.15s ease',
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: isMobile && isActive ? '0 2px 6px rgba(13, 148, 136, 0.3)' : 'none'
+                      }}
+                    >
+                      <span>{t.icon}</span> {t.label}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Drawer Tab Content */}
@@ -4600,13 +4745,17 @@ export default function EmployeeManagement() {
                     </div>
 
                     {/* 360° Document Inspection & Action Center */}
-                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '16px' }}>
-                      <div style={{ fontSize: '14px', fontWeight: 900, color: C.text, marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span>Required Documents Inspection</span>
-                        <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>5 Documents</span>
+                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '18px' }}>
+                      <div style={{ fontSize: '14.5px', fontWeight: 900, color: C.text, marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <FaFileAlt style={{ color: C.teal }} /> Required Documents Inspection
+                        </span>
+                        <span style={{ fontSize: '11.5px', color: C.teal, fontWeight: 900, background: `${C.teal}15`, padding: '3px 10px', borderRadius: '12px' }}>
+                          5 Required Files
+                        </span>
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {[
                           { key: 'aadhaar', name: 'Aadhaar Card (Front & Back)' },
                           { key: 'pan', name: 'PAN Card' },
@@ -4614,50 +4763,49 @@ export default function EmployeeManagement() {
                           { key: 'photo', name: 'Profile Photograph' },
                           { key: 'offer_letter', name: 'Signed Offer Letter' }
                         ].map((docItem) => {
-                          const docInfo = docStatuses[docItem.key] || { status: 'Submitted', reason: '' };
+                          const docInfo = docStatuses[docItem.key] || { status: 'Not Uploaded', reason: '', url: null };
                           const isRejectingThis = rejectingDocKey === docItem.key;
+                          const statusUpper = (docInfo.status || 'Not Uploaded').toUpperCase();
+                          const isVerified = statusUpper === 'VERIFIED' || statusUpper === 'APPROVED';
+                          const isRejected = statusUpper === 'REJECTED';
+                          const isSubmitted = statusUpper === 'SUBMITTED' || statusUpper === 'UNDER_REVIEW' || statusUpper === 'PENDING';
 
                           return (
-                            <div key={docItem.key} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                            <div key={docItem.key} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                                 <div>
-                                  <div style={{ color: C.text, fontWeight: 800, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <div style={{ color: C.text, fontWeight: 800, fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     📄 {docItem.name}
                                   </div>
                                   {docInfo.reason && (
-                                    <div style={{ fontSize: '11px', color: '#DC2626', fontWeight: 700, marginTop: '2px' }}>
-                                      Rejection Reason: {docInfo.reason}
+                                    <div style={{ fontSize: '11.5px', color: '#DC2626', fontWeight: 700, marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      ⚠️ Rejection Reason: {docInfo.reason}
                                     </div>
                                   )}
                                 </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                   <span style={{ 
-                                    padding: '2px 8px', borderRadius: '0px', fontSize: '11px', fontWeight: 900,
-                                    background: docInfo.status === 'Verified' ? '#D1FAE5' : docInfo.status === 'Rejected' ? '#FEE2E2' : '#FEF3C7',
-                                    color: docInfo.status === 'Verified' ? '#065F46' : docInfo.status === 'Rejected' ? '#991B1B' : '#92400E'
+                                    padding: '4px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 900,
+                                    background: isVerified ? '#D1FAE5' : isRejected ? '#FEE2E2' : isSubmitted ? '#FEF3C7' : '#F3F4F6',
+                                    color: isVerified ? '#065F46' : isRejected ? '#991B1B' : isSubmitted ? '#92400E' : '#6B7280',
+                                    border: `1px solid ${isVerified ? '#A7F3D0' : isRejected ? '#FCA5A5' : isSubmitted ? '#FDE68A' : '#E5E7EB'}`
                                   }}>
-                                    {docInfo.status === 'Verified' ? 'Verified ✓' : docInfo.status === 'Rejected' ? 'Rejected ❌' : 'Submitted'}
+                                    {isVerified ? 'Verified ✓' : isRejected ? 'Rejected ❌' : isSubmitted ? 'Submitted ⏳' : 'Not Uploaded ⚠️'}
                                   </span>
 
                                   {/* View Document Button */}
                                   <button
-                                    onClick={() => setViewingDocModal({ name: docItem.name, key: docItem.key })}
-                                    style={{ padding: '4px 8px', background: '#3B82F615', color: '#2563EB', border: '1px solid #3B82F640', borderRadius: '0px', fontSize: '11px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                    onClick={() => setViewingDocModal({ name: docItem.name, key: docItem.key, url: docInfo.url })}
+                                    style={{ padding: '5px 10px', background: '#3B82F615', color: '#2563EB', border: '1px solid #3B82F640', borderRadius: '8px', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                                   >
                                     <FaEye /> View
                                   </button>
 
                                   {/* Approve Document Button */}
                                   <button
-                                    onClick={() => {
-                                      setDocStatuses(prev => ({
-                                        ...prev,
-                                        [docItem.key]: { status: 'Verified', reason: '' }
-                                      }));
-                                      if (rejectingDocKey === docItem.key) setRejectingDocKey(null);
-                                    }}
-                                    style={{ padding: '4px 8px', background: '#10B98115', color: '#059669', border: '1px solid #10B98140', borderRadius: '0px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                                    onClick={() => handleSingleDocAction(drawerEmp.id, docItem.key, 'VERIFIED')}
+                                    style={{ padding: '5px 10px', background: '#10B98115', color: '#059669', border: '1px solid #10B98140', borderRadius: '8px', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer' }}
                                   >
                                     ✓ Approve
                                   </button>
@@ -4672,7 +4820,7 @@ export default function EmployeeManagement() {
                                         setDocRejectReasonInput('');
                                       }
                                     }}
-                                    style={{ padding: '4px 8px', background: '#EF444415', color: '#DC2626', border: '1px solid #EF444440', borderRadius: '0px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                                    style={{ padding: '5px 10px', background: '#EF444415', color: '#DC2626', border: '1px solid #EF444440', borderRadius: '8px', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer' }}
                                   >
                                     ✕ Reject
                                   </button>
@@ -4681,16 +4829,16 @@ export default function EmployeeManagement() {
 
                               {/* Inline Rejection Reason Box */}
                               {isRejectingThis && (
-                                <div style={{ background: '#FFF5F5', border: '1px solid #FCA5A5', borderRadius: '0px', padding: '10px', marginTop: '4px' }}>
-                                  <div style={{ fontSize: '11.5px', fontWeight: 800, color: '#991B1B', marginBottom: '6px' }}>
+                                <div style={{ background: '#FFF5F5', border: '1px solid #FCA5A5', borderRadius: '10px', padding: '12px', marginTop: '4px' }}>
+                                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#991B1B', marginBottom: '8px' }}>
                                     Specify Rejection Reason for {docItem.name}:
                                   </div>
-                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
-                                    {['Blurry Image', 'Document Expired', 'Name Mismatch', 'Signature Missing'].map((preset) => (
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+                                    {['Blurry Image', 'Document Expired', 'Name Mismatch', 'Signature Missing', 'File Unreadable'].map((preset) => (
                                       <button
                                         key={preset}
                                         onClick={() => setDocRejectReasonInput(preset)}
-                                        style={{ padding: '3px 8px', background: '#ffffff', border: '1px solid #FCA5A5', borderRadius: '0px', fontSize: '10.5px', color: '#991B1B', fontWeight: 700, cursor: 'pointer' }}
+                                        style={{ padding: '4px 10px', background: '#ffffff', border: '1px solid #FCA5A5', borderRadius: '6px', fontSize: '11px', color: '#991B1B', fontWeight: 700, cursor: 'pointer' }}
                                       >
                                         {preset}
                                       </button>
@@ -4702,7 +4850,7 @@ export default function EmployeeManagement() {
                                       placeholder="Enter custom rejection reason..."
                                       value={docRejectReasonInput}
                                       onChange={(e) => setDocRejectReasonInput(e.target.value)}
-                                      style={{ flex: 1, padding: '6px 10px', background: '#ffffff', border: '1px solid #FCA5A5', borderRadius: '0px', fontSize: '12px', color: C.text }}
+                                      style={{ flex: 1, padding: '7px 12px', background: '#ffffff', border: '1px solid #FCA5A5', borderRadius: '8px', fontSize: '12px', color: C.text }}
                                     />
                                     <button
                                       onClick={() => {
@@ -4710,13 +4858,10 @@ export default function EmployeeManagement() {
                                           alert('Please select or enter a rejection reason');
                                           return;
                                         }
-                                        setDocStatuses(prev => ({
-                                          ...prev,
-                                          [docItem.key]: { status: 'Rejected', reason: docRejectReasonInput.trim() }
-                                        }));
+                                        handleSingleDocAction(drawerEmp.id, docItem.key, 'REJECTED', docRejectReasonInput.trim());
                                         setRejectingDocKey(null);
                                       }}
-                                      style={{ padding: '6px 14px', background: '#DC2626', color: '#ffffff', border: 'none', borderRadius: '0px', fontSize: '11.5px', fontWeight: 900, cursor: 'pointer' }}
+                                      style={{ padding: '7px 16px', background: '#DC2626', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 900, cursor: 'pointer' }}
                                     >
                                       Confirm Rejection
                                     </button>
@@ -4733,93 +4878,143 @@ export default function EmployeeManagement() {
 
                 {/* 3. FACE VERIFICATION TAB */}
                 {drawerTab === 'biometric' && (() => {
-                  const isFaceMissing = !(drawerEmp.face_verification_status === 'VERIFIED' || drawerEmp.biometric_enrolled || drawerEmp.face_enrolled);
+                  const emp = drawer360Data?.employee || drawerEmp;
+                  const isFaceEnrolled = emp.face_verification_status === 'VERIFIED' || 
+                                        emp.biometric_enrolled || 
+                                        emp.face_enrolled || 
+                                        emp.face_status === 'VERIFIED' || 
+                                        emp.face_status === 'ENROLLED' ||
+                                        emp.biometric_status === 'ACTIVE' ||
+                                        Boolean(emp.face_reference_url && emp.face_reference_url.length > 5);
+
+                  const faceImgUrl = emp.face_reference_url || emp.profile_photo_url || emp.avatar_url;
 
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      <h4 style={{ fontSize: '16px', fontWeight: 900, color: C.text, margin: 0 }}>Face Verification</h4>
+                      <h4 style={{ fontSize: '16px', fontWeight: 900, color: C.text, margin: 0 }}>Face Biometric Verification</h4>
 
-                      {/* Warning Callout Box */}
-                      <div style={{ background: '#FFF8F0', border: '1px solid #FED7AA', borderRadius: '0px', padding: '16px' }}>
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '14px' }}>
-                          <div style={{ width: '32px', height: '32px', borderRadius: '0px', background: '#F59E0B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, flexShrink: 0 }}>
-                            ▲
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '15px', fontWeight: 900, color: '#C2410C' }}>Face Verification Pending</div>
-                            <div style={{ fontSize: '12.5px', color: '#9A3412', marginTop: '2px' }}>
-                              No authoritative face biometric reference captured yet.
+                      {isFaceEnrolled ? (
+                        /* Enrolled & Verified Callout Box */
+                        <div style={{ background: '#F0FDF4', border: '1px solid #86EFAC', borderRadius: '12px', padding: '16px' }}>
+                          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '14px' }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#10B981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 900, flexShrink: 0 }}>
+                              ✓
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '15.5px', fontWeight: 900, color: '#065F46' }}>
+                                Attendance Biometric Reference Enrolled & Locked
+                              </div>
+                              <div style={{ fontSize: '12.5px', color: '#047857', marginTop: '3px', fontWeight: 700 }}>
+                                Biometric Version: V1 | Enrolled Date: {emp.activated_at ? new Date(emp.activated_at).toLocaleDateString('en-IN') : 'Active'} | Status: <span style={{ color: '#059669' }}>ACTIVE ✓</span>
+                              </div>
+                              <div style={{ fontSize: '12px', color: '#065F46', marginTop: '6px', lineHeight: 1.4 }}>
+                                Your biometric reference is locked. Employees cannot replace it. Re-enrollment requires Super Admin authorization.
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        {/* Reminder & Complete Buttons */}
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                          <button
-                            onClick={() => {
-                              toast.success(`Verification reminder sent to ${drawerEmp.full_name}`);
-                            }}
-                            style={{
-                              flex: 1, padding: '10px 14px', background: '#4F46E5', color: '#ffffff', border: 'none',
-                              borderRadius: '0px', fontSize: '13px', fontWeight: 800, cursor: 'pointer',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                              boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)'
-                            }}
-                          >
-                            🔔 Send Reminder
-                          </button>
-                          <button
-                            onClick={() => {
-                              setBiometricModalEmp(drawerEmp);
-                              setBiometricModalOpen(true);
-                            }}
-                            style={{
-                              flex: 1, padding: '10px 14px', background: '#ffffff', color: '#4F46E5', border: '1.5px solid #4F46E5',
-                              borderRadius: '0px', fontSize: '13px', fontWeight: 800, cursor: 'pointer',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
-                            }}
-                          >
-                            Complete Verification
-                          </button>
+                          <div style={{ display: 'flex', gap: '12px' }}>
+                            <button
+                              onClick={() => {
+                                setBiometricModalEmp(emp);
+                                setBiometricModalOpen(true);
+                              }}
+                              style={{
+                                flex: 1, padding: '10px 14px', background: '#059669', color: '#ffffff', border: 'none',
+                                borderRadius: '8px', fontSize: '12.5px', fontWeight: 800, cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                                boxShadow: '0 2px 8px rgba(5, 150, 105, 0.25)'
+                              }}
+                            >
+                              🔒 Re-Enroll / Modify Biometric Reference
+                            </button>
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        /* Face Pending Callout Box */
+                        <div style={{ background: '#FFF8F0', border: '1px solid #FED7AA', borderRadius: '12px', padding: '16px' }}>
+                          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '14px' }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#F59E0B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: 900, flexShrink: 0 }}>
+                              ▲
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '15.5px', fontWeight: 900, color: '#C2410C' }}>Face Verification Pending</div>
+                              <div style={{ fontSize: '12.5px', color: '#9A3412', marginTop: '2px' }}>
+                                No authoritative face biometric reference captured yet.
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '12px' }}>
+                            <button
+                              onClick={() => {
+                                handleSendReminder(emp.id, emp.full_name);
+                              }}
+                              style={{
+                                flex: 1, padding: '10px 14px', background: '#4F46E5', color: '#ffffff', border: 'none',
+                                borderRadius: '8px', fontSize: '12.5px', fontWeight: 800, cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                                boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)'
+                              }}
+                            >
+                              🔔 Send Reminder
+                            </button>
+                            <button
+                              onClick={() => {
+                                setBiometricModalEmp(emp);
+                                setBiometricModalOpen(true);
+                              }}
+                              style={{
+                                flex: 1, padding: '10px 14px', background: '#ffffff', color: '#4F46E5', border: '1.5px solid #4F46E5',
+                                borderRadius: '8px', fontSize: '12.5px', fontWeight: 800, cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                              }}
+                            >
+                              Complete Verification
+                            </button>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Side by Side Reference Grid */}
                       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
                         {/* Captured Face Photo */}
-                        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '14px' }}>
-                          <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, marginBottom: '10px' }}>Captured Face Photo</div>
-                          <div style={{ width: '100%', height: '180px', borderRadius: '0px', overflow: 'hidden', background: '#F1F5F9', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {drawerEmp.profile_photo_url || drawerEmp.face_reference_url ? (
-                              <img src={drawerEmp.profile_photo_url || drawerEmp.face_reference_url} alt="Captured Face" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px' }}>
+                          <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, marginBottom: '10px' }}>Captured Profile Image</div>
+                          <div style={{ width: '100%', height: '180px', borderRadius: '10px', overflow: 'hidden', background: '#F1F5F9', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {faceImgUrl ? (
+                              <img src={faceImgUrl} alt="Captured Face" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             ) : (
                               <div style={{ textAlign: 'center', color: C.textMid, padding: '20px' }}>
-                                <div style={{ fontSize: '32px', marginBottom: '4px' }}>👤</div>
-                                <div style={{ fontSize: '11px' }}>Captured Face Image</div>
+                                <div style={{ fontSize: '36px', marginBottom: '4px' }}>👤</div>
+                                <div style={{ fontSize: '12px' }}>Captured Face Image</div>
                               </div>
                             )}
-                          </div>
-                          <div style={{ fontSize: '11px', color: C.textMid, marginTop: '8px', textAlign: 'center' }}>
-                            Captured on: Oct 2, 2026, 10:15 AM
                           </div>
                         </div>
 
                         {/* Employee Face Reference Box */}
-                        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '14px' }}>
-                          <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, marginBottom: '10px' }}>Employee Face Reference</div>
-                          <div style={{ width: '100%', height: '180px', borderRadius: '0px', border: '1.5px dashed #CBD5E1', background: '#F8FAFC', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px', textAlign: 'center' }}>
-                            <div style={{ width: '48px', height: '48px', borderRadius: '0px', border: '2px dashed #94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B', fontSize: '24px', marginBottom: '10px' }}>
-                              🔲
-                            </div>
-                            <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 600, maxWidth: '140px', lineHeight: 1.3 }}>
-                              No face biometric reference available yet.
-                            </div>
+                        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px' }}>
+                          <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, marginBottom: '10px' }}>Biometric Reference Template</div>
+                          <div style={{ width: '100%', height: '180px', borderRadius: '10px', border: isFaceEnrolled ? '1.5px solid #86EFAC' : '1.5px dashed #CBD5E1', background: isFaceEnrolled ? '#F0FDF4' : '#F8FAFC', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px', textAlign: 'center', overflow: 'hidden' }}>
+                            {faceImgUrl && isFaceEnrolled ? (
+                              <img src={faceImgUrl} alt="Biometric Reference" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                            ) : (
+                              <>
+                                <div style={{ width: '48px', height: '48px', borderRadius: '50%', border: '2px dashed #94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B', fontSize: '24px', marginBottom: '10px' }}>
+                                  {isFaceEnrolled ? '✓' : '🔲'}
+                                </div>
+                                <div style={{ fontSize: '12px', color: isFaceEnrolled ? '#047857' : '#64748B', fontWeight: 600, maxWidth: '160px', lineHeight: 1.3 }}>
+                                  {isFaceEnrolled ? 'Face Biometric Reference Enrolled & Locked' : 'No face biometric reference available yet.'}
+                                </div>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
 
                       {/* Bottom Info Banner Callout */}
-                      <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '0px', padding: '12px 14px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '10px', padding: '12px 14px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                         <div style={{ color: '#2563EB', fontSize: '16px', flexShrink: 0, marginTop: '1px' }}>ℹ</div>
                         <div style={{ fontSize: '12px', color: '#1E40AF', lineHeight: 1.4, fontWeight: 500 }}>
                           This photo will be used to create the biometric reference for attendance face matching. It is separate from the profile photo.
@@ -5070,25 +5265,62 @@ export default function EmployeeManagement() {
 
         {/* Document Inspection Preview Modal */}
         {viewingDocModal && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', width: '100%', maxWidth: '550px', padding: '20px', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
-                <h4 style={{ fontSize: '16px', fontWeight: 900, color: C.text, margin: 0 }}>
-                  📄 Document Preview: {viewingDocModal.name}
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', width: '100%', maxWidth: '600px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}>
+              <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: C.bgSecondary }}>
+                <h4 style={{ fontSize: '16px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  📄 Document Inspection: {viewingDocModal.name}
                 </h4>
-                <button onClick={() => setViewingDocModal(null)} style={{ background: 'transparent', border: 'none', fontSize: '18px', cursor: 'pointer', color: C.textMid }}>✕</button>
+                <button onClick={() => setViewingDocModal(null)} style={{ background: 'transparent', border: 'none', fontSize: '18px', cursor: 'pointer', color: C.textMid, fontWeight: 900 }}>✕</button>
               </div>
 
-              <div style={{ width: '100%', height: '260px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', textAlign: 'center' }}>
-                <div style={{ fontSize: '48px', marginBottom: '8px' }}>📄</div>
-                <div style={{ fontSize: '14px', fontWeight: 800, color: C.text }}>{viewingDocModal.name}</div>
-                <div style={{ fontSize: '12px', color: C.textMid, marginTop: '4px' }}>
-                  Submitted by {drawerEmp?.full_name || 'Employee'} • Verified Document File
-                </div>
+              <div style={{ padding: '20px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0F172A08', minHeight: '300px' }}>
+                {viewingDocModal.url ? (
+                  viewingDocModal.url.match(/\.(jpeg|jpg|png|webp|gif)/i) || viewingDocModal.url.includes('data:image') || viewingDocModal.key === 'photo' ? (
+                    <img 
+                      src={viewingDocModal.url} 
+                      alt={viewingDocModal.name} 
+                      style={{ maxWidth: '100%', maxHeight: '420px', objectFit: 'contain', borderRadius: '8px', border: `1px solid ${C.border}`, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} 
+                    />
+                  ) : (
+                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', textAlign: 'center', padding: '30px' }}>
+                      <div style={{ fontSize: '48px', color: C.teal }}>📄</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: C.text }}>{viewingDocModal.name}</div>
+                      <a 
+                        href={viewingDocModal.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        style={{ padding: '10px 20px', background: C.teal, color: '#fff', borderRadius: '10px', textDecoration: 'none', fontWeight: 900, fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        Open Document File ↗
+                      </a>
+                    </div>
+                  )
+                ) : (
+                  <div style={{ textAlign: 'center', color: C.textMid, padding: '30px' }}>
+                    <div style={{ fontSize: '48px', marginBottom: '8px' }}>📄</div>
+                    <div style={{ fontSize: '14px', fontWeight: 800, color: C.text }}>{viewingDocModal.name}</div>
+                    <div style={{ fontSize: '12px', color: C.textMid, marginTop: '4px' }}>
+                      Submitted by {drawerEmp?.full_name || 'Employee'} • Verified Document Record
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-                <button onClick={() => setViewingDocModal(null)} style={{ padding: '8px 18px', background: C.teal, color: '#fff', border: 'none', borderRadius: '0px', fontWeight: 800, cursor: 'pointer' }}>Close Preview</button>
+              <div style={{ padding: '14px 20px', borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: C.card }}>
+                {viewingDocModal.url ? (
+                  <a 
+                    href={viewingDocModal.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    style={{ fontSize: '12.5px', color: C.teal, fontWeight: 800, textDecoration: 'none' }}
+                  >
+                    Open in New Window ↗
+                  </a>
+                ) : <span />}
+                <button onClick={() => setViewingDocModal(null)} style={{ padding: '8px 20px', background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, borderRadius: '8px', fontWeight: 800, cursor: 'pointer' }}>
+                  Close
+                </button>
               </div>
             </div>
           </div>
