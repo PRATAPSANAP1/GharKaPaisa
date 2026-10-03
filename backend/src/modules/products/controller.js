@@ -41,12 +41,16 @@ const listProducts = async (req, res, next) => {
       if (category.includes('%')) {
         where += ` AND p.category::text ILIKE $${idx++}`; 
         values.push(category); 
-        // Exclude specialized categories from generic wildcard searches (e.g. %card% should not match loan_on_credit_card or smart_emi)
-        where += ` AND COALESCE(p.category::text, '') NOT IN ('loan_on_credit_card', 'smart_emi') AND COALESCE(p.sub_category, '') NOT ILIKE '%loan%credit%card%' AND COALESCE(p.sub_category, '') NOT ILIKE '%emi%card%'`;
+        // Exclude specialized categories from generic wildcard searches (e.g. %card% should not match loc_eoc, loan_on_credit_card, or smart_emi)
+        where += ` AND COALESCE(p.category::text, '') NOT IN ('loan_on_credit_card', 'smart_emi', 'loc_eoc') AND COALESCE(p.sub_category, '') NOT ILIKE '%loan%credit%card%' AND COALESCE(p.sub_category, '') NOT ILIKE '%emi%card%'`;
+      } else if (category === 'loc_eoc' || category === 'LOC/EOC' || category === 'LOC_EOC') {
+        where += ` AND p.category::text = 'loc_eoc'`;
       } else if (category === 'loan_on_credit_card') {
-        where += ` AND (p.category::text = 'loan_on_credit_card' OR p.sub_category ILIKE '%loan%credit%card%' OR p.sub_category ILIKE '%loan%card%')`;
+        where += ` AND (p.category::text = 'loc_eoc' OR p.category::text = 'loan_on_credit_card') AND (COALESCE(p.sub_category, '') ILIKE 'LOC' OR p.sub_category ILIKE '%loan%credit%card%')`;
       } else if (category === 'smart_emi') {
-        where += ` AND (p.category::text = 'smart_emi' OR p.sub_category ILIKE '%smart%emi%' OR p.sub_category ILIKE '%emi%card%' OR p.sub_category ILIKE '%emi on credit card%')`;
+        where += ` AND (p.category::text = 'loc_eoc' OR p.category::text = 'smart_emi') AND (COALESCE(p.sub_category, '') ILIKE 'EOC' OR p.sub_category ILIKE '%smart%emi%')`;
+      } else if (category === 'loans' || category === 'loan') {
+        where += ` AND p.category::text NOT IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi') AND p.category::text ILIKE '%loan%'`;
       } else {
         where += ` AND p.category::text = $${idx++}`; 
         values.push(category); 

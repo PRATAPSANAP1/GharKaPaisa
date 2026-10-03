@@ -84,10 +84,12 @@ const listApplications = async (req, res, next) => {
       }
     }
 
-    if (category === 'loan_applications') {
-      whereClause += ` AND (LOWER(category) IN ('loan_on_credit_card', 'smart_emi', 'loan') OR LOWER(card_name) LIKE '%loan%' OR LOWER(card_name) LIKE '%emi%')`;
+    if (category === 'loc_eoc' || category === 'LOC/EOC' || category === 'loc-eoc') {
+      whereClause += ` AND (LOWER(category) IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi') OR LOWER(card_name) LIKE '%insta loan%' OR LOWER(card_name) LIKE '%jumbo loan%' OR LOWER(card_name) LIKE '%smartemi%')`;
+    } else if (category === 'loan_applications' || category === 'loan' || category === 'loans') {
+      whereClause += ` AND (LOWER(category) IN ('loan', 'personal_loan', 'home_loan', 'business_loan', 'instant_loan', 'used_car_loan', 'education_loan') OR (LOWER(card_name) LIKE '%loan%' AND LOWER(card_name) NOT LIKE '%credit card%' AND LOWER(card_name) NOT LIKE '%insta loan%' AND LOWER(card_name) NOT LIKE '%jumbo loan%')) AND LOWER(COALESCE(category,'')) NOT IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi')`;
     } else {
-      whereClause += ` AND COALESCE(LOWER(category), '') NOT IN ('loan_on_credit_card', 'smart_emi') AND LOWER(COALESCE(card_name, '')) NOT LIKE '%loan on credit card%' AND LOWER(COALESCE(card_name, '')) NOT LIKE '%smart emi%'`;
+      whereClause += ` AND COALESCE(LOWER(category), '') NOT IN ('loan_on_credit_card', 'smart_emi', 'loc_eoc') AND LOWER(COALESCE(card_name, '')) NOT LIKE '%loan on credit card%' AND LOWER(COALESCE(card_name, '')) NOT LIKE '%smart emi%'`;
       if (category && category !== 'all') {
         whereClause += ` AND (LOWER(category) = $${idx} OR ($${idx} = 'credit_card' AND (category IS NULL OR category = '')))`;
         values.push(category.trim().toLowerCase());

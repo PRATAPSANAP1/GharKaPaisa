@@ -113,6 +113,7 @@ const migrate = async () => {
   await addEnumValue('product_category', 'insurance');
   await addEnumValue('product_category', 'smart_emi');
   await addEnumValue('product_category', 'loan_on_credit_card');
+  await addEnumValue('product_category', 'loc_eoc');
   await query(`
     DO $$ BEGIN
       CREATE TYPE wallet_txn_type AS ENUM ('credit','debit');
@@ -5107,6 +5108,14 @@ const migrate = async () => {
     await migrateAttendanceConsumedAtV1();
   } catch (consumedAtErr) {
     logger.error('Attendance Consumed At V1 migration error note:', consumedAtErr.message);
+  }
+
+  // LOC/EOC Category Migration
+  try {
+    const { migrateLocEocCategory } = require('./migrate_loc_eoc_category');
+    await migrateLocEocCategory();
+  } catch (locEocErr) {
+    logger.error('LOC/EOC Category migration error note:', locEocErr.message);
   }
 
   if (require.main === module) {
