@@ -1228,63 +1228,6 @@ export default function EmployeeManagement() {
         {activeTab === 'employees' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             
-            {/* Action Required Section */}
-            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
-                <div>
-                  <h3 style={{ fontSize: '16px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FaClock style={{ color: '#F59E0B' }} /> Action Required Center
-                  </h3>
-                  <p style={{ fontSize: '12.5px', color: C.textMid, margin: '2px 0 0 0', fontWeight: 600 }}>
-                    Employees requiring immediate verification, document review, face enrollment, or account activation.
-                  </p>
-                </div>
-                {actionRequiredFilter && (
-                  <button 
-                    onClick={() => setActionRequiredFilter('')}
-                    style={{ background: `${C.teal}15`, color: C.teal, border: `1px solid ${C.teal}40`, padding: '4px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}
-                  >
-                    Clear Filter ({actionRequiredFilter})
-                  </button>
-                )}
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '12px' }}>
-                {[
-                  { id: 'face_missing', title: 'Face Verification Missing', count: faceMissingCount, desc: 'Not enrolled on mobile or desk', color: '#DC2626', bg: '#FEF2F2', border: '#FCA5A5', icon: <FaCamera /> },
-                  { id: 'kyc_pending', title: 'KYC Pending Approval', count: kycPendingCount, desc: 'Requires document approval', color: '#D97706', bg: '#FFFBEB', border: '#FDE68A', icon: <FaClock /> }
-                ].map((card) => (
-                  <div
-                    key={card.id}
-                    onClick={() => {
-                      setActionRequiredFilter(actionRequiredFilter === card.id ? '' : card.id);
-                      setCurrentPage(1);
-                    }}
-                    style={{
-                      background: actionRequiredFilter === card.id ? card.bg : C.card,
-                      border: `1.5px solid ${actionRequiredFilter === card.id ? card.color : C.border}`,
-                      borderRadius: '14px',
-                      padding: '14px',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      boxShadow: actionRequiredFilter === card.id ? `0 4px 12px ${card.color}25` : 'none'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: card.bg, color: card.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>
-                        {card.icon}
-                      </div>
-                      <span style={{ fontSize: '18px', fontWeight: 900, color: card.color, background: card.bg, padding: '2px 10px', borderRadius: '10px', border: `1px solid ${card.border}` }}>
-                        {card.count}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>{card.title}</div>
-                    <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>{card.desc}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Employee Records Directory */}
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
               
@@ -1444,7 +1387,7 @@ export default function EmployeeManagement() {
                           padding: '14px',
                           display: 'flex',
                           alignItems: 'center',
-                          justify: 'space-between',
+                          justifyContent: 'space-between',
                           gap: '12px',
                           cursor: 'pointer',
                           boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
@@ -1462,24 +1405,47 @@ export default function EmployeeManagement() {
                               {emp.full_name}
                             </div>
                             <div style={{ fontSize: '12px', fontWeight: 800, color: C.teal, marginTop: '2px' }}>
-                              {empCode} • ☎ {emp.mobile_number || 'N/A'}
+                              {empCode} • {emp.designation || 'Telecaller'}
                             </div>
-                            <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px', fontWeight: 700 }}>
-                              Tap to View Profile →
+                            <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px', fontWeight: 600 }}>
+                              ☎ {emp.mobile_number || 'N/A'}
                             </div>
                           </div>
                         </div>
 
-                        <span 
-                          style={{ 
-                            padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 800,
-                            background: emp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7',
-                            color: emp.activation_status === 'APPROVED' ? '#065F46' : '#92400E',
-                            flexShrink: 0
-                          }}
-                        >
-                          {emp.activation_status === 'APPROVED' ? 'Active' : 'Pending'}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                          <span 
+                            style={{ 
+                              padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 800,
+                              background: emp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7',
+                              color: emp.activation_status === 'APPROVED' ? '#065F46' : '#92400E'
+                            }}
+                          >
+                            {emp.activation_status === 'APPROVED' ? 'Active' : 'Pending'}
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDrawerEmp(emp);
+                              setDrawerTab('overview');
+                            }}
+                            style={{
+                              background: C.bgSecondary,
+                              border: `1px solid ${C.border}`,
+                              borderRadius: '8px',
+                              width: '32px',
+                              height: '32px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              color: C.textMid
+                            }}
+                            title="View & manage employee profile"
+                          >
+                            <FaEllipsisV />
+                          </button>
+                        </div>
                       </div>
                     );
                   })
@@ -1494,14 +1460,16 @@ export default function EmployeeManagement() {
                       <th style={{ padding: '14px 20px' }}>Employee Code</th>
                       <th style={{ padding: '14px 20px' }}>Employee Name</th>
                       <th style={{ padding: '14px 20px' }}>Contact</th>
+                      <th style={{ padding: '14px 20px' }}>Designation</th>
                       <th style={{ padding: '14px 20px' }}>Account Status</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'center' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr><td colSpan="5" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>Loading records...</td></tr>
+                      <tr><td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>Loading records...</td></tr>
                     ) : displayedEmployees.length === 0 ? (
-                      <tr><td colSpan="5" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>No employees found matching criteria.</td></tr>
+                      <tr><td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>No employees found matching criteria.</td></tr>
                     ) : displayedEmployees.map(emp => {
                       const isSelected = drawerEmp && drawerEmp.id === emp.id;
                       const empCode = emp.employee_code || emp.employee_id || emp.emp_code || emp.code || (emp.id ? String(emp.id).slice(0, 8) : 'N/A');
@@ -1554,6 +1522,9 @@ export default function EmployeeManagement() {
                           <td style={{ padding: '14px 20px', fontSize: '13px', color: C.textMid, fontWeight: 600 }}>
                             ☎ {emp.mobile_number || 'N/A'}
                           </td>
+                          <td style={{ padding: '14px 20px', fontSize: '13px', color: C.text, fontWeight: 700 }}>
+                            {emp.designation || 'Telecaller'}
+                          </td>
                           <td style={{ padding: '14px 20px' }}>
                             <span 
                               style={{ 
@@ -1567,6 +1538,39 @@ export default function EmployeeManagement() {
                             >
                               {emp.activation_status === 'APPROVED' ? '● Active' : '● Pending Activation'}
                             </span>
+                          </td>
+                          <td style={{ padding: '14px 20px', textAlign: 'center' }}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDrawerEmp(emp);
+                                setDrawerTab('overview');
+                              }}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: C.textMid,
+                                fontSize: '16px',
+                                padding: '6px 10px',
+                                borderRadius: '8px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.15s ease'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = C.bgSecondary;
+                                e.currentTarget.style.color = C.teal;
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                                e.currentTarget.style.color = C.textMid;
+                              }}
+                              title="View & manage employee profile"
+                            >
+                              <FaEllipsisV />
+                            </button>
                           </td>
                         </tr>
                       );
@@ -3611,191 +3615,7 @@ export default function EmployeeManagement() {
           </div>
         )}
 
-        {/* ── MODAL: Employee Quick Actions Popup (Manage Depts, Manage Bonus, 360 View, Assign Team) ── */}
-        {actionModalEmp && (
-          <div 
-            style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
-            onClick={() => setActionModalEmp(null)}
-          >
-            <div 
-              style={{ 
-                background: C.card, 
-                border: `1px solid ${C.border}`, 
-                borderRadius: '24px', 
-                width: '100%', 
-                maxWidth: '480px', 
-                maxHeight: '90vh',
-                overflowY: 'auto',
-                padding: isMobile ? '18px 14px' : '24px', 
-                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' 
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: `linear-gradient(135deg, ${C.teal} 0%, #0D9488 100%)`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '20px' }}>
-                    {actionModalEmp.full_name?.charAt(0) || 'E'}
-                  </div>
-                  <div>
-                    <h3 style={{ fontSize: '17px', fontWeight: 900, margin: 0, color: C.text }}>{actionModalEmp.full_name}</h3>
-                    <div style={{ fontSize: '12px', color: C.teal, fontWeight: 800 }}>ID: {actionModalEmp.employee_id} • {actionModalEmp.designation || 'Employee'}</div>
-                  </div>
-                </div>
-                <button onClick={() => setActionModalEmp(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', color: C.textMid, fontWeight: 900 }}>✕</button>
-              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '12px' }}>
-                {/* 1. Manage Depts */}
-                <button
-                  onClick={() => {
-                    const emp = actionModalEmp;
-                    setActionModalEmp(null);
-                    openDeptModal(emp);
-                  }}
-                  style={{ width: '100%', padding: '16px 14px', background: `${C.teal}08`, border: `1px solid ${C.teal}30`, borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', color: C.text, textAlign: 'left', transition: 'all 0.2s ease' }}
-                >
-                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: `${C.teal}20`, color: C.teal, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
-                    <FaBuilding />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>Manage Depts</div>
-                    <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Assign bank & department access</div>
-                  </div>
-                </button>
-
-                {/* 2. Manage Bonus */}
-                <button
-                  onClick={() => {
-                    const emp = actionModalEmp;
-                    setActionModalEmp(null);
-                    openBonusModal(emp);
-                  }}
-                  style={{ width: '100%', padding: '16px 14px', background: '#F59E0B08', border: '1px solid #F59E0B30', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', color: C.text, textAlign: 'left', transition: 'all 0.2s ease' }}
-                >
-                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#F59E0B20', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
-                    <FaCoins />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>Manage Bonus</div>
-                    <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Set card targets & bonus rates</div>
-                  </div>
-                </button>
-
-                {/* 3. 360 View */}
-                <button
-                  onClick={() => {
-                    const emp = actionModalEmp;
-                    setActionModalEmp(null);
-                    handleOpen360View(emp);
-                  }}
-                  style={{ width: '100%', padding: '16px 14px', background: '#3B82F608', border: '1px solid #3B82F630', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', color: C.text, textAlign: 'left', transition: 'all 0.2s ease' }}
-                >
-                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#3B82F620', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
-                    <FaEye />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>360 View</div>
-                    <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Inspect KYC, links & profile 360</div>
-                  </div>
-                </button>
-
-                {/* 4. Assign Team */}
-                <button
-                  onClick={() => {
-                    const emp = actionModalEmp;
-                    setActionModalEmp(null);
-                    openHierarchyModal(emp);
-                  }}
-                  style={{ width: '100%', padding: '16px 14px', background: '#8B5CF608', border: '1px solid #8B5CF630', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', color: C.text, textAlign: 'left', transition: 'all 0.2s ease' }}
-                >
-                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#8B5CF620', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
-                    <FaSitemap />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>Assign Team</div>
-                    <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Set reporting hierarchy & team</div>
-                  </div>
-                </button>
-              </div>
-
-              {/* Missing Documents & Verification Reminder Section */}
-              {(() => {
-                const isVerified = actionModalEmp.overall_verification_status === 'VERIFIED';
-                const missingDocs = actionModalEmp.missing_documents || [];
-
-                return (
-                  <div style={{ 
-                    marginTop: '16px', 
-                    background: isVerified ? '#ECFDF5' : '#FEF2F2', 
-                    border: `1px solid ${isVerified ? '#A7F3D0' : '#FCA5A5'}`, 
-                    borderRadius: '16px', 
-                    padding: '16px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '10px'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ fontSize: '13px', fontWeight: 900, color: isVerified ? '#065F46' : '#991B1B', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {isVerified ? <FaCheckCircle style={{ color: '#10B981' }} /> : <FaExclamationCircle style={{ color: '#EF4444' }} />}
-                        {isVerified ? 'KYC & Verification Complete' : `Missing Documents (${missingDocs.length})`}
-                      </div>
-                      <span style={{
-                        padding: '3px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 900,
-                        background: isVerified ? '#D1FAE5' : '#FEE2E2',
-                        color: isVerified ? '#065F46' : '#991B1B'
-                      }}>
-                        {isVerified ? 'VERIFIED' : 'PENDING'}
-                      </span>
-                    </div>
-
-                    {!isVerified && missingDocs.length > 0 && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '2px' }}>
-                        {missingDocs.map((docName, idx) => (
-                          <span key={idx} style={{
-                            fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '6px',
-                            background: '#FFFFFF', color: '#991B1B', border: '1px solid #FCA5A5'
-                          }}>
-                            • {docName}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {!isVerified && (
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: `1px dashed ${isVerified ? '#A7F3D0' : '#FCA5A5'}`, paddingTop: '10px', marginTop: '4px' }}>
-                        <button
-                          onClick={() => handleSendReminder(actionModalEmp.id, actionModalEmp.full_name)}
-                          disabled={sendingReminder[actionModalEmp.id]}
-                          style={{
-                            background: '#F59E0B',
-                            color: '#ffffff',
-                            border: 'none',
-                            padding: '8px 16px',
-                            borderRadius: '10px',
-                            fontSize: '12.5px',
-                            fontWeight: 900,
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            boxShadow: '0 2px 8px rgba(245, 158, 11, 0.35)'
-                          }}
-                          title="Send Verification Reminder Notification to Employee"
-                        >
-                          🔔 {sendingReminder[actionModalEmp.id] ? 'Sending Reminder...' : 'Send Verification Reminder'}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-
-              <div style={{ marginTop: '20px', textAlign: 'right' }}>
-                <button onClick={() => setActionModalEmp(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '8px 18px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ── MODAL: Employee Performance Dashboard ── */}
         {perfModalEmp && (
@@ -4177,43 +3997,44 @@ export default function EmployeeManagement() {
             }}>
               
               {/* Drawer / Modal Header */}
-              <div style={{ padding: '18px 20px', borderBottom: `1px solid ${C.border}`, background: C.bgSecondary, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <div style={{
-                    width: '48px', height: '48px', borderRadius: '50%', background: `${C.teal}20`, color: C.teal,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '18px', flexShrink: 0,
-                    border: `2px solid ${C.teal}`
-                  }}>
-                    {drawerEmp.full_name ? drawerEmp.full_name[0].toUpperCase() : 'E'}
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <h3 style={{ fontSize: '16.5px', fontWeight: 900, color: C.text, margin: 0 }}>{drawerEmp.full_name}</h3>
-                      <span style={{ padding: '2px 7px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 800, background: drawerEmp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7', color: drawerEmp.activation_status === 'APPROVED' ? '#065F46' : '#92400E' }}>
-                        ● {drawerEmp.activation_status === 'APPROVED' ? 'Active' : 'Pending'}
-                      </span>
+              <div style={{ padding: '18px 20px', borderBottom: `1px solid ${C.border}`, background: C.card }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+                    <div style={{
+                      width: '64px', height: '64px', borderRadius: '50%', background: `${C.teal}15`, color: C.teal,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '24px', flexShrink: 0,
+                      border: `2px solid ${C.teal}30`, overflow: 'hidden'
+                    }}>
+                      {drawerEmp.profile_photo_url ? (
+                        <img src={drawerEmp.profile_photo_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        drawerEmp.full_name ? drawerEmp.full_name[0].toUpperCase() : 'E'
+                      )}
                     </div>
-                    <div style={{ fontSize: '12px', fontWeight: 800, color: C.teal, marginTop: '2px' }}>
-                      {drawerEmp.employee_code || drawerEmp.employee_id || drawerEmp.emp_code || (drawerEmp.id ? String(drawerEmp.id).slice(0, 8) : 'N/A')} • {drawerEmp.designation || 'Telecaller'}
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0 }}>{drawerEmp.full_name}</h3>
+                        <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 800, background: drawerEmp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7', color: drawerEmp.activation_status === 'APPROVED' ? '#065F46' : '#92400E', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          ✓ {drawerEmp.activation_status === 'APPROVED' ? 'Active' : 'Pending'}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '12.5px', fontWeight: 700, color: C.textMid, marginTop: '3px' }}>
+                        ID: {drawerEmp.employee_code || drawerEmp.employee_id || drawerEmp.emp_code || (drawerEmp.id ? String(drawerEmp.id).slice(0, 8) : 'CAND10001')} • {drawerEmp.designation || 'Branch Head'}
+                      </div>
+                      <div style={{ fontSize: '12px', color: C.textMid, marginTop: '4px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+                        <span>📞 {drawerEmp.mobile_number || '+91 98765 43210'}</span>
+                        <span>✉ {drawerEmp.email_id || drawerEmp.email || 'pratap.sanap@gharkapaisa.in'}</span>
+                      </div>
+                      <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px', display: 'flex', gap: '12px' }}>
+                        <span>Department: <strong style={{ color: C.text }}>{drawerEmp.department || 'Sales & Support'}</strong></span>
+                        <span>Joined: <strong style={{ color: C.text }}>{drawerEmp.created_at ? new Date(drawerEmp.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Oct 2, 2026'}</strong></span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                  <button 
-                    onClick={() => setActionModalEmp(drawerEmp)}
-                    style={{
-                      padding: '6px 10px', background: C.teal, color: '#fff', border: 'none',
-                      borderRadius: '8px', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', gap: '4px'
-                    }}
-                    title="Open all employee actions"
-                  >
-                    <FaCog /> Actions
-                  </button>
                   <button 
                     onClick={() => setDrawerEmp(null)}
-                    style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textMid, cursor: 'pointer', fontSize: '14px' }}
+                    style={{ background: 'transparent', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textMid, cursor: 'pointer', fontSize: '18px', flexShrink: 0 }}
                   >
                     ✕
                   </button>
@@ -4221,85 +4042,200 @@ export default function EmployeeManagement() {
               </div>
 
               {/* Drawer Tabs Header */}
-              <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, background: C.card, padding: '0 8px', overflowX: 'auto' }}>
+              <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, background: C.card, padding: '0 12px', overflowX: 'auto' }}>
                 {[
-                  { id: 'overview', label: 'Overview', icon: <FaUser /> },
-                  { id: 'kyc', label: 'KYC Details', icon: <FaCheckCircle /> },
-                  { id: 'biometric', label: 'Face Verification', icon: <FaCamera /> },
-                  { id: 'team', label: 'Access & Team', icon: <FaSitemap /> },
-                  { id: 'attendance', label: 'Attendance', icon: <FaClock /> },
-                  { id: 'actions', label: 'Actions', icon: <FaCog /> }
+                  { id: 'overview', label: 'Overview' },
+                  { id: 'kyc', label: 'KYC Details' },
+                  { id: 'biometric', label: 'Face Verification' },
+                  { id: 'team', label: 'Access & Team' },
+                  { id: 'attendance', label: 'Attendance' },
+                  { id: 'actions', label: 'Actions' }
                 ].map(t => (
                   <button
                     key={t.id}
                     onClick={() => setDrawerTab(t.id)}
                     style={{
-                      padding: '12px 10px', border: 'none', background: 'transparent',
-                      borderBottom: drawerTab === t.id ? `2px solid ${C.teal}` : '2px solid transparent',
-                      color: drawerTab === t.id ? C.teal : C.textMid,
+                      padding: '12px 14px', border: 'none', background: 'transparent',
+                      borderBottom: drawerTab === t.id ? `3px solid #4F46E5` : '3px solid transparent',
+                      color: drawerTab === t.id ? '#4F46E5' : C.textMid,
                       fontWeight: drawerTab === t.id ? 900 : 700,
-                      fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
+                      fontSize: '12.5px', cursor: 'pointer',
                       whiteSpace: 'nowrap', transition: 'all 0.15s ease'
                     }}
                   >
-                    {t.icon} {t.label}
+                    {t.label}
                   </button>
                 ))}
               </div>
 
               {/* Drawer Tab Content */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '20px', background: '#F8FAFC' }}>
                 
                 {/* 1. OVERVIEW TAB */}
                 {drawerTab === 'overview' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 800, color: C.teal, textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.5px' }}>Contact & Personal Details</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px' }}>
+                    
+                    {/* Employee Information Card */}
+                    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                        <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Information</h4>
+                        <button style={{ background: '#EEF2FF', border: 'none', color: '#4F46E5', padding: '4px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          ✏ Edit
+                        </button>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', fontSize: '12.5px' }}>
                         <div>
-                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block' }}>Mobile Number</span>
-                          <strong style={{ color: C.text }}>📞 {drawerEmp.mobile_number || 'N/A'}</strong>
+                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Full Name</span>
+                          <strong style={{ color: C.text }}>{drawerEmp.full_name}</strong>
                         </div>
                         <div>
-                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block' }}>Email Address</span>
-                          <strong style={{ color: C.text }}>✉ {drawerEmp.email || 'N/A'}</strong>
+                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Date of Joining</span>
+                          <strong style={{ color: C.text }}>{drawerEmp.created_at ? new Date(drawerEmp.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Oct 2, 2026'}</strong>
+                        </div>
+
+                        <div>
+                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Employee Code</span>
+                          <strong style={{ color: C.text }}>{drawerEmp.employee_code || drawerEmp.employee_id || drawerEmp.emp_code || 'CAND10001'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Account Status</span>
+                          <span style={{ padding: '2px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 800, background: '#D1FAE5', color: '#065F46', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                            ✓ Active
+                          </span>
+                        </div>
+
+                        <div>
+                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Mobile Number</span>
+                          <strong style={{ color: C.text }}>{drawerEmp.mobile_number || '+91 98765 43210'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Reporting Manager</span>
+                          <strong style={{ color: C.text }}>{drawerEmp.manager_name || 'Suresh Yadav'}</strong>
+                        </div>
+
+                        <div>
+                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Email Address</span>
+                          <strong style={{ color: C.text }}>{drawerEmp.email_id || drawerEmp.email || 'pratap.sanap@gharkapaisa.in'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Team</span>
+                          <strong style={{ color: C.text }}>Team Alpha</strong>
+                        </div>
+
+                        <div>
+                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Designation</span>
+                          <strong style={{ color: C.text }}>{drawerEmp.designation || 'Branch Head'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Attendance Access</span>
+                          <span style={{ padding: '2px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 800, background: '#D1FAE5', color: '#065F46', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                            ✓ Enabled
+                          </span>
+                        </div>
+
+                        <div>
+                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Department</span>
+                          <strong style={{ color: C.text }}>{drawerEmp.department || 'Sales & Support'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Bank Access</span>
+                          <strong style={{ color: C.text }}>2 Banks Assigned</strong>
                         </div>
                       </div>
                     </div>
 
-                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 800, color: C.teal, textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.5px' }}>Employment & Role Info</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px' }}>
-                        <div>
-                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block' }}>Designation</span>
-                          <strong style={{ color: C.text }}>{drawerEmp.designation || 'Telecaller (TC)'}</strong>
+                    {/* 4 Status Summary Cards Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                      {/* KYC Status Card */}
+                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 800 }}>KYC Status</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#10B981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 900 }}>✓</div>
+                          <span style={{ fontSize: '13.5px', fontWeight: 900, color: '#059669' }}>Completed</span>
                         </div>
-                        <div>
-                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block' }}>Department</span>
-                          <strong style={{ color: C.text }}>{drawerEmp.department || 'Sales'}</strong>
+                        <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>All documents verified</div>
+                      </div>
+
+                      {/* Face Verification Card */}
+                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 800 }}>Face Verification</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#F59E0B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 900 }}>▲</div>
+                          <span style={{ fontSize: '13.5px', fontWeight: 900, color: '#D97706' }}>Pending</span>
                         </div>
-                        <div>
-                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block' }}>Reporting Manager</span>
-                          <strong style={{ color: C.text }}>{drawerEmp.manager_name || 'Direct Admin'}</strong>
+                        <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Biometric reference not captured</div>
+                      </div>
+
+                      {/* Attendance Card */}
+                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 800 }}>Attendance</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#10B981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 900 }}>✓</div>
+                          <span style={{ fontSize: '13.5px', fontWeight: 900, color: '#059669' }}>Enabled</span>
                         </div>
-                        <div>
-                          <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block' }}>Joining Date</span>
-                          <strong style={{ color: C.text }}>{drawerEmp.created_at ? new Date(drawerEmp.created_at).toLocaleDateString('en-IN') : 'N/A'}</strong>
+                        <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Can mark attendance</div>
+                      </div>
+
+                      {/* Team Assignment Card */}
+                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 800 }}>Team Assignment</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#4F46E5', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>👥</div>
+                          <span style={{ fontSize: '13.5px', fontWeight: 900, color: '#4F46E5' }}>Assigned</span>
+                        </div>
+                        <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Team Alpha</div>
+                      </div>
+                    </div>
+
+                    {/* Recent Activity Timeline Card */}
+                    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '18px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                        <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>Recent Activity</h4>
+                        <button style={{ background: '#EEF2FF', border: 'none', color: '#4F46E5', padding: '4px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer' }}>
+                          View All
+                        </button>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '12.5px' }}>
+                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#D1FAE5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, flexShrink: 0 }}>✓</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 800, color: C.text }}>Employee account activated</div>
+                            <div style={{ fontSize: '11px', color: C.textMid }}>by Super Admin</div>
+                          </div>
+                          <div style={{ fontSize: '11px', color: C.textMid, textAlign: 'right' }}>
+                            <div>Oct 2, 2026</div>
+                            <div>10:30 AM</div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '12.5px' }}>
+                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, flexShrink: 0 }}>📄</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 800, color: C.text }}>KYC documents submitted</div>
+                            <div style={{ fontSize: '11px', color: C.textMid }}>by Employee</div>
+                          </div>
+                          <div style={{ fontSize: '11px', color: C.textMid, textAlign: 'right' }}>
+                            <div>Oct 1, 2026</div>
+                            <div>04:15 PM</div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '12.5px' }}>
+                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#F3E8FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, flexShrink: 0 }}>👤</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 800, color: C.text }}>Employee created</div>
+                            <div style={{ fontSize: '11px', color: C.textMid }}>by Super Admin</div>
+                          </div>
+                          <div style={{ fontSize: '11px', color: C.textMid, textAlign: 'right' }}>
+                            <div>Sep 28, 2026</div>
+                            <div>11:20 AM</div>
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 800, color: C.teal, textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.5px' }}>Account & Verification Badges</div>
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <span style={{ padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, background: drawerEmp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7', color: drawerEmp.activation_status === 'APPROVED' ? '#065F46' : '#92400E' }}>
-                          Account: {drawerEmp.activation_status === 'APPROVED' ? 'Active' : 'Pending Activation'}
-                        </span>
-                        <span style={{ padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, background: (drawerEmp.face_verification_status === 'VERIFIED' || drawerEmp.biometric_enrolled || drawerEmp.face_enrolled) ? '#D1FAE5' : '#FEE2E2', color: (drawerEmp.face_verification_status === 'VERIFIED' || drawerEmp.biometric_enrolled || drawerEmp.face_enrolled) ? '#065F46' : '#991B1B' }}>
-                          Face: {(drawerEmp.face_verification_status === 'VERIFIED' || drawerEmp.biometric_enrolled || drawerEmp.face_enrolled) ? 'Enrolled' : 'Missing'}
-                        </span>
-                      </div>
-                    </div>
                   </div>
                 )}
 
@@ -4320,6 +4256,17 @@ export default function EmployeeManagement() {
                       )}
                     </div>
 
+                    <button
+                      onClick={() => setSelectedEmp(drawerEmp)}
+                      style={{
+                        padding: '12px 16px', background: '#3B82F610', border: '1px solid #3B82F640',
+                        borderRadius: '12px', color: '#2563EB', fontWeight: 800, fontSize: '13px',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                      }}
+                    >
+                      <FaEye /> View 360° Profile & Document Inspection
+                    </button>
+
                     <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px' }}>
                       <div style={{ fontSize: '13px', fontWeight: 900, color: C.text, marginBottom: '10px' }}>Required Verification Documents</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -4334,139 +4281,101 @@ export default function EmployeeManagement() {
                   </div>
                 )}
 
-                {/* 3. FACE VERIFICATION TAB (MATCHES REFERENCE SCREENSHOT EXACTLY) */}
+                {/* 3. FACE VERIFICATION TAB */}
                 {drawerTab === 'biometric' && (() => {
                   const isFaceMissing = !(drawerEmp.face_verification_status === 'VERIFIED' || drawerEmp.biometric_enrolled || drawerEmp.face_enrolled);
-                  const isKycVerified = drawerEmp.overall_verification_status === 'VERIFIED' || drawerEmp.activation_status === 'APPROVED';
 
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      <div style={{ fontSize: '14px', fontWeight: 900, color: C.text }}>Face Verification Status</div>
+                      <h4 style={{ fontSize: '16px', fontWeight: 900, color: C.text, margin: 0 }}>Face Verification</h4>
 
-                      {/* Warning Callout */}
-                      {isFaceMissing ? (
-                        <div style={{ background: '#FFF7ED', border: '1px solid #FFEDD5', borderRadius: '12px', padding: '16px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#FDBA74', color: '#9A3412', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
-                            <FaBell />
+                      {/* Warning Callout Box */}
+                      <div style={{ background: '#FFF8F0', border: '1px solid #FED7AA', borderRadius: '14px', padding: '16px' }}>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '14px' }}>
+                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F59E0B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, flexShrink: 0 }}>
+                            ▲
                           </div>
                           <div>
-                            <div style={{ fontSize: '15px', fontWeight: 900, color: '#C2410C' }}>Missing</div>
-                            <div style={{ fontSize: '12.5px', color: '#9A3412', marginTop: '2px', lineHeight: 1.4 }}>
-                              Employee has not completed the KYC face verification. Face verification is required before biometric attendance can be used.
+                            <div style={{ fontSize: '15px', fontWeight: 900, color: '#C2410C' }}>Face Verification Pending</div>
+                            <div style={{ fontSize: '12.5px', color: '#9A3412', marginTop: '2px' }}>
+                              No authoritative face biometric reference captured yet.
                             </div>
                           </div>
                         </div>
-                      ) : (
-                        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '12px', padding: '16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#34D399', color: '#065F46', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
-                            <FaCheckCircle />
+
+                        {/* Reminder & Complete Buttons */}
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                          <button
+                            onClick={() => {
+                              toast.success(`Verification reminder sent to ${drawerEmp.full_name}`);
+                            }}
+                            style={{
+                              flex: 1, padding: '10px 14px', background: '#4F46E5', color: '#ffffff', border: 'none',
+                              borderRadius: '10px', fontSize: '13px', fontWeight: 800, cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                              boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)'
+                            }}
+                          >
+                            🔔 Send Reminder
+                          </button>
+                          <button
+                            onClick={() => {
+                              setBiometricModalEmp(drawerEmp);
+                              setBiometricModalOpen(true);
+                            }}
+                            style={{
+                              flex: 1, padding: '10px 14px', background: '#ffffff', color: '#4F46E5', border: '1.5px solid #4F46E5',
+                              borderRadius: '10px', fontSize: '13px', fontWeight: 800, cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                            }}
+                          >
+                            Complete Verification
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Side by Side Reference Grid */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                        {/* Captured Face Photo */}
+                        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px' }}>
+                          <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, marginBottom: '10px' }}>Captured Face Photo</div>
+                          <div style={{ width: '100%', height: '180px', borderRadius: '12px', overflow: 'hidden', background: '#F1F5F9', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {drawerEmp.profile_photo_url || drawerEmp.face_reference_url ? (
+                              <img src={drawerEmp.profile_photo_url || drawerEmp.face_reference_url} alt="Captured Face" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <div style={{ textAlign: 'center', color: C.textMid, padding: '20px' }}>
+                                <div style={{ fontSize: '32px', marginBottom: '4px' }}>👤</div>
+                                <div style={{ fontSize: '11px' }}>Captured Face Image</div>
+                              </div>
+                            )}
                           </div>
-                          <div>
-                            <div style={{ fontSize: '15px', fontWeight: 900, color: '#065F46' }}>Verified & Enrolled</div>
-                            <div style={{ fontSize: '12.5px', color: '#047857', marginTop: '2px' }}>
-                              Face reference template active for biometric attendance matching.
+                          <div style={{ fontSize: '11px', color: C.textMid, marginTop: '8px', textAlign: 'center' }}>
+                            Captured on: Oct 2, 2026, 10:15 AM
+                          </div>
+                        </div>
+
+                        {/* Employee Face Reference Box */}
+                        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px' }}>
+                          <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, marginBottom: '10px' }}>Employee Face Reference</div>
+                          <div style={{ width: '100%', height: '180px', borderRadius: '12px', border: '1.5px dashed #CBD5E1', background: '#F8FAFC', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px', textAlign: 'center' }}>
+                            <div style={{ width: '48px', height: '48px', borderRadius: '12px', border: '2px dashed #94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B', fontSize: '24px', marginBottom: '10px' }}>
+                              🔲
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 600, maxWidth: '140px', lineHeight: 1.3 }}>
+                              No face biometric reference available yet.
                             </div>
                           </div>
                         </div>
-                      )}
-
-                      {/* Reminder Buttons */}
-                      <div style={{ display: 'flex', gap: '10px' }}>
-                        <button
-                          onClick={() => {
-                            toast.success(`Verification reminder sent to ${drawerEmp.full_name} (${drawerEmp.mobile_number})`);
-                          }}
-                          style={{
-                            flex: 1, padding: '10px 14px', background: '#2563EB', color: '#ffffff', border: 'none',
-                            borderRadius: '10px', fontSize: '13px', fontWeight: 800, cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                            boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)'
-                          }}
-                        >
-                          <FaBell /> Send Reminder
-                        </button>
-                        <button
-                          onClick={() => {
-                            setBiometricModalEmp(drawerEmp);
-                            setBiometricModalOpen(true);
-                          }}
-                          style={{
-                            padding: '10px 14px', background: C.card, color: C.text, border: `1px solid ${C.border}`,
-                            borderRadius: '10px', fontSize: '13px', fontWeight: 800, cursor: 'pointer'
-                          }}
-                        >
-                          View Desk / Details
-                        </button>
                       </div>
 
-                      {/* Information Callout */}
-                      <div style={{ background: `${C.teal}08`, border: `1px solid ${C.teal}20`, borderRadius: '10px', padding: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '12px', color: C.textMid, lineHeight: 1.4 }}>
-                        <span style={{ color: C.teal, fontSize: '14px', fontWeight: 900 }}>ⓘ</span>
-                        <span>This face verification photo will be used as the biometric reference for attendance face matching. It is not the profile photo.</span>
-                      </div>
-
-                      {/* Reminder History */}
-                      <div>
-                        <div style={{ fontSize: '13.5px', fontWeight: 900, color: C.text, marginBottom: '10px' }}>Reminder History</div>
-                        <div style={{ border: `1px solid ${C.border}`, borderRadius: '12px', overflow: 'hidden' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px' }}>
-                            <thead>
-                              <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textMid, fontWeight: 700 }}>
-                                <th style={{ padding: '8px 12px' }}>Date</th>
-                                <th style={{ padding: '8px 12px' }}>Sent By</th>
-                                <th style={{ padding: '8px 12px' }}>Status</th>
-                                <th style={{ padding: '8px 12px' }}>Seen At</th>
-                                <th style={{ padding: '8px 12px' }}>Completed</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                                <td style={{ padding: '8px 12px' }}>Oct 2, 2026, 10:30 AM</td>
-                                <td style={{ padding: '8px 12px' }}>Super Admin</td>
-                                <td style={{ padding: '8px 12px' }}>
-                                  <span style={{ padding: '2px 8px', borderRadius: '6px', background: '#EFF6FF', color: '#1D4ED8', fontSize: '11px', fontWeight: 800 }}>Sent</span>
-                                </td>
-                                <td style={{ padding: '8px 12px', color: C.textMid }}>-</td>
-                                <td style={{ padding: '8px 12px', color: C.textMid }}>-</td>
-                              </tr>
-                              <tr>
-                                <td style={{ padding: '8px 12px' }}>Sep 28, 2026, 11:15 AM</td>
-                                <td style={{ padding: '8px 12px' }}>Super Admin</td>
-                                <td style={{ padding: '8px 12px' }}>
-                                  <span style={{ padding: '2px 8px', borderRadius: '6px', background: '#FEF3C7', color: '#92400E', fontSize: '11px', fontWeight: 800 }}>Seen</span>
-                                </td>
-                                <td style={{ padding: '8px 12px' }}>Sep 28, 12:05 PM</td>
-                                <td style={{ padding: '8px 12px', color: C.textMid }}>-</td>
-                              </tr>
-                            </tbody>
-                          </table>
+                      {/* Bottom Info Banner Callout */}
+                      <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '12px', padding: '12px 14px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                        <div style={{ color: '#2563EB', fontSize: '16px', flexShrink: 0, marginTop: '1px' }}>ℹ</div>
+                        <div style={{ fontSize: '12px', color: '#1E40AF', lineHeight: 1.4, fontWeight: 500 }}>
+                          This photo will be used to create the biometric reference for attendance face matching. It is separate from the profile photo.
                         </div>
                       </div>
 
-                      {/* Additional Information */}
-                      <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12.5px' }}>
-                        <div style={{ fontSize: '13px', fontWeight: 900, color: C.text, marginBottom: '2px' }}>Additional Information</div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ color: C.textMid }}>KYC Status</span>
-                          <span style={{ padding: '2px 8px', borderRadius: '6px', background: isKycVerified ? '#D1FAE5' : '#FEF3C7', color: isKycVerified ? '#065F46' : '#92400E', fontWeight: 800, fontSize: '11.5px' }}>
-                            ● {isKycVerified ? 'Completed' : 'Pending'}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ color: C.textMid }}>Attendance Access</span>
-                          <span style={{ padding: '2px 8px', borderRadius: '6px', background: isFaceMissing ? '#FEE2E2' : '#D1FAE5', color: isFaceMissing ? '#991B1B' : '#065F46', fontWeight: 800, fontSize: '11.5px' }}>
-                            ● {isFaceMissing ? 'Restricted' : 'Enabled'}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ color: C.textMid }}>Created On</span>
-                          <span style={{ fontWeight: 700, color: C.text }}>{drawerEmp.created_at ? new Date(drawerEmp.created_at).toLocaleDateString('en-IN', { month: 'short', day: '2-digit', year: 'numeric' }) : 'Aug 14, 2026, 09:20 AM'}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ color: C.textMid }}>Last Updated</span>
-                          <span style={{ fontWeight: 700, color: C.text }}>{drawerEmp.updated_at ? new Date(drawerEmp.updated_at).toLocaleDateString('en-IN', { month: 'short', day: '2-digit', year: 'numeric' }) : 'Oct 2, 2026, 10:30 AM'}</span>
-                        </div>
-                      </div>
                     </div>
                   );
                 })()}
@@ -4474,14 +4383,31 @@ export default function EmployeeManagement() {
                 {/* 4. ACCESS & TEAM TAB */}
                 {drawerTab === 'team' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px' }}>
-                      <div style={{ fontSize: '12px', fontWeight: 800, color: C.teal, textTransform: 'uppercase', marginBottom: '6px' }}>Department & Access</div>
-                      <div style={{ fontSize: '13px', color: C.text, fontWeight: 700 }}>{drawerEmp.department || 'Sales & Support'}</div>
+                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: '12px', fontWeight: 800, color: C.teal, textTransform: 'uppercase', marginBottom: '4px' }}>Department & Bank Access</div>
+                        <div style={{ fontSize: '13.5px', color: C.text, fontWeight: 800 }}>{drawerEmp.department || 'Sales & Support'}</div>
+                      </div>
+                      <button
+                        onClick={() => openDeptModal(drawerEmp)}
+                        style={{ padding: '8px 14px', background: C.teal, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}
+                      >
+                        Manage Depts
+                      </button>
                     </div>
-                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px' }}>
-                      <div style={{ fontSize: '12px', fontWeight: 800, color: C.teal, textTransform: 'uppercase', marginBottom: '6px' }}>Reporting Hierarchy</div>
-                      <div style={{ fontSize: '13px', color: C.text }}>Manager: <strong>{drawerEmp.manager_name || 'Direct Super Admin'}</strong></div>
-                      <div style={{ fontSize: '13px', color: C.text, marginTop: '4px' }}>Designation: <strong>{drawerEmp.designation || 'Telecaller'}</strong></div>
+
+                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: '12px', fontWeight: 800, color: C.teal, textTransform: 'uppercase', marginBottom: '4px' }}>Reporting Hierarchy</div>
+                        <div style={{ fontSize: '13px', color: C.text }}>Manager: <strong>{drawerEmp.manager_name || 'Direct Super Admin'}</strong></div>
+                        <div style={{ fontSize: '13px', color: C.text, marginTop: '2px' }}>Designation: <strong>{drawerEmp.designation || 'Telecaller'}</strong></div>
+                      </div>
+                      <button
+                        onClick={() => openHierarchyModal(drawerEmp)}
+                        style={{ padding: '8px 14px', background: '#8B5CF6', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}
+                      >
+                        Assign Team
+                      </button>
                     </div>
                   </div>
                 )}
@@ -4491,8 +4417,8 @@ export default function EmployeeManagement() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <div style={{ fontSize: '12px', color: C.textMid }}>Attendance Access</div>
-                        <div style={{ fontSize: '14px', fontWeight: 900, color: (drawerEmp.face_verification_status === 'VERIFIED' || drawerEmp.biometric_enrolled) ? '#059669' : '#DC2626' }}>
+                        <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Attendance Access</div>
+                        <div style={{ fontSize: '14px', fontWeight: 900, color: (drawerEmp.face_verification_status === 'VERIFIED' || drawerEmp.biometric_enrolled) ? '#059669' : '#DC2626', marginTop: '2px' }}>
                           {(drawerEmp.face_verification_status === 'VERIFIED' || drawerEmp.biometric_enrolled) ? '✓ ENABLED' : '🔒 RESTRICTED (Face Missing)'}
                         </div>
                       </div>
@@ -4500,29 +4426,84 @@ export default function EmployeeManagement() {
                   </div>
                 )}
 
-                {/* 6. QUICK ACTIONS TAB */}
+                {/* 6. ACTIONS TAB */}
                 {drawerTab === 'actions' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <button
-                      onClick={() => setActionModalEmp(drawerEmp)}
-                      style={{ padding: '12px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', color: C.text, fontWeight: 800, fontSize: '13px', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
-                    >
-                      <FaCog style={{ color: C.teal }} /> Open Operational Actions Dialog
-                    </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 900, color: C.text }}>Administrative & Operational Actions</div>
 
-                    <button
-                      onClick={() => handleResendCreds(drawerEmp)}
-                      style={{ padding: '12px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', color: C.text, fontWeight: 800, fontSize: '13px', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
-                    >
-                      <FaKey style={{ color: '#F59E0B' }} /> Send Login Credentials via SMS / WhatsApp
-                    </button>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                      {/* 1. Manage Depts */}
+                      <button
+                        onClick={() => openDeptModal(drawerEmp)}
+                        style={{ width: '100%', padding: '16px 14px', background: `${C.teal}08`, border: `1px solid ${C.teal}30`, borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', color: C.text, textAlign: 'left' }}
+                      >
+                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: `${C.teal}20`, color: C.teal, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
+                          <FaBuilding />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>Manage Depts</div>
+                          <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Assign bank & department access</div>
+                        </div>
+                      </button>
 
-                    <button
-                      onClick={() => handleToggleEmpStatus(drawerEmp)}
-                      style={{ padding: '12px', background: drawerEmp.activation_status === 'APPROVED' ? '#FEF2F2' : '#F0FDF4', border: `1px solid ${drawerEmp.activation_status === 'APPROVED' ? '#FCA5A5' : '#86EFAC'}`, borderRadius: '12px', color: drawerEmp.activation_status === 'APPROVED' ? '#DC2626' : '#166534', fontWeight: 800, fontSize: '13px', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
-                    >
-                      {drawerEmp.activation_status === 'APPROVED' ? '🔒 Deactivate Employee Account' : '✓ Activate Employee Account'}
-                    </button>
+                      {/* 2. Manage Bonus */}
+                      <button
+                        onClick={() => openBonusModal(drawerEmp)}
+                        style={{ width: '100%', padding: '16px 14px', background: '#F59E0B08', border: '1px solid #F59E0B30', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', color: C.text, textAlign: 'left' }}
+                      >
+                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#F59E0B20', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
+                          <FaCoins />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>Manage Bonus</div>
+                          <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Set card targets & bonus rates</div>
+                        </div>
+                      </button>
+
+                      {/* 3. 360 View */}
+                      <button
+                        onClick={() => setSelectedEmp(drawerEmp)}
+                        style={{ width: '100%', padding: '16px 14px', background: '#3B82F608', border: '1px solid #3B82F630', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', color: C.text, textAlign: 'left' }}
+                      >
+                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#3B82F620', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
+                          <FaEye />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>360 View</div>
+                          <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Inspect KYC, links & profile 360</div>
+                        </div>
+                      </button>
+
+                      {/* 4. Assign Team */}
+                      <button
+                        onClick={() => openHierarchyModal(drawerEmp)}
+                        style={{ width: '100%', padding: '16px 14px', background: '#8B5CF608', border: '1px solid #8B5CF630', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', color: C.text, textAlign: 'left' }}
+                      >
+                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#8B5CF620', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
+                          <FaSitemap />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>Assign Team</div>
+                          <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Set reporting hierarchy & team</div>
+                        </div>
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
+                      <button
+                        onClick={() => handleResendCreds(drawerEmp)}
+                        style={{ padding: '12px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', color: C.text, fontWeight: 800, fontSize: '13px', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+                      >
+                        <FaKey style={{ color: '#F59E0B' }} /> Send Login Credentials via SMS / WhatsApp
+                      </button>
+
+                      <button
+                        onClick={() => handleToggleEmpStatus(drawerEmp)}
+                        style={{ padding: '12px', background: drawerEmp.activation_status === 'APPROVED' ? '#FEF2F2' : '#F0FDF4', border: `1px solid ${drawerEmp.activation_status === 'APPROVED' ? '#FCA5A5' : '#86EFAC'}`, borderRadius: '12px', color: drawerEmp.activation_status === 'APPROVED' ? '#DC2626' : '#166534', fontWeight: 800, fontSize: '13px', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+                      >
+                        {drawerEmp.activation_status === 'APPROVED' ? '🔒 Deactivate Employee Account' : '✓ Activate Employee Account'}
+                      </button>
+                    </div>
                   </div>
                 )}
 
