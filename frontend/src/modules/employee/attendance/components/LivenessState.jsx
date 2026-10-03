@@ -53,10 +53,10 @@ export default function LivenessState({
         /* Amplify Liveness Container Overrides */
         .amplify-liveness-detector {
           width: 100% !important;
-          min-height: 420px !important;
+          min-height: 380px !important;
           background: #0F172A !important;
           border-radius: 16px !important;
-          overflow: visible !important;
+          overflow-y: auto !important;
         }
 
         .amplify-liveness-start-screen {
@@ -66,7 +66,9 @@ export default function LivenessState({
           border-radius: 16px !important;
           display: flex !important;
           flex-direction: column !important;
-          gap: 12px !important;
+          gap: 10px !important;
+          overflow-y: auto !important;
+          max-height: 100% !important;
         }
 
         .amplify-liveness-start-screen-warning {
@@ -86,28 +88,34 @@ export default function LivenessState({
 
         /* Prominent Start Video / Begin Check Button */
         .amplify-liveness-start-screen .amplify-button--primary,
-        .amplify-liveness-detector .amplify-button--primary {
+        .amplify-liveness-detector .amplify-button--primary,
+        .amplify-liveness-start-screen button,
+        .amplify-liveness-detector button.amplify-button {
           background: linear-gradient(135deg, #0B74F6 0%, #0052CC 100%) !important;
           color: #FFFFFF !important;
           border: none !important;
           border-radius: 12px !important;
           padding: 14px 20px !important;
           font-size: 15px !important;
-          font-weight: 700 !important;
+          font-weight: 800 !important;
           width: 100% !important;
           cursor: pointer !important;
-          box-shadow: 0 4px 14px rgba(11, 116, 246, 0.4) !important;
-          margin-top: 10px !important;
+          box-shadow: 0 4px 14px rgba(11, 116, 246, 0.5) !important;
+          margin-top: 12px !important;
+          margin-bottom: 12px !important;
           display: flex !important;
           align-items: center !important;
           justify-content: center !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          z-index: 10 !important;
           transition: transform 0.15s ease, box-shadow 0.15s ease !important;
         }
 
         .amplify-liveness-start-screen .amplify-button--primary:hover,
         .amplify-liveness-detector .amplify-button--primary:hover {
           transform: translateY(-1px) !important;
-          box-shadow: 0 6px 18px rgba(11, 116, 246, 0.5) !important;
+          box-shadow: 0 6px 18px rgba(11, 116, 246, 0.6) !important;
         }
 
         /* Camera Select Dropdown */
@@ -223,9 +231,10 @@ export default function LivenessState({
       <div style={{
         position: 'relative',
         width: '100%',
-        minHeight: isMobile ? '400px' : '440px',
+        minHeight: isMobile ? '380px' : '440px',
+        maxHeight: isMobile ? '65vh' : 'auto',
         borderRadius: '16px',
-        overflow: 'hidden',
+        overflowY: 'auto',
         background: '#0F172A',
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
         marginBottom: '14px',
