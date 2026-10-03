@@ -1153,7 +1153,7 @@ export default function EmployeeManagement() {
             <button
               onClick={() => { setBiometricModalEmp(null); setBiometricModalOpen(true); }}
               style={{
-                background: C.bgSecondary, color: C.text, border: `1px solid ${C.border}`, padding: '10px 18px', borderRadius: '12px',
+                background: C.bgSecondary, color: C.text, border: `1px solid ${C.border}`, padding: '10px 18px', borderRadius: '0px',
                 fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.03)', transition: 'all 0.15s ease'
               }}
@@ -1163,7 +1163,7 @@ export default function EmployeeManagement() {
             <button
               onClick={() => setCreateEmpModalOpen(true)}
               style={{
-                background: `linear-gradient(135deg, ${C.teal} 0%, #0D9488 100%)`, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '12px',
+                background: `linear-gradient(135deg, ${C.teal} 0%, #0D9488 100%)`, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '0px',
                 fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px',
                 boxShadow: '0 4px 14px rgba(13, 148, 136, 0.3)', transition: 'all 0.15s ease'
               }}
@@ -1182,8 +1182,8 @@ export default function EmployeeManagement() {
             { label: 'Attendance Active', count: targetEmployeeList.filter(e => e.attendance_enabled !== false).length, icon: <FaCheckCircle />, color: '#10B981', bg: '#D1FAE5' },
             { label: 'Active Employees', count: targetEmployeeList.filter(e => String(e.activation_status || '').toUpperCase() === 'APPROVED').length, icon: <FaUserCheck />, color: '#6366F1', bg: '#EEF2FF' }
           ].map((st, i) => (
-            <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: st.bg, color: st.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
+            <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '0px', background: st.bg, color: st.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
                 {st.icon}
               </div>
               <div style={{ minWidth: 0 }}>
@@ -1208,7 +1208,7 @@ export default function EmployeeManagement() {
                 background: activeTab === tab.id ? C.teal : C.card, 
                 color: activeTab === tab.id ? '#fff' : C.textMid, 
                 border: `1px solid ${activeTab === tab.id ? C.teal : C.border}`, 
-                padding: '9px 18px', borderRadius: '12px', fontSize: '13.5px', 
+                padding: '9px 18px', borderRadius: '0px', fontSize: '13.5px', 
                 fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', flexShrink: 0,
                 boxShadow: activeTab === tab.id ? '0 4px 12px rgba(13, 148, 136, 0.2)' : 'none',
                 transition: 'all 0.15s ease'
@@ -1216,7 +1216,7 @@ export default function EmployeeManagement() {
             >
               {tab.icon} {tab.label}
               {tab.badge !== null && (
-                <span style={{ background: activeTab === tab.id ? 'rgba(255,255,255,0.25)' : C.bgSecondary, color: activeTab === tab.id ? '#fff' : C.text, padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 900 }}>
+                <span style={{ background: activeTab === tab.id ? 'rgba(255,255,255,0.25)' : C.bgSecondary, color: activeTab === tab.id ? '#fff' : C.text, padding: '2px 8px', borderRadius: '0px', fontSize: '11px', fontWeight: 900 }}>
                   {tab.badge}
                 </span>
               )}
@@ -1229,21 +1229,21 @@ export default function EmployeeManagement() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             
             {/* Employee Records Directory */}
-            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
               
               {/* Directory Header & Filters Toolbar */}
               <div style={{ padding: '18px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '14px', background: C.bgSecondary }}>
                 {/* Line 1: Heading & Working View Tabs */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Records</h3>
-                  <div style={{ display: 'inline-flex', width: 'fit-content', background: C.card, borderRadius: '10px', padding: '3px', border: `1px solid ${C.border}` }}>
+                  <div style={{ display: 'inline-flex', width: 'fit-content', background: C.card, borderRadius: '0px', padding: '3px', border: `1px solid ${C.border}` }}>
                     <button 
                       onClick={() => setRecordsViewTab('recent')}
                       style={{
                         padding: '6px 14px', fontSize: '12px', fontWeight: 800, border: 'none',
                         background: recordsViewTab === 'recent' ? C.teal : 'transparent',
                         color: recordsViewTab === 'recent' ? '#fff' : C.textMid,
-                        cursor: 'pointer', borderRadius: '8px', transition: 'all 0.15s ease'
+                        cursor: 'pointer', borderRadius: '0px', transition: 'all 0.15s ease'
                       }}
                     >
                       Recent Activity
@@ -1254,7 +1254,7 @@ export default function EmployeeManagement() {
                         padding: '6px 14px', fontSize: '12px', fontWeight: 800, border: 'none',
                         background: recordsViewTab === 'directory' ? C.teal : 'transparent',
                         color: recordsViewTab === 'directory' ? '#fff' : C.textMid,
-                        cursor: 'pointer', borderRadius: '8px', transition: 'all 0.15s ease'
+                        cursor: 'pointer', borderRadius: '0px', transition: 'all 0.15s ease'
                       }}
                     >
                       Employee Directory
@@ -1275,7 +1275,7 @@ export default function EmployeeManagement() {
                         setSearchTerm(e.target.value);
                         setCurrentPage(1);
                       }}
-                      style={{ width: '100%', padding: '9px 14px 9px 38px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, outline: 'none', fontSize: '13.5px' }}
+                      style={{ width: '100%', padding: '9px 14px 9px 38px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, outline: 'none', fontSize: '13.5px' }}
                     />
                   </div>
 
@@ -1287,7 +1287,7 @@ export default function EmployeeManagement() {
                         setDesignationFilter(e.target.value);
                         setCurrentPage(1);
                       }} 
-                      style={{ padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13px', fontWeight: 700 }}
+                      style={{ padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '13px', fontWeight: 700 }}
                     >
                       <option value="">All Designations</option>
                       <option value="KYC Operator">KYC Operator</option>
@@ -1310,7 +1310,7 @@ export default function EmployeeManagement() {
                         setStatusFilter(e.target.value);
                         setCurrentPage(1);
                       }} 
-                      style={{ padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13px', fontWeight: 700 }}
+                      style={{ padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '13px', fontWeight: 700 }}
                     >
                       <option value="">All Statuses</option>
                       <option value="ACTIVE">Active</option>
@@ -1324,7 +1324,7 @@ export default function EmployeeManagement() {
                         setFaceFilter(e.target.value);
                         setCurrentPage(1);
                       }} 
-                      style={{ padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13px', fontWeight: 700 }}
+                      style={{ padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '13px', fontWeight: 700 }}
                     >
                       <option value="">All Face Biometrics</option>
                       <option value="VERIFIED">✓ Verified</option>
@@ -1342,7 +1342,7 @@ export default function EmployeeManagement() {
                           setSearchTerm('');
                           setCurrentPage(1);
                         }}
-                        style={{ padding: '9px 12px', background: `${C.teal}15`, color: C.teal, border: `1px solid ${C.teal}40`, borderRadius: '10px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}
+                        style={{ padding: '9px 12px', background: `${C.teal}15`, color: C.teal, border: `1px solid ${C.teal}40`, borderRadius: '0px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}
                       >
                         Clear Filters
                       </button>
@@ -3984,7 +3984,7 @@ export default function EmployeeManagement() {
                 width: '92%',
                 maxWidth: '480px',
                 maxHeight: '90vh',
-                borderRadius: '24px',
+                borderRadius: '0px',
                 border: `1px solid ${C.border}`
               } : {
                 top: 0,
@@ -4014,7 +4014,7 @@ export default function EmployeeManagement() {
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0 }}>{drawerEmp.full_name}</h3>
-                        <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 800, background: drawerEmp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7', color: drawerEmp.activation_status === 'APPROVED' ? '#065F46' : '#92400E', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ padding: '2px 8px', borderRadius: '0px', fontSize: '11px', fontWeight: 800, background: drawerEmp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7', color: drawerEmp.activation_status === 'APPROVED' ? '#065F46' : '#92400E', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                           ✓ {drawerEmp.activation_status === 'APPROVED' ? 'Active' : 'Pending'}
                         </span>
                       </div>
@@ -4034,7 +4034,7 @@ export default function EmployeeManagement() {
 
                   <button 
                     onClick={() => setDrawerEmp(null)}
-                    style={{ background: 'transparent', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textMid, cursor: 'pointer', fontSize: '18px', flexShrink: 0 }}
+                    style={{ background: 'transparent', border: 'none', borderRadius: '0px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textMid, cursor: 'pointer', fontSize: '18px', flexShrink: 0 }}
                   >
                     ✕
                   </button>
@@ -4076,10 +4076,10 @@ export default function EmployeeManagement() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     
                     {/* Employee Information Card */}
-                    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                         <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Information</h4>
-                        <button style={{ background: '#EEF2FF', border: 'none', color: '#4F46E5', padding: '4px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <button style={{ background: '#EEF2FF', border: 'none', color: '#4F46E5', padding: '4px 10px', borderRadius: '0px', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
                           ✏ Edit
                         </button>
                       </div>
@@ -4100,7 +4100,7 @@ export default function EmployeeManagement() {
                         </div>
                         <div>
                           <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Account Status</span>
-                          <span style={{ padding: '2px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 800, background: '#D1FAE5', color: '#065F46', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <span style={{ padding: '2px 8px', borderRadius: '0px', fontSize: '11px', fontWeight: 800, background: '#D1FAE5', color: '#065F46', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                             ✓ Active
                           </span>
                         </div>
@@ -4129,7 +4129,7 @@ export default function EmployeeManagement() {
                         </div>
                         <div>
                           <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Attendance Access</span>
-                          <span style={{ padding: '2px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 800, background: '#D1FAE5', color: '#065F46', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <span style={{ padding: '2px 8px', borderRadius: '0px', fontSize: '11px', fontWeight: 800, background: '#D1FAE5', color: '#065F46', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                             ✓ Enabled
                           </span>
                         </div>
@@ -4148,40 +4148,40 @@ export default function EmployeeManagement() {
                     {/* 4 Status Summary Cards Grid */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
                       {/* KYC Status Card */}
-                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         <div style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 800 }}>KYC Status</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#10B981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 900 }}>✓</div>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '0px', background: '#10B981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 900 }}>✓</div>
                           <span style={{ fontSize: '13.5px', fontWeight: 900, color: '#059669' }}>Completed</span>
                         </div>
                         <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>All documents verified</div>
                       </div>
 
                       {/* Face Verification Card */}
-                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         <div style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 800 }}>Face Verification</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#F59E0B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 900 }}>▲</div>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '0px', background: '#F59E0B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 900 }}>▲</div>
                           <span style={{ fontSize: '13.5px', fontWeight: 900, color: '#D97706' }}>Pending</span>
                         </div>
                         <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Biometric reference not captured</div>
                       </div>
 
                       {/* Attendance Card */}
-                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         <div style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 800 }}>Attendance</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#10B981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 900 }}>✓</div>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '0px', background: '#10B981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 900 }}>✓</div>
                           <span style={{ fontSize: '13.5px', fontWeight: 900, color: '#059669' }}>Enabled</span>
                         </div>
                         <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Can mark attendance</div>
                       </div>
 
                       {/* Team Assignment Card */}
-                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         <div style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 800 }}>Team Assignment</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#4F46E5', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>👥</div>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '0px', background: '#4F46E5', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>👥</div>
                           <span style={{ fontSize: '13.5px', fontWeight: 900, color: '#4F46E5' }}>Assigned</span>
                         </div>
                         <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Team Alpha</div>
@@ -4189,17 +4189,17 @@ export default function EmployeeManagement() {
                     </div>
 
                     {/* Recent Activity Timeline Card */}
-                    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '18px' }}>
+                    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '18px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                         <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>Recent Activity</h4>
-                        <button style={{ background: '#EEF2FF', border: 'none', color: '#4F46E5', padding: '4px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer' }}>
+                        <button style={{ background: '#EEF2FF', border: 'none', color: '#4F46E5', padding: '4px 10px', borderRadius: '0px', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer' }}>
                           View All
                         </button>
                       </div>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '12.5px' }}>
-                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#D1FAE5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, flexShrink: 0 }}>✓</div>
+                          <div style={{ width: '28px', height: '28px', borderRadius: '0px', background: '#D1FAE5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, flexShrink: 0 }}>✓</div>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: 800, color: C.text }}>Employee account activated</div>
                             <div style={{ fontSize: '11px', color: C.textMid }}>by Super Admin</div>
@@ -4211,7 +4211,7 @@ export default function EmployeeManagement() {
                         </div>
 
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '12.5px' }}>
-                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, flexShrink: 0 }}>📄</div>
+                          <div style={{ width: '28px', height: '28px', borderRadius: '0px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, flexShrink: 0 }}>📄</div>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: 800, color: C.text }}>KYC documents submitted</div>
                             <div style={{ fontSize: '11px', color: C.textMid }}>by Employee</div>
@@ -4223,7 +4223,7 @@ export default function EmployeeManagement() {
                         </div>
 
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '12.5px' }}>
-                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#F3E8FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, flexShrink: 0 }}>👤</div>
+                          <div style={{ width: '28px', height: '28px', borderRadius: '0px', background: '#F3E8FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, flexShrink: 0 }}>👤</div>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: 800, color: C.text }}>Employee created</div>
                             <div style={{ fontSize: '11px', color: C.textMid }}>by Super Admin</div>
@@ -4242,14 +4242,14 @@ export default function EmployeeManagement() {
                 {/* 2. KYC & DOCS TAB */}
                 {drawerTab === 'kyc' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div style={{ background: drawerEmp.activation_status === 'APPROVED' ? '#D1FAE515' : '#FEF3C715', border: `1px solid ${drawerEmp.activation_status === 'APPROVED' ? '#A7F3D0' : '#FDE68A'}`, borderRadius: '14px', padding: '14px' }}>
+                    <div style={{ background: drawerEmp.activation_status === 'APPROVED' ? '#D1FAE515' : '#FEF3C715', border: `1px solid ${drawerEmp.activation_status === 'APPROVED' ? '#A7F3D0' : '#FDE68A'}`, borderRadius: '0px', padding: '14px' }}>
                       <div style={{ fontSize: '13px', fontWeight: 900, color: drawerEmp.activation_status === 'APPROVED' ? '#065F46' : '#92400E' }}>
                         KYC Approval Status: {drawerEmp.activation_status === 'APPROVED' ? '✓ VERIFIED & APPROVED' : '⏳ PENDING SUPER ADMIN APPROVAL'}
                       </div>
                       {drawerEmp.activation_status !== 'APPROVED' && (
                         <button
                           onClick={() => handleKycVerify(drawerEmp.id, 'VERIFIED')}
-                          style={{ marginTop: '10px', width: '100%', padding: '10px', background: '#10B981', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 900, fontSize: '13px', cursor: 'pointer' }}
+                          style={{ marginTop: '10px', width: '100%', padding: '10px', background: '#10B981', color: '#fff', border: 'none', borderRadius: '0px', fontWeight: 900, fontSize: '13px', cursor: 'pointer' }}
                         >
                           ✓ Approve KYC & Activate Account Now
                         </button>
@@ -4260,18 +4260,18 @@ export default function EmployeeManagement() {
                       onClick={() => setSelectedEmp(drawerEmp)}
                       style={{
                         padding: '12px 16px', background: '#3B82F610', border: '1px solid #3B82F640',
-                        borderRadius: '12px', color: '#2563EB', fontWeight: 800, fontSize: '13px',
+                        borderRadius: '0px', color: '#2563EB', fontWeight: 800, fontSize: '13px',
                         cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                       }}
                     >
                       <FaEye /> View 360° Profile & Document Inspection
                     </button>
 
-                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px' }}>
+                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '14px' }}>
                       <div style={{ fontSize: '13px', fontWeight: 900, color: C.text, marginBottom: '10px' }}>Required Verification Documents</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {['Aadhaar Card', 'PAN Card', 'Bank Passbook / Cheque', 'Profile Photograph', 'Signed Offer Letter'].map((docName, idx) => (
-                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '8px', fontSize: '12.5px' }}>
+                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', fontSize: '12.5px' }}>
                             <span style={{ color: C.text, fontWeight: 700 }}>📄 {docName}</span>
                             <span style={{ fontSize: '11px', fontWeight: 800, color: '#10B981' }}>Submitted ✓</span>
                           </div>
@@ -4290,9 +4290,9 @@ export default function EmployeeManagement() {
                       <h4 style={{ fontSize: '16px', fontWeight: 900, color: C.text, margin: 0 }}>Face Verification</h4>
 
                       {/* Warning Callout Box */}
-                      <div style={{ background: '#FFF8F0', border: '1px solid #FED7AA', borderRadius: '14px', padding: '16px' }}>
+                      <div style={{ background: '#FFF8F0', border: '1px solid #FED7AA', borderRadius: '0px', padding: '16px' }}>
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '14px' }}>
-                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F59E0B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, flexShrink: 0 }}>
+                          <div style={{ width: '32px', height: '32px', borderRadius: '0px', background: '#F59E0B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, flexShrink: 0 }}>
                             ▲
                           </div>
                           <div>
@@ -4311,7 +4311,7 @@ export default function EmployeeManagement() {
                             }}
                             style={{
                               flex: 1, padding: '10px 14px', background: '#4F46E5', color: '#ffffff', border: 'none',
-                              borderRadius: '10px', fontSize: '13px', fontWeight: 800, cursor: 'pointer',
+                              borderRadius: '0px', fontSize: '13px', fontWeight: 800, cursor: 'pointer',
                               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                               boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)'
                             }}
@@ -4325,7 +4325,7 @@ export default function EmployeeManagement() {
                             }}
                             style={{
                               flex: 1, padding: '10px 14px', background: '#ffffff', color: '#4F46E5', border: '1.5px solid #4F46E5',
-                              borderRadius: '10px', fontSize: '13px', fontWeight: 800, cursor: 'pointer',
+                              borderRadius: '0px', fontSize: '13px', fontWeight: 800, cursor: 'pointer',
                               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                             }}
                           >
@@ -4337,9 +4337,9 @@ export default function EmployeeManagement() {
                       {/* Side by Side Reference Grid */}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                         {/* Captured Face Photo */}
-                        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px' }}>
+                        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '14px' }}>
                           <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, marginBottom: '10px' }}>Captured Face Photo</div>
-                          <div style={{ width: '100%', height: '180px', borderRadius: '12px', overflow: 'hidden', background: '#F1F5F9', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <div style={{ width: '100%', height: '180px', borderRadius: '0px', overflow: 'hidden', background: '#F1F5F9', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             {drawerEmp.profile_photo_url || drawerEmp.face_reference_url ? (
                               <img src={drawerEmp.profile_photo_url || drawerEmp.face_reference_url} alt="Captured Face" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             ) : (
@@ -4355,10 +4355,10 @@ export default function EmployeeManagement() {
                         </div>
 
                         {/* Employee Face Reference Box */}
-                        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px' }}>
+                        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '14px' }}>
                           <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, marginBottom: '10px' }}>Employee Face Reference</div>
-                          <div style={{ width: '100%', height: '180px', borderRadius: '12px', border: '1.5px dashed #CBD5E1', background: '#F8FAFC', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px', textAlign: 'center' }}>
-                            <div style={{ width: '48px', height: '48px', borderRadius: '12px', border: '2px dashed #94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B', fontSize: '24px', marginBottom: '10px' }}>
+                          <div style={{ width: '100%', height: '180px', borderRadius: '0px', border: '1.5px dashed #CBD5E1', background: '#F8FAFC', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px', textAlign: 'center' }}>
+                            <div style={{ width: '48px', height: '48px', borderRadius: '0px', border: '2px dashed #94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B', fontSize: '24px', marginBottom: '10px' }}>
                               🔲
                             </div>
                             <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 600, maxWidth: '140px', lineHeight: 1.3 }}>
@@ -4369,7 +4369,7 @@ export default function EmployeeManagement() {
                       </div>
 
                       {/* Bottom Info Banner Callout */}
-                      <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '12px', padding: '12px 14px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '0px', padding: '12px 14px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                         <div style={{ color: '#2563EB', fontSize: '16px', flexShrink: 0, marginTop: '1px' }}>ℹ</div>
                         <div style={{ fontSize: '12px', color: '#1E40AF', lineHeight: 1.4, fontWeight: 500 }}>
                           This photo will be used to create the biometric reference for attendance face matching. It is separate from the profile photo.
