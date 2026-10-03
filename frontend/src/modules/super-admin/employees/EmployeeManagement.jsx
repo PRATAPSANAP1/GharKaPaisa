@@ -1248,12 +1248,11 @@ export default function EmployeeManagement() {
                 )}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(1, 1fr)' : 'repeat(3, 1fr)', gap: '12px' }}>
                 {[
                   { id: 'face_missing', title: 'Face Verification Missing', count: faceMissingCount, desc: 'Not enrolled on mobile or desk', color: '#DC2626', bg: '#FEF2F2', border: '#FCA5A5', icon: <FaCamera /> },
                   { id: 'kyc_pending', title: 'KYC Pending Approval', count: kycPendingCount, desc: 'Requires document approval', color: '#D97706', bg: '#FFFBEB', border: '#FDE68A', icon: <FaClock /> },
-                  { id: 'docs_missing', title: 'Missing Documents', count: docsMissingCount, desc: 'Incomplete document uploads', color: '#9333EA', bg: '#F3E8FF', border: '#D8B4FE', icon: <FaFileUpload /> },
-                  { id: 'activation_pending', title: 'Account Activation Pending', count: activationPendingCount, desc: 'Pending admin approval', color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE', icon: <FaUserCheck /> }
+                  { id: 'docs_missing', title: 'Missing Documents', count: docsMissingCount, desc: 'Incomplete document uploads', color: '#9333EA', bg: '#F3E8FF', border: '#D8B4FE', icon: <FaFileUpload /> }
                 ].map((card) => (
                   <div
                     key={card.id}
