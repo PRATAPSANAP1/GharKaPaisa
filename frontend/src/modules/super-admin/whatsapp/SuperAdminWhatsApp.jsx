@@ -11,6 +11,14 @@ import SendWhatsAppModal from '../../../components/whatsapp/SendWhatsAppModal';
 
 export default function SuperAdminWhatsApp() {
   const { user } = useAuthStore();
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard | messages | templates | reports | webhooks | settings
 
   // Dashboard Data
@@ -344,43 +352,52 @@ export default function SuperAdminWhatsApp() {
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      gap: '20px',
-      padding: '24px',
+      gap: isMobile ? '14px' : '20px',
+      padding: isMobile ? '12px' : '24px',
       fontFamily: "'Inter', sans-serif",
       background: '#F8FAFC',
-      minHeight: 'calc(100vh - 90px)'
+      minHeight: 'calc(100vh - 90px)',
+      minWidth: 0,
+      maxWidth: '100%',
+      boxSizing: 'border-box'
     }}>
       {/* Top Banner Header */}
       <div style={{
         background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-        padding: '24px 28px',
+        padding: isMobile ? '16px' : '24px 28px',
         borderRadius: '16px',
         color: '#FFFFFF',
         display: 'flex',
-        alignItems: 'center',
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'flex-start' : 'center',
         justifyContent: 'space-between',
+        gap: isMobile ? '14px' : '16px',
         boxShadow: '0 4px 20px rgba(0,0,0,0.06)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{
-            width: '48px', height: '48px', borderRadius: '14px',
+            width: isMobile ? '40px' : '48px',
+            height: isMobile ? '40px' : '48px',
+            borderRadius: '14px',
             background: '#059669', color: '#FFFFFF',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '24px', boxShadow: '0 4px 12px rgba(5, 150, 105, 0.4)'
+            fontSize: isMobile ? '20px' : '24px',
+            boxShadow: '0 4px 12px rgba(5, 150, 105, 0.4)',
+            flexShrink: 0
           }}>
             <FaWhatsapp />
           </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 800, letterSpacing: '-0.3px', color: '#FFFFFF' }}>
+            <h1 style={{ margin: 0, fontSize: isMobile ? '18px' : '22px', fontWeight: 800, letterSpacing: '-0.3px', color: '#FFFFFF' }}>
               WhatsApp Business Management
             </h1>
-            <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#94A3B8' }}>
+            <p style={{ margin: '4px 0 0', fontSize: isMobile ? '12px' : '13px', color: '#94A3B8' }}>
               Centralized GharKaPaisa official number communication, role-based dispatch & Meta Cloud API audit logs
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: isMobile ? '100%' : 'auto' }}>
           <button
             onClick={() => openSendModalWithData()}
             style={{
@@ -394,8 +411,10 @@ export default function SuperAdminWhatsApp() {
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '8px',
-              boxShadow: '0 2px 10px rgba(5, 150, 105, 0.3)'
+              boxShadow: '0 2px 10px rgba(5, 150, 105, 0.3)',
+              width: isMobile ? '100%' : 'auto'
             }}
           >
             <FaPaperPlane size={12} /> Send WhatsApp Message
@@ -409,37 +428,41 @@ export default function SuperAdminWhatsApp() {
         gap: '8px',
         borderBottom: '1px solid #E2E8F0',
         paddingBottom: '4px',
-        overflowX: 'auto'
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        minWidth: 0,
+        maxWidth: '100%'
       }}>
         {[
           { key: 'dashboard', label: 'Dashboard', icon: <FaChartLine /> },
-          { key: 'sender_policy', label: 'Sender & Message Policy', icon: <FaShieldAlt /> },
-          { key: 'templates', label: 'Approved Templates', icon: <FaFileAlt /> },
-          { key: 'consents', label: 'Marketing Consents', icon: <FaUserCheck /> },
-          { key: 'messages', label: 'All Messages & Audit Log', icon: <FaEnvelopeOpenText /> },
+          { key: 'sender_policy', label: 'Sender & Policy', icon: <FaShieldAlt /> },
+          { key: 'templates', label: 'Templates', icon: <FaFileAlt /> },
+          { key: 'consents', label: 'Consents', icon: <FaUserCheck /> },
+          { key: 'messages', label: 'Audit Log', icon: <FaEnvelopeOpenText /> },
           { key: 'reports', label: 'Delivery Reports', icon: <FaCheckDouble /> },
-          { key: 'webhooks', label: 'Webhook & Diagnostics', icon: <FaServer /> },
-          { key: 'settings', label: 'WhatsApp Settings', icon: <FaCog /> }
+          { key: 'webhooks', label: 'Webhooks', icon: <FaServer /> },
+          { key: 'settings', label: 'Settings', icon: <FaCog /> }
         ].map(tab => (
-
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             style={{
-              padding: '10px 18px',
+              padding: isMobile ? '8px 14px' : '10px 18px',
               borderRadius: '10px',
               border: 'none',
               background: activeTab === tab.key ? '#FFFFFF' : 'transparent',
               color: activeTab === tab.key ? '#059669' : '#64748B',
               fontWeight: 800,
-              fontSize: '13.5px',
+              fontSize: isMobile ? '12.5px' : '13.5px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
+              gap: '6px',
               boxShadow: activeTab === tab.key ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
               borderBottom: activeTab === tab.key ? '2px solid #059669' : 'none',
-              transition: 'all 0.15s ease'
+              transition: 'all 0.15s ease',
+              flexShrink: 0,
+              whiteSpace: 'nowrap'
             }}
           >
             {tab.icon}
@@ -1103,16 +1126,19 @@ export default function SuperAdminWhatsApp() {
             background: '#FFFFFF',
             borderRadius: '16px',
             width: '100%',
-            maxWidth: '620px',
-            padding: '24px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
+            maxWidth: isMobile ? '92vw' : '620px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            padding: isMobile ? '16px' : '24px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+            boxSizing: 'border-box'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
               <div>
                 <span style={{ background: '#EFF6FF', color: '#1D4ED8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase' }}>
                   {selectedTemplateInspection.template_category}
                 </span>
-                <h3 style={{ margin: '4px 0 0', fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>
+                <h3 style={{ margin: '4px 0 0', fontSize: isMobile ? '16px' : '18px', fontWeight: 800, color: '#0F172A' }}>
                   Template: {selectedTemplateInspection.template_name}
                 </h3>
               </div>
@@ -1122,8 +1148,8 @@ export default function SuperAdminWhatsApp() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#F8FAFC', padding: '14px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                <div><span style={{ color: '#64748B', fontSize: '11px', textTransform: 'uppercase', fontWeight: 700 }}>Meta Template Name</span><div style={{ fontWeight: 800, color: '#0F172A' }}>{selectedTemplateInspection.template_name}</div></div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px', background: '#F8FAFC', padding: '14px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                <div><span style={{ color: '#64748B', fontSize: '11px', textTransform: 'uppercase', fontWeight: 700 }}>Meta Template Name</span><div style={{ fontWeight: 800, color: '#0F172A', wordBreak: 'break-all' }}>{selectedTemplateInspection.template_name}</div></div>
                 <div><span style={{ color: '#64748B', fontSize: '11px', textTransform: 'uppercase', fontWeight: 700 }}>Language</span><div style={{ fontWeight: 800, color: '#0F172A' }}>English (en)</div></div>
                 <div><span style={{ color: '#64748B', fontSize: '11px', textTransform: 'uppercase', fontWeight: 700 }}>Header Type</span><div style={{ fontWeight: 800, color: '#059669' }}>● Text Header</div></div>
                 <div><span style={{ color: '#64748B', fontSize: '11px', textTransform: 'uppercase', fontWeight: 700 }}>Header Text</span><div style={{ fontWeight: 800, color: '#0F172A' }}>{selectedTemplateInspection.header_content || 'GharKaPaisa'}</div></div>
@@ -1131,7 +1157,7 @@ export default function SuperAdminWhatsApp() {
 
               <div>
                 <span style={{ color: '#64748B', fontWeight: 700, display: 'block', marginBottom: '6px' }}>Message Body Text</span>
-                <div style={{ background: '#F1F5F9', padding: '12px 16px', borderRadius: '10px', border: '1px solid #CBD5E1', color: '#0F172A', lineHeight: '1.5', fontWeight: 500, whiteSpace: 'pre-line' }}>
+                <div style={{ background: '#F1F5F9', padding: '12px 16px', borderRadius: '10px', border: '1px solid #CBD5E1', color: '#0F172A', lineHeight: '1.5', fontWeight: 500, whiteSpace: 'pre-line', wordBreak: 'break-word' }}>
                   {selectedTemplateInspection.body}
                 </div>
               </div>
@@ -1502,7 +1528,7 @@ export default function SuperAdminWhatsApp() {
             </p>
           </div>
 
-          <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '650px' }}>
+          <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '650px', width: '100%' }}>
             <div>
               <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                 Business Display Name
@@ -1511,11 +1537,11 @@ export default function SuperAdminWhatsApp() {
                 type="text"
                 value={settingsForm.business_name}
                 onChange={(e) => setSettingsForm({ ...settingsForm, business_name: e.target.value })}
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13.5px' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13.5px', boxSizing: 'border-box' }}
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                   Official Phone Number
@@ -1524,7 +1550,7 @@ export default function SuperAdminWhatsApp() {
                   type="text"
                   value={settingsForm.phone_number}
                   onChange={(e) => setSettingsForm({ ...settingsForm, phone_number: e.target.value })}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13.5px' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13.5px', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -1537,12 +1563,12 @@ export default function SuperAdminWhatsApp() {
                   value={settingsForm.phone_number_id}
                   onChange={(e) => setSettingsForm({ ...settingsForm, phone_number_id: e.target.value })}
                   placeholder="e.g. 109283746592817"
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13.5px' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13.5px', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                   WhatsApp Business Account (WABA) ID
@@ -1552,7 +1578,7 @@ export default function SuperAdminWhatsApp() {
                   value={settingsForm.waba_id}
                   onChange={(e) => setSettingsForm({ ...settingsForm, waba_id: e.target.value })}
                   placeholder="e.g. 293847561029384"
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13.5px' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13.5px', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -1565,7 +1591,7 @@ export default function SuperAdminWhatsApp() {
                   value={settingsForm.meta_app_id}
                   onChange={(e) => setSettingsForm({ ...settingsForm, meta_app_id: e.target.value })}
                   placeholder="e.g. 987654321098765"
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13.5px' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13.5px', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
@@ -1578,7 +1604,7 @@ export default function SuperAdminWhatsApp() {
                 type="text"
                 value={settingsForm.webhook_verify_token}
                 onChange={(e) => setSettingsForm({ ...settingsForm, webhook_verify_token: e.target.value })}
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13.5px' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13.5px', boxSizing: 'border-box' }}
               />
             </div>
 
@@ -1643,9 +1669,12 @@ export default function SuperAdminWhatsApp() {
             background: '#FFFFFF',
             borderRadius: '16px',
             width: '100%',
-            maxWidth: '550px',
-            padding: '24px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
+            maxWidth: isMobile ? '92vw' : '550px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            padding: isMobile ? '16px' : '24px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+            boxSizing: 'border-box'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
@@ -1687,7 +1716,7 @@ export default function SuperAdminWhatsApp() {
 
               <div>
                 <span style={{ color: '#64748B', display: 'block', marginBottom: '4px' }}>Message Body Sent</span>
-                <div style={{ background: '#ECE5DD', padding: '12px', borderRadius: '8px', border: '1px solid #D1D5DB', whiteSpace: 'pre-line' }}>
+                <div style={{ background: '#ECE5DD', padding: '12px', borderRadius: '8px', border: '1px solid #D1D5DB', whiteSpace: 'pre-line', wordBreak: 'break-word' }}>
                   {selectedMessageDetails.message_body}
                 </div>
               </div>
@@ -1712,8 +1741,11 @@ export default function SuperAdminWhatsApp() {
             background: '#FFFFFF',
             borderRadius: '16px',
             width: '100%',
-            maxWidth: '560px',
-            padding: '24px'
+            maxWidth: isMobile ? '92vw' : '560px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            padding: isMobile ? '16px' : '24px',
+            boxSizing: 'border-box'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>Create Approved WhatsApp Template</h3>
@@ -1731,7 +1763,7 @@ export default function SuperAdminWhatsApp() {
                   value={newTemplateForm.template_name}
                   onChange={(e) => setNewTemplateForm({ ...newTemplateForm, template_name: e.target.value })}
                   required
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -1740,7 +1772,7 @@ export default function SuperAdminWhatsApp() {
                 <select
                   value={newTemplateForm.template_category}
                   onChange={(e) => setNewTemplateForm({ ...newTemplateForm, template_category: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
                 >
                   <option value="kyc">KYC Verification</option>
                   <option value="application">Application Lifecycle</option>
@@ -1759,7 +1791,7 @@ export default function SuperAdminWhatsApp() {
                   value={newTemplateForm.body}
                   onChange={(e) => setNewTemplateForm({ ...newTemplateForm, body: e.target.value })}
                   required
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -1770,7 +1802,7 @@ export default function SuperAdminWhatsApp() {
                   placeholder="e.g. customer_name, application_id"
                   value={newTemplateForm.variables}
                   onChange={(e) => setNewTemplateForm({ ...newTemplateForm, variables: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1' }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', boxSizing: 'border-box' }}
                 />
               </div>
 

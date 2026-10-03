@@ -312,8 +312,71 @@ export default function ManageDirectLeads() {
           <div style={{ textAlign: "center", padding: "50px", color: C.textLight, fontSize: "14.5px" }}>
             No direct leads found.
           </div>
+        ) : isMobile ? (
+          /* Mobile View: Responsive Lead Cards */
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px", padding: "12px" }}>
+            {leads.map((lead) => {
+              const catLabel = !lead.category || lead.category === 'credit_card' ? 'Credit Card' : (lead.category === 'insurance' ? 'Insurance' : String(lead.category).replace(/_/g, ' '));
+              return (
+                <div key={lead.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: "14px", padding: "14px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: "15px", color: C.text }}>{lead.customer_name}</div>
+                      <div style={{ fontSize: "11.5px", color: C.teal, fontWeight: 700, marginTop: "2px" }}>ID: LEAD-{String(lead.id).slice(0, 8)}</div>
+                      <div style={{ color: C.textLight, fontSize: "12px", marginTop: "2px", display: "flex", alignItems: "center", gap: "4px" }}>
+                        <FaMobileAlt size={11} /> <span>{lead.mobile}</span>
+                      </div>
+                    </div>
+                    <span style={{ fontSize: "10.5px", fontWeight: 800, background: `${C.primary}15`, color: C.primary, padding: "3px 8px", borderRadius: "8px", textTransform: "uppercase" }}>
+                      {catLabel}
+                    </span>
+                  </div>
+
+                  <div style={{ background: C.bgSecondary, borderRadius: "10px", padding: "10px", fontSize: "12px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <div><span style={{ color: C.textLight }}>Product: </span><strong style={{ color: C.text }}>{lead.card_name || 'Standard Lead'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Bank: </span><strong style={{ color: C.teal }}>{lead.bank_name || 'Partner Bank'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Date: </span><span style={{ color: C.textMid }}>{new Date(lead.created_at).toLocaleDateString("en-IN", { day: '2-digit', month: 'short', year: 'numeric' })}</span></div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+                    <select
+                      value={lead.status || 'verified'}
+                      onChange={(e) => handleStatusUpdate(lead.id, e.target.value)}
+                      style={{
+                        padding: "8px 10px", borderRadius: "8px",
+                        border: `1px solid ${C.border}`, background: C.inputBg,
+                        color: C.text, fontSize: "12px", fontWeight: 700, cursor: "pointer", flex: 1
+                      }}
+                    >
+                      <option value="verified">● Verified</option>
+                      <option value="contacted">● Contacted</option>
+                      <option value="converted">● Converted</option>
+                      <option value="rejected">● Rejected</option>
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={() => setWhatsAppData({
+                        recipientMobile: lead.mobile,
+                        recipientName: lead.customer_name,
+                        leadId: lead.id,
+                        initialTemplateCategory: 'lead'
+                      })}
+                      style={{
+                        background: '#25D366', color: '#FFFFFF', border: 'none',
+                        borderRadius: "8px", padding: "8px 14px", fontSize: "12px", fontWeight: 800,
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+                      }}
+                    >
+                      <FaWhatsapp size={14} /> WhatsApp
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
+          <div style={{ overflowX: "auto", width: "100%", WebkitOverflowScrolling: "touch" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
               <thead>
                 <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>

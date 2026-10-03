@@ -9,6 +9,14 @@ export default function ManagePartners() {
   const S = makeS(C);
   const user = useAuthStore((state) => state.user);
 
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Listing State (Two Tables: New Onboarding Requests vs Processed Partners)
   const [partnersNew, setPartnersNew] = useState([]);
   const [partnersProcessed, setPartnersProcessed] = useState([]);
@@ -684,11 +692,11 @@ export default function ManagePartners() {
       {selectedPartner && (
         <div style={{
           position: "fixed", top: 0, left: 0, width: "100%", height: "100%", zIndex: 1000,
-          background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", padding: "20px"
+          background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", padding: isMobile ? "12px" : "20px"
         }}>
           <div style={{
             background: C.card, borderRadius: "20px", border: `1px solid ${C.border}`,
-            width: "100%", maxWidth: "680px", maxHeight: "90%", overflowY: "auto", padding: "24px", position: "relative"
+            width: "100%", maxWidth: isMobile ? "92vw" : "680px", maxHeight: "90vh", overflowY: "auto", padding: isMobile ? "16px" : "24px", position: "relative", boxSizing: "border-box"
           }}>
             {/* Close */}
             <button
@@ -698,7 +706,7 @@ export default function ManagePartners() {
               <Icons.x size={20} />
             </button>
 
-            <h3 style={{ fontSize: "18px", fontWeight: 800, color: C.text, marginBottom: "4px" }}>
+            <h3 style={{ fontSize: isMobile ? "16px" : "18px", fontWeight: 800, color: C.text, marginBottom: "4px" }}>
               Partner Details: {selectedPartner.first_name} {selectedPartner.last_name}
             </h3>
             <p style={{ fontSize: "12px", color: C.textLight, marginBottom: "20px" }}>Code: {selectedPartner.Partner_code || selectedPartner.partner_code}</p>
@@ -708,10 +716,10 @@ export default function ManagePartners() {
             ) : profile ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                 {/* Info block */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", background: C.bgSecondary, padding: "14px", borderRadius: "12px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "12px", background: C.bgSecondary, padding: "14px", borderRadius: "12px" }}>
                   <div>
                     <div style={{ fontSize: "11px", color: C.textLight }}>Email Address</div>
-                    <div style={{ fontSize: "13.5px", fontWeight: 600, color: C.text }}>{profile.email}</div>
+                    <div style={{ fontSize: "13.5px", fontWeight: 600, color: C.text, wordBreak: "break-all" }}>{profile.email}</div>
                   </div>
                   <div>
                     <div style={{ fontSize: "11px", color: C.textLight }}>Mobile Phone</div>
@@ -733,7 +741,7 @@ export default function ManagePartners() {
                 <div>
                   <h4 style={{ fontSize: "14px", fontWeight: 700, color: C.text, marginBottom: "8px" }}>Bank Account Details</h4>
                   {profile.account_number ? (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", background: C.card, border: `1px solid ${C.border}`, padding: "12px", borderRadius: "10px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "10px", background: C.card, border: `1px solid ${C.border}`, padding: "12px", borderRadius: "10px" }}>
                       <div>
                         <div style={{ fontSize: "11px", color: C.textLight }}>Bank Name</div>
                         <div style={{ fontSize: "13px", fontWeight: 600, color: C.text }}>{profile.bank_name}</div>

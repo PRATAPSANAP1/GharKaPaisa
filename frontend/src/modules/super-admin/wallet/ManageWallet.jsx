@@ -660,23 +660,7 @@ export default function ManageWallet() {
           </div>
         </div>
 
-        {/* Card 3: Total Approved Incentive */}
-        <div onClick={() => { setActiveTab('employee_incentives'); setIncentiveSubTab('paid'); }} style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer', transition: 'transform 0.15s ease' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Approved Incentive</span>
-            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#F3E8FF', color: '#9333EA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MdAttachMoney size={22} /></div>
-          </div>
-          <div>
-            <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#9333EA', margin: 0, letterSpacing: '-0.5px' }}>
-              ₹{(parseFloat(employeeIncentives.kpi?.total_paid || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-            </h3>
-            <span style={{ fontSize: '10.5px', color: '#9333EA', fontWeight: 700, marginTop: '4px', display: 'block' }}>
-              Released Incentives
-            </span>
-          </div>
-        </div>
-
-        {/* Card 4: Total Withdrawal Amount */}
+        {/* Card 3: Total Withdrawal Amount */}
         <div onClick={() => { setActiveTab('withdrawals'); setWithdrawalSubTab('approved'); }} style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer', transition: 'transform 0.15s ease' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Total Withdrawal</span>
@@ -737,7 +721,6 @@ export default function ManageWallet() {
       }}>
         {[
           { id: 'commissions', label: 'Commission', icon: <MdLayers size={18} /> },
-          { id: 'employee_incentives', label: 'Employee Incentives', icon: <MdAttachMoney size={18} /> },
           { id: 'withdrawals', label: 'Withdrawal', icon: <MdAccountBalanceWallet size={18} /> },
           { id: 'add_funds', label: 'Add Funds Requests', icon: <MdAddCard size={18} /> },
           { id: 'team_commission', label: 'Team Commission Hierarchy', icon: <MdPeople size={18} /> },
@@ -777,155 +760,6 @@ export default function ManageWallet() {
 
       {/* ── ACTIVE TAB CONTENT (OPENED DIRECTLY BELOW THE BUTTON ROW) ── */}
       <div>
-
-        {/* TAB: Employee Incentives */}
-        {activeTab === 'employee_incentives' && (
-          <div style={{ ...S.card, padding: '20px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-              <div>
-                <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <MdAttachMoney style={{ color: C.teal }} size={20} /> Employee Incentive Management
-                </h3>
-                <span style={{ fontSize: '12px', color: C.textLight }}>Review and release employee card incentive payouts and target bonuses</span>
-              </div>
-            </div>
-
-            {/* Sub-Tabs: Pending Incentives vs Approved & Paid */}
-            <div style={{ display: 'flex', gap: '10px', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
-              <button
-                onClick={() => setIncentiveSubTab('pending')}
-                style={{
-                  padding: '8px 18px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: incentiveSubTab === 'pending' ? C.teal : (isDark ? '#27272A' : '#F1F5F9'),
-                  color: incentiveSubTab === 'pending' ? '#FFF' : C.text,
-                  fontWeight: 800,
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                <span>Pending Payouts</span>
-                <span style={{ background: incentiveSubTab === 'pending' ? 'rgba(255,255,255,0.25)' : (isDark ? '#3F3F46' : '#E2E8F0'), padding: '2px 8px', borderRadius: '12px', fontSize: '11px' }}>
-                  {employeeIncentives.pending.length}
-                </span>
-              </button>
-
-              <button
-                onClick={() => setIncentiveSubTab('paid')}
-                style={{
-                  padding: '8px 18px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: incentiveSubTab === 'paid' ? C.teal : (isDark ? '#27272A' : '#F1F5F9'),
-                  color: incentiveSubTab === 'paid' ? '#FFF' : C.text,
-                  fontWeight: 800,
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                <span>Approved & Paid</span>
-                <span style={{ background: incentiveSubTab === 'paid' ? 'rgba(255,255,255,0.25)' : (isDark ? '#3F3F46' : '#E2E8F0'), padding: '2px 8px', borderRadius: '12px', fontSize: '11px' }}>
-                  {employeeIncentives.paid.length}
-                </span>
-              </button>
-            </div>
-
-            {/* Sub-Tab 1: Pending Incentives Table */}
-            {incentiveSubTab === 'pending' && (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                  <thead>
-                    <tr style={{ borderBottom: `2px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
-                      <th style={{ padding: '10px 8px' }}>Incentive ID</th>
-                      <th style={{ padding: '10px 8px' }}>Employee</th>
-                      <th style={{ padding: '10px 8px' }}>Role</th>
-                      <th style={{ padding: '10px 8px' }}>Product / Card Details</th>
-                      <th style={{ padding: '10px 8px', textAlign: 'right' }}>Amount</th>
-                      <th style={{ padding: '10px 8px', textAlign: 'center' }}>Status</th>
-                      <th style={{ padding: '10px 8px', textAlign: 'center' }}>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {employeeIncentives.pending.length === 0 ? (
-                      <tr><td colSpan={7} style={{ textAlign: 'center', padding: '24px', color: C.textLight, fontWeight: 600 }}>No pending employee incentive payouts awaiting release</td></tr>
-                    ) : (
-                      employeeIncentives.pending.map((row, idx) => (
-                        <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
-                          <td style={{ padding: '12px 8px', fontWeight: 800, color: C.teal, fontFamily: 'monospace' }}>INC-{row.incentive_id?.slice(0, 6)}</td>
-                          <td style={{ padding: '12px 8px', fontWeight: 700 }}>
-                            <div>{row.employee_name}</div>
-                            <span style={{ fontSize: '10.5px', color: C.textLight }}>{row.emp_code}</span>
-                          </td>
-                          <td style={{ padding: '12px 8px', color: C.textLight }}>{row.role}</td>
-                          <td style={{ padding: '12px 8px', color: C.text }}>{row.product_name || 'Card Incentive'}</td>
-                          <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 900, color: C.text, fontSize: '13.5px' }}>₹{parseFloat(row.incentive_earned || 0).toLocaleString('en-IN')}</td>
-                          <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                            <span style={{ background: '#FEF3C7', color: '#B45309', padding: '4px 10px', borderRadius: '10px', fontWeight: 800, fontSize: '10.5px' }}>Pending Payout</span>
-                          </td>
-                          <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                            <button
-                              onClick={() => handleReleaseIncentivePayout(row.incentive_id)}
-                              disabled={actionLoading}
-                              style={{ background: '#10B981', color: '#FFF', border: 'none', borderRadius: '6px', padding: '6px 14px', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer' }}
-                            >
-                              Release Payout
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {/* Sub-Tab 2: Approved & Paid Incentives Table */}
-            {incentiveSubTab === 'paid' && (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                  <thead>
-                    <tr style={{ borderBottom: `2px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
-                      <th style={{ padding: '10px 8px' }}>Incentive ID</th>
-                      <th style={{ padding: '10px 8px' }}>Employee</th>
-                      <th style={{ padding: '10px 8px' }}>Role</th>
-                      <th style={{ padding: '10px 8px' }}>Product</th>
-                      <th style={{ padding: '10px 8px', textAlign: 'right' }}>Amount Paid</th>
-                      <th style={{ padding: '10px 8px', textAlign: 'center' }}>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {employeeIncentives.paid.length === 0 ? (
-                      <tr><td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: C.textLight, fontWeight: 600 }}>No approved/released incentive payouts found</td></tr>
-                    ) : (
-                      employeeIncentives.paid.map((row, idx) => (
-                        <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
-                          <td style={{ padding: '12px 8px', fontWeight: 800, color: C.teal, fontFamily: 'monospace' }}>INC-{row.incentive_id?.slice(0, 6)}</td>
-                          <td style={{ padding: '12px 8px', fontWeight: 700 }}>
-                            <div>{row.employee_name}</div>
-                            <span style={{ fontSize: '10.5px', color: C.textLight }}>{row.emp_code}</span>
-                          </td>
-                          <td style={{ padding: '12px 8px', color: C.textLight }}>{row.role}</td>
-                          <td style={{ padding: '12px 8px', color: C.text }}>{row.product_name || 'Card Incentive'}</td>
-                          <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 900, color: '#10B981', fontSize: '13.5px' }}>₹{parseFloat(row.incentive_earned || 0).toLocaleString('en-IN')}</td>
-                          <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                            <span style={{ background: '#DCFCE7', color: '#15803D', padding: '4px 10px', borderRadius: '10px', fontWeight: 800, fontSize: '10.5px' }}>Paid / Released</span>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* TAB 1: Withdrawal Settlements */}
         {activeTab === 'withdrawals' && (

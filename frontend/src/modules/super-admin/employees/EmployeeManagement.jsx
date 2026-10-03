@@ -1547,8 +1547,73 @@ export default function EmployeeManagement() {
                   })
                 )}
               </div>
+            ) : isMobile ? (
+              /* Mobile View: Responsive Employee Cards */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '12px' }}>
+                {loading ? (
+                  <div style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>Loading records...</div>
+                ) : displayedEmployees.length === 0 ? (
+                  <div style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>No employees found matching criteria.</div>
+                ) : displayedEmployees.map(emp => {
+                  const isSelected = drawerEmp && drawerEmp.id === emp.id;
+                  const empCode = emp.employee_code || emp.employee_id || emp.emp_code || emp.code || (emp.id ? String(emp.id).slice(0, 8) : 'N/A');
+
+                  return (
+                    <div 
+                      key={emp.id}
+                      onClick={() => setDrawerEmp(emp)}
+                      style={{
+                        background: isSelected ? `${C.teal}0F` : C.card,
+                        border: `1px solid ${isSelected ? C.teal : C.border}`,
+                        borderRadius: '14px',
+                        padding: '14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                        cursor: 'pointer',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.03)',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                        <div style={{
+                          width: '44px', height: '44px', borderRadius: '50%', background: `${C.teal}20`, color: C.teal,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '15px', flexShrink: 0,
+                          overflow: 'hidden', border: `1px solid ${C.teal}40`
+                        }}>
+                          {emp.profile_photo_url || emp.face_reference_url || emp.avatar_url || emp.photo ? (
+                            <img src={emp.profile_photo_url || emp.face_reference_url || emp.avatar_url || emp.photo} alt={emp.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            emp.full_name ? emp.full_name[0].toUpperCase() : 'E'
+                          )}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 900, color: C.text, fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{emp.full_name}</div>
+                          <div style={{ fontSize: '11.5px', color: C.teal, fontWeight: 800, marginTop: '2px' }}>{empCode}</div>
+                          <div style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 600, marginTop: '1px' }}>{emp.designation || 'Telecaller'}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
+                        <span 
+                          style={{ 
+                            padding: '3px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 800,
+                            background: emp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7',
+                            color: emp.activation_status === 'APPROVED' ? '#065F46' : '#92400E',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          {emp.activation_status === 'APPROVED' ? '● Active' : '● Pending'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
+              <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
                   <thead>
                     <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textMid, fontWeight: 700 }}>
@@ -4079,15 +4144,15 @@ export default function EmployeeManagement() {
               overflow: 'hidden',
               transition: 'all 0.25s ease',
               ...(isMobile ? {
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                width: '100%',
-                maxWidth: '100%',
-                maxHeight: '100vh',
-                borderRadius: '0px',
-                border: 'none'
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: 'calc(100% - 24px)',
+                maxWidth: '92vw',
+                maxHeight: '90vh',
+                borderRadius: '20px',
+                border: `1px solid ${C.border}`,
+                boxShadow: '0 20px 50px rgba(0,0,0,0.35)'
               } : {
                 top: 0,
                 right: 0,

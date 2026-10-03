@@ -227,8 +227,7 @@ const SuperAdminLayout = () => {
       title: "FINANCE",
       items: [
         { path: '/super-admin/wallet', label: 'Wallet & Settlements', icon: <Icons.wallet size={16} /> },
-        { path: '/super-admin/commissions', label: 'Partner Commissions', icon: <Icons.gift size={16} /> },
-        { path: '/super-admin/incentives', label: 'Employee Incentives', icon: <Icons.trending size={16} /> }
+        { path: '/super-admin/commissions', label: 'Partner Commissions', icon: <Icons.gift size={16} /> }
       ]
     },
     {
@@ -775,7 +774,7 @@ const SuperAdminLayout = () => {
       )}
 
       {/* ── MAIN CONTENT AREA ── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', paddingTop: isMobile ? '60px' : 0 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', minWidth: 0, maxWidth: '100%', paddingTop: isMobile ? '60px' : 0 }}>
         
         {/* Top Navbar Header */}
         {!isMobile && (
@@ -954,6 +953,9 @@ const SuperAdminLayout = () => {
           return (
             <main style={{ 
               flex: 1, 
+              minWidth: 0,
+              maxWidth: '100%',
+              overflowX: 'hidden',
               overflowY: isMessenger ? 'hidden' : 'auto', 
               padding: isMessenger 
                 ? (isMobile ? '0 0 calc(62px + env(safe-area-inset-bottom, 0px)) 0' : 0)

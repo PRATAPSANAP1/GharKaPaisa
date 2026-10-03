@@ -15,6 +15,14 @@ export default function AdminProfilePage() {
   const S = makeS(C);
   const location = useLocation();
   const navigate = useNavigate();
+
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
@@ -307,15 +315,25 @@ export default function AdminProfilePage() {
       )}
 
       {/* Main Multi-Tab Navigation */}
-      <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '20px', minWidth: 0, maxWidth: '100%' }}>
         
-        {/* Left Side Tab Buttons */}
-        <div style={{ width: '240px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {/* Tab Buttons Bar */}
+        <div style={{
+          width: isMobile ? '100%' : '240px',
+          flexShrink: 0,
+          display: 'flex',
+          flexDirection: isMobile ? 'row' : 'column',
+          gap: '8px',
+          overflowX: isMobile ? 'auto' : 'visible',
+          WebkitOverflowScrolling: 'touch',
+          paddingBottom: isMobile ? '4px' : 0,
+          minWidth: 0
+        }}>
           {[
             { id: 'profile', label: 'My Profile', icon: MdPerson, desc: 'Personal details & role' },
-            { id: 'account', label: 'Account & Razorpay', icon: MdAccountBalanceWallet, desc: 'RazorpayX, Add Money & Accounts' },
-            { id: 'settings', label: 'System Settings', icon: MdSettings, desc: 'Platform & payout rules' },
-            { id: 'security', label: 'Security & Password', icon: MdSecurity, desc: 'Password & account security' }
+            { id: 'account', label: 'Account & Razorpay', icon: MdAccountBalanceWallet, desc: 'RazorpayX & Accounts' },
+            { id: 'settings', label: 'System Settings', icon: MdSettings, desc: 'Platform & rules' },
+            { id: 'security', label: 'Security & Password', icon: MdSecurity, desc: 'Password security' }
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -328,9 +346,15 @@ export default function AdminProfilePage() {
                   navigate(`/super-admin/profile?tab=${tab.id}`, { replace: true });
                 }}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '12px', width: '100%',
-                  textAlign: 'left', padding: '14px 16px', borderRadius: '14px',
-                  fontWeight: 800, fontSize: '13.5px', border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px',
+                  width: isMobile ? 'auto' : '100%',
+                  flexShrink: 0,
+                  whiteSpace: 'nowrap',
+                  textAlign: 'left',
+                  padding: isMobile ? '10px 14px' : '14px 16px',
+                  borderRadius: '14px',
+                  fontWeight: 800, fontSize: isMobile ? '12.5px' : '13.5px',
+                  border: 'none', cursor: 'pointer',
                   transition: 'all 0.15s ease',
                   background: isActive ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : C.card,
                   color: isActive ? '#fff' : C.text,
@@ -338,12 +362,14 @@ export default function AdminProfilePage() {
                   border: isActive ? 'none' : `1px solid ${C.border}`
                 }}
               >
-                <Icon size={20} style={{ color: isActive ? '#fff' : C.teal }} />
+                <Icon size={isMobile ? 18 : 20} style={{ color: isActive ? '#fff' : C.teal }} />
                 <div>
                   <div style={{ lineHeight: 1.2 }}>{tab.label}</div>
-                  <span style={{ fontSize: '11px', fontWeight: 600, opacity: isActive ? 0.85 : 0.6, display: 'block', marginTop: '2px' }}>
-                    {tab.desc}
-                  </span>
+                  {!isMobile && (
+                    <span style={{ fontSize: '11px', fontWeight: 600, opacity: isActive ? 0.85 : 0.6, display: 'block', marginTop: '2px' }}>
+                      {tab.desc}
+                    </span>
+                  )}
                 </div>
               </button>
             );
@@ -351,20 +377,20 @@ export default function AdminProfilePage() {
         </div>
 
         {/* Right Side Content View Panel */}
-        <div style={{ flex: 1, minWidth: '320px' }}>
+        <div style={{ flex: 1, minWidth: 0, maxWidth: '100%' }}>
           
           {/* TAB 1: MY PROFILE */}
           {activeTab === 'profile' && (
-            <div style={{ ...S.card, padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ ...S.card, padding: isMobile ? '16px' : '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0, paddingBottom: '12px', borderBottom: `1px solid ${C.border}` }}>
                 Administrator Personal Profile
               </h3>
 
               <form onSubmit={handleProfileSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
                   <div>
                     <label style={S.label}>Email Address (System Primary)</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '10px 14px', color: C.textLight, fontSize: '13.5px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '10px 14px', color: C.textLight, fontSize: '13.5px', wordBreak: 'break-all' }}>
                       <MdEmail size={16} /> {user?.email}
                     </div>
                   </div>
@@ -376,7 +402,7 @@ export default function AdminProfilePage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
                   <div>
                     <label style={S.label}>Full Name *</label>
                     <div style={{ position: 'relative' }}>

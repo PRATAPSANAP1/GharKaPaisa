@@ -54,6 +54,13 @@ const DEFAULT_SCHEDULE = {
 };
 
 export default function AdminWorkingHours() {
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
   const [defaultConfig, setDefaultConfig] = useState({ start_time: '09:30 AM', end_time: '08:00 PM', is_enabled: true });
@@ -360,7 +367,7 @@ export default function AdminWorkingHours() {
   });
 
   return (
-    <div style={{ padding: '24px', backgroundColor: '#F8FAFC', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
+    <div style={{ padding: isMobile ? '12px' : '24px', backgroundColor: '#F8FAFC', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
       {/* Toast */}
       {toast && (
         <div style={{
@@ -377,60 +384,103 @@ export default function AdminWorkingHours() {
       )}
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: '16px', marginBottom: '20px' }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Clock style={{ color: '#4F46E5' }} size={28} />
-            Admin Working Hours & Holiday Management
+          <h1 style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 800, color: '#0F172A', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Clock style={{ color: '#4F46E5' }} size={isMobile ? 24 : 28} />
+            Working Hours & Holiday Schedule
           </h1>
-          <p style={{ margin: '4px 0 0 0', color: '#64748B', fontSize: '14px' }}>
-            Configure day-wise weekly schedules, holiday calendars, multi-role/designation policies, and operational extensions.
+          <p style={{ margin: '4px 0 0 0', color: '#64748B', fontSize: isMobile ? '12.5px' : '14px' }}>
+            Day-wise schedules, holiday calendars, multi-role policies, and operational extensions.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
           <button
             onClick={handleOpenNewPolicy}
             style={{
-              display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: isMobile ? '8px 12px' : '10px 18px',
               backgroundColor: '#4F46E5', color: '#FFFFFF', border: 'none', borderRadius: '10px',
-              fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(79, 70, 229, 0.25)'
+              fontWeight: 700, cursor: 'pointer', fontSize: isMobile ? '12px' : '13.5px', flex: isMobile ? '1 1 140px' : 'none',
+              boxShadow: '0 4px 12px rgba(79, 70, 229, 0.25)'
             }}
           >
-            <PlusCircle size={18} />
-            Add Day Schedule Policy
+            <PlusCircle size={16} />
+            <span>+ Policy</span>
           </button>
           <button
             onClick={handleOpenNewHoliday}
             style={{
-              display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: isMobile ? '8px 12px' : '10px 18px',
               backgroundColor: '#0284C7', color: '#FFFFFF', border: 'none', borderRadius: '10px',
-              fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)'
+              fontWeight: 700, cursor: 'pointer', fontSize: isMobile ? '12px' : '13.5px', flex: isMobile ? '1 1 120px' : 'none',
+              boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)'
             }}
           >
-            <Calendar size={18} />
-            Add Holiday
+            <Calendar size={16} />
+            <span>+ Holiday</span>
           </button>
           <button
             onClick={() => setShowExtendModal(true)}
             style={{
-              display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: isMobile ? '8px 12px' : '10px 18px',
               backgroundColor: '#10B981', color: '#FFFFFF', border: 'none', borderRadius: '10px',
-              fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
+              fontWeight: 700, cursor: 'pointer', fontSize: isMobile ? '12px' : '13.5px', flex: isMobile ? '1 1 100%' : 'none',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
             }}
           >
-            <Zap size={18} />
-            Extend Today's Hours
+            <Zap size={16} />
+            <span>Extend Today</span>
           </button>
         </div>
       </div>
 
+      {/* Summary KPI Cards Grid */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+        gap: isMobile ? '10px' : '14px',
+        marginBottom: '20px'
+      }}>
+        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px' }}>
+          <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 800, textTransform: 'uppercase' }}>Active Policies</div>
+          <div style={{ fontSize: isMobile ? '18px' : '22px', fontWeight: 900, color: '#4F46E5', marginTop: '4px' }}>{policies.length}</div>
+          <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>Weekly shift schedules</div>
+        </div>
+
+        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px' }}>
+          <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 800, textTransform: 'uppercase' }}>Holiday Rules</div>
+          <div style={{ fontSize: isMobile ? '18px' : '22px', fontWeight: 900, color: '#0284C7', marginTop: '4px' }}>{holidays.length}</div>
+          <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>Configured calendar days</div>
+        </div>
+
+        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px' }}>
+          <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 800, textTransform: 'uppercase' }}>Monitored Staff</div>
+          <div style={{ fontSize: isMobile ? '18px' : '22px', fontWeight: 900, color: '#10B981', marginTop: '4px' }}>{users.length}</div>
+          <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>Active employees & admins</div>
+        </div>
+
+        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px' }}>
+          <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 800, textTransform: 'uppercase' }}>Extensions Today</div>
+          <div style={{ fontSize: isMobile ? '18px' : '22px', fontWeight: 900, color: '#D97706', marginTop: '4px' }}>{extensionsToday.length}</div>
+          <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>Active shift overrides</div>
+        </div>
+      </div>
+
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '12px', borderBottom: '2px solid #E2E8F0', marginBottom: '24px' }}>
+      <div style={{
+        display: 'flex',
+        gap: '8px',
+        borderBottom: '2px solid #E2E8F0',
+        marginBottom: '20px',
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        paddingBottom: '4px'
+      }}>
         {[
-          { id: 'policies', label: 'Weekly Schedules & Policies', icon: Clock, count: policies.length },
-          { id: 'holidays', label: 'Holiday Management', icon: Calendar, count: holidays.length },
-          { id: 'list', label: 'Restricted Staff & Status', icon: Users, count: users.length },
-          { id: 'history', label: 'Extension History', icon: History, count: historyList.length }
+          { id: 'policies', label: 'Weekly Policies', icon: Clock, count: policies.length },
+          { id: 'holidays', label: 'Holidays', icon: Calendar, count: holidays.length },
+          { id: 'list', label: 'Staff & Status', icon: Users, count: users.length },
+          { id: 'history', label: 'History', icon: History, count: historyList.length }
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -439,18 +489,18 @@ export default function AdminWorkingHours() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               style={{
-                display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 18px',
+                display: 'flex', alignItems: 'center', gap: '6px', padding: isMobile ? '10px 12px' : '12px 18px',
                 border: 'none', background: 'none', borderBottom: isActive ? '3px solid #4F46E5' : '3px solid transparent',
                 color: isActive ? '#4F46E5' : '#64748B', fontWeight: isActive ? 800 : 600,
-                cursor: 'pointer', fontSize: '15px'
+                cursor: 'pointer', fontSize: isMobile ? '13px' : '14.5px', whiteSpace: 'nowrap', flexShrink: 0
               }}
             >
-              <Icon size={18} />
-              {tab.label}
+              <Icon size={16} />
+              <span>{tab.label}</span>
               <span style={{
                 backgroundColor: isActive ? '#EEF2FF' : '#F1F5F9',
                 color: isActive ? '#4F46E5' : '#64748B',
-                fontSize: '12px', padding: '2px 8px', borderRadius: '12px'
+                fontSize: '11px', padding: '1px 6px', borderRadius: '10px', fontWeight: 800
               }}>
                 {tab.count}
               </span>
@@ -540,75 +590,115 @@ export default function AdminWorkingHours() {
       {/* TAB 2: HOLIDAY MANAGEMENT */}
       {!loading && activeTab === 'holidays' && (
         <div>
-          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
-                  <th style={{ padding: '14px 20px', fontWeight: 700 }}>Holiday Name</th>
-                  <th style={{ padding: '14px 20px', fontWeight: 700 }}>Date</th>
-                  <th style={{ padding: '14px 20px', fontWeight: 700 }}>Scope</th>
-                  <th style={{ padding: '14px 20px', fontWeight: 700 }}>Targeting</th>
-                  <th style={{ padding: '14px 20px', fontWeight: 700 }}>Status</th>
-                  <th style={{ padding: '14px 20px', fontWeight: 700, textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {holidays.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: '#94A3B8' }}>
-                      No holiday rules configured yet. Click <strong>Add Holiday</strong> above to create one.
-                    </td>
+          {isMobile ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {holidays.length === 0 ? (
+                <div style={{ padding: '30px', textAlign: 'center', color: '#94A3B8', background: '#FFFFFF', borderRadius: '12px' }}>
+                  No holiday rules configured yet.
+                </div>
+              ) : (
+                holidays.map(h => (
+                  <div key={h.id} style={{ background: '#FFFFFF', borderRadius: '14px', padding: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A' }}>{h.holiday_name}</div>
+                        <div style={{ fontSize: '12px', color: '#4F46E5', fontWeight: 700, marginTop: '2px' }}>📅 {h.holiday_date ? h.holiday_date.split('T')[0] : ''}</div>
+                      </div>
+                      <span style={{
+                        fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '8px',
+                        backgroundColor: h.is_active ? '#DCFCE7' : '#FEE2E2',
+                        color: h.is_active ? '#15803D' : '#B91C1C'
+                      }}>
+                        {h.is_active ? '● Active' : '● Inactive'}
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: '12px', color: '#64748B', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>Scope: <strong>{h.scope_type}</strong></span>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => handleEditHoliday(h)} style={{ padding: '6px 10px', background: '#EEF2FF', color: '#4F46E5', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}>
+                          Edit
+                        </button>
+                        <button onClick={() => handleDeleteHolidayClick(h.id)} style={{ padding: '6px 10px', background: '#FEF2F2', color: '#EF4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}>
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          ) : (
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
+                    <th style={{ padding: '14px 20px', fontWeight: 700 }}>Holiday Name</th>
+                    <th style={{ padding: '14px 20px', fontWeight: 700 }}>Date</th>
+                    <th style={{ padding: '14px 20px', fontWeight: 700 }}>Scope</th>
+                    <th style={{ padding: '14px 20px', fontWeight: 700 }}>Targeting</th>
+                    <th style={{ padding: '14px 20px', fontWeight: 700 }}>Status</th>
+                    <th style={{ padding: '14px 20px', fontWeight: 700, textAlign: 'right' }}>Actions</th>
                   </tr>
-                ) : (
-                  holidays.map(h => (
-                    <tr key={h.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                      <td style={{ padding: '14px 20px', fontWeight: 700, color: '#0F172A' }}>{h.holiday_name}</td>
-                      <td style={{ padding: '14px 20px', color: '#334155' }}>{h.holiday_date ? h.holiday_date.split('T')[0] : ''}</td>
-                      <td style={{ padding: '14px 20px' }}>
-                        <span style={{
-                          fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '6px',
-                          backgroundColor: h.scope_type === 'GLOBAL' ? '#EEF2FF' : '#F0FDF4',
-                          color: h.scope_type === 'GLOBAL' ? '#4F46E5' : '#166534'
-                        }}>
-                          {h.scope_type}
-                        </span>
-                      </td>
-                      <td style={{ padding: '14px 20px', color: '#64748B', fontSize: '13px' }}>
-                        {h.scope_type === 'ROLE' && (h.roles?.join(', ') || 'All Roles')}
-                        {h.scope_type === 'DESIGNATION' && (h.designations?.join(', ') || 'All Designations')}
-                        {h.scope_type === 'USER' && (h.user_name || h.user_email)}
-                        {h.scope_type === 'GLOBAL' && 'All Staff (Global)'}
-                      </td>
-                      <td style={{ padding: '14px 20px' }}>
-                        <span style={{
-                          fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '12px',
-                          backgroundColor: h.is_active ? '#DCFCE7' : '#FEE2E2',
-                          color: h.is_active ? '#15803D' : '#B91C1C'
-                        }}>
-                          {h.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '14px 20px', textAlign: 'right' }}>
-                        <button onClick={() => handleEditHoliday(h)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4F46E5', marginRight: '12px' }}>
-                          <Edit2 size={16} />
-                        </button>
-                        <button onClick={() => handleDeleteHolidayClick(h.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444' }}>
-                          <Trash2 size={16} />
-                        </button>
+                </thead>
+                <tbody>
+                  {holidays.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: '#94A3B8' }}>
+                        No holiday rules configured yet. Click <strong>Add Holiday</strong> above to create one.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ) : (
+                    holidays.map(h => (
+                      <tr key={h.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                        <td style={{ padding: '14px 20px', fontWeight: 700, color: '#0F172A' }}>{h.holiday_name}</td>
+                        <td style={{ padding: '14px 20px', color: '#334155' }}>{h.holiday_date ? h.holiday_date.split('T')[0] : ''}</td>
+                        <td style={{ padding: '14px 20px' }}>
+                          <span style={{
+                            fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '6px',
+                            backgroundColor: h.scope_type === 'GLOBAL' ? '#EEF2FF' : '#F0FDF4',
+                            color: h.scope_type === 'GLOBAL' ? '#4F46E5' : '#166534'
+                          }}>
+                            {h.scope_type}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px 20px', color: '#64748B', fontSize: '13px' }}>
+                          {h.scope_type === 'ROLE' && (h.roles?.join(', ') || 'All Roles')}
+                          {h.scope_type === 'DESIGNATION' && (h.designations?.join(', ') || 'All Designations')}
+                          {h.scope_type === 'USER' && (h.user_name || h.user_email)}
+                          {h.scope_type === 'GLOBAL' && 'All Staff (Global)'}
+                        </td>
+                        <td style={{ padding: '14px 20px' }}>
+                          <span style={{
+                            fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '12px',
+                            backgroundColor: h.is_active ? '#DCFCE7' : '#FEE2E2',
+                            color: h.is_active ? '#15803D' : '#B91C1C'
+                          }}>
+                            {h.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px 20px', textAlign: 'right' }}>
+                          <button onClick={() => handleEditHoliday(h)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4F46E5', marginRight: '12px' }}>
+                            <Edit2 size={16} />
+                          </button>
+                          <button onClick={() => handleDeleteHolidayClick(h.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444' }}>
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
       {/* TAB 3: RESTRICTED STAFF LIST */}
       {!loading && activeTab === 'list' && (
         <div>
-          <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '12px', marginBottom: '20px' }}>
             <div style={{ flex: 1, position: 'relative' }}>
               <Search size={18} style={{ position: 'absolute', left: '14px', top: '12px', color: '#94A3B8' }} />
               <input
@@ -627,7 +717,7 @@ export default function AdminWorkingHours() {
               onChange={e => setSelectedRole(e.target.value)}
               style={{
                 padding: '10px 16px', borderRadius: '10px', border: '1px solid #CBD5E1',
-                fontSize: '14px', backgroundColor: '#FFFFFF', outline: 'none'
+                fontSize: '14px', backgroundColor: '#FFFFFF', outline: 'none', width: isMobile ? '100%' : 'auto'
               }}
             >
               <option value="ALL">All Roles</option>
@@ -638,98 +728,178 @@ export default function AdminWorkingHours() {
             </select>
           </div>
 
-          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
-                  <th style={{ padding: '14px 20px', fontWeight: 700 }}>Staff User</th>
-                  <th style={{ padding: '14px 20px', fontWeight: 700 }}>Designation & Role</th>
-                  <th style={{ padding: '14px 20px', fontWeight: 700 }}>Base Hours</th>
-                  <th style={{ padding: '14px 20px', fontWeight: 700 }}>Effective End Time Today</th>
-                  <th style={{ padding: '14px 20px', fontWeight: 700 }}>Status</th>
-                  <th style={{ padding: '14px 20px', fontWeight: 700, textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map(u => (
-                  <tr key={u.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                    <td style={{ padding: '14px 20px' }}>
-                      <div style={{ fontWeight: 700, color: '#0F172A' }}>{u.user}</div>
-                      <div style={{ fontSize: '12px', color: '#64748B' }}>{u.email}</div>
-                    </td>
-                    <td style={{ padding: '14px 20px' }}>
-                      <div style={{ fontWeight: 600, color: '#334155' }}>{u.designation}</div>
-                      <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', backgroundColor: '#F1F5F9', color: '#475569' }}>
-                        {u.role}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 20px', fontWeight: 600, color: '#334155' }}>
-                      {u.startTime} - {u.endTime}
-                    </td>
-                    <td style={{ padding: '14px 20px' }}>
-                      <span style={{ fontWeight: 700, color: u.effectiveEndTime !== u.endTime ? '#059669' : '#0F172A' }}>
-                        {u.effectiveEndTime}
-                      </span>
-                      {u.activeExtension && (
-                        <span style={{ fontSize: '11px', marginLeft: '6px', color: '#059669', fontWeight: 700 }}>
-                          (Extended)
-                        </span>
-                      )}
-                    </td>
-                    <td style={{ padding: '14px 20px' }}>
+          {isMobile ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {filteredUsers.length === 0 ? (
+                <div style={{ padding: '30px', textAlign: 'center', color: '#94A3B8', background: '#FFFFFF', borderRadius: '12px' }}>
+                  No staff records matching filter.
+                </div>
+              ) : (
+                filteredUsers.map(u => (
+                  <div key={u.id} style={{ background: '#FFFFFF', borderRadius: '14px', padding: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A' }}>{u.user}</div>
+                        <div style={{ fontSize: '12px', color: '#64748B' }}>{u.designation || 'Staff'} • <span style={{ fontWeight: 700 }}>{u.role}</span></div>
+                      </div>
                       {u.isExempt ? (
-                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#2563EB', backgroundColor: '#EFF6FF', padding: '4px 10px', borderRadius: '12px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB', backgroundColor: '#EFF6FF', padding: '3px 8px', borderRadius: '8px' }}>
                           Exempt (24/7)
                         </span>
                       ) : (
-                        <span style={{ fontSize: '12px', fontWeight: 700, color: u.isEnabled ? '#166534' : '#991B1B', backgroundColor: u.isEnabled ? '#DCFCE7' : '#FEE2E2', padding: '4px 10px', borderRadius: '12px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 800, color: u.isEnabled ? '#166534' : '#991B1B', backgroundColor: u.isEnabled ? '#DCFCE7' : '#FEE2E2', padding: '3px 8px', borderRadius: '8px' }}>
                           {u.status}
                         </span>
                       )}
-                    </td>
-                    <td style={{ padding: '14px 20px', textAlign: 'right' }}>
+                    </div>
+
+                    <div style={{ background: '#F8FAFC', borderRadius: '10px', padding: '10px', fontSize: '12px', display: 'flex', justifyContent: 'space-between' }}>
+                      <div>
+                        <span style={{ color: '#64748B', display: 'block', fontSize: '11px' }}>Base Shift:</span>
+                        <strong style={{ color: '#334155' }}>{u.startTime} - {u.endTime}</strong>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ color: '#64748B', display: 'block', fontSize: '11px' }}>Effective Today:</span>
+                        <strong style={{ color: u.effectiveEndTime !== u.endTime ? '#059669' : '#0F172A' }}>{u.effectiveEndTime}</strong>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                       <button onClick={() => {
                         setExtendForm({ ...extendForm, applyTo: 'SPECIFIC', userId: u.id });
                         setShowExtendModal(true);
-                      }} style={{ padding: '6px 12px', backgroundColor: '#EEF2FF', color: '#4F46E5', border: '1px solid #C7D2FE', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>
-                        Extend Today
+                      }} style={{ padding: '8px 14px', backgroundColor: '#EEF2FF', color: '#4F46E5', border: '1px solid #C7D2FE', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', fontSize: '12px', width: '100%' }}>
+                        ⚡ Extend Today's Hours
                       </button>
-                    </td>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          ) : (
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
+                    <th style={{ padding: '14px 20px', fontWeight: 700 }}>Staff User</th>
+                    <th style={{ padding: '14px 20px', fontWeight: 700 }}>Designation & Role</th>
+                    <th style={{ padding: '14px 20px', fontWeight: 700 }}>Base Hours</th>
+                    <th style={{ padding: '14px 20px', fontWeight: 700 }}>Effective End Time Today</th>
+                    <th style={{ padding: '14px 20px', fontWeight: 700 }}>Status</th>
+                    <th style={{ padding: '14px 20px', fontWeight: 700, textAlign: 'right' }}>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filteredUsers.map(u => (
+                    <tr key={u.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '14px 20px' }}>
+                        <div style={{ fontWeight: 700, color: '#0F172A' }}>{u.user}</div>
+                        <div style={{ fontSize: '12px', color: '#64748B' }}>{u.email}</div>
+                      </td>
+                      <td style={{ padding: '14px 20px' }}>
+                        <div style={{ fontWeight: 600, color: '#334155' }}>{u.designation}</div>
+                        <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', backgroundColor: '#F1F5F9', color: '#475569' }}>
+                          {u.role}
+                        </span>
+                      </td>
+                      <td style={{ padding: '14px 20px', fontWeight: 600, color: '#334155' }}>
+                        {u.startTime} - {u.endTime}
+                      </td>
+                      <td style={{ padding: '14px 20px' }}>
+                        <span style={{ fontWeight: 700, color: u.effectiveEndTime !== u.endTime ? '#059669' : '#0F172A' }}>
+                          {u.effectiveEndTime}
+                        </span>
+                        {u.activeExtension && (
+                          <span style={{ fontSize: '11px', marginLeft: '6px', color: '#059669', fontWeight: 700 }}>
+                            (Extended)
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: '14px 20px' }}>
+                        {u.isExempt ? (
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#2563EB', backgroundColor: '#EFF6FF', padding: '4px 10px', borderRadius: '12px' }}>
+                            Exempt (24/7)
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: u.isEnabled ? '#166534' : '#991B1B', backgroundColor: u.isEnabled ? '#DCFCE7' : '#FEE2E2', padding: '4px 10px', borderRadius: '12px' }}>
+                            {u.status}
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: '14px 20px', textAlign: 'right' }}>
+                        <button onClick={() => {
+                          setExtendForm({ ...extendForm, applyTo: 'SPECIFIC', userId: u.id });
+                          setShowExtendModal(true);
+                        }} style={{ padding: '6px 12px', backgroundColor: '#EEF2FF', color: '#4F46E5', border: '1px solid #C7D2FE', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>
+                          Extend Today
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
       {/* TAB 4: EXTENSION HISTORY */}
       {!loading && activeTab === 'history' && (
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
-                <th style={{ padding: '14px 20px', fontWeight: 700 }}>Date</th>
-                <th style={{ padding: '14px 20px', fontWeight: 700 }}>Applied To</th>
-                <th style={{ padding: '14px 20px', fontWeight: 700 }}>Extended End Time</th>
-                <th style={{ padding: '14px 20px', fontWeight: 700 }}>Reason</th>
-                <th style={{ padding: '14px 20px', fontWeight: 700 }}>Granted By</th>
-              </tr>
-            </thead>
-            <tbody>
-              {historyList.map(h => (
-                <tr key={h.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                  <td style={{ padding: '14px 20px', fontWeight: 600 }}>{h.extension_date ? h.extension_date.split('T')[0] : ''}</td>
-                  <td style={{ padding: '14px 20px', fontWeight: 700, color: '#0F172A' }}>
-                    {h.apply_to === 'ALL' ? 'All Users' : (h.target_user_name || h.target_user_email)}
-                  </td>
-                  <td style={{ padding: '14px 20px', fontWeight: 700, color: '#059669' }}>{h.extended_end_time}</td>
-                  <td style={{ padding: '14px 20px', color: '#475569' }}>{h.reason || 'N/A'}</td>
-                  <td style={{ padding: '14px 20px', color: '#64748B' }}>{h.created_by_name || h.created_by_email || 'Super Admin'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div>
+          {isMobile ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {historyList.length === 0 ? (
+                <div style={{ padding: '30px', textAlign: 'center', color: '#94A3B8', background: '#FFFFFF', borderRadius: '12px' }}>
+                  No past extensions recorded.
+                </div>
+              ) : (
+                historyList.map(h => (
+                  <div key={h.id} style={{ background: '#FFFFFF', borderRadius: '14px', padding: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A' }}>
+                          {h.apply_to === 'ALL' ? 'All Users' : (h.target_user_name || h.target_user_email)}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#64748B' }}>📅 {h.extension_date ? h.extension_date.split('T')[0] : ''}</div>
+                      </div>
+                      <span style={{ fontSize: '12px', fontWeight: 900, color: '#059669', background: '#DCFCE7', padding: '3px 8px', borderRadius: '8px' }}>
+                        Until {h.extended_end_time}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#475569' }}>Reason: {h.reason || 'N/A'}</div>
+                    <div style={{ fontSize: '11px', color: '#94A3B8' }}>Approved by {h.created_by_name || h.created_by_email || 'Super Admin'}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          ) : (
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
+                    <th style={{ padding: '14px 20px', fontWeight: 700 }}>Date</th>
+                    <th style={{ padding: '14px 20px', fontWeight: 700 }}>Applied To</th>
+                    <th style={{ padding: '14px 20px', fontWeight: 700 }}>Extended End Time</th>
+                    <th style={{ padding: '14px 20px', fontWeight: 700 }}>Reason</th>
+                    <th style={{ padding: '14px 20px', fontWeight: 700 }}>Granted By</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyList.map(h => (
+                    <tr key={h.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '14px 20px', fontWeight: 600 }}>{h.extension_date ? h.extension_date.split('T')[0] : ''}</td>
+                      <td style={{ padding: '14px 20px', fontWeight: 700, color: '#0F172A' }}>
+                        {h.apply_to === 'ALL' ? 'All Users' : (h.target_user_name || h.target_user_email)}
+                      </td>
+                      <td style={{ padding: '14px 20px', fontWeight: 700, color: '#059669' }}>{h.extended_end_time}</td>
+                      <td style={{ padding: '14px 20px', color: '#475569' }}>{h.reason || 'N/A'}</td>
+                      <td style={{ padding: '14px 20px', color: '#64748B' }}>{h.created_by_name || h.created_by_email || 'Super Admin'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
