@@ -1290,9 +1290,23 @@ export default function EmployeeManagement() {
               
               {/* Directory Header & Filters Toolbar */}
               <div style={{ padding: '18px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', background: C.bgSecondary }}>
-                <div style={{ minWidth: '220px' }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Records Directory</h3>
-                  <span style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Click any row to open the right-side detail drawer.</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Records</h3>
+                    <div style={{ display: 'flex', background: C.card, borderRadius: '8px', padding: '2px', border: `1px solid ${C.border}` }}>
+                      <button 
+                        style={{ padding: '4px 10px', fontSize: '11.5px', fontWeight: 800, border: 'none', background: 'transparent', color: C.teal, cursor: 'pointer', borderRadius: '6px' }}
+                      >
+                        Recent Activity
+                      </button>
+                      <button 
+                        style={{ padding: '4px 10px', fontSize: '11.5px', fontWeight: 800, border: 'none', background: `${C.teal}15`, color: C.teal, cursor: 'pointer', borderRadius: '6px' }}
+                      >
+                        Employee Directory
+                      </button>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '12px', color: C.textMid, fontWeight: 600 }}>View and manage employee accounts. Click Employee Code to open profile.</span>
                 </div>
                 <div style={{ display: 'flex', gap: '12px', flex: 1, minWidth: '280px' }}>
                 <div style={{ position: 'relative', flex: 1 }}>
@@ -1367,131 +1381,64 @@ export default function EmployeeManagement() {
 
             {/* Table & Mobile Card View */}
             {isMobile ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '12px' }}>
                 {loading ? (
                   <div style={{ padding: '30px', textAlign: 'center', color: C.textMid }}>Loading records...</div>
                 ) : employees.length === 0 ? (
                   <div style={{ padding: '30px', textAlign: 'center', color: C.textMid }}>No employees found matching criteria.</div>
                 ) : (
                   employees.map(emp => {
-                    const isFaceVerified = emp.face_verification_status === 'VERIFIED' || emp.biometric_enrolled || emp.face_enrolled;
-                    const isFaceRevoked = emp.face_verification_status === 'REVOKED';
-                    const isFacePending = emp.face_verification_status === 'PENDING';
+                    const empCode = emp.employee_code || emp.employee_id || emp.emp_code || emp.code || (emp.id ? String(emp.id).slice(0, 8) : 'N/A');
 
                     return (
-                    <div 
-                      key={emp.id}
-                      style={{
-                        background: C.card,
-                        border: `1px solid ${C.border}`,
-                        borderRadius: '16px',
-                        padding: '14px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '10px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                        <div>
-                          <div style={{ fontSize: '15px', fontWeight: 900, color: C.text }}>
-                            {emp.full_name}
+                      <div 
+                        key={emp.id}
+                        onClick={() => setDrawerEmp(emp)}
+                        style={{
+                          background: C.card,
+                          border: `1px solid ${C.border}`,
+                          borderRadius: '16px',
+                          padding: '14px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justify: 'space-between',
+                          gap: '12px',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{
+                            width: '42px', height: '42px', borderRadius: '50%', background: `${C.teal}20`, color: C.teal,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '16px', flexShrink: 0
+                          }}>
+                            {emp.full_name ? emp.full_name[0].toUpperCase() : 'E'}
                           </div>
-                          <div style={{ fontSize: '12px', fontWeight: 800, color: C.teal, marginTop: '2px' }}>
-                            Code: {emp.employee_code || emp.employee_id || emp.emp_code || emp.code || (emp.id ? String(emp.id).slice(0, 8) : 'N/A')} • {emp.mobile_number}
+                          <div>
+                            <div style={{ fontSize: '14.5px', fontWeight: 900, color: C.text }}>
+                              {emp.full_name}
+                            </div>
+                            <div style={{ fontSize: '12px', fontWeight: 800, color: C.teal, marginTop: '2px' }}>
+                              {empCode} • ☎ {emp.mobile_number || 'N/A'}
+                            </div>
+                            <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px', fontWeight: 700 }}>
+                              Tap to View Profile →
+                            </div>
                           </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                          <span 
-                            style={{ 
-                              padding: '3px 8px', borderRadius: '8px', fontSize: '10.5px', fontWeight: 800,
-                              background: emp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7',
-                              color: emp.activation_status === 'APPROVED' ? '#065F46' : '#92400E',
-                              flexShrink: 0
-                            }}
-                          >
-                            {emp.activation_status === 'APPROVED' ? 'Active' : 'Pending'}
-                          </span>
-                          <span 
-                            style={{ 
-                              padding: '3px 8px', borderRadius: '8px', fontSize: '10.5px', fontWeight: 800,
-                              background: isFaceVerified ? '#D1FAE5' : isFaceRevoked ? '#F3F4F6' : '#FEF3C7',
-                              color: isFaceVerified ? '#065F46' : isFaceRevoked ? '#4B5563' : '#92400E',
-                              border: `1px solid ${isFaceVerified ? '#A7F3D0' : '#FDE68A'}`
-                            }}
-                          >
-                            {isFaceVerified ? '✓ Face Enrolled' : isFaceRevoked ? '🔒 Face Revoked' : '⚠ Face Missing'}
-                          </span>
-                        </div>
-                      </div>
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: C.textMid, borderTop: `1px solid ${C.border}`, paddingTop: '8px' }}>
-                        <div>
-                          <strong>Role:</strong> {emp.designation || (emp.hierarchy_level === 'BRANCH_HEAD' ? 'BRANCH HEAD' : emp.hierarchy_level === 'SENIOR_MANAGER' ? 'SENIOR MANAGER' : emp.hierarchy_level === 'MANAGER' ? 'MANAGER' : emp.hierarchy_level === 'TEAM_LEADER' ? 'TL' : 'TC')}
-                        </div>
-                        <div>
-                          <strong>Manager:</strong> {emp.manager_name || 'Direct'}
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid }}>Onboarding:</span>
-                        <div style={{ flex: 1, background: C.bgSecondary, height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
-                          <div style={{ width: `${emp.overall_progress || 35}%`, background: C.teal, height: '100%' }} />
-                        </div>
-                        <span style={{ fontSize: '11px', fontWeight: 800 }}>{emp.overall_progress || 35}%</span>
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: `1px dashed ${C.border}` }}>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <button
-                            onClick={() => { setBiometricModalEmp(emp); setBiometricModalOpen(true); }}
-                            style={{
-                              padding: '6px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 800,
-                              background: `${C.teal}15`, color: C.teal, border: `1px solid ${C.teal}40`, cursor: 'pointer',
-                              display: 'inline-flex', alignItems: 'center', gap: '4px'
-                            }}
-                          >
-                            <FaCamera /> Biometrics
-                          </button>
-                          {emp.activation_status !== 'APPROVED' && (
-                            <button
-                              onClick={() => handleKycVerify(emp.id, 'VERIFIED')}
-                              style={{
-                                padding: '6px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 800,
-                                background: '#10B981', color: '#ffffff', border: 'none', cursor: 'pointer',
-                                display: 'inline-flex', alignItems: 'center', gap: '4px'
-                              }}
-                              title="Approve KYC and activate employee account"
-                            >
-                              <FaCheckCircle /> Approve
-                            </button>
-                          )}
-                        </div>
-
-                        <button 
-                          onClick={() => setActionModalEmp(emp)}
+                        <span 
                           style={{ 
-                            background: `linear-gradient(135deg, ${C.teal} 0%, #0D9488 100%)`, 
-                            color: '#ffffff', 
-                            border: 'none', 
-                            padding: '8px 14px', 
-                            borderRadius: '10px', 
-                            fontSize: '12.5px', 
-                            fontWeight: 800, 
-                            cursor: 'pointer', 
-                            display: 'inline-flex', 
-                            alignItems: 'center', 
-                            gap: '6px',
-                            boxShadow: '0 2px 8px rgba(13, 148, 136, 0.25)',
+                            padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 800,
+                            background: emp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7',
+                            color: emp.activation_status === 'APPROVED' ? '#065F46' : '#92400E',
                             flexShrink: 0
                           }}
                         >
-                          <FaEllipsisV /> Actions
-                        </button>
+                          {emp.activation_status === 'APPROVED' ? 'Active' : 'Pending'}
+                        </span>
                       </div>
-                    </div>
-                  );
+                    );
                   })
                 )}
               </div>
@@ -1500,158 +1447,83 @@ export default function EmployeeManagement() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
                   <thead>
                     <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textMid, fontWeight: 700 }}>
+                      <th style={{ padding: '14px 20px', width: '40px' }}><input type="checkbox" /></th>
                       <th style={{ padding: '14px 20px' }}>Employee Code</th>
                       <th style={{ padding: '14px 20px' }}>Employee Name</th>
-                      <th style={{ padding: '14px 20px' }}>Designation</th>
-                      <th style={{ padding: '14px 20px' }}>KYC Status</th>
-                      <th style={{ padding: '14px 20px' }}>Face Verification (Screen 7)</th>
-                      <th style={{ padding: '14px 20px' }}>Missing Documents</th>
+                      <th style={{ padding: '14px 20px' }}>Contact</th>
                       <th style={{ padding: '14px 20px' }}>Account Status</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr><td colSpan="8" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>Loading records...</td></tr>
+                      <tr><td colSpan="5" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>Loading records...</td></tr>
                     ) : employees.length === 0 ? (
-                      <tr><td colSpan="8" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>No employees found matching criteria.</td></tr>
+                      <tr><td colSpan="5" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>No employees found matching criteria.</td></tr>
                     ) : employees.map(emp => {
-                      const isVerified = emp.overall_verification_status === 'VERIFIED';
-                      const isFaceVerified = emp.face_verification_status === 'VERIFIED' || emp.biometric_enrolled || emp.face_enrolled;
-                      const isFaceRevoked = emp.face_verification_status === 'REVOKED';
-                      const isFacePending = emp.face_verification_status === 'PENDING';
-                      const missingDocs = emp.missing_documents || [];
+                      const isSelected = drawerEmp && drawerEmp.id === emp.id;
+                      const empCode = emp.employee_code || emp.employee_id || emp.emp_code || emp.code || (emp.id ? String(emp.id).slice(0, 8) : 'N/A');
 
                       return (
-                        <tr key={emp.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                          <td style={{ padding: '14px 20px', fontWeight: 900, color: C.teal }}>{emp.employee_code || emp.employee_id || emp.emp_code || emp.code || (emp.id ? String(emp.id).slice(0, 8) : 'N/A')}</td>
-                          <td style={{ padding: '14px 20px', fontWeight: 800, color: C.text }}>
-                            {emp.full_name}
-                            <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 400 }}>{emp.mobile_number}</div>
-                          </td>
-                          <td style={{ padding: '14px 20px', fontWeight: 800 }}>
-                            {emp.designation || (emp.hierarchy_level === 'BRANCH_HEAD' ? 'BRANCH HEAD' : emp.hierarchy_level === 'SENIOR_MANAGER' ? 'SENIOR MANAGER' : emp.hierarchy_level === 'MANAGER' ? 'MANAGER' : emp.hierarchy_level === 'TEAM_LEADER' ? 'TL' : 'TC')}
+                        <tr 
+                          key={emp.id} 
+                          style={{ 
+                            borderBottom: `1px solid ${C.border}`,
+                            background: isSelected ? `${C.teal}0F` : 'transparent',
+                            transition: 'background 0.15s ease'
+                          }}
+                        >
+                          <td style={{ padding: '14px 20px' }}>
+                            <input type="checkbox" />
                           </td>
                           <td style={{ padding: '14px 20px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
-                              <span 
-                                style={{ 
-                                  padding: '3px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 900,
-                                  background: isVerified ? '#D1FAE5' : '#FEF3C7',
-                                  color: isVerified ? '#065F46' : '#92400E',
-                                  border: `1px solid ${isVerified ? '#A7F3D0' : '#FDE68A'}`
-                                }}
-                              >
-                                {isVerified ? '● VERIFIED' : '● PENDING'}
-                              </span>
-                              <div style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 700 }}>
-                                Docs: <strong>{emp.documents_summary || '0/6'}</strong>
+                            <span 
+                              onClick={() => setDrawerEmp(emp)}
+                              style={{ 
+                                fontWeight: 900, 
+                                color: C.teal, 
+                                cursor: 'pointer',
+                                fontSize: '13.5px',
+                                textDecoration: 'none'
+                              }}
+                              onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                              onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                              title="Click to open employee profile"
+                            >
+                              {empCode}
+                            </span>
+                          </td>
+                          <td style={{ padding: '14px 20px' }}>
+                            <div 
+                              onClick={() => setDrawerEmp(emp)}
+                              style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
+                            >
+                              <div style={{
+                                width: '34px', height: '34px', borderRadius: '50%', background: `${C.teal}20`, color: C.teal,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px', flexShrink: 0
+                              }}>
+                                {emp.full_name ? emp.full_name[0].toUpperCase() : 'E'}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 800, color: C.text, fontSize: '13.5px' }}>{emp.full_name}</div>
                               </div>
                             </div>
                           </td>
-                          <td style={{ padding: '14px 20px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
-                              <span 
-                                style={{ 
-                                  padding: '3px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 900,
-                                  background: isFaceVerified ? '#D1FAE5' : isFaceRevoked ? '#F3F4F6' : isFacePending ? '#FEF9C3' : '#FEF3C7',
-                                  color: isFaceVerified ? '#065F46' : isFaceRevoked ? '#4B5563' : isFacePending ? '#854D0E' : '#92400E',
-                                  border: `1px solid ${isFaceVerified ? '#A7F3D0' : isFaceRevoked ? '#E5E7EB' : '#FDE68A'}`
-                                }}
-                              >
-                                {isFaceVerified ? '✓ Verified' : isFaceRevoked ? '🔒 Revoked' : isFacePending ? '⏳ Pending' : '⚠ Missing'}
-                              </span>
-                              <button
-                                onClick={() => { setBiometricModalEmp(emp); setBiometricModalOpen(true); }}
-                                style={{ background: 'none', border: 'none', color: C.teal, fontSize: '11px', fontWeight: 800, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
-                              >
-                                Biometric Desk →
-                              </button>
-                            </div>
+                          <td style={{ padding: '14px 20px', fontSize: '13px', color: C.textMid, fontWeight: 600 }}>
+                            ☎ {emp.mobile_number || 'N/A'}
                           </td>
                           <td style={{ padding: '14px 20px' }}>
-                            {isVerified || missingDocs.length === 0 ? (
-                              <span style={{ fontSize: '12px', color: '#059669', fontWeight: 800 }}>✓ All Submitted</span>
-                            ) : (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start' }}>
-                                <span style={{ fontSize: '12px', fontWeight: 900, color: '#DC2626' }}>
-                                  ⚠️ {missingDocs.length} Missing {missingDocs.length === 1 ? 'Doc' : 'Docs'}
-                                </span>
-                                <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>
-                                  (View in Actions)
-                                </span>
-                              </div>
-                            )}
-                          </td>
-                          <td style={{ padding: '14px 20px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
-                              <span 
-                                style={{ 
-                                  padding: '3px 10px', borderRadius: '10px', fontSize: '11.5px', fontWeight: 800,
-                                  background: emp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7',
-                                  color: emp.activation_status === 'APPROVED' ? '#065F46' : '#92400E'
-                                }}
-                              >
-                                {emp.activation_status === 'APPROVED' ? '● Active Account' : '● Pending Activation'}
-                              </span>
-
-                              {emp.activation_status !== 'APPROVED' && (
-                                <button
-                                  onClick={() => handleKycVerify(emp.id, 'VERIFIED')}
-                                  style={{
-                                    padding: '5px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 800,
-                                    background: '#10B981', color: '#ffffff', border: 'none', cursor: 'pointer',
-                                    display: 'inline-flex', alignItems: 'center', gap: '4px'
-                                  }}
-                                  title="Approve KYC and activate employee account"
-                                >
-                                  <FaCheckCircle /> Approve KYC & Activate
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                          <td style={{ padding: '14px 20px', textAlign: 'right' }}>
-                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
-                              <button
-                                onClick={() => { setBiometricModalEmp(emp); setBiometricModalOpen(true); }}
-                                style={{
-                                  background: `${C.teal}15`,
-                                  color: C.teal,
-                                  border: `1px solid ${C.teal}40`,
-                                  padding: '7px 12px',
-                                  borderRadius: '10px',
-                                  fontSize: '12px',
-                                  fontWeight: 800,
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '5px'
-                                }}
-                                title="Manage Biometric Reference, Signed Previews & Reminders"
-                              >
-                                <FaCamera /> Biometrics
-                              </button>
-                              <button 
-                                onClick={() => setActionModalEmp(emp)}
-                                style={{ 
-                                  background: `linear-gradient(135deg, ${C.teal} 0%, #0D9488 100%)`, 
-                                  color: '#ffffff', 
-                                  border: 'none', 
-                                  padding: '7px 14px', 
-                                  borderRadius: '10px', 
-                                  fontSize: '12.5px', 
-                                  fontWeight: 800, 
-                                  cursor: 'pointer', 
-                                  display: 'inline-flex', 
-                                  alignItems: 'center', 
-                                  gap: '6px',
-                                  boxShadow: '0 2px 8px rgba(13, 148, 136, 0.25)',
-                                  transition: 'all 0.2s ease'
-                                }}
-                              >
-                                <FaEllipsisV /> Actions
-                              </button>
-                            </div>
+                            <span 
+                              style={{ 
+                                padding: '4px 10px', borderRadius: '10px', fontSize: '12px', fontWeight: 800,
+                                background: emp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7',
+                                color: emp.activation_status === 'APPROVED' ? '#065F46' : '#92400E',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px'
+                              }}
+                            >
+                              {emp.activation_status === 'APPROVED' ? '● Active' : '● Pending Activation'}
+                            </span>
                           </td>
                         </tr>
                       );
@@ -4231,43 +4103,77 @@ export default function EmployeeManagement() {
               }}
             />
 
-            {/* Slide-over Drawer Body */}
+            {/* Profile Drawer Body (Desktop Right Drawer / Mobile Centered Modal) */}
             <div style={{
-              position: 'fixed', top: 0, right: 0, bottom: 0,
-              width: isMobile ? '100%' : '480px',
-              maxWidth: '100vw',
-              background: C.card,
-              borderLeft: `1px solid ${C.border}`,
+              position: 'fixed',
               zIndex: 9999,
+              background: C.card,
+              boxShadow: isMobile ? '0 10px 40px rgba(0,0,0,0.3)' : '-8px 0 32px rgba(0, 0, 0, 0.15)',
               display: 'flex',
               flexDirection: 'column',
-              boxShadow: '-8px 0 32px rgba(0, 0, 0, 0.15)',
-              animation: 'slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+              overflow: 'hidden',
+              transition: 'all 0.25s ease',
+              ...(isMobile ? {
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '92%',
+                maxWidth: '480px',
+                maxHeight: '90vh',
+                borderRadius: '24px',
+                border: `1px solid ${C.border}`
+              } : {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                width: '480px',
+                maxWidth: '100vw',
+                borderLeft: `1px solid ${C.border}`
+              })
             }}>
               
-              {/* Drawer Header */}
-              <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, background: C.bgSecondary, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              {/* Drawer / Modal Header */}
+              <div style={{ padding: '18px 20px', borderBottom: `1px solid ${C.border}`, background: C.bgSecondary, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                   <div style={{
-                    width: '44px', height: '44px', borderRadius: '14px', background: `${C.teal}20`, color: C.teal,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '18px'
+                    width: '48px', height: '48px', borderRadius: '50%', background: `${C.teal}20`, color: C.teal,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '18px', flexShrink: 0,
+                    border: `2px solid ${C.teal}`
                   }}>
                     {drawerEmp.full_name ? drawerEmp.full_name[0].toUpperCase() : 'E'}
                   </div>
                   <div>
-                    <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0 }}>{drawerEmp.full_name}</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <h3 style={{ fontSize: '16.5px', fontWeight: 900, color: C.text, margin: 0 }}>{drawerEmp.full_name}</h3>
+                      <span style={{ padding: '2px 7px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 800, background: drawerEmp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7', color: drawerEmp.activation_status === 'APPROVED' ? '#065F46' : '#92400E' }}>
+                        ● {drawerEmp.activation_status === 'APPROVED' ? 'Active' : 'Pending'}
+                      </span>
+                    </div>
                     <div style={{ fontSize: '12px', fontWeight: 800, color: C.teal, marginTop: '2px' }}>
-                      Code: {drawerEmp.employee_code || drawerEmp.employee_id || drawerEmp.emp_code || (drawerEmp.id ? String(drawerEmp.id).slice(0, 8) : 'N/A')}
+                      {drawerEmp.employee_code || drawerEmp.employee_id || drawerEmp.emp_code || (drawerEmp.id ? String(drawerEmp.id).slice(0, 8) : 'N/A')} • {drawerEmp.designation || 'Telecaller'}
                     </div>
                   </div>
                 </div>
 
-                <button 
-                  onClick={() => setDrawerEmp(null)}
-                  style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textMid, cursor: 'pointer', fontSize: '14px' }}
-                >
-                  ✕
-                </button>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <button 
+                    onClick={() => setActionModalEmp(drawerEmp)}
+                    style={{
+                      padding: '6px 10px', background: C.teal, color: '#fff', border: 'none',
+                      borderRadius: '8px', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: '4px'
+                    }}
+                    title="Open all employee actions"
+                  >
+                    <FaCog /> Actions
+                  </button>
+                  <button 
+                    onClick={() => setDrawerEmp(null)}
+                    style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textMid, cursor: 'pointer', fontSize: '14px' }}
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
 
               {/* Drawer Tabs Header */}
