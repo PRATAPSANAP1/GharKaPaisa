@@ -7,7 +7,7 @@ import {
   FaFileAlt, FaVideo, FaUniversity, FaBuilding, FaBriefcase, FaIdCard, FaPhone, FaEnvelope, FaClock, FaUserCircle,
   FaUserTimes, FaUnlink, FaChartLine, FaTrophy, FaEllipsisV, FaDownload, FaRedo, FaInfoCircle, FaChevronRight,
   FaCoins, FaBullseye, FaTrash, FaCalendarAlt, FaExclamationCircle, FaCamera, FaUserShield,
-  FaFileUpload, FaBell, FaCog, FaKey
+  FaFileUpload, FaBell, FaCog, FaKey, FaUser
 } from 'react-icons/fa';
 import api from '../../../services/api';
 import BiometricManagementModal from '../biometrics/BiometricManagementModal';
@@ -25,6 +25,7 @@ export default function EmployeeManagement() {
   const [activeTab, setActiveTab] = useState('employees'); // 'employees', 'hierarchy', 'bonus'
   const [drawerEmp, setDrawerEmp] = useState(null); // Right-side drawer / mobile modal selected employee
   const [drawerTab, setDrawerTab] = useState('overview'); // 'overview', 'kyc', 'face', 'access', 'attendance', 'activity'
+  const [recordsViewTab, setRecordsViewTab] = useState('directory'); // 'directory', 'recent'
   const [showReminderHistory, setShowReminderHistory] = useState(false);
   const [actionRequiredFilter, setActionRequiredFilter] = useState(''); // '', 'face_missing', 'kyc_pending', 'docs_missing', 'activation_pending'
   const [departmentFilter, setDepartmentFilter] = useState('');
@@ -1248,11 +1249,10 @@ export default function EmployeeManagement() {
                 )}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(1, 1fr)' : 'repeat(3, 1fr)', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '12px' }}>
                 {[
                   { id: 'face_missing', title: 'Face Verification Missing', count: faceMissingCount, desc: 'Not enrolled on mobile or desk', color: '#DC2626', bg: '#FEF2F2', border: '#FCA5A5', icon: <FaCamera /> },
-                  { id: 'kyc_pending', title: 'KYC Pending Approval', count: kycPendingCount, desc: 'Requires document approval', color: '#D97706', bg: '#FFFBEB', border: '#FDE68A', icon: <FaClock /> },
-                  { id: 'docs_missing', title: 'Missing Documents', count: docsMissingCount, desc: 'Incomplete document uploads', color: '#9333EA', bg: '#F3E8FF', border: '#D8B4FE', icon: <FaFileUpload /> }
+                  { id: 'kyc_pending', title: 'KYC Pending Approval', count: kycPendingCount, desc: 'Requires document approval', color: '#D97706', bg: '#FFFBEB', border: '#FDE68A', icon: <FaClock /> }
                 ].map((card) => (
                   <div
                     key={card.id}
@@ -1289,105 +1289,148 @@ export default function EmployeeManagement() {
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
               
               {/* Directory Header & Filters Toolbar */}
-              <div style={{ padding: '18px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', background: C.bgSecondary }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Records</h3>
-                    <div style={{ display: 'flex', background: C.card, borderRadius: '8px', padding: '2px', border: `1px solid ${C.border}` }}>
-                      <button 
-                        style={{ padding: '4px 10px', fontSize: '11.5px', fontWeight: 800, border: 'none', background: 'transparent', color: C.teal, cursor: 'pointer', borderRadius: '6px' }}
-                      >
-                        Recent Activity
-                      </button>
-                      <button 
-                        style={{ padding: '4px 10px', fontSize: '11.5px', fontWeight: 800, border: 'none', background: `${C.teal}15`, color: C.teal, cursor: 'pointer', borderRadius: '6px' }}
-                      >
-                        Employee Directory
-                      </button>
-                    </div>
+              <div style={{ padding: '18px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '14px', background: C.bgSecondary }}>
+                {/* Line 1: Heading & Working View Tabs */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Records</h3>
+                  <div style={{ display: 'inline-flex', width: 'fit-content', background: C.card, borderRadius: '10px', padding: '3px', border: `1px solid ${C.border}` }}>
+                    <button 
+                      onClick={() => setRecordsViewTab('recent')}
+                      style={{
+                        padding: '6px 14px', fontSize: '12px', fontWeight: 800, border: 'none',
+                        background: recordsViewTab === 'recent' ? C.teal : 'transparent',
+                        color: recordsViewTab === 'recent' ? '#fff' : C.textMid,
+                        cursor: 'pointer', borderRadius: '8px', transition: 'all 0.15s ease'
+                      }}
+                    >
+                      Recent Activity
+                    </button>
+                    <button 
+                      onClick={() => setRecordsViewTab('directory')}
+                      style={{
+                        padding: '6px 14px', fontSize: '12px', fontWeight: 800, border: 'none',
+                        background: recordsViewTab === 'directory' ? C.teal : 'transparent',
+                        color: recordsViewTab === 'directory' ? '#fff' : C.textMid,
+                        cursor: 'pointer', borderRadius: '8px', transition: 'all 0.15s ease'
+                      }}
+                    >
+                      Employee Directory
+                    </button>
                   </div>
-                  <span style={{ fontSize: '12px', color: C.textMid, fontWeight: 600 }}>View and manage employee accounts. Click Employee Code to open profile.</span>
                 </div>
-                <div style={{ display: 'flex', gap: '12px', flex: 1, minWidth: '280px' }}>
-                <div style={{ position: 'relative', flex: 1 }}>
-                  <FaSearch style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: C.textMid }} />
-                  <input 
-                    type="text" 
-                    placeholder="Search by Employee ID, Name, Mobile..." 
-                    value={searchTerm}
-                    onChange={(e) => {
-                      setSearchTerm(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    style={{ width: '100%', padding: '9px 14px 9px 38px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, outline: 'none', fontSize: '13.5px' }}
-                  />
+
+                {/* Line 2: Searchbar on Left, Filter buttons on Right in the same row */}
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+                  {/* Left: Searchbar */}
+                  <div style={{ position: 'relative', flex: '1 1 280px', minWidth: '240px' }}>
+                    <FaSearch style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: C.textMid }} />
+                    <input 
+                      type="text" 
+                      placeholder="Search by Employee ID, Name, Mobile..." 
+                      value={searchTerm}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      style={{ width: '100%', padding: '9px 14px 9px 38px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, outline: 'none', fontSize: '13.5px' }}
+                    />
+                  </div>
+
+                  {/* Right: Filters */}
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <select 
+                      value={designationFilter} 
+                      onChange={(e) => {
+                        setDesignationFilter(e.target.value);
+                        setCurrentPage(1);
+                      }} 
+                      style={{ padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13px', fontWeight: 700 }}
+                    >
+                      <option value="">All Designations</option>
+                      <option value="KYC Operator">KYC Operator</option>
+                      <option value="QD Operator">QD Operator</option>
+                      <option value="Remark Operator">Remark Operator</option>
+                      <option value="Final Status Operator">Final Status Operator</option>
+                      <option value="PAN Checker">PAN Checker</option>
+                      <option value="Administrative Operator">Administrative Operator</option>
+                      <option value="Administrative Sales Executive">Administrative Sales Executive</option>
+                      <option value="TC">TC (Telecaller)</option>
+                      <option value="TL">TL (Team Leader)</option>
+                      <option value="Manager">MANAGER</option>
+                      <option value="Senior Manager">SENIOR MANAGER</option>
+                      <option value="Branch Head">BRANCH HEAD</option>
+                    </select>
+
+                    <select 
+                      value={statusFilter} 
+                      onChange={(e) => {
+                        setStatusFilter(e.target.value);
+                        setCurrentPage(1);
+                      }} 
+                      style={{ padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13px', fontWeight: 700 }}
+                    >
+                      <option value="">All Statuses</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="ONBOARDING">Onboarding</option>
+                      <option value="INACTIVE">Inactive</option>
+                    </select>
+
+                    <select 
+                      value={faceFilter} 
+                      onChange={(e) => {
+                        setFaceFilter(e.target.value);
+                        setCurrentPage(1);
+                      }} 
+                      style={{ padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13px', fontWeight: 700 }}
+                    >
+                      <option value="">All Face Biometrics</option>
+                      <option value="VERIFIED">✓ Verified</option>
+                      <option value="MISSING">⚠ Missing</option>
+                      <option value="PENDING">⏳ Pending</option>
+                      <option value="REVOKED">🔒 Revoked</option>
+                    </select>
+
+                    {(designationFilter || statusFilter || faceFilter || searchTerm) && (
+                      <button
+                        onClick={() => {
+                          setDesignationFilter('');
+                          setStatusFilter('');
+                          setFaceFilter('');
+                          setSearchTerm('');
+                          setCurrentPage(1);
+                        }}
+                        style={{ padding: '9px 12px', background: `${C.teal}15`, color: C.teal, border: `1px solid ${C.teal}40`, borderRadius: '10px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}
+                      >
+                        Clear Filters
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                <select 
-                  value={designationFilter} 
-                  onChange={(e) => {
-                    setDesignationFilter(e.target.value);
-                    setCurrentPage(1);
-                  }} 
-                  style={{ padding: '9px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }}
-                >
-                  <option value="">All Designations</option>
-                  <option value="KYC Operator">KYC Operator</option>
-                  <option value="QD Operator">QD Operator</option>
-                  <option value="Remark Operator">Remark Operator</option>
-                  <option value="Final Status Operator">Final Status Operator</option>
-                  <option value="PAN Checker">PAN Checker</option>
-                  <option value="Administrative Operator">Administrative Operator</option>
-                  <option value="Administrative Sales Executive">Administrative Sales Executive</option>
-                  <option value="TC">TC (Telecaller)</option>
-                  <option value="TL">TL (Team Leader)</option>
-                  <option value="Manager">MANAGER</option>
-                  <option value="Senior Manager">SENIOR MANAGER</option>
-                  <option value="Branch Head">BRANCH HEAD</option>
-                </select>
+              {/* Table & Mobile Card View */}
+            {(() => {
+              const displayedEmployees = (() => {
+                let list = [...employees];
+                if (recordsViewTab === 'recent') {
+                  list.sort((a, b) => {
+                    const dateA = new Date(a.updated_at || a.created_at || 0).getTime();
+                    const dateB = new Date(b.updated_at || b.created_at || 0).getTime();
+                    if (dateA !== dateB) return dateB - dateA;
+                    return (b.id || 0) - (a.id || 0);
+                  });
+                }
+                return list;
+              })();
 
-                <select 
-                  value={statusFilter} 
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value);
-                    setCurrentPage(1);
-                  }} 
-                  style={{ padding: '9px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }}
-                >
-                  <option value="">All Statuses</option>
-                  <option value="ACTIVE">Active</option>
-                  <option value="ONBOARDING">Onboarding</option>
-                  <option value="INACTIVE">Inactive</option>
-                </select>
-
-                <select 
-                  value={faceFilter} 
-                  onChange={(e) => {
-                    setFaceFilter(e.target.value);
-                    setCurrentPage(1);
-                  }} 
-                  style={{ padding: '9px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }}
-                >
-                  <option value="">All Face Biometrics</option>
-                  <option value="VERIFIED">✓ Verified</option>
-                  <option value="MISSING">⚠ Missing</option>
-                  <option value="PENDING">⏳ Pending</option>
-                  <option value="REVOKED">🔒 Revoked</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Table & Mobile Card View */}
-            {isMobile ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '12px' }}>
-                {loading ? (
-                  <div style={{ padding: '30px', textAlign: 'center', color: C.textMid }}>Loading records...</div>
-                ) : employees.length === 0 ? (
-                  <div style={{ padding: '30px', textAlign: 'center', color: C.textMid }}>No employees found matching criteria.</div>
-                ) : (
-                  employees.map(emp => {
+              return isMobile ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '12px' }}>
+                  {loading ? (
+                    <div style={{ padding: '30px', textAlign: 'center', color: C.textMid }}>Loading records...</div>
+                  ) : displayedEmployees.length === 0 ? (
+                    <div style={{ padding: '30px', textAlign: 'center', color: C.textMid }}>No employees found matching criteria.</div>
+                  ) : (
+                    displayedEmployees.map(emp => {
                     const empCode = emp.employee_code || emp.employee_id || emp.emp_code || emp.code || (emp.id ? String(emp.id).slice(0, 8) : 'N/A');
 
                     return (
@@ -1457,9 +1500,9 @@ export default function EmployeeManagement() {
                   <tbody>
                     {loading ? (
                       <tr><td colSpan="5" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>Loading records...</td></tr>
-                    ) : employees.length === 0 ? (
+                    ) : displayedEmployees.length === 0 ? (
                       <tr><td colSpan="5" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>No employees found matching criteria.</td></tr>
-                    ) : employees.map(emp => {
+                    ) : displayedEmployees.map(emp => {
                       const isSelected = drawerEmp && drawerEmp.id === emp.id;
                       const empCode = emp.employee_code || emp.employee_id || emp.emp_code || emp.code || (emp.id ? String(emp.id).slice(0, 8) : 'N/A');
 
@@ -1531,7 +1574,8 @@ export default function EmployeeManagement() {
                   </tbody>
                 </table>
               </div>
-            )}
+            );
+          })()}
 
             {/* Pagination Toolbar */}
             <div style={{
