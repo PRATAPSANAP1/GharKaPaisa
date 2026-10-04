@@ -586,6 +586,7 @@ const AdminLayout = () => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <LanguageSwitcher />
             {/* Messenger Button */}
             <button
               id="admin-messenger-button"

@@ -167,6 +167,7 @@ export default function RegisterScreen() {
         company_type: form.companyType,
         company_name: form.companyName.trim() || `${form.firstName} ${form.lastName}`,
         current_address: form.currentAddress.trim(),
+        business_location: form.city.trim() || form.currentAddress.trim(),
         pincode: form.pincode.trim(),
         city: form.city.trim(),
         bank_name: form.bankName.trim(),
@@ -174,7 +175,8 @@ export default function RegisterScreen() {
         ifsc_code: form.ifsc.trim().toUpperCase(),
         account_holder_name: form.accountHolderName.trim() || `${form.firstName} ${form.lastName}`,
         pan: form.pan.trim().toUpperCase(),
-        aadhaar_number: form.aadhaar.trim(),
+        aadhaar: form.aadhaar.trim() || undefined,
+        aadhaar_number: form.aadhaar.trim() || undefined,
         referral_code: form.referralCode.trim() || undefined,
       };
 

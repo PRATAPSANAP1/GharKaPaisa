@@ -16,6 +16,7 @@ import api from '../services/api';
 import EmployeeForcePasswordModal from '../modules/employee/components/EmployeeForcePasswordModal';
 import EmployeeMobileBottomNav from '../components/EmployeeMobileBottomNav';
 import AnnouncementBanner from '../components/AnnouncementBanner';
+import LanguageSwitcher from '../components/LanguageSwitcher/LanguageSwitcher';
 
 export default function EmployeeLayout() {
   const user = useAuthStore((state) => state.user);
@@ -323,6 +324,7 @@ export default function EmployeeLayout() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px', position: 'relative' }}>
+            <LanguageSwitcher />
 
             {/* Messenger Button */}
             <button
