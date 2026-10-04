@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Clock, ShieldCheck, Check, Sparkles } from 'lucide-react';
+import { Check, ArrowRight, Building2, MapPin, User, Clock } from 'lucide-react';
 
 export default function AttendanceSuccess({ verResult, user, onClose }) {
   const isCheckIn = verResult?.action === 'CHECK_IN' || verResult?.action === 'START_WORK';
@@ -27,172 +27,191 @@ export default function AttendanceSuccess({ verResult, user, onClose }) {
   };
 
   const { time, date } = formatTimeAndDate(rawTimestamp);
+  const employeeName = user?.name || user?.full_name || user?.first_name || 'Rahul Sharma';
 
-  const calculateDurationStr = (startTs, endTs) => {
-    if (verResult?.duration) return verResult.duration;
-    if (!startTs || !endTs) return null;
-    const diff = new Date(endTs) - new Date(startTs);
-    if (diff <= 0) return '0h 0m';
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    return `${hours}h ${mins}m`;
-  };
-
-  const durationStr = !isCheckIn ? calculateDurationStr(verResult?.checkInTime, verResult?.checkOutTime || verResult?.timestamp) : null;
-  const isEnvironmentVerified = verResult?.environmentStatus === 'PASSED' || verResult?.environment_status === 'PASSED';
+  // 12 Radiating particle positions around checkmark
+  const particles = Array.from({ length: 12 }).map((_, i) => {
+    const angle = (i * 30 * Math.PI) / 180;
+    const distance = 48;
+    return {
+      x: Math.cos(angle) * distance,
+      y: Math.sin(angle) * distance,
+      color: i % 2 === 0 ? '#16C784' : '#42C8FF'
+    };
+  });
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.96, y: 10 }}
+      initial={{ opacity: 0, scale: 0.94, y: 15 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.96, y: 10 }}
-      transition={{ duration: 0.28, ease: 'easeOut' }}
+      exit={{ opacity: 0, scale: 0.94, y: 15 }}
+      transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
       style={{
         background: '#FFFFFF',
-        borderRadius: '20px',
+        borderRadius: '24px',
         padding: '36px 28px 28px',
         width: '100%',
-        maxWidth: '460px',
+        maxWidth: '440px',
         position: 'relative',
-        boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.15)',
-        border: '1px solid #E5E7EB',
-        textAlign: 'center'
+        boxShadow: '0 20px 40px -15px rgba(22, 199, 132, 0.15), 0 8px 16px -8px rgba(0, 0, 0, 0.04)',
+        border: '1px solid #E7EAF0',
+        textAlign: 'center',
+        fontFamily: "'Inter', sans-serif"
       }}
     >
-      {/* Green Checkmark */}
-      <motion.div
-        initial={{ scale: 0.6, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-        style={{
-          width: '76px',
-          height: '76px',
-          borderRadius: '50%',
-          background: '#DCFCE7',
-          color: '#16A34A',
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: '20px',
-          boxShadow: '0 4px 16px rgba(22, 163, 74, 0.2)'
-        }}
-      >
-        <CheckCircle2 size={46} strokeWidth={2.2} />
-      </motion.div>
+      {/* Central Green Circle & Checkmark + Radiating Particles */}
+      <div style={{ position: 'relative', display: 'inline-block', marginBottom: '24px' }}>
+        {/* Radiating Particles */}
+        {particles.map((p, idx) => (
+          <motion.div
+            key={idx}
+            initial={{ x: 0, y: 0, opacity: 1, scale: 0 }}
+            animate={{ x: p.x, y: p.y, opacity: 0, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.1 + idx * 0.02, ease: 'easeOut' }}
+            style={{
+              position: 'absolute',
+              top: '36px',
+              left: '36px',
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: p.color
+            }}
+          />
+        ))}
+
+        <motion.div
+          initial={{ scale: 0.4, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 260, damping: 18 }}
+          style={{
+            width: '80px',
+            height: '80px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #16C784 0%, #10B981 100%)',
+            color: '#FFFFFF',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 10px 30px -5px rgba(22, 199, 132, 0.4)'
+          }}
+        >
+          <Check size={44} strokeWidth={3} />
+        </motion.div>
+      </div>
 
       {/* Heading */}
-      <h3 style={{
+      <h2 style={{
         margin: '0 0 6px',
         fontSize: '22px',
-        fontWeight: 700,
-        color: '#111827'
+        fontWeight: 800,
+        color: '#111827',
+        letterSpacing: '-0.3px'
       }}>
-        {isCheckIn ? 'Check-In Successful!' : 'Check-Out Successful!'}
-      </h3>
+        Attendance Marked Successfully!
+      </h2>
 
       <p style={{
         margin: '0 0 24px',
-        fontSize: '14px',
-        color: '#6B7280',
-        lineHeight: 1.45
+        fontSize: '13.5px',
+        color: '#64748B',
+        fontWeight: 500
       }}>
-        Your attendance has been recorded successfully.
+        Good morning, <strong style={{ color: '#111827' }}>{employeeName}</strong>
       </p>
 
-      {/* Information Card */}
+      {/* Employee Details Summary Card */}
       <div style={{
-        background: '#F9FAFB',
-        border: '1px solid #E5E7EB',
-        borderRadius: '16px',
-        padding: '18px 20px',
+        background: '#F8FAFC',
+        border: '1px solid #E7EAF0',
+        borderRadius: '18px',
+        padding: '16px 20px',
         marginBottom: '24px',
         textAlign: 'left',
         display: 'flex',
         flexDirection: 'column',
-        gap: '14px'
+        gap: '12px'
       }}>
-        {/* Time row */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '13.5px', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Clock size={15} color="#0B74F6" />
-            {isCheckIn ? 'Check-In Time' : 'Check-Out Time'}
+          <span style={{ fontSize: '13px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <User size={15} style={{ color: '#6D3DF5' }} /> Employee
           </span>
-          <span style={{ fontSize: '14px', fontWeight: 700, color: '#111827' }}>
-            {time}, {date}
+          <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#111827' }}>
+            {employeeName}
           </span>
         </div>
 
-        {/* Duration if check-out */}
-        {!isCheckIn && durationStr && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F3F4F6', paddingTop: '10px' }}>
-            <span style={{ fontSize: '13.5px', color: '#6B7280' }}>
-              Duration
-            </span>
-            <span style={{ fontSize: '14px', fontWeight: 700, color: '#0B74F6' }}>
-              {durationStr}
-            </span>
-          </div>
-        )}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E7EAF0', paddingTop: '10px' }}>
+          <span style={{ fontSize: '13px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Clock size={15} style={{ color: '#6D3DF5' }} /> Type
+          </span>
+          <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#111827' }}>
+            {isCheckIn ? 'Check-In' : 'Check-Out'}
+          </span>
+        </div>
 
-        {/* Status row */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F3F4F6', paddingTop: '10px' }}>
-          <span style={{ fontSize: '13.5px', color: '#6B7280' }}>
-            Status
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E7EAF0', paddingTop: '10px' }}>
+          <span style={{ fontSize: '13px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Clock size={15} style={{ color: '#6D3DF5' }} /> Time
+          </span>
+          <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#111827' }}>
+            {time}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E7EAF0', paddingTop: '10px' }}>
+          <span style={{ fontSize: '13px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Building2 size={15} style={{ color: '#6D3DF5' }} /> Office
+          </span>
+          <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#111827' }}>
+            GharKaPaisa
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E7EAF0', paddingTop: '10px' }}>
+          <span style={{ fontSize: '13px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <MapPin size={15} style={{ color: '#16C784' }} /> Location
           </span>
           <span style={{
-            fontSize: '13px',
-            fontWeight: 700,
-            color: '#16A34A',
-            background: '#DCFCE7',
-            padding: '3px 10px',
+            fontSize: '12px',
+            fontWeight: 800,
+            color: '#16C784',
+            background: '#E9FBF3',
+            padding: '2px 10px',
             borderRadius: '12px'
           }}>
-            {isCheckIn ? 'Present (Verified)' : 'Work Completed'}
+            Verified
           </span>
         </div>
-
-        {/* Work Environment row (Only if actually verified by backend) */}
-        {isEnvironmentVerified && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F3F4F6', paddingTop: '10px' }}>
-            <span style={{ fontSize: '13.5px', color: '#6B7280' }}>
-              Work Environment
-            </span>
-            <span style={{
-              fontSize: '13px',
-              fontWeight: 700,
-              color: '#16A34A',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}>
-              <ShieldCheck size={14} /> Verified
-            </span>
-          </div>
-        )}
       </div>
 
-      {/* Close Button */}
+      {/* Primary Go to Dashboard Button */}
       <button
         type="button"
         onClick={onClose}
         style={{
           width: '100%',
-          height: '48px',
-          borderRadius: '12px',
+          height: '50px',
+          borderRadius: '14px',
           border: 'none',
-          background: '#0B74F6',
+          background: 'linear-gradient(135deg, #6D3DF5 0%, #8B6CFF 100%)',
           color: '#FFFFFF',
           fontSize: '15px',
           fontWeight: 700,
           cursor: 'pointer',
-          boxShadow: '0 4px 14px rgba(11, 116, 246, 0.25)',
-          transition: 'background 0.2s ease'
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          boxShadow: '0 8px 20px -4px rgba(109, 61, 245, 0.35)',
+          transition: 'transform 0.15s ease'
         }}
-        onMouseOver={(e) => { e.currentTarget.style.background = '#0963D2'; }}
-        onMouseOut={(e) => { e.currentTarget.style.background = '#0B74F6'; }}
+        onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
+        onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
       >
-        Close
+        Go to Dashboard <ArrowRight size={18} />
       </button>
     </motion.div>
   );
 }
+

@@ -54,53 +54,55 @@ export default function LivenessState({
         .amplify-liveness-detector {
           width: 100% !important;
           min-height: 380px !important;
-          background: #0F172A !important;
-          border-radius: 16px !important;
+          background: #FFFFFF !important;
+          border-radius: 20px !important;
           overflow-y: auto !important;
+          box-shadow: inset 0 0 0 1px #E7EAF0 !important;
         }
 
         .amplify-liveness-start-screen {
-          padding: 16px 14px !important;
-          color: #F8FAFC !important;
-          background: #0F172A !important;
-          border-radius: 16px !important;
+          padding: 20px 16px !important;
+          color: #111827 !important;
+          background: #FFFFFF !important;
+          border-radius: 20px !important;
           display: flex !important;
           flex-direction: column !important;
-          gap: 10px !important;
+          gap: 12px !important;
           overflow-y: auto !important;
           max-height: 100% !important;
         }
 
         .amplify-liveness-start-screen-warning {
-          background: rgba(245, 158, 11, 0.15) !important;
-          border: 1px solid rgba(245, 158, 11, 0.4) !important;
-          border-radius: 12px !important;
-          padding: 10px 14px !important;
-          color: #FDE68A !important;
-          font-size: 12.5px !important;
+          background: #FFF7E8 !important;
+          border: 1px solid #F5A623 !important;
+          border-radius: 14px !important;
+          padding: 12px 16px !important;
+          color: #B45309 !important;
+          font-size: 13px !important;
+          font-weight: 600 !important;
         }
 
         .amplify-liveness-start-screen-instructions {
-          color: #E2E8F0 !important;
-          font-size: 13px !important;
+          color: #475569 !important;
+          font-size: 13.5px !important;
           line-height: 1.5 !important;
         }
 
-        /* Prominent Start Video / Begin Check Button */
+        /* Prominent Start Video Button */
         .amplify-liveness-start-screen .amplify-button--primary,
         .amplify-liveness-detector .amplify-button--primary,
         .amplify-liveness-start-screen button,
         .amplify-liveness-detector button.amplify-button {
-          background: linear-gradient(135deg, #0B74F6 0%, #0052CC 100%) !important;
+          background: linear-gradient(135deg, #6D3DF5 0%, #8B6CFF 100%) !important;
           color: #FFFFFF !important;
           border: none !important;
-          border-radius: 12px !important;
+          border-radius: 14px !important;
           padding: 14px 20px !important;
           font-size: 15px !important;
-          font-weight: 800 !important;
+          font-weight: 700 !important;
           width: 100% !important;
           cursor: pointer !important;
-          box-shadow: 0 4px 14px rgba(11, 116, 246, 0.5) !important;
+          box-shadow: 0 8px 20px -4px rgba(109, 61, 245, 0.35) !important;
           margin-top: 12px !important;
           margin-bottom: 12px !important;
           display: flex !important;
@@ -115,47 +117,47 @@ export default function LivenessState({
         .amplify-liveness-start-screen .amplify-button--primary:hover,
         .amplify-liveness-detector .amplify-button--primary:hover {
           transform: translateY(-1px) !important;
-          box-shadow: 0 6px 18px rgba(11, 116, 246, 0.6) !important;
+          box-shadow: 0 10px 24px -4px rgba(109, 61, 245, 0.45) !important;
         }
 
         /* Camera Select Dropdown */
         .amplify-liveness-start-screen select,
         .amplify-select {
-          background: #1E293B !important;
-          color: #FFFFFF !important;
-          border: 1px solid #334155 !important;
-          border-radius: 10px !important;
-          padding: 10px 12px !important;
-          font-size: 13px !important;
+          background: #F8FAFC !important;
+          color: #111827 !important;
+          border: 1px solid #E7EAF0 !important;
+          border-radius: 12px !important;
+          padding: 10px 14px !important;
+          font-size: 13.5px !important;
           width: 100% !important;
         }
 
-        /* Video Stream & Center Circle/Oval Styling */
+        /* Video Stream & Oval Styling */
         .amplify-liveness-video-canvas-container {
-          border-radius: 16px !important;
+          border-radius: 20px !important;
           overflow: hidden !important;
           position: relative !important;
         }
 
         .amplify-liveness-oval {
-          stroke: #0B74F6 !important;
+          stroke: #6D3DF5 !important;
           stroke-width: 4 !important;
-          filter: drop-shadow(0px 0px 12px rgba(11, 116, 246, 0.6)) !important;
+          filter: drop-shadow(0px 0px 16px rgba(109, 61, 245, 0.6)) !important;
         }
 
         .amplify-liveness-oval--matched {
-          stroke: #16A34A !important;
-          filter: drop-shadow(0px 0px 14px rgba(22, 163, 74, 0.8)) !important;
+          stroke: #16C784 !important;
+          filter: drop-shadow(0px 0px 18px rgba(22, 199, 132, 0.8)) !important;
         }
 
         .amplify-liveness-instruction-overlay {
-          background: rgba(15, 23, 42, 0.85) !important;
+          background: rgba(17, 24, 39, 0.85) !important;
           color: #FFFFFF !important;
           font-weight: 700 !important;
           font-size: 14px !important;
           border-radius: 20px !important;
-          padding: 6px 16px !important;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+          padding: 8px 18px !important;
+          box-shadow: 0 4px 14px rgba(0,0,0,0.25) !important;
         }
       `}</style>
 
