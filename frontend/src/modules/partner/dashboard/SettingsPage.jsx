@@ -221,7 +221,7 @@ export default function SettingsPage() {
       const deviceRows = devicesResponse.data.data || [];
       setLoginHistory(history.map(row => ({ ...row, time: row.login_time, ip: row.ip_address || 'Unknown', location: [row.city, row.country].filter(Boolean).join(', ') || 'Unknown location', icon: iconFor(row.device) })));
       setDevices(deviceRows.map(row => ({ ...row, name: row.device_name || 'Unknown device', lastActive: formatTimeAgo(row.last_used_at), ip: row.ip_address || 'Unknown', location: [row.city, row.country].filter(Boolean).join(', ') || 'Unknown location', isCurrent: row.is_current, isTrusted: !row.revoked, icon: iconFor(row.device_name) })));
-      setSessions({ active: deviceRows.filter(row => !row.revoked && new Date(row.expires_at) > new Date()).map(row => ({ id: row.id, device: row.device_name || 'Unknown device', browser: row.browser, startedAt: row.created_at, expiresAt: row.expires_at, isCurrent: row.is_current })), expired: [] });
+      setSessions({ active: (Array.isArray(deviceRows) ? deviceRows : []).filter(row => !row.revoked && new Date(row.expires_at) > new Date()).map(row => ({ id: row.id, device: row.device_name || 'Unknown device', browser: row.browser, startedAt: row.created_at, expiresAt: row.expires_at, isCurrent: row.is_current })), expired: [] });
     } catch (err) { console.error('Unable to load security data', err); }
   };
 
@@ -633,7 +633,7 @@ export default function SettingsPage() {
                 
                 const otherDevices = [];
                 const seenKeys = new Set();
-                devices.filter(d => !isMatchingCurrent(d)).forEach(d => {
+                (Array.isArray(devices) ? devices : []).filter(d => !isMatchingCurrent(d)).forEach(d => {
                   const key = `${d.name || ''}_${d.browser || ''}_${d.ip || ''}`;
                   if (!seenKeys.has(key)) {
                     seenKeys.add(key);

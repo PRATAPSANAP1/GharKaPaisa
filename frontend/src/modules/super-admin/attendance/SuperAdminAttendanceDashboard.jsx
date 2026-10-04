@@ -6,7 +6,7 @@ import {
   FaClock, FaUserTimes, FaExclamationTriangle, FaInfoCircle, 
   FaSync, FaCheckCircle, FaTimesCircle, FaChevronLeft, FaChevronRight,
   FaShieldAlt, FaDesktop, FaMapMarkerAlt, FaEye, FaUserClock, FaBuilding,
-  FaFileDownload, FaFileCsv, FaFileExcel, FaRedo
+  FaFileDownload, FaFileCsv, FaFileExcel, FaRedo, FaPlus, FaTrash, FaEdit, FaMapPin
 } from 'react-icons/fa';
 import api from '../../../services/api';
 
@@ -21,7 +21,7 @@ export default function SuperAdminAttendanceDashboard() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Main Tabs: 'today' | 'history' | 'reports'
+  // Main Tabs: 'today' | 'history' | 'reports' | 'buildings'
   const [activeTab, setActiveTab] = useState('today');
 
   // Filter States
@@ -45,6 +45,22 @@ export default function SuperAdminAttendanceDashboard() {
   // Data States
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+
+  // Building Geofences State
+  const [buildingsList, setBuildingsList] = useState([]);
+  const [loadingBuildings, setLoadingBuildings] = useState(false);
+  const [buildingModalOpen, setBuildingModalOpen] = useState(false);
+  const [editingBuilding, setEditingBuilding] = useState(null);
+  const [buildingForm, setBuildingForm] = useState({
+    name: '',
+    code: '',
+    address: '',
+    tolerance_meters: 35,
+    polygon_coordinates: '',
+    is_active: true
+  });
+  const [savingBuilding, setSavingBuilding] = useState(false);
+  const [buildingActionMsg, setBuildingActionMsg] = useState(null);
 
   const [todayData, setTodayData] = useState({
     date: '',
@@ -185,6 +201,21 @@ export default function SuperAdminAttendanceDashboard() {
     }
   }, [startDate, endDate, debouncedSearch, statusFilter, departmentFilter, sourceFilter, page, limit]);
 
+  // Fetch Building Geofences
+  const fetchBuildings = useCallback(async () => {
+    setLoadingBuildings(true);
+    try {
+      const res = await api.get('/attendance/admin/buildings');
+      if (res.data?.success) {
+        setBuildingsList(res.data.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch buildings:', err);
+    } finally {
+      setLoadingBuildings(false);
+    }
+  }, []);
+
   // Trigger API calls on tab/filter change
   useEffect(() => {
     if (activeTab === 'today') {
@@ -193,8 +224,108 @@ export default function SuperAdminAttendanceDashboard() {
       fetchHistoryAttendance();
     } else if (activeTab === 'reports') {
       fetchReportsAttendance();
+    } else if (activeTab === 'buildings') {
+      fetchBuildings();
     }
-  }, [activeTab, fetchTodayAttendance, fetchHistoryAttendance, fetchReportsAttendance]);
+  }, [activeTab, fetchTodayAttendance, fetchHistoryAttendance, fetchReportsAttendance, fetchBuildings]);
+
+  // Building Geofence CRUD Handlers
+  const handleOpenAddBuilding = () => {
+    setEditingBuilding(null);
+    setBuildingForm({
+      name: '',
+      code: '',
+      address: '',
+      tolerance_meters: 35,
+      polygon_coordinates: '18.619358, 73.874924\n18.619565, 73.874942\n18.619585, 73.874550\n18.619377, 73.874543',
+      is_active: true
+    });
+    setBuildingActionMsg(null);
+    setBuildingModalOpen(true);
+  };
+
+  const handleOpenEditBuilding = (b) => {
+    setEditingBuilding(b);
+    let coordStr = '';
+    if (Array.isArray(b.polygon_coordinates)) {
+      coordStr = b.polygon_coordinates.map(pt => `${pt[0]}, ${pt[1]}`).join('\n');
+    }
+    setBuildingForm({
+      name: b.name || '',
+      code: b.code || '',
+      address: b.address || '',
+      tolerance_meters: b.tolerance_meters || 35,
+      polygon_coordinates: coordStr,
+      is_active: b.is_active !== false
+    });
+    setBuildingActionMsg(null);
+    setBuildingModalOpen(true);
+  };
+
+  const handleSaveBuilding = async (e) => {
+    e.preventDefault();
+    setSavingBuilding(true);
+    setBuildingActionMsg(null);
+
+    try {
+      // Parse coordinates lines into [[lat, lng], ...]
+      const lines = buildingForm.polygon_coordinates
+        .split('\n')
+        .map(l => l.trim())
+        .filter(Boolean);
+
+      const parsedCoords = [];
+      for (const line of lines) {
+        const parts = line.split(',').map(s => parseFloat(s.trim()));
+        if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+          parsedCoords.push([parts[0], parts[1]]);
+        }
+      }
+
+      if (parsedCoords.length < 3) {
+        setBuildingActionMsg({ type: 'error', text: 'At least 3 valid polygon coordinates (latitude, longitude) are required.' });
+        setSavingBuilding(false);
+        return;
+      }
+
+      const payload = {
+        name: buildingForm.name.trim(),
+        code: buildingForm.code.trim().toUpperCase().replace(/\\s+/g, '_'),
+        address: buildingForm.address.trim(),
+        tolerance_meters: Number(buildingForm.tolerance_meters) || 35,
+        polygon_coordinates: parsedCoords,
+        is_active: buildingForm.is_active
+      };
+
+      let res;
+      if (editingBuilding?.id) {
+        res = await api.put(`/attendance/admin/buildings/${editingBuilding.id}`, payload);
+      } else {
+        res = await api.post('/attendance/admin/buildings', payload);
+      }
+
+      if (res.data?.success) {
+        setBuildingModalOpen(false);
+        fetchBuildings();
+      } else {
+        setBuildingActionMsg({ type: 'error', text: res.data?.message || 'Failed to save building' });
+      }
+    } catch (err) {
+      setBuildingActionMsg({ type: 'error', text: err.response?.data?.message || err.message || 'Error saving building' });
+    } finally {
+      setSavingBuilding(false);
+    }
+  };
+
+  const handleDeleteBuilding = async (b) => {
+    if (!window.confirm(`Are you sure you want to delete building "${b.name}"?`)) return;
+    try {
+      await api.delete(`/attendance/admin/buildings/${b.id}`);
+      fetchBuildings();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete building');
+    }
+  };
 
   // Handle Export CSV/Excel
   const handleExport = async (format) => {
@@ -500,10 +631,32 @@ export default function SuperAdminAttendanceDashboard() {
           </button>
 
           <button
+            onClick={() => { setActiveTab('buildings'); setPage(1); }}
+            style={{
+              padding: '9px 16px',
+              borderRadius: '10px',
+              border: 'none',
+              background: activeTab === 'buildings' ? C.teal : C.inputBg,
+              color: activeTab === 'buildings' ? '#fff' : C.text,
+              fontSize: '13px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: activeTab === 'buildings' ? `0 4px 12px ${C.teal}30` : 'none',
+              transition: 'all 0.2s'
+            }}
+          >
+            <FaBuilding /> Office Buildings & Geofences
+          </button>
+
+          <button
             onClick={() => {
               if (activeTab === 'today') fetchTodayAttendance();
               else if (activeTab === 'history') fetchHistoryAttendance();
-              else fetchReportsAttendance();
+              else if (activeTab === 'reports') fetchReportsAttendance();
+              else if (activeTab === 'buildings') fetchBuildings();
             }}
             title="Refresh Data"
             style={{
@@ -519,11 +672,207 @@ export default function SuperAdminAttendanceDashboard() {
               justifyContent: 'center'
             }}
           >
-            <FaSync className={loading ? 'fa-spin' : ''} />
+            <FaSync className={(loading || loadingBuildings) ? 'fa-spin' : ''} />
           </button>
         </div>
       </div>
 
+      {/* ── CONDITIONAL RENDERING: BUILDINGS TAB OR ATTENDANCE METRICS ── */}
+      {activeTab === 'buildings' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Header Card */}
+          <div style={{
+            background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px',
+            padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            flexWrap: 'wrap', gap: '16px'
+          }}>
+            <div>
+              <h2 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: '0 0 4px' }}>
+                Configured Office Buildings & Geofence Boundaries
+              </h2>
+              <p style={{ fontSize: '13px', color: C.textLight, margin: 0 }}>
+                Attendance verification is strictly validated against these physical building 4-corner GPS polygon boundaries.
+              </p>
+            </div>
+            <button
+              onClick={handleOpenAddBuilding}
+              style={{
+                padding: '10px 18px',
+                borderRadius: '10px',
+                border: 'none',
+                background: C.teal,
+                color: '#fff',
+                fontSize: '13.5px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: `0 4px 12px ${C.teal}35`
+              }}
+            >
+              <FaPlus /> Add Office Building
+            </button>
+          </div>
+
+          {/* Buildings List / Grid */}
+          {loadingBuildings ? (
+            <div style={{ padding: '60px', textAlign: 'center', background: C.card, borderRadius: '16px', border: `1px solid ${C.border}` }}>
+              <LoadingLogo message="Loading building geofences..." />
+            </div>
+          ) : buildingsList.length === 0 ? (
+            <div style={{ padding: '48px', textAlign: 'center', background: C.card, borderRadius: '16px', border: `1px solid ${C.border}` }}>
+              <FaBuilding size={36} color={C.textLight} style={{ marginBottom: '12px' }} />
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 6px' }}>No Office Buildings Configured</h3>
+              <p style={{ fontSize: '13px', color: C.textLight, margin: '0 0 16px' }}>Add your first office building with 4-corner GPS polygon coordinates.</p>
+              <button
+                onClick={handleOpenAddBuilding}
+                style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: C.teal, color: '#fff', fontWeight: 700, cursor: 'pointer' }}
+              >
+                <FaPlus /> Add Building
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(380px, 1fr))', gap: '16px' }}>
+              {buildingsList.map((b) => {
+                const coords = Array.isArray(b.polygon_coordinates)
+                  ? b.polygon_coordinates
+                  : typeof b.polygon_coordinates === 'string'
+                  ? JSON.parse(b.polygon_coordinates || '[]')
+                  : [];
+
+                return (
+                  <div key={b.id || b.code} style={{
+                    background: C.card,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: '16px',
+                    padding: '20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '16px',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.02)'
+                  }}>
+                    <div>
+                      {/* Top Row: Name & Status */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
+                        <div>
+                          <h3 style={{ fontSize: '16px', fontWeight: 900, color: C.text, margin: 0 }}>
+                            {b.name}
+                          </h3>
+                          <span style={{ fontSize: '11.5px', fontFamily: 'monospace', fontWeight: 700, color: C.teal }}>
+                            {b.code}
+                          </span>
+                        </div>
+                        <span style={{
+                          fontSize: '11px',
+                          fontWeight: 800,
+                          padding: '3px 10px',
+                          borderRadius: '20px',
+                          background: b.is_active !== false ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                          color: b.is_active !== false ? '#10B981' : '#EF4444'
+                        }}>
+                          {b.is_active !== false ? '● ACTIVE' : '○ INACTIVE'}
+                        </span>
+                      </div>
+
+                      {/* Address & Tolerance */}
+                      {b.address && (
+                        <p style={{ fontSize: '12.5px', color: C.textMid, margin: '0 0 10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <FaMapMarkerAlt size={12} color={C.teal} /> {b.address}
+                        </p>
+                      )}
+
+                      <div style={{
+                        background: C.inputBg,
+                        borderRadius: '8px',
+                        padding: '8px 12px',
+                        fontSize: '12px',
+                        color: C.textMid,
+                        marginBottom: '12px',
+                        display: 'flex',
+                        justifyContent: 'space-between'
+                      }}>
+                        <span style={{ fontWeight: 600 }}>Boundary Tolerance:</span>
+                        <span style={{ fontWeight: 800, color: C.text }}>{b.tolerance_meters || 35} meters</span>
+                      </div>
+
+                      {/* 4-Corner Polygon Coordinates */}
+                      <div>
+                        <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>
+                          POLYGON BOUNDARY CORNERS ({coords.length} POINTS)
+                        </span>
+                        <div style={{
+                          background: C.inputBg,
+                          borderRadius: '8px',
+                          padding: '10px 12px',
+                          fontFamily: 'monospace',
+                          fontSize: '11.5px',
+                          color: C.text,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px'
+                        }}>
+                          {coords.map((pt, idx) => (
+                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: idx < coords.length - 1 ? `1px solid ${C.border}` : 'none', paddingBottom: idx < coords.length - 1 ? '3px' : '0' }}>
+                              <span style={{ color: C.textLight, fontWeight: 700 }}>Point {idx + 1}:</span>
+                              <span style={{ fontWeight: 700, color: C.teal }}>{Number(pt[0]).toFixed(6)}, {Number(pt[1]).toFixed(6)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div style={{ display: 'flex', gap: '8px', paddingTop: '12px', borderTop: `1px solid ${C.border}` }}>
+                      <button
+                        onClick={() => handleOpenEditBuilding(b)}
+                        style={{
+                          flex: 1,
+                          padding: '8px 12px',
+                          borderRadius: '8px',
+                          border: `1px solid ${C.border}`,
+                          background: C.inputBg,
+                          color: C.text,
+                          fontSize: '12.5px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <FaEdit size={12} /> Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteBuilding(b)}
+                        style={{
+                          padding: '8px 14px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          background: 'rgba(239, 68, 68, 0.1)',
+                          color: '#EF4444',
+                          fontSize: '12.5px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <FaTrash size={12} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
       {/* ── METRIC CARDS OVERVIEW ── */}
       <div style={{
         display: 'grid',
@@ -1178,6 +1527,8 @@ export default function SuperAdminAttendanceDashboard() {
           </div>
         )}
       </div>
+      </>
+      )}
 
       {/* ── EMPLOYEE DETAILED ATTENDANCE MODAL ── */}
       {selectedEmpDetail && (
@@ -1314,6 +1665,194 @@ export default function SuperAdminAttendanceDashboard() {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ADD / EDIT OFFICE BUILDING GEOFENCE MODAL ── */}
+      {buildingModalOpen && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            background: C.card, border: `1px solid ${C.border}`,
+            borderRadius: '20px', width: '100%', maxWidth: '600px',
+            maxHeight: '90vh', overflowY: 'auto', padding: '24px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
+            display: 'flex', flexDirection: 'column', gap: '18px'
+          }}>
+            {/* Modal Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px' }}>
+              <div>
+                <h2 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0 }}>
+                  {editingBuilding ? 'Edit Office Building Geofence' : 'Add New Office Building Geofence'}
+                </h2>
+                <span style={{ fontSize: '12.5px', color: C.textLight }}>
+                  Define building polygon corners to restrict attendance within physical premises
+                </span>
+              </div>
+              <button
+                onClick={() => setBuildingModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: C.textLight, fontSize: '20px', cursor: 'pointer', fontWeight: 900 }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {buildingActionMsg && (
+              <div style={{
+                padding: '10px 14px', borderRadius: '8px',
+                background: buildingActionMsg.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                border: `1px solid ${buildingActionMsg.type === 'error' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
+                color: buildingActionMsg.type === 'error' ? '#EF4444' : '#10B981',
+                fontSize: '13px', fontWeight: 700
+              }}>
+                {buildingActionMsg.text}
+              </div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleSaveBuilding} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '12.5px', fontWeight: 800, color: C.text, display: 'block', marginBottom: '6px' }}>
+                  Building Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., Main Office Building (Pune)"
+                  value={buildingForm.name}
+                  onChange={(e) => setBuildingForm({ ...buildingForm, name: e.target.value })}
+                  style={{
+                    width: '100%', padding: '10px 14px', borderRadius: '8px',
+                    border: `1px solid ${C.border}`, background: C.inputBg, color: C.text,
+                    fontSize: '13px', outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12.5px', fontWeight: 800, color: C.text, display: 'block', marginBottom: '6px' }}>
+                    Building Code *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g., MAIN_OFFICE_HQ"
+                    value={buildingForm.code}
+                    onChange={(e) => setBuildingForm({ ...buildingForm, code: e.target.value })}
+                    style={{
+                      width: '100%', padding: '10px 14px', borderRadius: '8px',
+                      border: `1px solid ${C.border}`, background: C.inputBg, color: C.text,
+                      fontSize: '13px', outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12.5px', fontWeight: 800, color: C.text, display: 'block', marginBottom: '6px' }}>
+                    Tolerance Buffer (meters)
+                  </label>
+                  <input
+                    type="number"
+                    min="5"
+                    max="200"
+                    placeholder="e.g., 35"
+                    value={buildingForm.tolerance_meters}
+                    onChange={(e) => setBuildingForm({ ...buildingForm, tolerance_meters: e.target.value })}
+                    style={{
+                      width: '100%', padding: '10px 14px', borderRadius: '8px',
+                      border: `1px solid ${C.border}`, background: C.inputBg, color: C.text,
+                      fontSize: '13px', outline: 'none'
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12.5px', fontWeight: 800, color: C.text, display: 'block', marginBottom: '6px' }}>
+                  Address / City
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., Pune, Maharashtra"
+                  value={buildingForm.address}
+                  onChange={(e) => setBuildingForm({ ...buildingForm, address: e.target.value })}
+                  style={{
+                    width: '100%', padding: '10px 14px', borderRadius: '8px',
+                    border: `1px solid ${C.border}`, background: C.inputBg, color: C.text,
+                    fontSize: '13px', outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '12.5px', fontWeight: 800, color: C.text }}>
+                    4-Corner Polygon Coordinates (Latitude, Longitude) *
+                  </label>
+                  <span style={{ fontSize: '11px', color: C.teal, fontWeight: 700 }}>One pair per line</span>
+                </div>
+                <textarea
+                  rows={5}
+                  required
+                  placeholder={`18.619358, 73.874924\n18.619565, 73.874942\n18.619585, 73.874550\n18.619377, 73.874543`}
+                  value={buildingForm.polygon_coordinates}
+                  onChange={(e) => setBuildingForm({ ...buildingForm, polygon_coordinates: e.target.value })}
+                  style={{
+                    width: '100%', padding: '10px 14px', borderRadius: '8px',
+                    border: `1px solid ${C.border}`, background: C.inputBg, color: C.text,
+                    fontSize: '12.5px', fontFamily: 'monospace', outline: 'none', lineHeight: '1.6'
+                  }}
+                />
+                <span style={{ fontSize: '11.5px', color: C.textLight, display: 'block', marginTop: '4px' }}>
+                  Example format: <code>18.619358, 73.874924</code> (Point 1), <code>18.619565, 73.874942</code> (Point 2), etc.
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                <input
+                  type="checkbox"
+                  id="building_active_cb"
+                  checked={buildingForm.is_active}
+                  onChange={(e) => setBuildingForm({ ...buildingForm, is_active: e.target.checked })}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: C.teal }}
+                />
+                <label htmlFor="building_active_cb" style={{ fontSize: '13px', fontWeight: 700, color: C.text, cursor: 'pointer' }}>
+                  Active Geofence (Enforce attendance restriction for this building)
+                </label>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', paddingTop: '14px', borderTop: `1px solid ${C.border}` }}>
+                <button
+                  type="button"
+                  onClick={() => setBuildingModalOpen(false)}
+                  style={{
+                    padding: '9px 18px', borderRadius: '8px', border: `1px solid ${C.border}`,
+                    background: C.inputBg, color: C.text, fontSize: '13px', fontWeight: 700, cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingBuilding}
+                  style={{
+                    padding: '9px 22px', borderRadius: '8px', border: 'none',
+                    background: C.teal, color: '#fff', fontSize: '13px', fontWeight: 800,
+                    cursor: savingBuilding ? 'not-allowed' : 'pointer',
+                    boxShadow: `0 4px 12px ${C.teal}35`
+                  }}
+                >
+                  {savingBuilding ? 'Saving...' : editingBuilding ? 'Update Building' : 'Create Building'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

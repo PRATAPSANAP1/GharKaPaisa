@@ -115,7 +115,7 @@ export default function PartnerVault() {
   }, []);
 
   const categories = ['All', ...new Set(documents.map((d) => d.category))];
-  const filteredDocs = filter === 'All' ? documents : documents.filter((d) => d.category === filter);
+  const filteredDocs = filter === 'All' ? documents : (Array.isArray(documents) ? documents : []).filter((d) => d.category === filter);
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>

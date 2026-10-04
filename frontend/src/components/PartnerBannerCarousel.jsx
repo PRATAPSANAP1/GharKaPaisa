@@ -71,7 +71,7 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false, targetPan
   // Determine active list of banners
   const activeBanners = dynamicBanners.length > 0
     ? dynamicBanners
-    : (showOnlyRefer ? defaultBanners.filter(b => b.id.includes('refer')) : defaultBanners);
+    : (showOnlyRefer ? (Array.isArray(defaultBanners) ? defaultBanners : []).filter(b => b.id.includes('refer')) : defaultBanners);
 
   // Infinite Auto-Rotate Slider Effect (Loops continuously)
   useEffect(() => {

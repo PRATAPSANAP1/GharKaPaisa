@@ -3,9 +3,10 @@ import { motion } from 'framer-motion';
 import { Check, Loader2 } from 'lucide-react';
 
 export default function IdentityVerificationProgress({
-  stage = 'FACE_MATCH', // 'FACE_MATCH' | 'ENVIRONMENT_CHECK' | 'COMPLETE_ATTENDANCE'
+  stage = 'FACE_MATCH', // 'FACE_MATCH' | 'LOCATION_CHECK' | 'COMPLETE_ATTENDANCE'
   actionType = 'CHECK_IN',
-  environmentStatus = null
+  locationStatus = null,
+  buildingName = null
 }) {
   const isCheckIn = actionType === 'CHECK_IN';
 
@@ -26,17 +27,17 @@ export default function IdentityVerificationProgress({
     },
     {
       num: 3,
-      title: 'Environment Check',
+      title: 'Building Location',
       desc: stage === 'FACE_MATCH'
         ? 'Pending'
-        : stage === 'ENVIRONMENT_CHECK'
-        ? 'Verifying your work environment...'
-        : environmentStatus === 'PASSED'
-        ? 'Environment verified'
-        : 'Workplace environment checked',
+        : stage === 'LOCATION_CHECK'
+        ? 'Verifying you are within the designated office building...'
+        : buildingName
+        ? `Verified within ${buildingName}`
+        : 'Office building premises verified',
       status: stage === 'FACE_MATCH'
         ? 'pending'
-        : stage === 'ENVIRONMENT_CHECK'
+        : stage === 'LOCATION_CHECK'
         ? 'active'
         : 'completed'
     },

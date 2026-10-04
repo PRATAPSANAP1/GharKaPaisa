@@ -237,7 +237,7 @@ export default function PartnerCrm() {
   };
 
   // Filter Logic
-  const filteredCustomers = (customers || []).filter(c => {
+  const filteredCustomers = (Array.isArray(customers) ? customers : []).filter(c => {
     const matchesSearch = !searchTerm || (
       c.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.mobile?.includes(searchTerm) ||

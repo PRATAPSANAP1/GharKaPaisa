@@ -74,8 +74,7 @@ export default function PincodeAutoComplete({
     if (onChange) onChange(val);
 
     if (val.length >= 1) {
-      const filtered = sbiEntries
-        .filter(([pin]) => pin.startsWith(val))
+      const filtered = (Array.isArray(sbiEntries) ? sbiEntries : []).filter(([pin]) => pin.startsWith(val))
         .slice(0, 10);
       setSuggestions(filtered);
       setIsOpen(filtered.length > 0);
@@ -146,7 +145,7 @@ export default function PincodeAutoComplete({
           onChange={handleInputChange}
           onFocus={() => {
             if (query.length >= 1) {
-              const filtered = sbiEntries.filter(([pin]) => pin.startsWith(query)).slice(0, 10);
+              const filtered = (Array.isArray(sbiEntries) ? sbiEntries : []).filter(([pin]) => pin.startsWith(query)).slice(0, 10);
               setSuggestions(filtered);
               setIsOpen(filtered.length > 0);
             }

@@ -356,10 +356,10 @@ export default function ManageApplications() {
 
   const kpis = {
     total: total || apps.length,
-    pending: backendStatusCounts?.pending ?? apps.filter(a => ['submitted', 'pending', 'lead_created', 'created'].includes((a.status || '').toLowerCase())).length,
-    operationalVerified: backendStatusCounts?.operational_verified ?? backendStatusCounts?.under_review ?? apps.filter(a => ['operational_verified', 'under_review', 'verification', 'in_progress', 'details_submitted'].includes((a.status || '').toLowerCase())).length,
-    approved: backendStatusCounts?.approved ?? apps.filter(a => ['approved', 'super_admin_approved'].includes((a.status || '').toLowerCase())).length,
-    rejected: backendStatusCounts?.rejected ?? apps.filter(a => ['rejected', 'declined', 'cancelled'].includes((a.status || '').toLowerCase())).length
+    pending: backendStatusCounts?.pending ?? (Array.isArray(apps) ? apps : []).filter(a => ['submitted', 'pending', 'lead_created', 'created'].includes((a.status || '').toLowerCase())).length,
+    operationalVerified: backendStatusCounts?.operational_verified ?? backendStatusCounts?.under_review ?? (Array.isArray(apps) ? apps : []).filter(a => ['operational_verified', 'under_review', 'verification', 'in_progress', 'details_submitted'].includes((a.status || '').toLowerCase())).length,
+    approved: backendStatusCounts?.approved ?? (Array.isArray(apps) ? apps : []).filter(a => ['approved', 'super_admin_approved'].includes((a.status || '').toLowerCase())).length,
+    rejected: backendStatusCounts?.rejected ?? (Array.isArray(apps) ? apps : []).filter(a => ['rejected', 'declined', 'cancelled'].includes((a.status || '').toLowerCase())).length
   };
 
   const totalPages = Math.ceil((total || 1) / limit);

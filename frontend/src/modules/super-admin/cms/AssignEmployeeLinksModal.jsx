@@ -75,7 +75,7 @@ export default function AssignEmployeeLinksModal({ isOpen, onClose, onSuccess, b
       const selectedBankObj = banks.find(b => String(b.id) === String(selectedBankId));
       const selectedBankName = String(selectedBankObj?.name || '').toLowerCase().trim();
 
-      const filtered = listToFilter.filter(p => {
+      const filtered = (Array.isArray(listToFilter) ? listToFilter : []).filter(p => {
         const pBankId = String(p.bank_id || p.bankId || p.bank_uuid || '').trim();
         const pBankName = String(p.bank_name || p.bank || '').toLowerCase().trim();
         const pProdName = String(p.name || '').toLowerCase().trim();
@@ -135,7 +135,7 @@ export default function AssignEmployeeLinksModal({ isOpen, onClose, onSuccess, b
 
   const handleEmpCheckboxChange = (empId) => {
     if (selectedEmpIds.includes(empId)) {
-      setSelectedEmpIds(selectedEmpIds.filter(id => id !== empId));
+      setSelectedEmpIds((Array.isArray(selectedEmpIds) ? selectedEmpIds : []).filter(id => id !== empId));
       setSelectAllEmps(false);
     } else {
       setSelectedEmpIds([...selectedEmpIds, empId]);
@@ -144,14 +144,14 @@ export default function AssignEmployeeLinksModal({ isOpen, onClose, onSuccess, b
 
   const handleProdCheckboxChange = (prodId) => {
     if (selectedProdIds.includes(prodId)) {
-      setSelectedProdIds(selectedProdIds.filter(id => id !== prodId));
+      setSelectedProdIds((Array.isArray(selectedProdIds) ? selectedProdIds : []).filter(id => id !== prodId));
       setSelectAllProds(false);
     } else {
       setSelectedProdIds([...selectedProdIds, prodId]);
     }
   };
 
-  const filteredEmployeesList = employees.filter(e => {
+  const filteredEmployeesList = (Array.isArray(employees) ? employees : []).filter(e => {
     if (!empSearch.trim()) return true;
     const q = empSearch.toLowerCase().trim();
     return (

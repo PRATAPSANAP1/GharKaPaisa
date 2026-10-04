@@ -106,7 +106,7 @@ export default function EmployeeContests() {
     return 'ACTIVE';
   };
 
-  const filteredContests = contests.filter((c) => {
+  const filteredContests = (Array.isArray(contests) ? contests : []).filter((c) => {
     const category = getContestCategory(c);
     const matchesTab = category === activeTab;
     const matchesSearch = 

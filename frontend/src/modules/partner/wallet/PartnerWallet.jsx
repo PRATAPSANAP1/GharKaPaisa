@@ -290,7 +290,7 @@ export default function PartnerWallet() {
   const openingBal = parseFloat(dashboardData?.wallet?.opening_balance ?? dashboardData?.opening_balance ?? 0);
 
   // Compute exact pending withdrawal requests amount and count
-  const pendingWithdrawalList = withdrawals.filter(w => {
+  const pendingWithdrawalList = (Array.isArray(withdrawals) ? withdrawals : []).filter(w => {
     const s = String(w.status || '').toLowerCase();
     return s.includes('pending') && !s.includes('reject') && !s.includes('fail') && !s.includes('cancel');
   });
@@ -298,7 +298,7 @@ export default function PartnerWallet() {
   const pendingWithdrawalCount = pendingWithdrawalList.length;
 
   const totalWdrCount = withdrawals.length;
-  const approvedWdrCount = withdrawals.filter(w => ['approved', 'completed', 'paid', 'processed', 'transferred', 'released'].includes(String(w.status).toLowerCase())).length;
+  const approvedWdrCount = (Array.isArray(withdrawals) ? withdrawals : []).filter(w => ['approved', 'completed', 'paid', 'processed', 'transferred', 'released'].includes(String(w.status).toLowerCase())).length;
   const successRate = totalWdrCount > 0 ? ((approvedWdrCount / totalWdrCount) * 100).toFixed(1) : '100.0';
 
   // Donut Dynamic Breakdown Data
@@ -332,8 +332,7 @@ export default function PartnerWallet() {
   const displayWithdrawals = withdrawals.slice(0, 5);
 
   // Dynamic Recent Payouts List
-  const displayPayouts = withdrawals
-    .filter(w => ['processed', 'transferred', 'completed', 'paid', 'released'].includes(String(w.status).toLowerCase()))
+  const displayPayouts = (Array.isArray(withdrawals) ? withdrawals : []).filter(w => ['processed', 'transferred', 'completed', 'paid', 'released'].includes(String(w.status).toLowerCase()))
     .slice(0, 5);
 
   const renderStatusBadge = (status) => {

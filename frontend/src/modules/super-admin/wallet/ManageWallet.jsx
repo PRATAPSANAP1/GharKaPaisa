@@ -149,8 +149,8 @@ export default function ManageWallet() {
       if (rzData) setRazorpayBalance(rzData);
       if (incPayload) {
         const tableData = incPayload.table?.data || [];
-        const pending = tableData.filter(r => ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING', 'IN_REVIEW'].includes((r.status || '').toUpperCase()));
-        const paid = tableData.filter(r => ['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes((r.status || '').toUpperCase()));
+        const pending = (Array.isArray(tableData) ? tableData : []).filter(r => ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING', 'IN_REVIEW'].includes((r.status || '').toUpperCase()));
+        const paid = (Array.isArray(tableData) ? tableData : []).filter(r => ['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes((r.status || '').toUpperCase()));
         setEmployeeIncentives({ kpi: incPayload.kpi || {}, pending, paid, all: tableData });
       }
 
@@ -160,7 +160,7 @@ export default function ManageWallet() {
         if (!filters.fromDate && !filters.toDate) return arr;
         const start = filters.fromDate ? new Date(filters.fromDate).getTime() : 0;
         const end = filters.toDate ? new Date(filters.toDate).setHours(23, 59, 59, 999) : Infinity;
-        return arr.filter(item => {
+        return (Array.isArray(arr) ? arr : []).filter(item => {
           const itemDate = new Date(item[dateField] || item.requested_at || item.created_at || Date.now()).getTime();
           return itemDate >= start && itemDate <= end;
         });
@@ -338,7 +338,7 @@ export default function ManageWallet() {
 
   const handleApproveCommission = async (id) => {
     setActionLoading(true);
-    setPendingCommissions(prev => prev.filter(item => item.id !== id));
+    setPendingCommissions(prev => (Array.isArray(prev) ? prev : []).filter(item => item.id !== id));
     try {
       await api.post(`/wallet/admin/commissions/${id}/release`);
       showToast(`Commission ${id} approved & released successfully!`, 'success');
@@ -353,7 +353,7 @@ export default function ManageWallet() {
 
   const handleRejectCommission = async (id, reason = 'Admin Rejected') => {
     setActionLoading(true);
-    setPendingCommissions(prev => prev.filter(item => item.id !== id));
+    setPendingCommissions(prev => (Array.isArray(prev) ? prev : []).filter(item => item.id !== id));
     try {
       await api.post(`/wallet/admin/commissions/${id}/reject`, { remarks: reason, rejection_reason: reason });
       showToast(`Commission ${id} rejected.`, 'success');
@@ -644,7 +644,7 @@ export default function ManageWallet() {
           <div>
             <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.green, margin: 0, letterSpacing: '-0.5px' }}>
               ₹{(() => {
-                const approvedComms = ledgerEntries.filter(l => {
+                const approvedComms = (Array.isArray(ledgerEntries) ? ledgerEntries : []).filter(l => {
                   const isCredit = (l.type === 'Credited' || parseFloat(l.credit || 0) > 0 || (l.transaction_type || '').toLowerCase().includes('commission'));
                   const statusStr = (l.status || '').toLowerCase();
                   const isApproved = statusStr.includes('approved') || statusStr.includes('released') || statusStr.includes('completed') || statusStr.includes('credited') || statusStr.includes('success');
@@ -669,7 +669,7 @@ export default function ManageWallet() {
           <div>
             <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0, letterSpacing: '-0.5px' }}>
               ₹{(() => {
-                const approvedWd = withdrawals.filter(w => {
+                const approvedWd = (Array.isArray(withdrawals) ? withdrawals : []).filter(w => {
                   const s = (w.status || '').toLowerCase();
                   return s.includes('approved') || s.includes('processed') || s.includes('completed') || s.includes('transferred') || s.includes('success');
                 });
@@ -692,7 +692,7 @@ export default function ManageWallet() {
           <div>
             <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#EA580C', margin: 0, letterSpacing: '-0.5px' }}>
               ₹{(() => {
-                const pendingWd = withdrawals.filter(w => {
+                const pendingWd = (Array.isArray(withdrawals) ? withdrawals : []).filter(w => {
                   const s = (w.status || '').toLowerCase();
                   return s.includes('pending') || s.includes('review');
                 });
@@ -701,7 +701,7 @@ export default function ManageWallet() {
               })()}
             </h3>
             <span style={{ fontSize: '10.5px', color: '#EA580C', fontWeight: 700, marginTop: '4px', display: 'block' }}>
-              {withdrawals.filter(w => (w.status || '').toLowerCase().includes('pending')).length} Pending Requests
+              {(Array.isArray(withdrawals) ? withdrawals : []).filter(w => (w.status || '').toLowerCase().includes('pending')).length} Pending Requests
             </span>
           </div>
         </div>
@@ -793,7 +793,7 @@ export default function ManageWallet() {
               >
                 <span>Pending Requests</span>
                 <span style={{ background: withdrawalSubTab === 'pending' ? 'rgba(255,255,255,0.25)' : (isDark ? '#3F3F46' : '#E2E8F0'), padding: '2px 8px', borderRadius: '12px', fontSize: '11px' }}>
-                  {withdrawals.filter(w => {
+                  {(Array.isArray(withdrawals) ? withdrawals : []).filter(w => {
                     const s = (w.status || '').toLowerCase();
                     return s.includes('pending') && !s.includes('reject') && !s.includes('fail') && !s.includes('cancel');
                   }).length}
@@ -818,7 +818,7 @@ export default function ManageWallet() {
               >
                 <span>Approved & Paid</span>
                 <span style={{ background: withdrawalSubTab === 'approved' ? 'rgba(255,255,255,0.25)' : (isDark ? '#3F3F46' : '#E2E8F0'), padding: '2px 8px', borderRadius: '12px', fontSize: '11px' }}>
-                  {withdrawals.filter(w => {
+                  {(Array.isArray(withdrawals) ? withdrawals : []).filter(w => {
                     const s = (w.status || '').toLowerCase();
                     return (s.includes('approved') || s.includes('processed') || s.includes('transferred') || s.includes('completed') || s.includes('paid')) &&
                            !s.includes('reject') && !s.includes('fail') && !s.includes('cancel');
@@ -844,7 +844,7 @@ export default function ManageWallet() {
               >
                 <span>Rejected & Cancelled</span>
                 <span style={{ background: withdrawalSubTab === 'rejected' ? 'rgba(255,255,255,0.25)' : (isDark ? '#3F3F46' : '#E2E8F0'), padding: '2px 8px', borderRadius: '12px', fontSize: '11px' }}>
-                  {withdrawals.filter(w => {
+                  {(Array.isArray(withdrawals) ? withdrawals : []).filter(w => {
                     const s = (w.status || '').toLowerCase();
                     return s.includes('reject') || s.includes('fail') || s.includes('cancel');
                   }).length}
@@ -869,7 +869,7 @@ export default function ManageWallet() {
                   </thead>
                   <tbody>
                     {(() => {
-                      const pendingList = withdrawals.filter(w => {
+                      const pendingList = (Array.isArray(withdrawals) ? withdrawals : []).filter(w => {
                         const s = (w.status || '').toLowerCase();
                         return s.includes('pending') && !s.includes('reject') && !s.includes('fail') && !s.includes('cancel');
                       });
@@ -951,7 +951,7 @@ export default function ManageWallet() {
                   </thead>
                   <tbody>
                     {(() => {
-                      const approvedList = withdrawals.filter(w => {
+                      const approvedList = (Array.isArray(withdrawals) ? withdrawals : []).filter(w => {
                         const s = (w.status || '').toLowerCase();
                         return (s.includes('approved') || s.includes('processed') || s.includes('transferred') || s.includes('completed') || s.includes('paid')) &&
                                !s.includes('reject') && !s.includes('fail') && !s.includes('cancel');
@@ -1047,7 +1047,7 @@ export default function ManageWallet() {
                   </thead>
                   <tbody>
                     {(() => {
-                      const rejectedList = withdrawals.filter(w => {
+                      const rejectedList = (Array.isArray(withdrawals) ? withdrawals : []).filter(w => {
                         const s = (w.status || '').toLowerCase();
                         return s.includes('reject') || s.includes('fail') || s.includes('cancel');
                       });
@@ -1231,7 +1231,7 @@ export default function ManageWallet() {
               >
                 <span>Approved & Released</span>
                 <span style={{ background: commissionSubTab === 'approved' ? 'rgba(255,255,255,0.25)' : (isDark ? '#3F3F46' : '#E2E8F0'), padding: '2px 8px', borderRadius: '12px', fontSize: '11px' }}>
-                  {ledgerEntries.filter(l => {
+                  {(Array.isArray(ledgerEntries) ? ledgerEntries : []).filter(l => {
                     const st = (l.status || '').toLowerCase();
                     const tt = (l.transaction_type || '').toUpperCase();
                     const desc = (l.description || '').toLowerCase();
@@ -1369,7 +1369,7 @@ export default function ManageWallet() {
                   </thead>
                   <tbody>
                     {(() => {
-                      const approvedList = ledgerEntries.filter(l => {
+                      const approvedList = (Array.isArray(ledgerEntries) ? ledgerEntries : []).filter(l => {
                         const st = (l.status || '').toLowerCase();
                         const tt = (l.transaction_type || '').toUpperCase();
                         const desc = (l.description || '').toLowerCase();
@@ -2070,7 +2070,7 @@ export default function ManageWallet() {
 
           {/* 1. MODULE 1: WITHDRAWALS FULL VIEW */}
           {activeFullViewModal === 'withdrawals' && (() => {
-            const filtered = withdrawals.filter(w => {
+            const filtered = (Array.isArray(withdrawals) ? withdrawals : []).filter(w => {
               const matchesSearch = !modalSearchTerm || JSON.stringify(w).toLowerCase().includes(modalSearchTerm.toLowerCase());
               const matchesStatus = modalStatusFilter === 'all' || (w.status || '').toLowerCase().includes(modalStatusFilter.toLowerCase());
               return matchesSearch && matchesStatus;
@@ -2134,7 +2134,7 @@ export default function ManageWallet() {
 
           {/* 2. MODULE 2: ADD FUNDS FULL VIEW */}
           {activeFullViewModal === 'add_funds' && (() => {
-            const filtered = addFundsReqs.filter(f => {
+            const filtered = (Array.isArray(addFundsReqs) ? addFundsReqs : []).filter(f => {
               const matchesSearch = !modalSearchTerm || JSON.stringify(f).toLowerCase().includes(modalSearchTerm.toLowerCase());
               const matchesStatus = modalStatusFilter === 'all' || (f.status || '').toLowerCase().includes(modalStatusFilter.toLowerCase());
               return matchesSearch && matchesStatus;
@@ -2190,7 +2190,7 @@ export default function ManageWallet() {
 
           {/* 3. MODULE 3: COMMISSIONS FULL VIEW */}
           {activeFullViewModal === 'commissions' && (() => {
-            const filtered = pendingCommissions.filter(c => {
+            const filtered = (Array.isArray(pendingCommissions) ? pendingCommissions : []).filter(c => {
               const matchesSearch = !modalSearchTerm || JSON.stringify(c).toLowerCase().includes(modalSearchTerm.toLowerCase());
               const matchesStatus = modalStatusFilter === 'all' || (c.status || '').toLowerCase().includes(modalStatusFilter.toLowerCase());
               return matchesSearch && matchesStatus;
@@ -2241,7 +2241,7 @@ export default function ManageWallet() {
 
           {/* 4. MODULE 4: PARTNERS OVERVIEW FULL VIEW */}
           {activeFullViewModal === 'partners' && (() => {
-            const filtered = partnersOverview.filter(p => !modalSearchTerm || JSON.stringify(p).toLowerCase().includes(modalSearchTerm.toLowerCase()));
+            const filtered = (Array.isArray(partnersOverview) ? partnersOverview : []).filter(p => !modalSearchTerm || JSON.stringify(p).toLowerCase().includes(modalSearchTerm.toLowerCase()));
             return (
               <div style={{ background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
                 <div style={{ overflowX: 'auto' }}>
@@ -2284,7 +2284,7 @@ export default function ManageWallet() {
 
           {/* 5. MODULE 5: LEDGER AUDIT TRAIL FULL VIEW */}
           {activeFullViewModal === 'ledger' && (() => {
-            const filtered = ledgerEntries.filter(l => {
+            const filtered = (Array.isArray(ledgerEntries) ? ledgerEntries : []).filter(l => {
               const matchesSearch = !modalSearchTerm || JSON.stringify(l).toLowerCase().includes(modalSearchTerm.toLowerCase());
               const isCredit = l.type === 'Credited' || parseFloat(l.credit || 0) > 0;
               const matchesStatus = modalStatusFilter === 'all' || (isCredit ? 'credited' : 'debited').includes(modalStatusFilter.toLowerCase());

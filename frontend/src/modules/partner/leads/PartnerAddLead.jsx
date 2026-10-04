@@ -778,8 +778,8 @@ export default function PartnerAddLead() {
                   `${selectedProd.bank_name || ''} ${selectedProd.name || ''}`.toUpperCase().includes('TATA')
                 );
                 let opts = isHdfcSelected 
-                  ? ALL_PROCESS_OPTIONS.filter(o => ['lead_punching', 'linked_share', 'direct_bank', 'co_browsing'].includes(o.id))
-                  : ALL_PROCESS_OPTIONS.filter(o => ['lead_punching', 'linked_share', 'direct_bank', 'physical_process'].includes(o.id));
+                  ? (Array.isArray(ALL_PROCESS_OPTIONS) ? ALL_PROCESS_OPTIONS : []).filter(o => ['lead_punching', 'linked_share', 'direct_bank', 'co_browsing'].includes(o.id))
+                  : (Array.isArray(ALL_PROCESS_OPTIONS) ? ALL_PROCESS_OPTIONS : []).filter(o => ['lead_punching', 'linked_share', 'direct_bank', 'physical_process'].includes(o.id));
 
                 const userDesignation = String(user?.designation || user?.hierarchy_level || '').trim().toUpperCase();
                 const userRole = String(user?.role || '').trim().toUpperCase();
@@ -793,7 +793,7 @@ export default function PartnerAddLead() {
                   userRole === 'PAN_CHECKER';
 
                 if (isAdministrativeSalesExecutive || isPanChecker) {
-                  opts = opts.filter(o => o.id === 'lead_punching');
+                  opts = (Array.isArray(opts) ? opts : []).filter(o => o.id === 'lead_punching');
                 }
 
                 return opts.map((opt) => {

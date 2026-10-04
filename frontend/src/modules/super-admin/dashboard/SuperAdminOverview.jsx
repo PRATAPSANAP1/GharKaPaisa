@@ -174,7 +174,7 @@ export default function SuperAdminOverview() {
       const res = await api.get('/applications', { params: { search: cust.mobile || cust.email || cust.customer_name, limit: 50 } });
       if (res.data?.success) {
         const apps = res.data.data?.applications || res.data.data || [];
-        setCustomerApps(apps.filter(a => a.customer_id === cust.id || a.customer_mobile === cust.mobile || a.mobile === cust.mobile));
+        setCustomerApps((Array.isArray(apps) ? apps : []).filter(a => a.customer_id === cust.id || a.customer_mobile === cust.mobile || a.mobile === cust.mobile));
       }
     } catch (err) {
       console.error(err);
@@ -268,20 +268,20 @@ export default function SuperAdminOverview() {
   // Metrics summary
   const stats = {
     employees: parseInt(overviewData?.employees?.total_employees ?? employeesList.length ?? 0, 10),
-    activeEmployees: parseInt(overviewData?.employees?.active_employees ?? employeesList.filter(e => ['active', 'approved'].includes((e.employee_status || e.activation_status || '').toLowerCase())).length ?? 0, 10),
+    activeEmployees: parseInt(overviewData?.employees?.active_employees ?? (Array.isArray(employeesList) ? employeesList : []).filter(e => ['active', 'approved'].includes((e.employee_status || e.activation_status || '').toLowerCase())).length ?? 0, 10),
 
     customers: parseInt(overviewData?.customers?.total_customers ?? customersList.length ?? 0, 10),
     partners: parseInt(overviewData?.Partners?.total ?? partnersList.length ?? 0, 10),
-    activePartners: parseInt(overviewData?.Partners?.active ?? partnersList.filter(p => (p.account_status || p.status) === 'active').length ?? 0, 10),
-    pendingKycPartners: parseInt(overviewData?.Partners?.pending_kyc ?? overviewData?.partners?.pending_kyc ?? partnersList.filter(p => (p.kyc_status || 'pending') === 'pending').length ?? 0, 10),
+    activePartners: parseInt(overviewData?.Partners?.active ?? (Array.isArray(partnersList) ? partnersList : []).filter(p => (p.account_status || p.status) === 'active').length ?? 0, 10),
+    pendingKycPartners: parseInt(overviewData?.Partners?.pending_kyc ?? overviewData?.partners?.pending_kyc ?? (Array.isArray(partnersList) ? partnersList : []).filter(p => (p.kyc_status || 'pending') === 'pending').length ?? 0, 10),
     teamMembers: parseInt(overviewData?.team?.total_team ?? teamList.length ?? 0, 10),
 
     totalApps: parseInt(overviewData?.applications?.total ?? applicationsList.length ?? 0, 10),
-    leadPunchingApps: parseInt(overviewData?.applications?.lead_punching_count ?? applicationsList.filter(a => (a.process_type || 'lead_punching') === 'lead_punching').length ?? 0, 10),
-    linkedShareApps: parseInt(overviewData?.applications?.linked_share_count ?? applicationsList.filter(a => a.process_type === 'linked_share').length ?? 0, 10),
-    directBankApps: parseInt(overviewData?.applications?.direct_bank_count ?? applicationsList.filter(a => a.process_type === 'direct_bank').length ?? 0, 10),
-    physicalProcessApps: parseInt(overviewData?.applications?.physical_process_count ?? applicationsList.filter(a => a.process_type === 'physical_process').length ?? 0, 10),
-    coBrowsingApps: parseInt(overviewData?.applications?.co_browsing_count ?? applicationsList.filter(a => ['co_browsing', 'co-browsing', 'card_assist'].includes(a.process_type) || !a.process_type).length ?? 0, 10),
+    leadPunchingApps: parseInt(overviewData?.applications?.lead_punching_count ?? (Array.isArray(applicationsList) ? applicationsList : []).filter(a => (a.process_type || 'lead_punching') === 'lead_punching').length ?? 0, 10),
+    linkedShareApps: parseInt(overviewData?.applications?.linked_share_count ?? (Array.isArray(applicationsList) ? applicationsList : []).filter(a => a.process_type === 'linked_share').length ?? 0, 10),
+    directBankApps: parseInt(overviewData?.applications?.direct_bank_count ?? (Array.isArray(applicationsList) ? applicationsList : []).filter(a => a.process_type === 'direct_bank').length ?? 0, 10),
+    physicalProcessApps: parseInt(overviewData?.applications?.physical_process_count ?? (Array.isArray(applicationsList) ? applicationsList : []).filter(a => a.process_type === 'physical_process').length ?? 0, 10),
+    coBrowsingApps: parseInt(overviewData?.applications?.co_browsing_count ?? (Array.isArray(applicationsList) ? applicationsList : []).filter(a => ['co_browsing', 'co-browsing', 'card_assist'].includes(a.process_type) || !a.process_type).length ?? 0, 10),
     invalidProcessApps: parseInt(overviewData?.applications?.invalid_process_count ?? 0, 10),
 
     approvedApps: parseInt(overviewData?.applications?.approved ?? 0, 10),
@@ -289,12 +289,11 @@ export default function SuperAdminOverview() {
     rejectedApps: parseInt(overviewData?.applications?.rejected ?? 0, 10),
 
     admins: parseInt(overviewData?.admins?.total_admins ?? adminsList.length ?? 0, 10),
-    activeAdmins: parseInt(overviewData?.admins?.active_admins ?? adminsList.filter(a => a.status === 'active' || a.isActive).length ?? 0, 10),
+    activeAdmins: parseInt(overviewData?.admins?.active_admins ?? (Array.isArray(adminsList) ? adminsList : []).filter(a => a.status === 'active' || a.isActive).length ?? 0, 10),
 
-    totalWithdrawalAmount: financialsWithdrawals
-      .filter(w => ['approved', 'completed', 'transferred', 'processed'].includes((w.status || '').toLowerCase()))
+    totalWithdrawalAmount: (Array.isArray(financialsWithdrawals) ? financialsWithdrawals : []).filter(w => ['approved', 'completed', 'transferred', 'processed'].includes((w.status || '').toLowerCase()))
       .reduce((sum, w) => sum + parseFloat(w.amount || 0), 0),
-    pendingWithdrawals: financialsWithdrawals.filter(w => (w.status || '').toLowerCase().includes('pending') || (w.status || '').toLowerCase().includes('review')).length,
+    pendingWithdrawals: (Array.isArray(financialsWithdrawals) ? financialsWithdrawals : []).filter(w => (w.status || '').toLowerCase().includes('pending') || (w.status || '').toLowerCase().includes('review')).length,
 
     banks: parseInt(overviewData?.banks?.total_banks ?? 0, 10),
     products: parseInt(overviewData?.products?.total_products ?? 0, 10),
@@ -739,8 +738,7 @@ export default function SuperAdminOverview() {
                 </tr>
               </thead>
               <tbody>
-                {customersList
-                  .filter(c => !searchQuery || (c.customer_name || '').toLowerCase().includes(searchQuery.toLowerCase()) || (c.mobile || '').includes(searchQuery))
+                {(Array.isArray(customersList) ? customersList : []).filter(c => !searchQuery || (c.customer_name || '').toLowerCase().includes(searchQuery.toLowerCase()) || (c.mobile || '').includes(searchQuery))
                   .map((cust, i) => (
                     <tr key={cust.id || i} style={{ borderBottom: `1px solid ${C.border}` }}>
                       <td style={{ padding: '12px 16px', fontWeight: 800, color: C.text }}>{cust.customer_name || 'Customer'}</td>
@@ -796,8 +794,7 @@ export default function SuperAdminOverview() {
                 </tr>
               </thead>
               <tbody>
-                {partnersList
-                  .filter(p => {
+                {(Array.isArray(partnersList) ? partnersList : []).filter(p => {
                     if (!searchQuery) return true;
                     const q = searchQuery.toLowerCase();
                     const name = `${p.first_name || ''} ${p.last_name || ''} ${p.company_name || ''}`.toLowerCase();
@@ -888,8 +885,7 @@ export default function SuperAdminOverview() {
                     <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: C.textLight }}>No employee records found.</td>
                   </tr>
                 ) : (
-                  employeesList
-                    .filter(e => {
+                  (Array.isArray(employeesList) ? employeesList : []).filter(e => {
                       if (!searchQuery) return true;
                       const q = searchQuery.toLowerCase();
                       const name = (e.full_name || e.employee_name || '').toLowerCase();
@@ -970,8 +966,7 @@ export default function SuperAdminOverview() {
                 </tr>
               </thead>
               <tbody>
-                {teamList
-                  .filter(m => !searchQuery || (m.first_name || m.full_name || '').toLowerCase().includes(searchQuery.toLowerCase()) || (m.partner_code || '').toLowerCase().includes(searchQuery.toLowerCase()))
+                {(Array.isArray(teamList) ? teamList : []).filter(m => !searchQuery || (m.first_name || m.full_name || '').toLowerCase().includes(searchQuery.toLowerCase()) || (m.partner_code || '').toLowerCase().includes(searchQuery.toLowerCase()))
                   .map((m, i) => (
                     <tr key={m.id || i} style={{ borderBottom: `1px solid ${C.border}` }}>
                       <td style={{ padding: '12px 16px', fontWeight: 800, color: C.text }}>{m.first_name || m.full_name} {m.last_name || ''}</td>
@@ -1066,8 +1061,7 @@ export default function SuperAdminOverview() {
                 </tr>
               </thead>
               <tbody>
-                {applicationsList
-                  .filter(app => {
+                {(Array.isArray(applicationsList) ? applicationsList : []).filter(app => {
                     if (processFilter !== 'all' && (app.process_type || 'lead_punching') !== processFilter) return false;
                     if (statusFilter !== 'all' && (app.status || '').toLowerCase() !== statusFilter.toLowerCase()) return false;
                     if (searchQuery) {
@@ -1291,8 +1285,7 @@ export default function SuperAdminOverview() {
                         <td colSpan={7} style={{ textAlign: 'center', padding: '24px', color: C.textLight }}>No ledger transaction records found.</td>
                       </tr>
                     ) : (
-                      financialsLedger
-                        .filter(txn => {
+                      (Array.isArray(financialsLedger) ? financialsLedger : []).filter(txn => {
                           if (finTypeFilter !== 'all' && String(txn.transaction_type || '').toUpperCase() !== finTypeFilter.toUpperCase()) return false;
                           if (finStatusFilter !== 'all' && String(txn.status || '').toLowerCase() !== finStatusFilter.toLowerCase()) return false;
                           if (finSearch) {
@@ -1387,8 +1380,7 @@ export default function SuperAdminOverview() {
                         <td colSpan={8} style={{ textAlign: 'center', padding: '24px', color: C.textLight }}>No withdrawal payout requests found.</td>
                       </tr>
                     ) : (
-                      financialsWithdrawals
-                        .filter(w => {
+                      (Array.isArray(financialsWithdrawals) ? financialsWithdrawals : []).filter(w => {
                           if (finStatusFilter !== 'all' && String(w.status || '').toLowerCase() !== finStatusFilter.toLowerCase()) return false;
                           if (finSearch) {
                             const q = finSearch.toLowerCase();

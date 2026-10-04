@@ -42,14 +42,20 @@ const createLivenessSession = async (req, res) => {
 // POST /api/v1/attendance/verification/liveness/result
 const validateLivenessResult = async (req, res) => {
   try {
-    const { session_id, provider_session_id } = req.body;
+    const { session_id, provider_session_id, latitude, longitude, accuracy, lat, lng } = req.body;
     if (!session_id || !provider_session_id) {
       return res.status(400).json({ success: false, reason: 'INVALID_REQUEST', message: 'session_id and provider_session_id are required' });
     }
 
+    const clientLat = latitude !== undefined ? latitude : lat;
+    const clientLng = longitude !== undefined ? longitude : lng;
+
     const result = await service.validateLivenessResult({
       sessionId: session_id,
       providerSessionId: provider_session_id,
+      latitude: clientLat,
+      longitude: clientLng,
+      accuracy: accuracy || 0,
       reqUser: req.user,
     });
 

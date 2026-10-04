@@ -512,7 +512,7 @@ export default function ManageAdminProducts() {
   const selectedBank = banks.find(b => b.id === form.bank_id);
 
   // Compute Filtered Products
-  const filteredProducts = products.filter(p => {
+  const filteredProducts = (Array.isArray(products) ? products : []).filter(p => {
     if (search.trim()) {
       const q = search.toLowerCase().trim();
       const matchName = p.name?.toLowerCase().includes(q);
@@ -1129,7 +1129,7 @@ export default function ManageAdminProducts() {
                         <button
                           type="button"
                           onClick={() => {
-                            const next = form.features.filter((_, i) => i !== idx);
+                            const next = (Array.isArray(form.features) ? form.features : []).filter((_, i) => i !== idx);
                             setForm({ ...form, features: next });
                           }}
                           style={{ padding: '6px 12px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
@@ -1176,7 +1176,7 @@ export default function ManageAdminProducts() {
                         <button
                           type="button"
                           onClick={() => {
-                            const next = form.benefits.filter((_, i) => i !== idx);
+                            const next = (Array.isArray(form.benefits) ? form.benefits : []).filter((_, i) => i !== idx);
                             setForm({ ...form, benefits: next });
                           }}
                           style={{ padding: '6px 12px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
@@ -1210,7 +1210,7 @@ export default function ManageAdminProducts() {
                               type="checkbox"
                               checked={checked}
                               onChange={() => {
-                                const next = checked ? form.required_documents.filter(d => d !== doc) : [...form.required_documents, doc];
+                                const next = checked ? (Array.isArray(form.required_documents) ? form.required_documents : []).filter(d => d !== doc) : [...form.required_documents, doc];
                                 setForm({ ...form, required_documents: next });
                               }}
                             />
@@ -1250,7 +1250,7 @@ export default function ManageAdminProducts() {
                         <button
                           type="button"
                           onClick={() => {
-                            const next = (form.faqs || []).filter((_, i) => i !== idx);
+                            const next = (Array.isArray(form.faqs) ? form.faqs : []).filter((_, i) => i !== idx);
                             setForm({ ...form, faqs: next });
                           }}
                           style={{ color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 700, alignSelf: 'flex-end' }}
@@ -1428,7 +1428,7 @@ export default function ManageAdminProducts() {
                     </p>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px' }}>
-                      {form.features.filter(f => f).slice(0, 3).map((f, i) => (
+                      {(Array.isArray(form.features) ? form.features : []).filter(f => f).slice(0, 3).map((f, i) => (
                         <div key={i} style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', color: isDark ? '#94a3b8' : '#64748b' }}>
                           <MdCheckCircle size={14} style={{ color: '#10B981', flexShrink: 0 }} />
                           <span>{f}</span>

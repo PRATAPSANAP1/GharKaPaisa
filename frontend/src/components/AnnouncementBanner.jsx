@@ -36,7 +36,7 @@ export default function AnnouncementBanner() {
     } catch (e) {}
   };
 
-  const activeAnnouncements = announcements.filter(a => !dismissedIds.includes(a.id));
+  const activeAnnouncements = (Array.isArray(announcements) ? announcements : []).filter(a => !dismissedIds.includes(a.id));
 
   if (activeAnnouncements.length === 0) return null;
 

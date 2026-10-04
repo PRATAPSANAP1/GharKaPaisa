@@ -21,11 +21,35 @@ const attendanceService = {
     return response.data;
   },
 
-  validateLivenessResult: async (sessionId, providerSessionId) => {
+  validateLivenessResult: async (sessionId, providerSessionId, locationData = {}) => {
     const response = await api.post('/attendance/verification/liveness/result', {
       session_id: sessionId,
       provider_session_id: providerSessionId,
+      latitude: locationData.latitude ?? locationData.lat,
+      longitude: locationData.longitude ?? locationData.lng,
+      accuracy: locationData.accuracy,
     });
+    return response.data;
+  },
+
+  // Office Building Geofence Endpoints
+  getBuildingGeofences: async () => {
+    const response = await api.get('/attendance/admin/buildings');
+    return response.data;
+  },
+
+  createBuildingGeofence: async (data) => {
+    const response = await api.post('/attendance/admin/buildings', data);
+    return response.data;
+  },
+
+  updateBuildingGeofence: async (id, data) => {
+    const response = await api.put(`/attendance/admin/buildings/${id}`, data);
+    return response.data;
+  },
+
+  deleteBuildingGeofence: async (id) => {
+    const response = await api.delete(`/attendance/admin/buildings/${id}`);
     return response.data;
   },
 

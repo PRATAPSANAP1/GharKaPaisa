@@ -265,7 +265,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
     setCompareList(prev => {
       const exists = prev.find(p => p.id === product.id);
       if (exists) {
-        return prev.filter(p => p.id !== product.id);
+        return (Array.isArray(prev) ? prev : []).filter(p => p.id !== product.id);
       } else {
         if (prev.length >= 2) {
           alert("You can select up to 2 products to compare.");
@@ -523,7 +523,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
   }, [activeBank, products]);
 
   // Filter Logic
-  const filteredProducts = products.filter(p => {
+  const filteredProducts = (Array.isArray(products) ? products : []).filter(p => {
     const approvalRate = getApprovalRate(p);
     
     // Deep Search: by Name, Bank Code, Category, Commission, Eligibility
@@ -714,7 +714,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
               }}
             >
               <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>{t("All Products")}</option>
-              {CATEGORIES.filter(c => c.id !== 'all').map(cat => (
+              {(Array.isArray(CATEGORIES) ? CATEGORIES : []).filter(c => c.id !== 'all').map(cat => (
                 <option key={cat.id} value={cat.id} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
                   {t(cat.label)}
                 </option>
@@ -748,7 +748,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
               }}
             >
               <option value="All Banks" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🏦 {t("All Banks")}</option>
-              {bankOptions.filter(b => b !== 'All Banks').map(bank => (
+              {(Array.isArray(bankOptions) ? bankOptions : []).filter(b => b !== 'All Banks').map(bank => (
                 <option key={bank} value={bank} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
                   🏦 {bank}
                 </option>
@@ -1131,7 +1131,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                   }}
                 >
                   <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>{t("Products (All)")}</option>
-                  {CATEGORIES.filter(c => c.id !== 'all').map(cat => (
+                  {(Array.isArray(CATEGORIES) ? CATEGORIES : []).filter(c => c.id !== 'all').map(cat => (
                     <option key={cat.id} value={cat.id} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
                       {t(cat.label)}
                     </option>
@@ -1156,7 +1156,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                   }}
                 >
                   <option value="All Banks" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🏦 {t("Banks (All)")}</option>
-                  {bankOptions.filter(b => b !== 'All Banks').map(bank => (
+                  {(Array.isArray(bankOptions) ? bankOptions : []).filter(b => b !== 'All Banks').map(bank => (
                     <option key={bank} value={bank} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
                       🏦 {bank}
                     </option>

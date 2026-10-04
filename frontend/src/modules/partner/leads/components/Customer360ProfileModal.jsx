@@ -637,7 +637,7 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
                     </h4>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
                       {['pan', 'aadhaar', 'salary_slip', 'itr', 'bank_statement', 'photo', 'other'].map(type => {
-                        const docList = documents.filter(d => (d.document_type || '').toLowerCase() === type);
+                        const docList = (Array.isArray(documents) ? documents : []).filter(d => (d.document_type || '').toLowerCase() === type);
                         return (
                           <div key={type} style={{ ...S.card, padding: '14px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                             <div>

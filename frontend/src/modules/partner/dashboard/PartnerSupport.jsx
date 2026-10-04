@@ -109,7 +109,7 @@ export default function PartnerSupport() {
 
   const isMobile = width < 992;
 
-  const filteredTickets = tickets.filter(t => {
+  const filteredTickets = (Array.isArray(tickets) ? tickets : []).filter(t => {
     const ticketIdStr = `TKT-${t.id.substring(0, 8)}`.toLowerCase();
     const matchSearch = t.subject.toLowerCase().includes(searchTerm.toLowerCase()) || ticketIdStr.includes(searchTerm.toLowerCase());
     const matchTab = activeTab === 'all' || t.status === activeTab || (activeTab === 'resolved' && t.status === 'closed');

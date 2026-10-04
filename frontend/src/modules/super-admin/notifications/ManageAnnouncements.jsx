@@ -295,7 +295,7 @@ export default function ManageAnnouncements() {
   };
 
   // Filtered Dynamic Announcements List
-  const filteredAnnouncements = announcements.filter(ann => {
+  const filteredAnnouncements = (Array.isArray(announcements) ? announcements : []).filter(ann => {
     const q = searchQuery.toLowerCase();
     const matchesSearch = !q || (
       ann.title?.toLowerCase().includes(q) || 
@@ -312,9 +312,9 @@ export default function ManageAnnouncements() {
 
   // Calculate dynamic KPIs from API stats or active array
   const totalCount = stats?.kpis?.total ?? announcements.length;
-  const publishedCount = stats?.kpis?.published ?? announcements.filter(a => (a.status || '').toUpperCase() === 'PUBLISHED').length;
-  const scheduledCount = stats?.kpis?.scheduled ?? announcements.filter(a => (a.status || '').toUpperCase() === 'SCHEDULED').length;
-  const draftCount = stats?.kpis?.drafts ?? announcements.filter(a => (a.status || '').toUpperCase() === 'DRAFT').length;
+  const publishedCount = stats?.kpis?.published ?? (Array.isArray(announcements) ? announcements : []).filter(a => (a.status || '').toUpperCase() === 'PUBLISHED').length;
+  const scheduledCount = stats?.kpis?.scheduled ?? (Array.isArray(announcements) ? announcements : []).filter(a => (a.status || '').toUpperCase() === 'SCHEDULED').length;
+  const draftCount = stats?.kpis?.drafts ?? (Array.isArray(announcements) ? announcements : []).filter(a => (a.status || '').toUpperCase() === 'DRAFT').length;
   const totalReachSum = stats?.kpis?.total_reach ?? announcements.reduce((sum, a) => sum + (parseInt(a.reach) || 0), 0);
 
   // Highest performing announcement calculated dynamically
@@ -906,7 +906,7 @@ export default function ManageAnnouncements() {
                 Loading announcement audit history...
               </div>
             ) : (() => {
-              const filteredHistory = historyData.filter(log => {
+              const filteredHistory = (Array.isArray(historyData) ? historyData : []).filter(log => {
                 const q = historySearchQuery.toLowerCase();
                 const matchesSearch = !q || (
                   log.action?.toLowerCase().includes(q) ||
@@ -1218,7 +1218,7 @@ export default function ManageAnnouncements() {
                               if (e.target.checked) {
                                 setFormData({ ...formData, target_designations: [...current, desig.value] });
                               } else {
-                                setFormData({ ...formData, target_designations: current.filter(d => d !== desig.value) });
+                                setFormData({ ...formData, target_designations: (Array.isArray(current) ? current : []).filter(d => d !== desig.value) });
                               }
                             }}
                           />
@@ -1265,7 +1265,7 @@ export default function ManageAnnouncements() {
                               if (e.target.checked) {
                                 setFormData({ ...formData, target_designations: [...current, desig.value] });
                               } else {
-                                setFormData({ ...formData, target_designations: current.filter(d => d !== desig.value) });
+                                setFormData({ ...formData, target_designations: (Array.isArray(current) ? current : []).filter(d => d !== desig.value) });
                               }
                             }}
                           />
@@ -1292,7 +1292,7 @@ export default function ManageAnnouncements() {
                             if (e.target.checked) {
                               setFormData({ ...formData, delivery_channels: [...formData.delivery_channels, ch] });
                             } else {
-                              setFormData({ ...formData, delivery_channels: formData.delivery_channels.filter(c => c !== ch) });
+                              setFormData({ ...formData, delivery_channels: (Array.isArray(formData.delivery_channels) ? formData.delivery_channels : []).filter(c => c !== ch) });
                             }
                           }}
                         />

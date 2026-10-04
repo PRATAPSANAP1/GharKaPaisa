@@ -126,7 +126,7 @@ export default function DynamicCreditCardsPage() {
 
 
   // Filter cards by category & search query
-  const filteredCards = cards.filter(card => {
+  const filteredCards = (Array.isArray(cards) ? cards : []).filter(card => {
     const matchesFilter = activeFilter === 'All' || 
                           card.sub_category === activeFilter || 
                           card.category === activeFilter;
@@ -702,7 +702,7 @@ export default function DynamicCreditCardsPage() {
                       <span>Select Card to Compare</span>
                       <FaTimes size={10} style={{ cursor: 'pointer' }} onClick={() => setShowCardBSelector(false)} />
                     </div>
-                    {cards.filter(c => c.id !== selectedForCompare[0]?.id).map(c => (
+                    {(Array.isArray(cards) ? cards : []).filter(c => c.id !== selectedForCompare[0]?.id).map(c => (
                       <div
                         key={c.id}
                         onClick={() => {

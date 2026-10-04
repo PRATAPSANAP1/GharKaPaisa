@@ -11,8 +11,8 @@ export default function AttendanceSummaryView({
 }) {
   // Compute metrics from real backend summary & history records
   const totalDays = summary.total || history.length || 0;
-  const presentDays = summary.present || history.filter(item => item.check_in_time).length;
-  const completedDays = history.filter(item => item.check_in_time && item.check_out_time).length;
+  const presentDays = summary.present || (Array.isArray(history) ? history : []).filter(item => item.check_in_time).length;
+  const completedDays = (Array.isArray(history) ? history : []).filter(item => item.check_in_time && item.check_out_time).length;
 
   // Calculate total hours
   const totalHours = history.reduce((acc, curr) => {

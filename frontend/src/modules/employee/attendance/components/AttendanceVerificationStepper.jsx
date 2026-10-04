@@ -24,8 +24,8 @@ export default function AttendanceVerificationStepper({
     },
     {
       num: 3,
-      title: 'Environment Check',
-      desc: 'Verify your work environment',
+      title: 'Building Location',
+      desc: 'Verify you are within the designated office building',
       status: 'pending'
     },
     {

@@ -409,16 +409,16 @@ export default function QuickAccessSection() {
     const groups = {};
     serviceCatalog.categories.forEach((cat) => {
       if (cat.id === 'banks') {
-        const catalogBanks = serviceCatalog.services.filter((s) => s.category === 'banks');
+        const catalogBanks = (Array.isArray(serviceCatalog.services) ? serviceCatalog.services : []).filter((s) => s.category === 'banks');
         if (dynamicBankServices.length > 0) {
           const dynamicIds = new Set(dynamicBankServices.map(b => b.id));
-          const extra = catalogBanks.filter(b => !dynamicIds.has(b.id));
+          const extra = (Array.isArray(catalogBanks) ? catalogBanks : []).filter(b => !dynamicIds.has(b.id));
           groups[cat.id] = [...dynamicBankServices, ...extra];
         } else {
           groups[cat.id] = catalogBanks;
         }
       } else {
-        groups[cat.id] = serviceCatalog.services.filter((s) => s.category === cat.id);
+        groups[cat.id] = (Array.isArray(serviceCatalog.services) ? serviceCatalog.services : []).filter((s) => s.category === cat.id);
       }
     });
     return groups;

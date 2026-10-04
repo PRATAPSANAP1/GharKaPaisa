@@ -159,7 +159,7 @@ export default function PartnerNotifications() {
       setNotifications(p => {
         const t = p.find(n => n.id === id);
         if (t && !t.is_read) setUnreadCount(c => Math.max(0, c - 1));
-        return p.filter(n => n.id !== id);
+        return (Array.isArray(p) ? p : []).filter(n => n.id !== id);
       });
     } catch { /* silent */ }
   };
@@ -201,7 +201,7 @@ export default function PartnerNotifications() {
 
   const catColor = (cat) => CAT_COLORS[cat?.toLowerCase()] || '#64748b';
 
-  const filtered = notifications.filter(n => {
+  const filtered = (Array.isArray(notifications) ? notifications : []).filter(n => {
     if (statusFilter === 'unread' && n.is_read) return false;
     if (statusFilter === 'read' && !n.is_read) return false;
     return true;

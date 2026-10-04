@@ -270,7 +270,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
   }, [dbBanks, activeBanks]);
 
   const filteredBanks = useMemo(() => {
-    let list = bankList.filter(b => {
+    let list = (Array.isArray(bankList) ? bankList : []).filter(b => {
       const q = searchQuery.toLowerCase().trim();
       const matchesQuery = !q || b.name.toLowerCase().includes(q) || b.slug.toLowerCase().includes(q);
       const matchesCategory = bankCategoryFilter === 'all' || 
@@ -294,7 +294,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
   const matchingProducts = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return [];
-    return allProducts.filter(p => {
+    return (Array.isArray(allProducts) ? allProducts : []).filter(p => {
       const pName = (p.name || '').toLowerCase();
       const bName = (p.bank_name || p.bank?.name || p.bank_code || '').toLowerCase();
       const cat = (p.category || '').toLowerCase();
@@ -311,7 +311,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
       let current = [];
       const raw = localStorage.getItem('gkp_partner_recent_banks');
       if (raw) current = JSON.parse(raw);
-      const filtered = current.filter(s => s.toLowerCase() !== bank.slug.toLowerCase());
+      const filtered = (Array.isArray(current) ? current : []).filter(s => s.toLowerCase() !== bank.slug.toLowerCase());
       const updated = [bank.slug, ...filtered].slice(0, 8);
       localStorage.setItem('gkp_partner_recent_banks', JSON.stringify(updated));
     } catch (e) {}
@@ -330,7 +330,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
     ];
 
     return categories.map(cat => {
-      const dbMatchCount = (allProducts || []).filter(p => {
+      const dbMatchCount = (Array.isArray(allProducts) ? allProducts : []).filter(p => {
         const pCat = (p.category || '').toLowerCase();
         const pSub = (p.sub_category || '').toLowerCase();
         const pName = (p.name || '').toLowerCase();
@@ -357,7 +357,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
     ];
 
     return categories.map(cat => {
-      const dbMatchCount = (allProducts || []).filter(p => {
+      const dbMatchCount = (Array.isArray(allProducts) ? allProducts : []).filter(p => {
         const pCat = (p.category || '').toLowerCase();
         const pSub = (p.sub_category || '').toLowerCase();
         const pName = (p.name || '').toLowerCase();
@@ -381,7 +381,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
   }, [activeCategory, loanCategoriesList, insuranceCategoriesList]);
 
   const filteredNonCcCards = useMemo(() => {
-    let list = rawCards.filter(card => {
+    let list = (Array.isArray(rawCards) ? rawCards : []).filter(card => {
       const q = searchQuery.toLowerCase().trim();
       const matchesQuery = !q || card.title.toLowerCase().includes(q) || card.slug.toLowerCase().includes(q);
       const matchesCategory = bankCategoryFilter === 'all' || card.slug === bankCategoryFilter;

@@ -345,18 +345,18 @@ export default function AdminWorkingHours() {
   // Multi-select toggle helpers
   const toggleRole = (formState, setFormState, role) => {
     const current = formState.roles || [];
-    const updated = current.includes(role) ? current.filter(r => r !== role) : [...current, role];
+    const updated = current.includes(role) ? (Array.isArray(current) ? current : []).filter(r => r !== role) : [...current, role];
     setFormState({ ...formState, roles: updated });
   };
 
   const toggleDesignation = (formState, setFormState, desig) => {
     const current = formState.designations || [];
-    const updated = current.includes(desig) ? current.filter(d => d !== desig) : [...current, desig];
+    const updated = current.includes(desig) ? (Array.isArray(current) ? current : []).filter(d => d !== desig) : [...current, desig];
     setFormState({ ...formState, designations: updated });
   };
 
   // Filtered Users
-  const filteredUsers = users.filter(u => {
+  const filteredUsers = (Array.isArray(users) ? users : []).filter(u => {
     const matchesSearch =
       u.user?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||

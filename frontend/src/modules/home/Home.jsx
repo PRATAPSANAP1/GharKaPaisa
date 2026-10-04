@@ -596,7 +596,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs, dynamicBa
     // Filtered sections logic
     const filteredSections = (category.sections || [])
       .map(sec => {
-        const cards = sec.cards.filter(card => {
+        const cards = (Array.isArray(sec.cards) ? sec.cards : []).filter(card => {
           const cat = getCardCategory(card);
           const matchesFilter = activeFilter === "All" || cat === activeFilter;
           const matchesSearch = card.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -1831,7 +1831,7 @@ export default function Home({ onNavigate }) {
       const bankId = cardsMatch[1];
       const bankItem = (dynamicBanks && dynamicBanks.find(b => b.id === bankId)) || banksList.find(b => b.id === bankId);
       if (bankItem) {
-        const dbBankProducts = dynamicProducts.filter(p => 
+        const dbBankProducts = (Array.isArray(dynamicProducts) ? dynamicProducts : []).filter(p => 
           (p.bank_id === bankItem.dbId || p.bank_id === bankItem.id || String(p.bank_id) === String(bankItem.dbId)) &&
           (!p.category || p.category === 'credit_card' || p.category.toLowerCase().includes('card'))
         );
@@ -2620,7 +2620,7 @@ export default function Home({ onNavigate }) {
                 if (popularProducts.length > 0) {
                   return popularProducts;
                 }
-                const dynamicPopular = dynamicProducts.filter(p => (p.is_active || p.status === 'Active') && (p.visibility?.is_popular || p.popular));
+                const dynamicPopular = (Array.isArray(dynamicProducts) ? dynamicProducts : []).filter(p => (p.is_active || p.status === 'Active') && (p.visibility?.is_popular || p.popular));
                 if (dynamicPopular.length > 0) {
                   return dynamicPopular.slice(0, 7).map(p => ({
                     name: p.name,
@@ -2870,7 +2870,7 @@ export default function Home({ onNavigate }) {
             <div className="bank-ticker-wrap">
               {(() => {
                 const tickerBanks = dynamicBanks.length > 0
-                  ? dynamicBanks.filter(b => b.image || b.logo_url).map(b => ({ id: b.id, name: b.label || b.name, logo: b.image || b.logo_url }))
+                  ? (Array.isArray(dynamicBanks) ? dynamicBanks : []).filter(b => b.image || b.logo_url).map(b => ({ id: b.id, name: b.label || b.name, logo: b.image || b.logo_url }))
                   : trustBanks;
                 return [...tickerBanks, ...tickerBanks];
               })().map((bank, idx) => (

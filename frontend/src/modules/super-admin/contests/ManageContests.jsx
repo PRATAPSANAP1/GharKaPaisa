@@ -156,7 +156,7 @@ export default function ManageContests() {
     }
   };
 
-  const filteredContests = contests.filter((c) => {
+  const filteredContests = (Array.isArray(contests) ? contests : []).filter((c) => {
     if (activeTab === 'ALL') return true;
     return c.status === activeTab;
   });

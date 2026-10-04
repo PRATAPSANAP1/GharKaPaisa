@@ -88,7 +88,7 @@ export default function ManageLeads() {
   };
 
   const toggleSelectLead = (id) => {
-    setSelectedLeadIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    setSelectedLeadIds(prev => prev.includes(id) ? (Array.isArray(prev) ? prev : []).filter(i => i !== id) : [...prev, id]);
   };
 
   const toggleSelectAll = (e) => {
@@ -184,7 +184,7 @@ export default function ManageLeads() {
   ];
 
   const getLeadsForGroup = (statuses) => {
-    return leads.filter(l => {
+    return (Array.isArray(leads) ? leads : []).filter(l => {
       const st = (l.status || l.pipeline_stage || '').toLowerCase();
       return statuses.some(s => st === s || st.includes(s));
     });

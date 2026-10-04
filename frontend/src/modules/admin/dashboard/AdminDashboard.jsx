@@ -90,7 +90,7 @@ export default function AdminDashboard() {
     { label: "Total Applications", val: appStats.total || 0, sub: `${appStats.approved || 0} Approved Cases`, icon: <FileText size={22} />, color: "#06b6d4", bg: "#06b6d415", path: "/admin/applications", superAdminOnly: true }
   ];
 
-  const statCards = allStatCards.filter(card => {
+  const statCards = (Array.isArray(allStatCards) ? allStatCards : []).filter(card => {
     if (card.superAdminOnly && !isSuperAdmin) return false;
     if (card.val === 0 || card.val === '0') return false;
     return true;

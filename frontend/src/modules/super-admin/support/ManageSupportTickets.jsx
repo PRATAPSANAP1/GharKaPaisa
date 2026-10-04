@@ -93,7 +93,7 @@ export default function ManageSupportTickets() {
 
   const isMobile = width < 992;
 
-  const filtered = tickets.filter(t => {
+  const filtered = (Array.isArray(tickets) ? tickets : []).filter(t => {
     const id = `TKT-${t.id.substring(0, 8)}`.toLowerCase();
     const name = `${t.first_name || ''} ${t.last_name || ''}`.toLowerCase();
     const code = (t.partner_code || '').toLowerCase();

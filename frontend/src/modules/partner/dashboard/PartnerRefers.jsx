@@ -127,7 +127,7 @@ export default function PartnerRefers() {
 
   // Filtered invites history
   const allInvites = refersData?.invites || [];
-  const filteredInvites = allInvites.filter((inv) => {
+  const filteredInvites = (Array.isArray(allInvites) ? allInvites : []).filter((inv) => {
     const name = (inv.recipient_name || '').toLowerCase();
     const mobile = (inv.recipient_mobile || '').toLowerCase();
     const email = (inv.recipient_email || '').toLowerCase();
@@ -141,7 +141,7 @@ export default function PartnerRefers() {
   });
 
   const totalInvitesCount = refersData?.total_invites || allInvites.length;
-  const totalRegisteredCount = refersData?.total_registered || allInvites.filter(i => i.registered_at).length;
+  const totalRegisteredCount = refersData?.total_registered || (Array.isArray(allInvites) ? allInvites : []).filter(i => i.registered_at).length;
   const conversionRate = totalInvitesCount > 0 ? Math.round((totalRegisteredCount / totalInvitesCount) * 100) : 0;
 
   if (loading) {

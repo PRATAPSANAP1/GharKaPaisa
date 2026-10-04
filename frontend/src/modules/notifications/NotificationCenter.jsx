@@ -133,7 +133,7 @@ export default function NotificationCenter() {
     try {
       const res = await api.delete(`/notifications/${id}`);
       if (res.data?.success) {
-        setNotifications(prev => prev.filter(n => n.id !== id));
+        setNotifications(prev => (Array.isArray(prev) ? prev : []).filter(n => n.id !== id));
         fetchNotifications();
       }
     } catch (e) {

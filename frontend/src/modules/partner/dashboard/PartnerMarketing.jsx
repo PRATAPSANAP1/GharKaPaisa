@@ -41,7 +41,7 @@ export default function PartnerMarketing() {
     fetchMaterials();
   }, []);
 
-  const filteredMaterials = filter === 'All' ? materials : materials.filter(m => m.category === filter);
+  const filteredMaterials = filter === 'All' ? materials : (Array.isArray(materials) ? materials : []).filter(m => m.category === filter);
 
   const getIcon = (category) => {
     switch(category) {

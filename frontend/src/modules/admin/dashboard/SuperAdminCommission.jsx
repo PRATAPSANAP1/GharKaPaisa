@@ -32,7 +32,7 @@ export default function SuperAdminCommission() {
         const raw = res.data.data;
         const list = Array.isArray(raw) ? raw : (raw?.items || raw?.rows || []);
         // Only show PARTNER applications whose status is approved (exclude employee incentives/leads)
-        const approvedOnly = list.filter(app => {
+        const approvedOnly = (Array.isArray(list) ? list : []).filter(app => {
           const st = (app.status || '').toLowerCase();
           const cst = (app.commission_status || 'pending').toLowerCase();
           const isApprovedStatus = ['approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received'].includes(st);

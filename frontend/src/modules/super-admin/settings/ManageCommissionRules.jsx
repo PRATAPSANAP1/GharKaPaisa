@@ -100,7 +100,7 @@ const ManageCommissionRules = () => {
   };
   const tdStyle = { padding: '14px 18px', fontSize: '14px', color: C.text, borderBottom: `1px solid ${C.border}` };
 
-  const filteredPartners = partnersOverview.filter(p => 
+  const filteredPartners = (Array.isArray(partnersOverview) ? partnersOverview : []).filter(p => 
     p.full_name?.toLowerCase().includes(search.toLowerCase()) ||
     p.partner_code?.toLowerCase().includes(search.toLowerCase()) ||
     p.email?.toLowerCase().includes(search.toLowerCase())

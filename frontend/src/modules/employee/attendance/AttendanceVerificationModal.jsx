@@ -202,6 +202,30 @@ export default function AttendanceVerificationModal({
     credentialProvider
   }), [credentialProvider]);
 
+  // Helper to fetch device coordinates with high accuracy
+  const getDeviceLocation = useCallback(() => {
+    return new Promise((resolve) => {
+      if (!navigator?.geolocation) {
+        resolve(null);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          resolve({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+          });
+        },
+        (err) => {
+          console.warn('Geolocation retrieval error:', err);
+          resolve(null);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    });
+  }, []);
+
   // Called when AWS Amplify FaceLivenessDetectorCore completes client-side challenge (Panel 5/6 -> Panel 7 -> Panel 8 -> Panel 9 -> Panel 10)
   const handleAnalysisComplete = useCallback(async () => {
     try {
@@ -218,20 +242,43 @@ export default function AttendanceVerificationModal({
       // 1. Show Panel 7 (Analyzing...)
       setCurrentState('LIVENESS_ANALYZING');
 
-      // 2. Validate AWS Rekognition Liveness on Backend
-      await attendanceService.validateLivenessResult(activeSessionId, activeProviderSessionId);
+      // 2. Fetch current GPS location for office building geofence verification
+      const locationData = await getDeviceLocation();
 
-      // 3. Show Panel 8 (Liveness Check Passed!)
+      // 3. Validate AWS Rekognition Liveness & Building Geofence on Backend
+      const validateRes = await attendanceService.validateLivenessResult(
+        activeSessionId,
+        activeProviderSessionId,
+        locationData || {}
+      );
+
+      // Save matched building info if returned
+      if (validateRes?.data?.building_name || validateRes?.building_name) {
+        setVerificationResult(prev => ({
+          ...prev,
+          buildingName: validateRes?.data?.building_name || validateRes?.building_name
+        }));
+      }
+
+      // 4. Show Panel 8 (Liveness Check Passed!)
       setCurrentState('LIVENESS_PASSED');
 
     } catch (err) {
-      console.error('Liveness analysis error:', err);
+      console.error('Liveness analysis / location verification error:', err);
       const errReason = err.response?.data?.reason || err.reason;
       const isExpired = errReason === 'LIVENESS_EXPIRED' || err.response?.status === 410;
-      const isMismatch = errReason === 'FACE_MISMATCH' || err.response?.data?.message?.toLowerCase().includes('match');
+      const isMismatch = errReason === 'FACE_MISMATCH' || err.response?.data?.message?.toLowerCase().includes('face mismatch');
+      const isLocMismatch = errReason === 'LOCATION_MISMATCH' || err.response?.data?.message?.toLowerCase().includes('location does not match') || err.response?.data?.message?.toLowerCase().includes('outside');
+      const isLocDenied = errReason === 'LOCATION_REQUIRED' || errReason === 'LOCATION_DENIED';
       const errText = err.response?.data?.message || err.message || (isExpired ? 'Face verification session expired. Please retry.' : 'Face verification failed');
 
-      if (isMismatch) {
+      if (isLocMismatch) {
+        setFailureType('LOCATION_MISMATCH');
+        setErrorMessage(errText || 'Location does not match: You are outside the designated office/building premises.');
+      } else if (isLocDenied) {
+        setFailureType('LOCATION_DENIED');
+        setErrorMessage('Location access is required to verify your office building presence.');
+      } else if (isMismatch) {
         setFailureType('FACE_MISMATCH');
         setErrorMessage('Your face could not be matched with your registered KYC photo.');
       } else if (isExpired) {
@@ -246,20 +293,20 @@ export default function AttendanceVerificationModal({
       }
       setCurrentState('FAILURE');
     }
-  }, [sessionId, awsProviderSessionId]);
+  }, [sessionId, awsProviderSessionId, getDeviceLocation]);
 
-  // Step after Panel 8 (Liveness Passed) -> Panel 9 (KYC Face Match & Environment Progress) -> Panel 10
+  // Step after Panel 8 (Liveness Passed) -> Panel 9 (KYC Face Match & Building Location Progress) -> Panel 10
   const handleProceedToIdentityVerification = useCallback(async () => {
     try {
       const activeSessionId = sessionIdRef.current || sessionId;
       setCurrentState('IDENTITY_VERIFICATION');
       setIdentityStage('FACE_MATCH');
 
-      // Small UI tick for step 2
+      // Small UI tick for step 2 (KYC Face Match)
       await new Promise(r => setTimeout(r, 600));
-      setIdentityStage('ENVIRONMENT_CHECK');
+      setIdentityStage('LOCATION_CHECK');
 
-      // Small UI tick for step 3
+      // Small UI tick for step 3 (Building Location Check)
       await new Promise(r => setTimeout(r, 600));
       setIdentityStage('COMPLETE_ATTENDANCE');
 
@@ -280,7 +327,8 @@ export default function AttendanceVerificationModal({
         timestamp: attendanceData?.check_out_time || attendanceData?.check_in_time || new Date().toISOString(),
         attendanceDate: attendanceData?.attendance_date || attendanceData?.date || new Date().toISOString(),
         status: attendanceData?.status || 'PRESENT',
-        environmentStatus: attendanceData?.environment_status,
+        buildingName: attendanceData?.matched_building_name,
+        locationStatus: attendanceData?.location_status || 'INSIDE_BUILDING',
         action: actionType
       };
 
@@ -293,16 +341,16 @@ export default function AttendanceVerificationModal({
     } catch (err) {
       console.error('Identity verification completion error:', err);
       const errReason = err.response?.data?.reason || err.reason;
-      const isMismatch = errReason === 'FACE_MISMATCH' || err.response?.data?.message?.toLowerCase().includes('match');
-      const isEnvFail = errReason === 'ENVIRONMENT_MISMATCH' || err.response?.data?.message?.toLowerCase().includes('environment');
+      const isMismatch = errReason === 'FACE_MISMATCH' || err.response?.data?.message?.toLowerCase().includes('face');
+      const isLocMismatch = errReason === 'LOCATION_MISMATCH' || err.response?.data?.message?.toLowerCase().includes('location does not match') || err.response?.data?.message?.toLowerCase().includes('outside');
       const errText = err.response?.data?.message || err.message || 'Attendance submission failed. Please try again.';
 
-      if (isMismatch) {
+      if (isLocMismatch) {
+        setFailureType('LOCATION_MISMATCH');
+        setErrorMessage(errText || 'Location does not match: You are outside the designated office/building premises.');
+      } else if (isMismatch) {
         setFailureType('FACE_MISMATCH');
         setErrorMessage('Your face could not be matched with your registered KYC photo.');
-      } else if (isEnvFail) {
-        setFailureType('ENVIRONMENT_MISMATCH');
-        setErrorMessage('Workplace environment check failed.');
       } else {
         setFailureType('GENERAL');
         setErrorMessage(errText);
@@ -417,13 +465,14 @@ export default function AttendanceVerificationModal({
           />
         )}
 
-        {/* PANEL 9: FACE MATCH + ENVIRONMENT PROGRESS */}
+        {/* PANEL 9: FACE MATCH + BUILDING LOCATION PROGRESS */}
         {currentState === 'IDENTITY_VERIFICATION' && (
           <IdentityVerificationProgress
             key="identity_progress"
             stage={identityStage}
             actionType={actionType}
-            environmentStatus={verificationResult?.environmentStatus}
+            buildingName={verificationResult?.buildingName}
+            locationStatus={verificationResult?.locationStatus}
           />
         )}
 

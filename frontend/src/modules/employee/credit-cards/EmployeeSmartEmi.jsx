@@ -47,7 +47,7 @@ export default function EmployeeSmartEmi() {
         const prods = res.data?.data?.rows || res.data?.data || res.data?.products || [];
         if (Array.isArray(prods) && prods.length > 0) {
           // Filter products relevant for Smart EMI / EMI on credit card
-          const smartEmiProds = prods.filter(p => {
+          const smartEmiProds = (Array.isArray(prods) ? prods : []).filter(p => {
             const cat = String(p.category || '').toLowerCase();
             const subCat = String(p.sub_category || '').toLowerCase();
             const pName = String(p.name || '').toLowerCase();
@@ -59,7 +59,7 @@ export default function EmployeeSmartEmi() {
                    (cat.includes('loan') && (subCat.includes('emi') || pName.includes('smart')));
           });
 
-          const targetProds = smartEmiProds.length > 0 ? smartEmiProds : prods.filter(p => String(p.category || '').toLowerCase().includes('loan'));
+          const targetProds = smartEmiProds.length > 0 ? smartEmiProds : (Array.isArray(prods) ? prods : []).filter(p => String(p.category || '').toLowerCase().includes('loan'));
 
           if (targetProds.length > 0) {
             const mapped = targetProds.map(p => {
@@ -160,7 +160,7 @@ export default function EmployeeSmartEmi() {
   }, [purchaseAmt, tenure, rateType]);
 
   const filteredSchemes = useMemo(() => {
-    return activeSchemes.filter(scheme => {
+    return (Array.isArray(activeSchemes) ? activeSchemes : []).filter(scheme => {
       const matchesSearch = scheme.title.toLowerCase().includes(search.toLowerCase()) || 
                             scheme.bank.toLowerCase().includes(search.toLowerCase()) ||
                             scheme.features.some(f => f.toLowerCase().includes(search.toLowerCase()));

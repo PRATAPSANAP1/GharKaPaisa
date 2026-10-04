@@ -287,7 +287,7 @@ export default function ManageSections() {
         await fetchData();
         // Update loaded section
         if (res.data.data) {
-          setCmsSections(prev => [...prev.filter(s => s.key !== selectedSection.cmsKey), res.data.data]);
+          setCmsSections(prev => [...(Array.isArray(prev) ? prev : []).filter(s => s.key !== selectedSection.cmsKey), res.data.data]);
         }
       }
     } catch (e) {
@@ -404,7 +404,7 @@ export default function ManageSections() {
   // Delete an item from section
   const handleDeleteItem = (index) => {
     if (confirm("Are you sure you want to delete this item?")) {
-      const updated = designerItems.filter((_, idx) => idx !== index);
+      const updated = (Array.isArray(designerItems) ? designerItems : []).filter((_, idx) => idx !== index);
       setDesignerItems(updated);
     }
   };

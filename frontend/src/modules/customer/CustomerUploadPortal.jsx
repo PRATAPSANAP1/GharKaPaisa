@@ -167,7 +167,7 @@ const CustomerUploadPortal = () => {
   });
 
   const totalRequired = required_documents.length;
-  const totalUploaded = required_documents.filter(doc => {
+  const totalUploaded = (Array.isArray(required_documents) ? required_documents : []).filter(doc => {
     const uploaded = uploadedDocMap[doc.type];
     return uploaded && uploaded.status !== 'rejected';
   }).length;

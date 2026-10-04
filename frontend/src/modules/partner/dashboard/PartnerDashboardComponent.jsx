@@ -352,7 +352,7 @@ export default function PartnerDashboardComponent({ partner }) {
   const totalEarned = `₹${parseFloat(w.total_earned || 12450).toLocaleString('en-IN', { minimumFractionDigits: 0 })}`;
 
   const kpiTotalApps = allLeads.length || 48;
-  const kpiApprovedApps = allLeads.filter(lead => lead.status?.toLowerCase() === 'approved').length || 32;
+  const kpiApprovedApps = (Array.isArray(allLeads) ? allLeads : []).filter(lead => lead.status?.toLowerCase() === 'approved').length || 32;
   const approvedPct = kpiTotalApps > 0 ? Math.round((kpiApprovedApps / kpiTotalApps) * 100) : 68;
 
   // Recent applications list

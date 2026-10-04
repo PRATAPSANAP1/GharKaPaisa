@@ -1,9 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { XCircle, RefreshCw, AlertCircle, CameraOff, ShieldAlert } from 'lucide-react';
+import { XCircle, RefreshCw, AlertCircle, CameraOff, ShieldAlert, MapPinOff } from 'lucide-react';
 
 export default function AttendanceFailure({
-  failureType = 'LIVENESS_FAILED', // 'CAMERA_DENIED' | 'LIVENESS_FAILED' | 'FACE_MISMATCH' | 'ENVIRONMENT_MISMATCH' | 'SERVICE_UNAVAILABLE' | 'GENERAL'
+  failureType = 'LIVENESS_FAILED', // 'CAMERA_DENIED' | 'LOCATION_DENIED' | 'LOCATION_MISMATCH' | 'LIVENESS_FAILED' | 'FACE_MISMATCH' | 'SERVICE_UNAVAILABLE' | 'GENERAL'
   errorMessage,
   onRetry,
   onClose
@@ -18,19 +18,33 @@ export default function AttendanceFailure({
       };
     }
 
+    if (
+      failureType === 'LOCATION_MISMATCH' ||
+      errorMessage?.toLowerCase().includes('location does not match') ||
+      errorMessage?.toLowerCase().includes('outside') ||
+      errorMessage?.toLowerCase().includes('geofence') ||
+      errorMessage?.toLowerCase().includes('building')
+    ) {
+      return {
+        title: 'Building Location Mismatch',
+        description: errorMessage || 'Location does not match: You are outside the designated office/building premises.',
+        icon: <MapPinOff size={42} />
+      };
+    }
+
+    if (failureType === 'LOCATION_DENIED' || errorMessage?.toLowerCase().includes('geolocation') || errorMessage?.toLowerCase().includes('location permission')) {
+      return {
+        title: 'Location Permission Required',
+        description: 'Please enable GPS / Location access in your browser or device settings to verify building presence.',
+        icon: <MapPinOff size={42} />
+      };
+    }
+
     if (failureType === 'FACE_MISMATCH' || errorMessage?.toLowerCase().includes('match') || errorMessage?.toLowerCase().includes('kyc')) {
       return {
         title: 'Face Verification Failed',
         description: 'Your face could not be matched with your registered KYC photo.',
         icon: <ShieldAlert size={42} />
-      };
-    }
-
-    if (failureType === 'ENVIRONMENT_MISMATCH' || errorMessage?.toLowerCase().includes('environment') || errorMessage?.toLowerCase().includes('workplace')) {
-      return {
-        title: 'Workplace Verification Failed',
-        description: 'Your workspace environment could not be verified for attendance.',
-        icon: <AlertCircle size={42} />
       };
     }
 

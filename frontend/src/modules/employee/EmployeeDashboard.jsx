@@ -211,10 +211,10 @@ export default function EmployeeDashboard() {
                                          currentMissingItems.some(i => (i.type === 'video' || i.type === 'terms_video') && String(i.status || '').toUpperCase() === 'REJECTED');
           const videoRejectionReason = verState.video_notes || (currentMissingItems.find(i => (i.type === 'video' || i.type === 'terms_video') && String(i.status || '').toUpperCase() === 'REJECTED')?.reason) || "Video verification was rejected by Super Admin. Please re-record a clear teleprompter video.";
 
-          const actionRequiredItems = missingItems.filter(item => 
+          const actionRequiredItems = (Array.isArray(missingItems) ? missingItems : []).filter(item => 
             item.status === 'NOT_UPLOADED' || item.status === 'NOT_COMPLETED' || item.status === 'REJECTED' || item.status === 'REQUIRES_UPDATE'
           );
-          const underReviewItems = missingItems.filter(item => item.status === 'UNDER_REVIEW');
+          const underReviewItems = (Array.isArray(missingItems) ? missingItems : []).filter(item => item.status === 'UNDER_REVIEW');
 
           // Priority Case 0: Video Verification Specifically Rejected
           if (isVideoRejected) {

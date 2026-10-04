@@ -392,7 +392,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     try {
       const res = await api.delete(`/messenger/messages/${msgId}`);
       if (res.data?.success) {
-        setMessages(prev => prev.filter(m => m.id !== msgId));
+        setMessages(prev => (Array.isArray(prev) ? prev : []).filter(m => m.id !== msgId));
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to delete message.');
@@ -480,7 +480,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
       const res = await api.get('/messenger/contacts', { params: { query: queryText } });
       if (res.data?.success) {
         const existingIds = new Set(groupMembers.map(m => m.user_id || m.id));
-        const filtered = (res.data.data || []).filter(c => !existingIds.has(c.id));
+        const filtered = (Array.isArray(res.data.data) ? res.data.data : []).filter(c => !existingIds.has(c.id));
         setAddMemberContacts(filtered);
       }
     } catch (err) {
@@ -589,7 +589,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     try {
       const res = await api.delete(`/messenger/admin/assignments/${assignmentId}`);
       if (res.data?.success) {
-        setExistingAssignments(prev => prev.filter(a => a.id !== assignmentId));
+        setExistingAssignments(prev => (Array.isArray(prev) ? prev : []).filter(a => a.id !== assignmentId));
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to remove assignment.');
@@ -800,7 +800,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
         if (target.previewUrl) revokeTrackedBlobUrl(target.previewUrl);
         if (target.file_url) revokeTrackedBlobUrl(target.file_url);
       }
-      return prev.filter((_, idx) => idx !== indexToRemove);
+      return (Array.isArray(prev) ? prev : []).filter((_, idx) => idx !== indexToRemove);
     });
   };
 
@@ -984,7 +984,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
         if (olderMsgs.length > 0) {
           setMessages(prev => {
             const existingIds = new Set(prev.map(m => m.id));
-            const uniqueOlder = olderMsgs.filter(m => !existingIds.has(m.id));
+            const uniqueOlder = (Array.isArray(olderMsgs) ? olderMsgs : []).filter(m => !existingIds.has(m.id));
             return [...uniqueOlder, ...prev];
           });
 
@@ -1038,7 +1038,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
           unread_count: newUnread
         };
 
-        const rest = prev.filter(c => c.id !== conversation_id);
+        const rest = (Array.isArray(prev) ? prev : []).filter(c => c.id !== conversation_id);
         return sortConversationsList([updated, ...rest]);
       });
 
@@ -1111,7 +1111,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     const handleMessageDeleted = (payload) => {
       const { conversation_id, message_id } = payload || {};
       if (activeConvRef.current && activeConvRef.current.id === conversation_id && message_id) {
-        setMessages(prev => prev.filter(m => m.id !== message_id));
+        setMessages(prev => (Array.isArray(prev) ? prev : []).filter(m => m.id !== message_id));
       }
     };
 
@@ -1556,7 +1556,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
 
   const toggleSelectContact = (id) => {
     setSelectedContactIds(prev => 
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+      prev.includes(id) ? (Array.isArray(prev) ? prev : []).filter(item => item !== id) : [...prev, id]
     );
   };
 
@@ -1663,7 +1663,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     }
 
     if (conv.other_participants && conv.other_participants.length > 0) {
-      const others = conv.other_participants.filter(p => (p.user_id || p.id) !== user?.id);
+      const others = (Array.isArray(conv.other_participants) ? conv.other_participants : []).filter(p => (p.user_id || p.id) !== user?.id);
       if (others.length > 0) {
         return others.map(p => {
           if (!isSuperAdminOrSharad) {
@@ -1677,7 +1677,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     return 'Direct Chat';
   };
 
-  const filteredMessages = messages.filter(m => {
+  const filteredMessages = (Array.isArray(messages) ? messages : []).filter(m => {
     if (!msgSearch.trim()) return true;
     return (m.message_text || '').toLowerCase().includes(msgSearch.toLowerCase());
   });
@@ -1826,7 +1826,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
               <div style={{ padding: '30px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>
                 Loading conversations...
               </div>
-            ) : conversations.filter(conv => {
+            ) : (Array.isArray(conversations) ? conversations : []).filter(conv => {
               if (filter === 'EMPLOYEES') {
                 const targetUser = conv.other_participants?.find(p => (p.user_id || p.id) !== user?.id) || conv.other_participants?.[0];
                 const role = (targetUser?.role || targetUser?.participant_role || '').toUpperCase();
@@ -1846,7 +1846,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                 <span>Click + above to start a chat with your team</span>
               </div>
             ) : (
-              conversations.filter(conv => {
+              (Array.isArray(conversations) ? conversations : []).filter(conv => {
                 if (filter === 'EMPLOYEES') {
                   const targetUser = conv.other_participants?.find(p => (p.user_id || p.id) !== user?.id) || conv.other_participants?.[0];
                   const role = (targetUser?.role || targetUser?.participant_role || '').toUpperCase();
@@ -3331,7 +3331,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                     maxHeight: '180px', overflowY: 'auto', border: '1.5px solid #CBD5E1',
                     borderRadius: '12px', padding: '10px', background: '#F8FAFC', display: 'flex', flexDirection: 'column', gap: '6px'
                   }}>
-                    {accountsList.filter(a => a.id !== selectedAccountId).map(targetAcc => {
+                    {(Array.isArray(accountsList) ? accountsList : []).filter(a => a.id !== selectedAccountId).map(targetAcc => {
                       const code = targetAcc.partner_code || targetAcc.employee_code || `USR-${targetAcc.id.slice(0, 6).toUpperCase()}`;
                       const isChecked = selectedMessengerIds.includes(targetAcc.id);
                       return (
@@ -3349,7 +3349,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                             onChange={() => {
                               setSelectedMessengerIds(prev =>
                                 prev.includes(targetAcc.id)
-                                  ? prev.filter(id => id !== targetAcc.id)
+                                  ? (Array.isArray(prev) ? prev : []).filter(id => id !== targetAcc.id)
                                   : [...prev, targetAcc.id]
                               );
                             }}
@@ -3390,7 +3390,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                           <FaTimes
                             size={12}
                             style={{ cursor: 'pointer', color: '#1E40AF' }}
-                            onClick={() => setSelectedMessengerIds(prev => prev.filter(item => item !== id))}
+                            onClick={() => setSelectedMessengerIds(prev => (Array.isArray(prev) ? prev : []).filter(item => item !== id))}
                           />
                         </span>
                       );
@@ -3621,7 +3621,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                               checked={isChecked}
                               onChange={() => {
                                 setSelectedAddUserIds(prev =>
-                                  prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id]
+                                  prev.includes(c.id) ? (Array.isArray(prev) ? prev : []).filter(id => id !== c.id) : [...prev, c.id]
                                 );
                               }}
                             />

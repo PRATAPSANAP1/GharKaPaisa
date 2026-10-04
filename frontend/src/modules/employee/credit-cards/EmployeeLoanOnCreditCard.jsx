@@ -47,7 +47,7 @@ export default function EmployeeLoanOnCreditCard() {
         const prods = res.data?.data?.rows || res.data?.data || res.data?.products || [];
         if (Array.isArray(prods) && prods.length > 0) {
           // Filter products relevant for Loan on Credit Card
-          const cardLoanProds = prods.filter(p => {
+          const cardLoanProds = (Array.isArray(prods) ? prods : []).filter(p => {
             const cat = String(p.category || '').toLowerCase();
             const subCat = String(p.sub_category || '').toLowerCase();
             const pName = String(p.name || '').toLowerCase();
@@ -56,7 +56,7 @@ export default function EmployeeLoanOnCreditCard() {
                    (cat.includes('loan') && (pName.includes('credit card') || pName.includes('insta') || pName.includes('jumbo') || pName.includes('encash') || pName.includes('dial') || subCat.includes('loan')));
           });
 
-          const targetProds = cardLoanProds.length > 0 ? cardLoanProds : prods.filter(p => String(p.category || '').toLowerCase().includes('loan'));
+          const targetProds = cardLoanProds.length > 0 ? cardLoanProds : (Array.isArray(prods) ? prods : []).filter(p => String(p.category || '').toLowerCase().includes('loan'));
 
           if (targetProds.length > 0) {
             const mapped = targetProds.map(p => {
@@ -136,7 +136,7 @@ export default function EmployeeLoanOnCreditCard() {
   }, [loanAmount, interestRate, tenureMonths]);
 
   const filteredOffers = useMemo(() => {
-    return activeOffers.filter(offer => {
+    return (Array.isArray(activeOffers) ? activeOffers : []).filter(offer => {
       const matchesSearch = offer.title.toLowerCase().includes(search.toLowerCase()) || 
                             offer.bank.toLowerCase().includes(search.toLowerCase()) ||
                             offer.features.some(f => f.toLowerCase().includes(search.toLowerCase()));

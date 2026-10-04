@@ -108,14 +108,14 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
         const from = new Date(fromDate + 'T00:00:00');
         const to = new Date(toDate + 'T23:59:59');
 
-        filtered = filtered.filter(app => {
+        filtered = (Array.isArray(filtered) ? filtered : []).filter(app => {
           const appDate = new Date(app.created_at || app.application_date || app.createdAt);
           return appDate >= from && appDate <= to;
         });
       }
 
       if (statusFilter !== 'all' && filtered.length > 0) {
-        filtered = filtered.filter(app => {
+        filtered = (Array.isArray(filtered) ? filtered : []).filter(app => {
           const stat = (app.status || '').toLowerCase();
           if (statusFilter === 'approved') {
             return ['approved', 'disbursed', 'commission_released', 'commission_received'].includes(stat);

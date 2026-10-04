@@ -119,7 +119,7 @@ export default function EmployeeSalesReports() {
 
   const removeBankRow = (index) => {
     if (bankRows.length === 1) return;
-    setBankRows(bankRows.filter((_, i) => i !== index));
+    setBankRows((Array.isArray(bankRows) ? bankRows : []).filter((_, i) => i !== index));
   };
 
   // Handle Photo File Select
@@ -149,7 +149,7 @@ export default function EmployeeSalesReports() {
     e.preventDefault();
 
     // Validate bank rows
-    const validBanks = bankRows.filter(b => (b.bank_name || b.bank_id) && parseInt(b.cards_sold || 0) > 0);
+    const validBanks = (Array.isArray(bankRows) ? bankRows : []).filter(b => (b.bank_name || b.bank_id) && parseInt(b.cards_sold || 0) > 0);
     if (validBanks.length === 0) {
       alert('Please select at least one bank and enter the number of cards sold.');
       return;
@@ -229,7 +229,7 @@ export default function EmployeeSalesReports() {
   const teamReports = reportsData?.team_reports || [];
   const hasDownline = stats.has_downline || false;
 
-  const filteredTeamReports = teamReports.filter(r => {
+  const filteredTeamReports = (Array.isArray(teamReports) ? teamReports : []).filter(r => {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       const matchName = r.employee_name?.toLowerCase().includes(term);

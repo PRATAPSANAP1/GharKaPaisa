@@ -289,7 +289,7 @@ export default function Lead360Modal({ leadId, onClose, onRefresh }) {
           {[
             { id: 'overview', label: 'Lead Details', icon: MdPerson },
             { id: 'customer_cards', label: `Interested Cards (${customer_cards.length})`, icon: MdCreditCard },
-            { id: 'checklist', label: `Checklist (${checklist.filter(c => c.status === 'verified').length}/${checklist.length})`, icon: MdVerifiedUser },
+            { id: 'checklist', label: `Checklist (${(Array.isArray(checklist) ? checklist : []).filter(c => c.status === 'verified').length}/${checklist.length})`, icon: MdVerifiedUser },
             { id: 'documents', label: `Documents (${documents.length})`, icon: MdDescription },
             { id: 'timeline', label: `Activity Stream (${timeline.length})`, icon: MdTimeline },
             { id: 'bank_assign', label: 'Bank Executive', icon: MdAccountBalance },
@@ -461,7 +461,7 @@ export default function Lead360Modal({ leadId, onClose, onRefresh }) {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 style={{ fontSize: '16px', fontWeight: 800, margin: 0 }}>Lead Verification Checklist</h3>
                     <span style={{ fontSize: '13px', color: isDark ? '#94A3B8' : '#64748B', fontWeight: 700 }}>
-                      {checklist.filter(c => c.status === 'verified').length} of {checklist.length} items verified
+                      {(Array.isArray(checklist) ? checklist : []).filter(c => c.status === 'verified').length} of {checklist.length} items verified
                     </span>
                   </div>
 

@@ -16,8 +16,8 @@ export default function AttendanceHistoryView({
   onBackToDashboard
 }) {
   // Calculate Completed & Attendance % safely from real data
-  const completedCount = history.filter(item => item.check_in_time && item.check_out_time).length;
-  const presentCount = summary.present || history.filter(item => item.check_in_time).length;
+  const completedCount = (Array.isArray(history) ? history : []).filter(item => item.check_in_time && item.check_out_time).length;
+  const presentCount = summary.present || (Array.isArray(history) ? history : []).filter(item => item.check_in_time).length;
   const totalDays = summary.total || history.length || 0;
   const attendancePct = totalDays > 0 ? Math.round((presentCount / totalDays) * 100) : (presentCount > 0 ? 100 : 0);
 

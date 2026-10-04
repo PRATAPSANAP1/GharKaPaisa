@@ -241,7 +241,7 @@ export default function HRDashboard() {
     }
   };
 
-  const filteredHRAccounts = hrAccounts.filter(hr => {
+  const filteredHRAccounts = (Array.isArray(hrAccounts) ? hrAccounts : []).filter(hr => {
     if (!hrSearchTerm) return true;
     const term = hrSearchTerm.toLowerCase();
     return (

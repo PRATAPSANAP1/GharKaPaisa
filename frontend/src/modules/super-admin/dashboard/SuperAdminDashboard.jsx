@@ -185,7 +185,7 @@ export default function SuperAdminDashboard() {
   const handleToggleBankAssignment = async (bankId) => {
     let updated;
     if (assignedBankIds.includes(bankId)) {
-      updated = assignedBankIds.filter(id => id !== bankId);
+      updated = (Array.isArray(assignedBankIds) ? assignedBankIds : []).filter(id => id !== bankId);
     } else {
       updated = [...assignedBankIds, bankId];
     }
@@ -317,8 +317,8 @@ export default function SuperAdminDashboard() {
   // Stats calculations
   const stats = {
     total: businessStats?.admins?.total_admins ?? admins.length,
-    active: businessStats?.admins?.active_admins ?? admins.filter(a => a.status === 'active' || a.isActive).length,
-    suspended: admins.filter(a => a.status === 'suspended').length
+    active: businessStats?.admins?.active_admins ?? (Array.isArray(admins) ? admins : []).filter(a => a.status === 'active' || a.isActive).length,
+    suspended: (Array.isArray(admins) ? admins : []).filter(a => a.status === 'suspended').length
   };
 
   const bStats = businessStats || {
@@ -355,7 +355,7 @@ export default function SuperAdminDashboard() {
   };
 
   // Filter admins based on search query (including all admin designation users)
-  const filteredAdmins = admins.filter(admin => {
+  const filteredAdmins = (Array.isArray(admins) ? admins : []).filter(admin => {
     const r = String(admin.role || '').toUpperCase();
     const desig = String(admin.designation || '').toLowerCase();
     
@@ -974,14 +974,14 @@ export default function SuperAdminDashboard() {
                   />
 
                   <div style={{ maxHeight: "180px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", paddingRight: "4px" }}>
-                    {allBanks.filter(b => b.name.toLowerCase().includes((bankSearchQuery || '').toLowerCase()) || (b.short_code || '').toLowerCase().includes((bankSearchQuery || '').toLowerCase())).map(bank => {
+                    {(Array.isArray(allBanks) ? allBanks : []).filter(b => b.name.toLowerCase().includes((bankSearchQuery || '').toLowerCase()) || (b.short_code || '').toLowerCase().includes((bankSearchQuery || '').toLowerCase())).map(bank => {
                       const isChecked = selectedCreateBankIds.includes(bank.id);
                       return (
                         <div
                           key={bank.id}
                           onClick={() => {
                             if (isChecked) {
-                              setSelectedCreateBankIds(selectedCreateBankIds.filter(id => id !== bank.id));
+                              setSelectedCreateBankIds((Array.isArray(selectedCreateBankIds) ? selectedCreateBankIds : []).filter(id => id !== bank.id));
                             } else {
                               setSelectedCreateBankIds([...selectedCreateBankIds, bank.id]);
                             }
@@ -1214,14 +1214,14 @@ export default function SuperAdminDashboard() {
                     />
 
                     <div style={{ maxHeight: "180px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", paddingRight: "4px" }}>
-                      {allBanks.filter(b => b.name.toLowerCase().includes((editBankSearchQuery || '').toLowerCase()) || (b.short_code || '').toLowerCase().includes((editBankSearchQuery || '').toLowerCase())).map(bank => {
+                      {(Array.isArray(allBanks) ? allBanks : []).filter(b => b.name.toLowerCase().includes((editBankSearchQuery || '').toLowerCase()) || (b.short_code || '').toLowerCase().includes((editBankSearchQuery || '').toLowerCase())).map(bank => {
                         const isChecked = editForm.bank_ids.includes(bank.id);
                         return (
                           <div
                             key={bank.id}
                             onClick={() => {
                               if (isChecked) {
-                                setEditForm({ ...editForm, bank_ids: editForm.bank_ids.filter(id => id !== bank.id) });
+                                setEditForm({ ...editForm, bank_ids: (Array.isArray(editForm.bank_ids) ? editForm.bank_ids : []).filter(id => id !== bank.id) });
                               } else {
                                 setEditForm({ ...editForm, bank_ids: [...editForm.bank_ids, bank.id] });
                               }

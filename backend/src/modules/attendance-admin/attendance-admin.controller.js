@@ -159,11 +159,107 @@ const revokeEnvironmentBypass = async (req, res, next) => {
   }
 };
 
+const buildingGeofenceService = require('../../services/geofence/buildingGeofence.service');
+
+/**
+ * GET /api/v1/attendance/admin/buildings
+ * List all office building geofences
+ */
+const listBuildings = async (req, res, next) => {
+  try {
+    const data = await buildingGeofenceService.getAllBuildings();
+    res.json({
+      success: true,
+      message: 'Office building geofences loaded successfully',
+      data
+    });
+  } catch (error) {
+    logger.error(`[ATTENDANCE-ADMIN] listBuildings error: ${error.message}`);
+    next(error);
+  }
+};
+
+/**
+ * POST /api/v1/attendance/admin/buildings
+ * Create a new office building geofence
+ */
+const createBuilding = async (req, res, next) => {
+  try {
+    const { name, code, address, polygon_coordinates, tolerance_meters, is_active } = req.body;
+    const data = await buildingGeofenceService.createBuilding({
+      name,
+      code,
+      address,
+      polygon_coordinates,
+      tolerance_meters,
+      is_active
+    });
+    res.status(201).json({
+      success: true,
+      message: 'Office building geofence created successfully',
+      data
+    });
+  } catch (error) {
+    logger.error(`[ATTENDANCE-ADMIN] createBuilding error: ${error.message}`);
+    next(error);
+  }
+};
+
+/**
+ * PUT /api/v1/attendance/admin/buildings/:id
+ * Update an existing building geofence
+ */
+const updateBuilding = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { name, code, address, polygon_coordinates, tolerance_meters, is_active } = req.body;
+    const data = await buildingGeofenceService.updateBuilding(id, {
+      name,
+      code,
+      address,
+      polygon_coordinates,
+      tolerance_meters,
+      is_active
+    });
+    res.json({
+      success: true,
+      message: 'Office building geofence updated successfully',
+      data
+    });
+  } catch (error) {
+    logger.error(`[ATTENDANCE-ADMIN] updateBuilding error: ${error.message}`);
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/v1/attendance/admin/buildings/:id
+ * Delete a building geofence
+ */
+const deleteBuilding = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const data = await buildingGeofenceService.deleteBuilding(id);
+    res.json({
+      success: true,
+      message: 'Office building geofence deleted successfully',
+      data
+    });
+  } catch (error) {
+    logger.error(`[ATTENDANCE-ADMIN] deleteBuilding error: ${error.message}`);
+    next(error);
+  }
+};
+
 module.exports = {
   getTodayAttendance,
   getAttendanceHistory,
   getEmployeeAttendanceDetails,
   createEnvironmentBypass,
   listEnvironmentBypasses,
-  revokeEnvironmentBypass
+  revokeEnvironmentBypass,
+  listBuildings,
+  createBuilding,
+  updateBuilding,
+  deleteBuilding
 };

@@ -331,7 +331,7 @@ export default function ManageEmployeeIncentives() {
   const avgPerEmp = parseFloat(kpi.avg_incentive_per_employee || 0);
 
   const handleExportAuditCSV = () => {
-    const auditList = (data.table?.data || []).filter(row =>
+    const auditList = (Array.isArray(data.table?.data) ? data.table?.data : []).filter(row =>
       !row.application_status || ['approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received'].includes(String(row.application_status).toLowerCase())
     );
     if (!auditList.length) {
@@ -883,7 +883,7 @@ export default function ManageEmployeeIncentives() {
                     </thead>
                     <tbody>
                       {(() => {
-                        const releasedOnly = (data.top_employees || []).filter(emp => 
+                        const releasedOnly = (Array.isArray(data.top_employees) ? data.top_employees : []).filter(emp => 
                           parseInt(emp.released_count || 0) > 0 || parseFloat(emp.paid || 0) > 0
                         );
                         const displayList = releasedOnly.length > 0 ? releasedOnly : (data.top_employees || []);
@@ -1181,7 +1181,7 @@ export default function ManageEmployeeIncentives() {
                 <div>
                   <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0 }}>Payout Management & Releases</h3>
                   <span style={{ fontSize: '12px', fontWeight: 800, color: C.teal }}>
-                    {formatINR((data.table?.data || []).filter(r => 
+                    {formatINR((Array.isArray(data.table?.data) ? data.table?.data : []).filter(r => 
                       ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING'].includes((r.status || '').toUpperCase()) &&
                       (!r.application_id || isApprovedApplicationStatus(r.application_status))
                     ).reduce((s, r) => s + parseFloat(r.incentive_earned || 0), 0))} Pending / Held Release
@@ -1204,7 +1204,7 @@ export default function ManageEmployeeIncentives() {
                         <input
                           type="checkbox"
                           onChange={(e) => {
-                            const pendingList = (data.table?.data || []).filter(r => 
+                            const pendingList = (Array.isArray(data.table?.data) ? data.table?.data : []).filter(r => 
                               ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING'].includes((r.status || '').toUpperCase()) &&
                               (!r.application_id || isApprovedApplicationStatus(r.application_status))
                             );
@@ -1214,7 +1214,7 @@ export default function ManageEmployeeIncentives() {
                               setSelectedIncentiveIds([]);
                             }
                           }}
-                          checked={selectedIncentiveIds.length > 0 && selectedIncentiveIds.length === (data.table?.data || []).filter(r => 
+                          checked={selectedIncentiveIds.length > 0 && selectedIncentiveIds.length === (Array.isArray(data.table?.data) ? data.table?.data : []).filter(r => 
                             ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING'].includes((r.status || '').toUpperCase()) &&
                             (!r.application_id || isApprovedApplicationStatus(r.application_status))
                           ).length}
@@ -1231,7 +1231,7 @@ export default function ManageEmployeeIncentives() {
                   </thead>
                   <tbody>
                     {(() => {
-                      const list = (data.table?.data || []).filter(r => 
+                      const list = (Array.isArray(data.table?.data) ? data.table?.data : []).filter(r => 
                         ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING', 'IN_REVIEW'].includes((r.status || '').toUpperCase()) &&
                         (!r.application_id || isApprovedApplicationStatus(r.application_status))
                       );
@@ -1252,7 +1252,7 @@ export default function ManageEmployeeIncentives() {
                               checked={selectedIncentiveIds.includes(row.incentive_id)}
                               onChange={() => {
                                 setSelectedIncentiveIds(prev => 
-                                  prev.includes(row.incentive_id) ? prev.filter(id => id !== row.incentive_id) : [...prev, row.incentive_id]
+                                  prev.includes(row.incentive_id) ? (Array.isArray(prev) ? prev : []).filter(id => id !== row.incentive_id) : [...prev, row.incentive_id]
                                 );
                               }}
                             />
@@ -1361,7 +1361,7 @@ export default function ManageEmployeeIncentives() {
                   </h3>
                   <span style={{ fontSize: '12px', fontWeight: 800, color: '#10B981' }}>
                     {(() => {
-                      const releasedList = (data.table?.data || []).filter(r => 
+                      const releasedList = (Array.isArray(data.table?.data) ? data.table?.data : []).filter(r => 
                         ['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes((r.status || '').toUpperCase().trim())
                       );
                       const sumReleased = releasedList.reduce((s, r) => s + parseFloat(r.incentive_earned || r.incentive_paid || 0), 0);
@@ -1385,7 +1385,7 @@ export default function ManageEmployeeIncentives() {
                   </thead>
                   <tbody>
                     {(() => {
-                      const releasedList = (data.table?.data || []).filter(r => 
+                      const releasedList = (Array.isArray(data.table?.data) ? data.table?.data : []).filter(r => 
                         ['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes((r.status || '').toUpperCase())
                       );
                       if (releasedList.length === 0) {
@@ -1526,7 +1526,7 @@ export default function ManageEmployeeIncentives() {
                   </thead>
                   <tbody>
                     {(() => {
-                      const auditList = (data.table?.data || []).filter(row =>
+                      const auditList = (Array.isArray(data.table?.data) ? data.table?.data : []).filter(row =>
                         !row.application_status || ['approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received'].includes(String(row.application_status).toLowerCase())
                       );
                       if (auditList.length === 0) {

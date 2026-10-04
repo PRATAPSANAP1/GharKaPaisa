@@ -155,20 +155,20 @@ export default function ManageApplications() {
   // KPI Metrics Calculation from backend DB stats or fallback
   const kpis = {
     total: globalStats?.total ?? totalCount ?? applications.length,
-    pending: globalStats?.pending ?? applications.filter(a => ['submitted', 'pending', 'lead_created', 'created', 'initiated', 'new', 'draft'].includes((a.status || '').toLowerCase())).length,
-    operationalVerified: globalStats?.operational_verified ?? applications.filter(a => ['operational_verified', 'under_review', 'under review', 'verification', 'in_progress', 'bank_verification'].includes((a.status || '').toLowerCase())).length,
-    approved: globalStats?.approved ?? applications.filter(a => ['approved', 'super_admin_approved', 'sanctioned', 'disbursed'].includes((a.status || '').toLowerCase())).length,
-    rejected: globalStats?.rejected ?? applications.filter(a => ['rejected', 'declined', 'cancelled'].includes((a.status || '').toLowerCase())).length
+    pending: globalStats?.pending ?? (Array.isArray(applications) ? applications : []).filter(a => ['submitted', 'pending', 'lead_created', 'created', 'initiated', 'new', 'draft'].includes((a.status || '').toLowerCase())).length,
+    operationalVerified: globalStats?.operational_verified ?? (Array.isArray(applications) ? applications : []).filter(a => ['operational_verified', 'under_review', 'under review', 'verification', 'in_progress', 'bank_verification'].includes((a.status || '').toLowerCase())).length,
+    approved: globalStats?.approved ?? (Array.isArray(applications) ? applications : []).filter(a => ['approved', 'super_admin_approved', 'sanctioned', 'disbursed'].includes((a.status || '').toLowerCase())).length,
+    rejected: globalStats?.rejected ?? (Array.isArray(applications) ? applications : []).filter(a => ['rejected', 'declined', 'cancelled'].includes((a.status || '').toLowerCase())).length
   };
 
   // Today's Activity Stats
   const todayStr = new Date().toISOString().split('T')[0];
-  const todayApps = applications.filter(a => (a.created_at || '').startsWith(todayStr));
+  const todayApps = (Array.isArray(applications) ? applications : []).filter(a => (a.created_at || '').startsWith(todayStr));
   const todayStats = {
     newLeads: globalStats?.today ?? todayApps.length,
-    operationalVerified: todayApps.filter(a => (a.status || '').toLowerCase().includes('verified') || (a.status || '').toLowerCase().includes('review')).length,
-    approved: todayApps.filter(a => (a.status || '').toLowerCase().includes('approved')).length,
-    rejected: todayApps.filter(a => (a.status || '').toLowerCase().includes('reject')).length
+    operationalVerified: (Array.isArray(todayApps) ? todayApps : []).filter(a => (a.status || '').toLowerCase().includes('verified') || (a.status || '').toLowerCase().includes('review')).length,
+    approved: (Array.isArray(todayApps) ? todayApps : []).filter(a => (a.status || '').toLowerCase().includes('approved')).length,
+    rejected: (Array.isArray(todayApps) ? todayApps : []).filter(a => (a.status || '').toLowerCase().includes('reject')).length
   };
 
   const fetchApplications = async () => {
@@ -199,12 +199,12 @@ export default function ManageApplications() {
       if (res.data?.success) {
         let list = res.data.data || [];
         if (partnerFilter === 'ALL_PARTNERS' || sourceTypeFilter === 'partner') {
-          list = list.filter(a => a.partner_code || a.partner_id || (a.process_by && String(a.process_by).toLowerCase().includes('partner')));
+          list = (Array.isArray(list) ? list : []).filter(a => a.partner_code || a.partner_id || (a.process_by && String(a.process_by).toLowerCase().includes('partner')));
         } else if (partnerFilter === 'ALL_EMPLOYEES' || sourceTypeFilter === 'employee') {
-          list = list.filter(a => a.employee_code || a.employee_id || (a.process_by && String(a.process_by).toLowerCase().includes('employee')));
+          list = (Array.isArray(list) ? list : []).filter(a => a.employee_code || a.employee_id || (a.process_by && String(a.process_by).toLowerCase().includes('employee')));
         } else if (partnerFilter && partnerFilter !== 'ALL_PARTNERS' && partnerFilter !== 'ALL_EMPLOYEES') {
           const pf = partnerFilter.toLowerCase();
-          list = list.filter(a => 
+          list = (Array.isArray(list) ? list : []).filter(a => 
             (a.partner_code && a.partner_code.toLowerCase().includes(pf)) ||
             (a.employee_code && a.employee_code.toLowerCase().includes(pf)) ||
             (a.partner_id && String(a.partner_id).toLowerCase().includes(pf)) ||
@@ -348,7 +348,7 @@ export default function ManageApplications() {
   };
 
   const toggleSelectApp = (id) => {
-    setSelectedAppIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    setSelectedAppIds(prev => prev.includes(id) ? (Array.isArray(prev) ? prev : []).filter(i => i !== id) : [...prev, id]);
   };
 
   // Badge Color & Label Helpers

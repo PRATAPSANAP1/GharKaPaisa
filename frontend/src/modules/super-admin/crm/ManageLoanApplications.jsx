@@ -301,9 +301,9 @@ export default function ManageLoanApplications() {
   }, [loanForm.sanctioned_loan_amount, loanForm.requested_loan_amount, loanForm.interest_rate, loanForm.tenure_months, loanForm.processing_fee]);
 
   // Helper stats
-  const loanOnCardCount = leads.filter(l => l.category === 'loan_on_credit_card' || l.card_name?.toLowerCase().includes('loan')).length;
-  const smartEmiCount = leads.filter(l => l.category === 'smart_emi' || l.card_name?.toLowerCase().includes('emi')).length;
-  const verifiedCount = leads.filter(l => l.status === 'verified' || l.status === 'operational_verified' || l.status === 'approved' || l.status === 'disbursed').length;
+  const loanOnCardCount = (Array.isArray(leads) ? leads : []).filter(l => l.category === 'loan_on_credit_card' || l.card_name?.toLowerCase().includes('loan')).length;
+  const smartEmiCount = (Array.isArray(leads) ? leads : []).filter(l => l.category === 'smart_emi' || l.card_name?.toLowerCase().includes('emi')).length;
+  const verifiedCount = (Array.isArray(leads) ? leads : []).filter(l => l.status === 'verified' || l.status === 'operational_verified' || l.status === 'approved' || l.status === 'disbursed').length;
 
   const categories = [
     { id: "all", label: "All Loan Applications", icon: <FaCoins size={14} /> },

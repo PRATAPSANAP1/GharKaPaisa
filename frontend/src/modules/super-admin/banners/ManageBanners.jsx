@@ -200,7 +200,7 @@ export default function ManageBanners() {
           alert("At least one target panel must be selected.");
           return prev;
         }
-        updated = currentPanels.filter(p => p !== panelKey);
+        updated = (Array.isArray(currentPanels) ? currentPanels : []).filter(p => p !== panelKey);
       } else {
         updated = [...currentPanels, panelKey];
       }
@@ -303,10 +303,10 @@ export default function ManageBanners() {
 
   const getTabCount = (key) => {
     if (key === "all") return banners.length;
-    return banners.filter(b => isBannerInPanel(b, key)).length;
+    return (Array.isArray(banners) ? banners : []).filter(b => isBannerInPanel(b, key)).length;
   };
 
-  const filteredBanners = banners.filter(item => {
+  const filteredBanners = (Array.isArray(banners) ? banners : []).filter(item => {
     if (activeTab === "all") return true;
     return isBannerInPanel(item, activeTab);
   });

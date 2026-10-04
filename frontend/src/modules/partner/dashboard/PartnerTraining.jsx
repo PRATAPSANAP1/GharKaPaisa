@@ -48,7 +48,7 @@ export default function PartnerTraining() {
     }
   };
 
-  const completedCount = modules.filter((m) => m.status === 'completed').length;
+  const completedCount = (Array.isArray(modules) ? modules : []).filter((m) => m.status === 'completed').length;
 
   if (loading) {
     return (

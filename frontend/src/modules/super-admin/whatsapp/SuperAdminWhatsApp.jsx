@@ -958,8 +958,7 @@ export default function SuperAdminWhatsApp() {
 
           {/* Templates Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
-            {templates
-              .filter(t => {
+            {(Array.isArray(templates) ? templates : []).filter(t => {
                 const matchSearch = t.template_name.toLowerCase().includes(templateSearchFilter.toLowerCase());
                 const matchCat = templateCategoryFilter === 'ALL' || t.template_category.toLowerCase() === templateCategoryFilter.toLowerCase();
                 return matchSearch && matchCat;

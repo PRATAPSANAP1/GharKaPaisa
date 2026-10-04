@@ -89,7 +89,7 @@ const Navbar = () => {
 
   const filteredCatalog = searchQuery.trim() === ""
     ? []
-    : dynamicCatalog.filter(item =>
+    : (Array.isArray(dynamicCatalog) ? dynamicCatalog : []).filter(item =>
         item.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (item.desc && item.desc.toLowerCase().includes(searchQuery.toLowerCase()))
       );

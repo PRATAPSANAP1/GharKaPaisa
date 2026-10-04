@@ -114,7 +114,7 @@ export default function ManageProductLinks() {
         // Dynamically update view cards modal if currently open
         setViewEmpCardsModal(prev => {
           if (!prev.open || !prev.employee) return prev;
-          const updatedLinks = prev.employee.links.filter(l => l.id !== id);
+          const updatedLinks = (Array.isArray(prev.employee.links) ? prev.employee.links : []).filter(l => l.id !== id);
           if (updatedLinks.length === 0) {
             return { open: false, employee: null };
           }

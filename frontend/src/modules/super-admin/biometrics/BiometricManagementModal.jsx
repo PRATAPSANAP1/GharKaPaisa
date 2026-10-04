@@ -332,7 +332,7 @@ export default function BiometricManagementModal({ isOpen, onClose, employee = n
 
   if (!isOpen) return null;
 
-  const filteredMissing = missingList.filter(emp => {
+  const filteredMissing = (Array.isArray(missingList) ? missingList : []).filter(emp => {
     if (!missingSearch.trim()) return true;
     const s = missingSearch.toLowerCase();
     return (

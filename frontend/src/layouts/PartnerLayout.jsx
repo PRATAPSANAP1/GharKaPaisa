@@ -224,7 +224,7 @@ export default function PartnerLayout() {
 
   const isTeamMember = user?.role === 'TEAM_MEMBER';
 
-  const filteredNavItems = NAV_ITEMS.filter((item) => {
+  const filteredNavItems = (Array.isArray(NAV_ITEMS) ? NAV_ITEMS : []).filter((item) => {
     if (accountStatus === 'pending' || accountStatus === 'inactive' || accountStatus === 'rejected') {
       return ['dashboard', 'training'].includes(item.id);
     }
@@ -234,7 +234,7 @@ export default function PartnerLayout() {
     return true;
   });
 
-  const filteredMobileBottomNav = MOBILE_BOTTOM_NAV.filter((nav) => {
+  const filteredMobileBottomNav = (Array.isArray(MOBILE_BOTTOM_NAV) ? MOBILE_BOTTOM_NAV : []).filter((nav) => {
     if (accountStatus === 'pending' || accountStatus === 'inactive' || accountStatus === 'rejected') {
       return ['dashboard'].includes(nav.id);
     }
@@ -337,7 +337,7 @@ export default function PartnerLayout() {
               borderLeft: `2px solid ${isChildActive ? C.primary : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)')}`,
               marginLeft: '20px',
             }}>
-              {item.subItems.filter(sub => !(isTeamMember && sub.partnerOnly)).map((sub) => {
+              {(Array.isArray(item.subItems) ? item.subItems : []).filter(sub => !(isTeamMember && sub.partnerOnly)).map((sub) => {
                 const SubIcon = sub.icon;
                 const isSubActive = sub.path.includes('?')
                   ? currentPathAndQuery === sub.path

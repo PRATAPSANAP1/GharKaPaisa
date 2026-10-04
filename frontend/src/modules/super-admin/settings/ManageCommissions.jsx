@@ -308,7 +308,7 @@ export default function ManageCommissions() {
   })();
 
   // Filtered partners/team members list
-  const filteredPartners = partners.filter(p => {
+  const filteredPartners = (Array.isArray(partners) ? partners : []).filter(p => {
     const q = searchQuery.toLowerCase().trim();
     const fullName = `${p.first_name || ''} ${p.last_name || ''}`.toLowerCase();
     const code = (p.Partner_code || p.partner_code || '').toLowerCase();
@@ -329,7 +329,7 @@ export default function ManageCommissions() {
   });
 
   // Filtered partners overview for Team Splits tab
-  const filteredPartnersOverview = partnersOverview.filter(p => {
+  const filteredPartnersOverview = (Array.isArray(partnersOverview) ? partnersOverview : []).filter(p => {
     const q = teamSearch.toLowerCase().trim();
     if (!q) return true;
     return (
@@ -352,7 +352,7 @@ export default function ManageCommissions() {
 
   const toggleSelectPartner = (id) => {
     if (selectedPartnerIds.includes(id)) {
-      setSelectedPartnerIds(selectedPartnerIds.filter(item => item !== id));
+      setSelectedPartnerIds((Array.isArray(selectedPartnerIds) ? selectedPartnerIds : []).filter(item => item !== id));
     } else {
       setSelectedPartnerIds([...selectedPartnerIds, id]);
     }
@@ -639,7 +639,7 @@ export default function ManageCommissions() {
                     filteredPartners.map(p => {
                       const isSelected = selectedPartnerIds.includes(p.id);
                       const isTeam = p.parent_partner_id || (p.role && p.role.toUpperCase() === 'TEAM_MEMBER');
-                      const partnerOverrides = rules.filter(r => r.Partner_id === p.id || r.partner_id === p.id);
+                      const partnerOverrides = (Array.isArray(rules) ? rules : []).filter(r => r.Partner_id === p.id || r.partner_id === p.id);
 
                       return (
                         <tr key={p.id} style={{ borderBottom: `1px solid ${C.border}`, background: isSelected ? `${C.teal}08` : "none" }}>
@@ -1247,7 +1247,7 @@ export default function ManageCommissions() {
                       });
                     }
 
-                    const filteredList = cardList.filter(c => {
+                    const filteredList = (Array.isArray(cardList) ? cardList : []).filter(c => {
                       const q = viewCardsSearch.toLowerCase().trim();
                       return !q || c.name.toLowerCase().includes(q) || (c.category && c.category.toLowerCase().includes(q));
                     });
@@ -1330,7 +1330,7 @@ export default function ManageCommissions() {
                     />
                     🌟 All Cards & Products (Apply same payout to all products)
                   </label>
-                  {products.filter(p => !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase())).map(p => {
+                  {(Array.isArray(products) ? products : []).filter(p => !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase())).map(p => {
                     const isChecked = form.product_ids.includes(p.id);
                     return (
                       <label
@@ -1343,9 +1343,9 @@ export default function ManageCommissions() {
                           onChange={e => {
                             let updated;
                             if (e.target.checked) {
-                              updated = [...form.product_ids.filter(id => id !== "all"), p.id];
+                              updated = [...(Array.isArray(form.product_ids) ? form.product_ids : []).filter(id => id !== "all"), p.id];
                             } else {
-                              updated = form.product_ids.filter(id => id !== p.id);
+                              updated = (Array.isArray(form.product_ids) ? form.product_ids : []).filter(id => id !== p.id);
                             }
                             setForm({ ...form, product_ids: updated, product_id: updated[0] || "" });
                           }}
@@ -1412,7 +1412,7 @@ export default function ManageCommissions() {
                       👥 All Active Partners & Team Members
                     </label>
                   </div>
-                  {partners.filter(p => {
+                  {(Array.isArray(partners) ? partners : []).filter(p => {
                     if (partnerRoleFilter === "partners") return p.role === "PARTNER";
                     if (partnerRoleFilter === "team_members") return p.role === "TEAM_MEMBER";
                     return true;
@@ -1423,9 +1423,9 @@ export default function ManageCommissions() {
                         checked={form.partner_ids.includes(p.id)}
                         onChange={e => {
                           if (e.target.checked) {
-                            setForm({ ...form, partner_ids: [...form.partner_ids.filter(id => !["global", "all"].includes(id)), p.id] });
+                            setForm({ ...form, partner_ids: [...(Array.isArray(form.partner_ids) ? form.partner_ids : []).filter(id => !["global", "all"].includes(id)), p.id] });
                           } else {
-                            setForm({ ...form, partner_ids: form.partner_ids.filter(id => id !== p.id) });
+                            setForm({ ...form, partner_ids: (Array.isArray(form.partner_ids) ? form.partner_ids : []).filter(id => id !== p.id) });
                           }
                         }}
                       />

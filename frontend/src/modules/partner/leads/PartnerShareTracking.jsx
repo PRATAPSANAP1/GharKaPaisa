@@ -130,19 +130,19 @@ export default function PartnerShareTracking() {
         </div>
         <div style={{ ...S.card, padding: '20px', textAlign: 'center' }}>
           <div style={{ fontSize: '32px', fontWeight: 800, color: '#059669' }}>
-            {leads.filter(l => l.status === 'approved').length}
+            {(Array.isArray(leads) ? leads : []).filter(l => l.status === 'approved').length}
           </div>
           <div style={{ fontSize: '12px', color: C.textLight, marginTop: '4px' }}>Approved</div>
         </div>
         <div style={{ ...S.card, padding: '20px', textAlign: 'center' }}>
           <div style={{ fontSize: '32px', fontWeight: 800, color: '#2563EB' }}>
-            {leads.filter(l => l.status === 'pending').length}
+            {(Array.isArray(leads) ? leads : []).filter(l => l.status === 'pending').length}
           </div>
           <div style={{ fontSize: '12px', color: C.textLight, marginTop: '4px' }}>Pending</div>
         </div>
         <div style={{ ...S.card, padding: '20px', textAlign: 'center' }}>
           <div style={{ fontSize: '32px', fontWeight: 800, color: '#DC2626' }}>
-            {leads.filter(l => l.status === 'rejected').length}
+            {(Array.isArray(leads) ? leads : []).filter(l => l.status === 'rejected').length}
           </div>
           <div style={{ fontSize: '12px', color: C.textLight, marginTop: '4px' }}>Rejected</div>
         </div>

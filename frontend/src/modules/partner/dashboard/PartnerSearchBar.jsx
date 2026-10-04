@@ -96,7 +96,7 @@ export default function PartnerSearchBar() {
 
   const filteredItems = searchQuery.length === 0
     ? STATIC_CATALOG.slice(0, 6)
-    : allCatalog.filter(item => {
+    : (Array.isArray(allCatalog) ? allCatalog : []).filter(item => {
         if (item.title.toLowerCase().includes(searchQuery)) return true;
         if (item.category.toLowerCase().includes(searchQuery)) return true;
         if (item.sub.toLowerCase().includes(searchQuery)) return true;

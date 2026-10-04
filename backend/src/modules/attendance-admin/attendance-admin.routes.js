@@ -25,6 +25,14 @@ router.get('/history', ctrl.getAttendanceHistory);
 router.get('/employee/:employeeId', ctrl.getEmployeeAttendanceDetails);
 
 /**
+ * Office Building Geofences Management (Super Admin)
+ */
+router.get('/buildings', ctrl.listBuildings);
+router.post('/buildings', ctrl.createBuilding);
+router.put('/buildings/:id', ctrl.updateBuilding);
+router.delete('/buildings/:id', ctrl.deleteBuilding);
+
+/**
  * Environment Bypass Admin Management
  */
 router.post('/environment-bypass', ctrl.createEnvironmentBypass);

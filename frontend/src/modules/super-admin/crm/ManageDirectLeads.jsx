@@ -138,15 +138,15 @@ export default function ManageDirectLeads() {
   };
 
   // Helper stats
-  const todayLeadsCount = leads.filter(l => {
+  const todayLeadsCount = (Array.isArray(leads) ? leads : []).filter(l => {
     const today = new Date().toDateString();
     const leadDate = new Date(l.created_at).toDateString();
     return today === leadDate;
   }).length;
 
   const categoryCounts = {
-    credit_card: leads.filter(l => !l.category || l.category === 'credit_card').length,
-    insurance: leads.filter(l => l.category === 'insurance').length,
+    credit_card: (Array.isArray(leads) ? leads : []).filter(l => !l.category || l.category === 'credit_card').length,
+    insurance: (Array.isArray(leads) ? leads : []).filter(l => l.category === 'insurance').length,
   };
 
   const categories = [

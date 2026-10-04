@@ -19,7 +19,7 @@ export default function Customer360Drawer({ customer, allLeads = [], onClose }) 
       return customer.applications;
     }
     if (Array.isArray(allLeads) && allLeads.length > 0) {
-      const matched = allLeads.filter(lead => {
+      const matched = (Array.isArray(allLeads) ? allLeads : []).filter(lead => {
         const leadName = (lead.customer_name || lead.name || '').toLowerCase();
         const leadPhone = String(lead.customer_phone || lead.phone || '').replace(/[^0-9]/g, '');
         const custName = (customer.name || customer.customer_name || '').toLowerCase();
