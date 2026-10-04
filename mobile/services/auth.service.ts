@@ -17,12 +17,12 @@ export const sendOtp = async (identity: string, role = 'PARTNER') => {
   }
 };
 
-export const loginWithOtp = async (identity: string, otp: string, role = 'PARTNER', rememberMe = true) => {
+export const loginWithOtp = async (identity: string, otp: string, role?: string, rememberMe = true) => {
   try {
     const res = await apiClient.post('/auth/login', {
       identity,
       otp,
-      role,
+      role: role || undefined,
       rememberMe,
     });
 
@@ -38,6 +38,75 @@ export const loginWithOtp = async (identity: string, otp: string, role = 'PARTNE
     return res.data;
   } catch (err: any) {
     throw err.response?.data || { success: false, message: 'Login failed' };
+  }
+};
+
+export const loginWithPassword = async (identity: string, password: string, role?: string, rememberMe = true) => {
+  try {
+    const res = await apiClient.post('/auth/login-password', {
+      identity,
+      password,
+      role: role || undefined,
+      rememberMe,
+    });
+
+    if (res.data?.success && res.data?.token) {
+      await setSecureItem('auth_token', res.data.token);
+      if (res.data.refreshToken) {
+        await setSecureItem('refresh_token', res.data.refreshToken);
+      }
+      if (res.data.user) {
+        await setSecureItem('auth_user', res.data.user);
+      }
+    }
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Invalid credentials or password' };
+  }
+};
+
+export const registerUser = async (formData: any) => {
+  try {
+    const res = await apiClient.post('/auth/register', formData);
+    if (res.data?.success && res.data?.token) {
+      await setSecureItem('auth_token', res.data.token);
+      if (res.data.refreshToken) {
+        await setSecureItem('refresh_token', res.data.refreshToken);
+      }
+      if (res.data.user) {
+        await setSecureItem('auth_user', res.data.user);
+      }
+    }
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Registration failed' };
+  }
+};
+
+export const forgotPassword = async (email: string) => {
+  try {
+    const res = await apiClient.post('/auth/forgot-password', { email });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to send password reset link' };
+  }
+};
+
+export const resetPassword = async (token: string, password: string) => {
+  try {
+    const res = await apiClient.post('/auth/reset-password', { token, password });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to reset password' };
+  }
+};
+
+export const lookupUser = async (identity: string, role?: string) => {
+  try {
+    const res = await apiClient.post('/auth/lookup', { identity, role });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'User lookup failed' };
   }
 };
 
