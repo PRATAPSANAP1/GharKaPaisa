@@ -107,8 +107,11 @@ export default function SuperAdminEmployeesScreen() {
     try {
       setConverting(true);
       await convertCandidateToEmployee(selectedCandidate.id, {
+        offered_designation: offeredDesignation,
+        offered_salary: Number(offeredSalary) || 20000,
+        offered_department: 'Sales & Distribution',
         designation: offeredDesignation,
-        offeredSalary: Number(offeredSalary) || 18000,
+        offeredSalary: Number(offeredSalary) || 20000,
       });
       setConvertModalVisible(false);
       Alert.alert('Candidate Converted', `${selectedCandidate.full_name} is now converted to an Employee.`);

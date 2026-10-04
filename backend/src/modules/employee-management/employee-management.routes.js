@@ -1227,6 +1227,8 @@ router.post('/create', async (req, res, next) => {
 
     const cleanMobile = String(mobile_number).trim();
     const cleanEmail = email_id ? String(email_id).trim().toLowerCase() : `${cleanMobile}@gharkapaisa.in`;
+    const levelUpper = (hierarchy_level || 'TC').toUpperCase();
+    const prefix = designation || 'TC';
 
     // 1. Check existing user/employee
     const existing = await query(`SELECT id FROM employees WHERE mobile_number = $1 OR email_id = $2`, [cleanMobile, cleanEmail]);
