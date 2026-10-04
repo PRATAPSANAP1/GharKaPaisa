@@ -97,6 +97,48 @@ export default function MoreScreen() {
 
   const accountSupport: MenuItem[] = [
     {
+      id: 'travel-utilities',
+      title: 'Travel & Utilities',
+      subtitle: 'Process bill payments, recharges, tickets & earn margin',
+      icon: '⚡',
+      route: '/(app)/travel-utilities'
+    },
+    {
+      id: 'marketing',
+      title: 'Marketing & Creatives',
+      subtitle: 'Share branded posters, story banners & WhatsApp flyers',
+      icon: '📢',
+      route: '/(app)/marketing'
+    },
+    {
+      id: 'training',
+      title: 'Training & Learning Hub',
+      subtitle: 'Product pitch walkthroughs & sales certification',
+      icon: '🎓',
+      route: '/(app)/training'
+    },
+    {
+      id: 'share-tracking',
+      title: 'Share Link Tracking',
+      subtitle: 'Live traffic clicks, conversion stats & leads',
+      icon: '📈',
+      route: '/(app)/share-tracking'
+    },
+    {
+      id: 'vault',
+      title: 'Partner Document Vault',
+      subtitle: 'Secure encrypted compliance & agreement storage',
+      icon: '🗄️',
+      route: '/(app)/vault'
+    },
+    {
+      id: 'partner-kyc',
+      title: 'Partner KYC Centre',
+      subtitle: 'Verify PAN & bank details for instant payouts',
+      icon: '🛡️',
+      route: '/(app)/partner-kyc'
+    },
+    {
       id: 'support',
       title: 'Support Tickets',
       subtitle: 'Connect to support desk & manage open tickets',

@@ -143,7 +143,7 @@ export default function PartnerDashboardScreen() {
       </View>
 
       {/* Quick Action Bar */}
-      <Text style={styles.sectionTitle}>Quick Actions</Text>
+      <Text style={styles.sectionTitle}>Partner Quick Tools</Text>
       <View style={styles.quickActionGrid}>
         <TouchableOpacity style={styles.actionTile} onPress={() => router.push('/add-lead')}>
           <View style={[styles.actionIconBg, { backgroundColor: '#EEF2FF' }]}>
@@ -159,18 +159,46 @@ export default function PartnerDashboardScreen() {
           <Text style={styles.actionTileText}>Share Products</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionTile} onPress={() => router.push('/team')}>
+        <TouchableOpacity style={styles.actionTile} onPress={() => router.push('/travel-utilities' as any)}>
           <View style={[styles.actionIconBg, { backgroundColor: '#FEF3C7' }]}>
-            <Icon name="users" size={20} color="#D97706" />
+            <Icon name="zap" size={20} color="#D97706" />
+          </View>
+          <Text style={styles.actionTileText}>Utilities & Travel</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionTile} onPress={() => router.push('/marketing' as any)}>
+          <View style={[styles.actionIconBg, { backgroundColor: '#FDF2F8' }]}>
+            <Icon name="image" size={20} color="#DB2777" />
+          </View>
+          <Text style={styles.actionTileText}>Creatives</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionTile} onPress={() => router.push('/training' as any)}>
+          <View style={[styles.actionIconBg, { backgroundColor: '#F0FDF4' }]}>
+            <Icon name="book-open" size={20} color="#16A34A" />
+          </View>
+          <Text style={styles.actionTileText}>Training Hub</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionTile} onPress={() => router.push('/partner-kyc' as any)}>
+          <View style={[styles.actionIconBg, { backgroundColor: '#EFF6FF' }]}>
+            <Icon name="shield" size={20} color="#2563EB" />
+          </View>
+          <Text style={styles.actionTileText}>KYC Centre</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionTile} onPress={() => router.push('/team')}>
+          <View style={[styles.actionIconBg, { backgroundColor: '#FAF5FF' }]}>
+            <Icon name="users" size={20} color="#7C3AED" />
           </View>
           <Text style={styles.actionTileText}>My Team</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionTile} onPress={() => router.push('/leads')}>
+        <TouchableOpacity style={styles.actionTile} onPress={() => router.push('/share-tracking' as any)}>
           <View style={[styles.actionIconBg, { backgroundColor: '#F3E8FF' }]}>
-            <Icon name="list" size={20} color="#9333EA" />
+            <Icon name="activity" size={20} color="#9333EA" />
           </View>
-          <Text style={styles.actionTileText}>My Leads</Text>
+          <Text style={styles.actionTileText}>Link Tracking</Text>
         </TouchableOpacity>
       </View>
 

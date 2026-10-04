@@ -405,6 +405,18 @@ const startServer = async () => {
       runMessengerPurge();
       setInterval(runMessengerPurge, 15 * 60 * 1000);
 
+      // Initialize 2-Hour Read Notification Purge Job timer (runs every 5 minutes and on startup for all panels)
+      const runNotificationPurge = async () => {
+        try {
+          const { purgeExpiredReadNotifications } = require('./jobs/notificationPurge.job.js');
+          await purgeExpiredReadNotifications();
+        } catch (err) {
+          logger.error('2-Hour Read Notification Purge Job error:', err.message);
+        }
+      };
+      runNotificationPurge();
+      setInterval(runNotificationPurge, 5 * 60 * 1000);
+
       // Initialize Scheduled Announcement Auto-Publisher (runs every minute and on startup)
       const runAnnouncementScheduler = async () => {
         try {

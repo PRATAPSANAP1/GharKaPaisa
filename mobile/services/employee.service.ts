@@ -161,3 +161,54 @@ export const fetchEmployeeCreditCards = async (): Promise<EmployeeProductLink[]>
     return [];
   }
 };
+
+/**
+ * Fetch employee verification status and onboarding checklist
+ */
+export interface VerificationStatus {
+  overall_status: string;
+  missing_items: Array<{
+    type: string;
+    status: string;
+    description?: string;
+  }>;
+  video_status?: string;
+}
+
+export const fetchEmployeeVerificationStatus = async (): Promise<VerificationStatus | null> => {
+  try {
+    const res = await apiClient.get('/employee/verification-status');
+    if (res.data?.success && res.data?.data) {
+      return res.data.data;
+    }
+    return null;
+  } catch (err) {
+    console.error('Failed to fetch employee verification status:', err);
+    return null;
+  }
+};
+
+/**
+ * Fetch employee onboarding status checklist
+ */
+export interface OnboardingChecklist {
+  kyc_status: string;
+  video_status: string;
+  terms_status: string;
+  bank_status: string;
+  overall_status: string;
+  [key: string]: any;
+}
+
+export const fetchEmployeeOnboardingStatus = async (): Promise<OnboardingChecklist | null> => {
+  try {
+    const res = await apiClient.get('/employee/onboarding-status');
+    if (res.data?.success && res.data?.data) {
+      return res.data.data;
+    }
+    return null;
+  } catch (err) {
+    console.error('Failed to fetch employee onboarding status:', err);
+    return null;
+  }
+};

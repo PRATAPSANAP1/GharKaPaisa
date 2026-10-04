@@ -32,6 +32,13 @@ export default function EmployeeManagement() {
   const [attendanceFilter, setAttendanceFilter] = useState('');
   const [activeActionMenuId, setActiveActionMenuId] = useState(null);
 
+  // Drawer Employee Attendance Breakdown State
+  const [empAttendanceData, setEmpAttendanceData] = useState(null);
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
+  const [attendanceMonth, setAttendanceMonth] = useState(new Date().getMonth() + 1);
+  const [attendanceYear, setAttendanceYear] = useState(new Date().getFullYear());
+  const [selectedDayAttendance, setSelectedDayAttendance] = useState(null);
+
   // Drawer Employee Editing State
   const [isEditingEmpInfo, setIsEditingEmpInfo] = useState(false);
   const [editEmpForm, setEditEmpForm] = useState({
@@ -138,6 +145,29 @@ export default function EmployeeManagement() {
       setLoadingDrawer360(false);
     }
   };
+
+  const fetchEmployeeAttendanceData = async (empId, month = attendanceMonth, year = attendanceYear) => {
+    if (!empId) return;
+    setLoadingAttendance(true);
+    try {
+      const res = await api.get(`/attendance/admin/employee/${empId}`, {
+        params: { month, year }
+      });
+      if (res.data?.success) {
+        setEmpAttendanceData(res.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch employee attendance details:', err);
+    } finally {
+      setLoadingAttendance(false);
+    }
+  };
+
+  useEffect(() => {
+    if (drawerEmp?.id && drawerTab === 'attendance') {
+      fetchEmployeeAttendanceData(drawerEmp.id, attendanceMonth, attendanceYear);
+    }
+  }, [drawerEmp?.id, drawerTab, attendanceMonth, attendanceYear]);
 
   const handleSingleDocAction = async (empId, docKey, action, reasonText = '') => {
     const isApprove = action === 'VERIFIED';
@@ -5078,14 +5108,172 @@ export default function EmployeeManagement() {
                 {/* 5. ATTENDANCE TAB */}
                 {drawerTab === 'attendance' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    {/* Header Access & Overview Card */}
                     <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Attendance Access</div>
+                        <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Attendance Access & Biometric Status</div>
                         <div style={{ fontSize: '14px', fontWeight: 900, color: (drawerEmp.face_verification_status === 'VERIFIED' || drawerEmp.biometric_enrolled) ? '#059669' : '#DC2626', marginTop: '2px' }}>
-                          {(drawerEmp.face_verification_status === 'VERIFIED' || drawerEmp.biometric_enrolled) ? '✓ ENABLED' : '🔒 RESTRICTED (Face Missing)'}
+                          {(drawerEmp.face_verification_status === 'VERIFIED' || drawerEmp.biometric_enrolled) ? '✓ ENABLED (Face Registered)' : '🔒 RESTRICTED (Face Reference Missing)'}
                         </div>
                       </div>
+                      <button
+                        onClick={() => openBiometricModal(drawerEmp)}
+                        style={{ padding: '6px 12px', background: `${C.teal}15`, border: `1px solid ${C.teal}40`, borderRadius: '6px', color: C.teal, fontSize: '11.5px', fontWeight: 800, cursor: 'pointer' }}
+                      >
+                        ⚙ Biometric Settings
+                      </button>
                     </div>
+
+                    {/* Month & Year Filter Bar */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '10px 14px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 900, color: C.text, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>📅</span> Monthly Attendance Overview
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <select
+                          value={attendanceMonth}
+                          onChange={(e) => setAttendanceMonth(parseInt(e.target.value, 10))}
+                          style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '12px', fontWeight: 700 }}
+                        >
+                          {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, idx) => (
+                            <option key={idx + 1} value={idx + 1}>{m}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={attendanceYear}
+                          onChange={(e) => setAttendanceYear(parseInt(e.target.value, 10))}
+                          style={{ padding: '5px 8px', borderRadius: '6px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '12px', fontWeight: 700 }}
+                        >
+                          {[2026, 2025, 2024].map((y) => (
+                            <option key={y} value={y}>{y}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Summary Metrics Cards */}
+                    {empAttendanceData?.summary && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                        <div style={{ background: '#D1FAE5', border: '1px solid #A7F3D0', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#065F46' }}>PRESENT</div>
+                          <div style={{ fontSize: '16px', fontWeight: 900, color: '#047857' }}>{empAttendanceData.summary.totalPresent}</div>
+                        </div>
+                        <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#92400E' }}>LATE</div>
+                          <div style={{ fontSize: '16px', fontWeight: 900, color: '#D97706' }}>{empAttendanceData.summary.totalLate}</div>
+                        </div>
+                        <div style={{ background: '#FFEDD5', border: '1px solid #FED7AA', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#9A3412' }}>HALF DAY</div>
+                          <div style={{ fontSize: '16px', fontWeight: 900, color: '#C2410C' }}>{empAttendanceData.summary.totalHalfDay}</div>
+                        </div>
+                        <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#991B1B' }}>ABSENT / LEAVE</div>
+                          <div style={{ fontSize: '16px', fontWeight: 900, color: '#DC2626' }}>
+                            {(empAttendanceData.summary.totalAbsent || 0) + (empAttendanceData.summary.totalLeave || 0)}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Total Working Hours Bar */}
+                    {empAttendanceData?.summary && (
+                      <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '8px', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
+                        <span style={{ color: C.textMid, fontWeight: 700 }}>⏱ Total Hours Logged this Month:</span>
+                        <strong style={{ color: C.teal, fontSize: '13px', fontWeight: 900 }}>{empAttendanceData.summary.totalWorkingHoursFormatted || '0h 0m'}</strong>
+                      </div>
+                    )}
+
+                    {/* Daily Attendance Records Section */}
+                    <div style={{ fontSize: '13px', fontWeight: 900, color: C.text, marginTop: '4px' }}>
+                      Detailed Daily Attendance Breakdown
+                    </div>
+
+                    {loadingAttendance ? (
+                      <div style={{ padding: '24px', textAlign: 'center', color: C.textMid, fontSize: '12.5px' }}>
+                        ⏳ Loading attendance records...
+                      </div>
+                    ) : (!empAttendanceData?.records || empAttendanceData.records.length === 0) ? (
+                      <div style={{ padding: '24px', textAlign: 'center', background: C.card, border: `1px dashed ${C.border}`, borderRadius: '10px', color: C.textMid, fontSize: '12.5px' }}>
+                        📅 No attendance records found for this month.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {empAttendanceData.records.map((rec) => {
+                          const dateObj = new Date(rec.attendance_date);
+                          const dateFormatted = isNaN(dateObj.getTime()) ? rec.attendance_date : dateObj.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                          
+                          const checkInFmt = rec.check_in_time ? new Date(rec.check_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }) : 'N/A';
+                          const checkOutFmt = rec.check_out_time ? new Date(rec.check_out_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }) : (rec.check_in_time ? '⏳ In Progress' : 'N/A');
+
+                          let duration = 'N/A';
+                          if (rec.check_in_time) {
+                            const startMs = new Date(rec.check_in_time).getTime();
+                            const endMs = rec.check_out_time ? new Date(rec.check_out_time).getTime() : Date.now();
+                            if (!isNaN(startMs) && !isNaN(endMs) && endMs >= startMs) {
+                              const totalMins = Math.floor((endMs - startMs) / 60000);
+                              duration = `${Math.floor(totalMins / 60)}h ${totalMins % 60}m${!rec.check_out_time ? ' (Active)' : ''}`;
+                            }
+                          }
+
+                          const statusColors = {
+                            PRESENT: { bg: '#D1FAE5', color: '#065F46', label: '✓ PRESENT' },
+                            LATE: { bg: '#FEF3C7', color: '#92400E', label: '⚠️ LATE' },
+                            HALF_DAY: { bg: '#FFEDD5', color: '#C2410C', label: '🌗 HALF DAY' },
+                            LEAVE: { bg: '#F3E8FF', color: '#6B21A8', label: '🏖 LEAVE' },
+                            ABSENT: { bg: '#FEE2E2', color: '#991B1B', label: '✕ ABSENT' },
+                          };
+                          const st = statusColors[rec.attendance_status] || { bg: '#F3F4F6', color: '#374151', label: rec.attendance_status || 'NOT MARKED' };
+
+                          return (
+                            <div
+                              key={rec.attendance_id || rec.attendance_date}
+                              style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}
+                            >
+                              {/* Top Bar: Date & Status */}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ fontSize: '13px', fontWeight: 900, color: C.text }}>
+                                  📅 {dateFormatted}
+                                </div>
+                                <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 800, background: st.bg, color: st.color }}>
+                                  {st.label}
+                                </span>
+                              </div>
+
+                              {/* Time & Duration Grid */}
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', background: C.bgSecondary, padding: '8px 10px', borderRadius: '6px', fontSize: '11.5px' }}>
+                                <div>
+                                  <span style={{ color: C.textMid, fontSize: '10.5px', display: 'block' }}>Check-In</span>
+                                  <strong style={{ color: C.text }}>{checkInFmt}</strong>
+                                </div>
+                                <div>
+                                  <span style={{ color: C.textMid, fontSize: '10.5px', display: 'block' }}>Check-Out</span>
+                                  <strong style={{ color: C.text }}>{checkOutFmt}</strong>
+                                </div>
+                                <div>
+                                  <span style={{ color: C.textMid, fontSize: '10.5px', display: 'block' }}>Work Duration</span>
+                                  <strong style={{ color: C.teal }}>{duration}</strong>
+                                </div>
+                              </div>
+
+                              {/* Audit & Verification Badges */}
+                              <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: C.textMid, paddingTop: '2px' }}>
+                                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                  <span>🔒 Ref: <strong>{rec.verification_reference || 'N/A'}</strong></span>
+                                  <span>📍 Location: <strong>{rec.matched_environment_code || 'OFFICE'}</strong></span>
+                                  <span>📱 Channel: <strong>{rec.source || 'WEB'}</strong></span>
+                                </div>
+                                <button
+                                  onClick={() => setSelectedDayAttendance(rec)}
+                                  style={{ background: 'transparent', border: 'none', color: C.teal, fontWeight: 800, cursor: 'pointer', fontSize: '11px', textDecoration: 'underline' }}
+                                >
+                                  Inspect Full Day Details →
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -5340,6 +5528,67 @@ export default function EmployeeManagement() {
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Full Day Attendance Details Audit Modal */}
+        {selectedDayAttendance && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', width: '100%', maxWidth: '520px', padding: '20px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
+                <div>
+                  <h3 style={{ fontSize: '16px', fontWeight: 900, color: C.text, margin: 0 }}>
+                    📅 Attendance Details: {selectedDayAttendance.attendance_date}
+                  </h3>
+                  <div style={{ fontSize: '12px', color: C.textMid, marginTop: '2px' }}>
+                    Employee: <strong>{drawerEmp?.full_name}</strong> ({drawerEmp?.employee_code || drawerEmp?.employee_id || drawerEmp?.id})
+                  </div>
+                </div>
+                <button onClick={() => setSelectedDayAttendance(null)} style={{ background: 'transparent', border: 'none', fontSize: '18px', cursor: 'pointer', color: C.textMid }}>✕</button>
+              </div>
+
+              {/* Day Metrics */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '14px' }}>
+                <div style={{ background: C.bgSecondary, padding: '10px', borderRadius: '8px', border: `1px solid ${C.border}` }}>
+                  <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Check-In Timestamp</div>
+                  <div style={{ fontSize: '13px', fontWeight: 900, color: C.text, marginTop: '2px' }}>
+                    {selectedDayAttendance.check_in_time ? new Date(selectedDayAttendance.check_in_time).toLocaleString('en-IN') : 'N/A'}
+                  </div>
+                </div>
+                <div style={{ background: C.bgSecondary, padding: '10px', borderRadius: '8px', border: `1px solid ${C.border}` }}>
+                  <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Check-Out Timestamp</div>
+                  <div style={{ fontSize: '13px', fontWeight: 900, color: C.text, marginTop: '2px' }}>
+                    {selectedDayAttendance.check_out_time ? new Date(selectedDayAttendance.check_out_time).toLocaleString('en-IN') : (selectedDayAttendance.check_in_time ? '⏳ Work Session Active' : 'N/A')}
+                  </div>
+                </div>
+              </div>
+
+              {/* Verification & Audit Technical Log */}
+              <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '8px', border: `1px solid ${C.border}`, fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 900, color: C.teal, borderBottom: `1px solid ${C.border}`, paddingBottom: '4px' }}>
+                  🛡 Verification Audit Details
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                  <div>Verification Ref: <strong>{selectedDayAttendance.verification_reference || 'N/A'}</strong></div>
+                  <div>Status: <strong>{selectedDayAttendance.verification_status || 'VERIFIED'}</strong></div>
+                  <div>Face Match: <strong>{selectedDayAttendance.face_status || 'PASSED'}</strong></div>
+                  <div>Liveness Check: <strong>{selectedDayAttendance.liveness_status || 'PASSED'}</strong></div>
+                  <div>Environment: <strong>{selectedDayAttendance.environment_status || 'MATCHED'}</strong></div>
+                  <div>Location Code: <strong>{selectedDayAttendance.matched_environment_code || 'OFFICE_HQ'}</strong></div>
+                  <div>Channel / Source: <strong>{selectedDayAttendance.source || 'WEB'}</strong></div>
+                  <div>Attendance Status: <strong>{selectedDayAttendance.attendance_status || 'PRESENT'}</strong></div>
+                </div>
+              </div>
+
+              {/* Close Button */}
+              <button
+                onClick={() => setSelectedDayAttendance(null)}
+                style={{ width: '100%', padding: '10px', background: C.teal, color: '#FFF', border: 'none', borderRadius: '8px', fontWeight: 900, fontSize: '13px', cursor: 'pointer' }}
+              >
+                Close Audit Details
+              </button>
             </div>
           </div>
         )}

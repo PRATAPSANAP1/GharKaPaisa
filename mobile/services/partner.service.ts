@@ -98,15 +98,6 @@ export const fetchEmployeeProfile = async () => {
   }
 };
 
-export const fetchEmployeeProducts = async () => {
-  try {
-    const res = await apiClient.get('/employee/credit-cards');
-    return res.data;
-  } catch (err: any) {
-    throw err.response?.data || { success: false, message: 'Failed to fetch employee products' };
-  }
-};
-
 // ============================================================================
 // PRODUCTS CATALOG ENDPOINTS
 // ============================================================================
@@ -128,3 +119,163 @@ export const fetchProductById = async (id: string) => {
     throw err.response?.data || { success: false, message: 'Failed to fetch product details' };
   }
 };
+
+export const fetchEmployeeProducts = async () => {
+  try {
+    const res = await apiClient.get('/employee/credit-cards');
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch employee products' };
+  }
+};
+
+export const fetchPartnerKycStatus = async () => {
+  try {
+    const res = await apiClient.get('/partner/kyc/status');
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch KYC status' };
+  }
+};
+
+export const fetchPartnerKycDetails = async () => {
+  try {
+    const res = await apiClient.get('/partner/kyc/details');
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch KYC details' };
+  }
+};
+
+export const submitPartnerKycPan = async (panNumber: string, panImageUri?: string) => {
+  try {
+    const formData = new FormData();
+    formData.append('pan_number', panNumber);
+    if (panImageUri) {
+      const filename = panImageUri.split('/').pop() || 'pan.jpg';
+      formData.append('pan', {
+        uri: panImageUri,
+        name: filename,
+        type: 'image/jpeg',
+      } as any);
+    }
+    const res = await apiClient.post('/partner/kyc/upload-pan', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to upload PAN details' };
+  }
+};
+
+export const submitPartnerKycCheque = async (accountData: {
+  account_number: string;
+  ifsc_code: string;
+  bank_name?: string;
+  account_holder_name?: string;
+  chequeImageUri?: string;
+}) => {
+  try {
+    const formData = new FormData();
+    formData.append('account_number', accountData.account_number);
+    formData.append('ifsc_code', accountData.ifsc_code);
+    if (accountData.bank_name) formData.append('bank_name', accountData.bank_name);
+    if (accountData.account_holder_name) formData.append('account_holder_name', accountData.account_holder_name);
+    if (accountData.chequeImageUri) {
+      const filename = accountData.chequeImageUri.split('/').pop() || 'cheque.jpg';
+      formData.append('cancelled_cheque', {
+        uri: accountData.chequeImageUri,
+        name: filename,
+        type: 'image/jpeg',
+      } as any);
+    }
+    const res = await apiClient.post('/partner/kyc/upload-cheque', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to upload bank cheque' };
+  }
+};
+
+export const submitPartnerKycFinal = async () => {
+  try {
+    const res = await apiClient.post('/partner/kyc/submit');
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to submit KYC for review' };
+  }
+};
+
+export const fetchPartnerTraining = async () => {
+  try {
+    const res = await apiClient.get('/partner/training');
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch training modules' };
+  }
+};
+
+export const completeTrainingModule = async (moduleId: string) => {
+  try {
+    const res = await apiClient.post(`/partner/training/${moduleId}/complete`);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to complete training module' };
+  }
+};
+
+export const fetchPartnerShareTracking = async () => {
+  try {
+    const res = await apiClient.get('/partner/share-tracking');
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch share tracking stats' };
+  }
+};
+
+export const fetchPartnerSupportTickets = async () => {
+  try {
+    const res = await apiClient.get('/partner/support-tickets');
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch support tickets' };
+  }
+};
+
+export const createPartnerSupportTicket = async (data: { subject: string; category: string; description: string }) => {
+  try {
+    const res = await apiClient.post('/partner/support-tickets', data);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to create support ticket' };
+  }
+};
+
+export const fetchPartnerNotifications = async () => {
+  try {
+    const res = await apiClient.get('/partner/notifications');
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch notifications' };
+  }
+};
+
+export const markNotificationRead = async (id: string) => {
+  try {
+    const res = await apiClient.patch(`/partner/notifications/${id}/read`);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to mark notification read' };
+  }
+};
+
+export const fetchTravelUtilitiesTransactions = async () => {
+  try {
+    const res = await apiClient.get('/partner/wallet/transactions', { params: { type: 'UTILITY_MARGIN' } });
+    return res.data;
+  } catch (err: any) {
+    return { success: true, data: [] };
+  }
+};
+

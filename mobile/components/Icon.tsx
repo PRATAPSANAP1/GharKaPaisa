@@ -26,7 +26,10 @@ export type IconName =
   | 'arrow-down-left'
   | 'arrow-up-right'
   | 'device'
-  | 'x';
+  | 'x'
+  | 'circle'
+  | 'lock'
+  | 'calendar';
 
 interface IconProps {
   name: IconName | string;
@@ -67,6 +70,8 @@ export const Icon: React.FC<IconProps> = ({ name, size = 16, color = '#000', sty
       case 'calendar': return '📅';
       case 'camera': return '📷';
       case 'x-circle': return '❌';
+      case 'circle': return '○';
+      case 'shield-check': return '🛡️✓';
       default: return '•';
     }
   };

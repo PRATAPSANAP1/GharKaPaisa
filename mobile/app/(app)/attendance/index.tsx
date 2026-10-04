@@ -24,10 +24,10 @@ import {
   getMyAttendanceHistory,
   getMyAttendanceSummary,
   createVerificationSession,
-  createLivenessSession,
   completeVerificationPipeline,
   executeCheckIn,
   executeCheckOut,
+  getEnrollmentStatus,
 } from '../../../services/attendance.service';
 import { isAttendanceEnabledForEmployee } from '../../../config/attendanceRollout';
 
@@ -69,6 +69,8 @@ export default function AttendanceScreen() {
   const [error, setError] = useState<string | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [isFaceEnrolled, setIsFaceEnrolled] = useState<boolean | null>(null);
+  const [showEnrollModal, setShowEnrollModal] = useState(false);
 
   const checkAttendanceAccess = () => {
     return isAttendanceEnabledForEmployee((user as any)?.employee_code || (user as any)?.employee_id || '');
@@ -120,10 +122,21 @@ export default function AttendanceScreen() {
   useEffect(() => {
     if (checkAttendanceAccess()) {
       loadAllData();
+      checkEnrollmentStatus();
     } else {
       setLoading(false);
     }
   }, [selectedMonth, selectedYear]);
+
+  const checkEnrollmentStatus = async () => {
+    try {
+      const status = await getEnrollmentStatus();
+      setIsFaceEnrolled(status.is_enrolled);
+    } catch (err) {
+      console.error('Failed to check enrollment status:', err);
+      setIsFaceEnrolled(true); // Default to true if check fails
+    }
+  };
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -132,6 +145,16 @@ export default function AttendanceScreen() {
 
   const handleCheckIn = async () => {
     try {
+      // Check face enrollment status
+      if (isFaceEnrolled === false) {
+        Alert.alert(
+          'Biometric Enrollment Required',
+          'Please complete your biometric enrollment in the employee panel before marking attendance.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
       const session = await createVerificationSession();
       setVerificationSessionId(session.sessionId);
       setShowVerificationModal(true);

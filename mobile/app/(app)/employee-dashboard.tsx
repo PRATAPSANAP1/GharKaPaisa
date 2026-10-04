@@ -21,9 +21,13 @@ import {
   fetchEmployeeProfile,
   fetchEmployeeIncentives,
   fetchEmployeeApplications,
+  fetchEmployeeVerificationStatus,
+  fetchEmployeeOnboardingStatus,
   EmployeeProfileData,
   EmployeeIncentivesResponse,
   EmployeeApplicationItem,
+  VerificationStatus,
+  OnboardingChecklist,
 } from '../../services/employee.service';
 
 export default function EmployeeDashboardScreen() {
@@ -35,19 +39,35 @@ export default function EmployeeDashboardScreen() {
   const [profileData, setProfileData] = useState<EmployeeProfileData | null>(null);
   const [incentiveData, setIncentiveData] = useState<EmployeeIncentivesResponse | null>(null);
   const [applications, setApplications] = useState<EmployeeApplicationItem[]>([]);
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus | null>(null);
+  const [onboardingChecklist, setOnboardingChecklist] = useState<OnboardingChecklist | null>(null);
 
   const loadDashboardData = async () => {
     try {
       setError(null);
-      const [profileRes, incentiveRes, appsRes] = await Promise.all([
+      const [profileRes, incentiveRes, appsRes, verRes, onboardRes] = await Promise.allSettled([
         fetchEmployeeProfile(),
         fetchEmployeeIncentives(),
         fetchEmployeeApplications(),
+        fetchEmployeeVerificationStatus(),
+        fetchEmployeeOnboardingStatus(),
       ]);
 
-      setProfileData(profileRes);
-      setIncentiveData(incentiveRes);
-      setApplications(appsRes);
+      if (profileRes.status === 'fulfilled') {
+        setProfileData(profileRes.value);
+      }
+      if (incentiveRes.status === 'fulfilled') {
+        setIncentiveData(incentiveRes.value);
+      }
+      if (appsRes.status === 'fulfilled') {
+        setApplications(appsRes.value);
+      }
+      if (verRes.status === 'fulfilled') {
+        setVerificationStatus(verRes.value);
+      }
+      if (onboardRes.status === 'fulfilled') {
+        setOnboardingChecklist(onboardRes.value);
+      }
     } catch (err) {
       console.error('[EmployeeDashboard] Load error:', err);
       setError('Failed to load performance metrics. Please tap retry.');
@@ -84,12 +104,73 @@ export default function EmployeeDashboardScreen() {
   const pendingIncentive = incentiveData?.stats?.pending_incentive ?? profileData?.incentives_summary?.pending_incentives ?? 0;
   const totalIncentives = profileData?.incentives_summary?.total_incentives ?? (totalPaidIncentive + pendingIncentive);
 
+  // Check if employee needs onboarding
+  const isVerified = verificationStatus?.overall_status === 'VERIFIED';
+  const missingItems = verificationStatus?.missing_items || [];
+  const isVideoRejected = verificationStatus?.video_status?.toUpperCase() === 'REJECTED' ||
+                          missingItems.some(i => (i.type === 'video' || i.type === 'terms_video') && String(i.status || '').toUpperCase() === 'REJECTED');
+  const needsOnboarding = !isVerified || isVideoRejected;
+
   if (loading && !refreshing) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading Personal Performance Workspace...</Text>
       </View>
+    );
+  }
+
+  // Show onboarding checklist if verification is incomplete
+  if (needsOnboarding) {
+    return (
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+      >
+        <View style={styles.header}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{(user?.full_name || user?.email || 'E')[0].toUpperCase()}</Text>
+          </View>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.greeting}>{getGreeting()},</Text>
+            <Text style={styles.userName}>{user?.full_name || user?.name || user?.email}</Text>
+            <View style={styles.roleContainer}>
+              <StatusBadge status={userRole || 'EMPLOYEE'} />
+            </View>
+          </View>
+        </View>
+
+        <Card style={styles.onboardingCard}>
+          <Text style={styles.onboardingTitle}>⚠️ Complete Your Onboarding</Text>
+          <Text style={styles.onboardingSubtitle}>
+            Please complete the following steps to activate your employee account.
+          </Text>
+
+          <View style={styles.checklistContainer}>
+            {missingItems.length > 0 ? (
+              missingItems.map((item, index) => (
+                <View key={index} style={styles.checklistItem}>
+                  <Icon
+                    name={String(item.status || '').toUpperCase() === 'COMPLETED' ? 'check-circle' : 'circle'}
+                    size={20}
+                    color={String(item.status || '').toUpperCase() === 'COMPLETED' ? colors.success : colors.textLight}
+                  />
+                  <Text style={styles.checklistText}>{item.description || item.type}</Text>
+                </View>
+              ))
+            ) : (
+              <Text style={styles.checklistText}>No missing items. Verification in progress.</Text>
+            )}
+          </View>
+
+          <Button
+            title="Go to Profile"
+            onPress={() => router.push('/(app)/profile')}
+            style={styles.onboardingButton}
+          />
+        </Card>
+      </ScrollView>
     );
   }
 
@@ -492,5 +573,40 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xs,
     color: colors.textMid,
     marginTop: 2,
+  },
+  onboardingCard: {
+    alignItems: 'center',
+    padding: spacing.lg,
+    borderColor: colors.warning,
+    borderWidth: 2,
+  },
+  onboardingTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginTop: spacing.md,
+  },
+  onboardingSubtitle: {
+    fontSize: typography.sizes.sm,
+    color: colors.textMid,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+  },
+  checklistContainer: {
+    width: '100%',
+    marginTop: spacing.md,
+  },
+  checklistItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  checklistText: {
+    fontSize: typography.sizes.sm,
+    color: colors.text,
+    marginLeft: spacing.sm,
+  },
+  onboardingButton: {
+    marginTop: spacing.md,
   },
 });

@@ -5118,6 +5118,22 @@ const migrate = async () => {
     logger.error('Status constraint fix migration error note:', statusConstraintErr.message);
   }
 
+  // Messenger 48-Hour Purge Migration
+  try {
+    const { migrateMessenger48hPurge } = require('./migrate_messenger_48h_purge');
+    await migrateMessenger48hPurge();
+  } catch (mPurgeErr) {
+    logger.error('Messenger 48h Purge migration error note:', mPurgeErr.message);
+  }
+
+  // Notification 2-Hour Read Purge Migration
+  try {
+    const { migrateNotification2hPurge } = require('./migrate_notification_2h_purge');
+    await migrateNotification2hPurge();
+  } catch (nPurgeErr) {
+    logger.error('Notification 2h Purge migration error note:', nPurgeErr.message);
+  }
+
   // LOC/EOC Category Migration
   try {
     const { migrateLocEocCategory } = require('./migrate_loc_eoc_category');
