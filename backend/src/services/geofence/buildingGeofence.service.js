@@ -1,7 +1,7 @@
 const { query } = require('../../config/database');
 const logger = require('../../config/logger');
 
-// Default Seed Building: User-supplied coordinates
+// Default Seed Buildings: Both Pune Main Office and Branch Office (4-Corner GPS Boundaries)
 const DEFAULT_BUILDINGS = [
   {
     id: '00000000-0000-0000-0000-000000000001',
@@ -15,6 +15,20 @@ const DEFAULT_BUILDINGS = [
       [18.619377, 73.874543]
     ],
     tolerance_meters: 35,
+    is_active: true
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000002',
+    name: 'Branch Office Building',
+    code: 'BRANCH_OFFICE_02',
+    address: 'Secondary Office Building Premises',
+    polygon_coordinates: [
+      [19.381363, 75.467645],
+      [19.381447, 75.467656],
+      [19.381458, 75.467571],
+      [19.381371, 75.467558]
+    ],
+    tolerance_meters: 20,
     is_active: true
   }
 ];
@@ -43,25 +57,22 @@ async function ensureGeofenceTableExists() {
       CREATE INDEX IF NOT EXISTS idx_office_buildings_active ON office_building_geofences(is_active);
     `);
 
-    // Auto-seed default building if table is empty
-    const { rows } = await query(`SELECT COUNT(*)::int AS count FROM office_building_geofences`);
-    if (rows[0] && rows[0].count === 0) {
-      for (const def of DEFAULT_BUILDINGS) {
-        await query(
-          `INSERT INTO office_building_geofences (id, name, code, address, polygon_coordinates, tolerance_meters, is_active)
-           VALUES ($1, $2, $3, $4, $5, $6)
-           ON CONFLICT (code) DO NOTHING`,
-          [
-            def.id,
-            def.name,
-            def.code,
-            def.address,
-            JSON.stringify(def.polygon_coordinates),
-            def.tolerance_meters,
-            def.is_active
-          ]
-        );
-      }
+    // Ensure default buildings exist in DB
+    for (const def of DEFAULT_BUILDINGS) {
+      await query(
+        `INSERT INTO office_building_geofences (id, name, code, address, polygon_coordinates, tolerance_meters, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (code) DO NOTHING`,
+        [
+          def.id,
+          def.name,
+          def.code,
+          def.address,
+          JSON.stringify(def.polygon_coordinates),
+          def.tolerance_meters,
+          def.is_active
+        ]
+      );
     }
 
     tableVerified = true;
