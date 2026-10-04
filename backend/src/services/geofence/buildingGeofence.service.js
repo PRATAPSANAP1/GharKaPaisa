@@ -84,12 +84,6 @@ async function ensureGeofenceTableExists() {
   }
 }
 
-    tableVerified = true;
-  } catch (err) {
-    logger.warn('[BUILDING GEOFENCE] Table auto-creation notice:', err.message);
-  }
-}
-
 /**
  * Ray-Casting Algorithm for Point-in-Polygon
  * @param {number} latitude 
