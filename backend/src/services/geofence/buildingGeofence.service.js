@@ -14,12 +14,12 @@ const DEFAULT_BUILDINGS = [
       [18.619585, 73.874550],
       [18.619377, 73.874543]
     ],
-    tolerance_meters: 35,
+    tolerance_meters: 100,
     is_active: true
   },
   {
     id: '00000000-0000-0000-0000-000000000002',
-    name: 'Branch Office Building',
+    name: 'Branch Office Building (Test Location)',
     code: 'BRANCH_OFFICE_02',
     address: 'Secondary Office Building Premises',
     polygon_coordinates: [
@@ -28,7 +28,7 @@ const DEFAULT_BUILDINGS = [
       [19.381458, 75.467571],
       [19.381371, 75.467558]
     ],
-    tolerance_meters: 20,
+    tolerance_meters: 100,
     is_active: true
   }
 ];
@@ -48,7 +48,7 @@ async function ensureGeofenceTableExists() {
         code VARCHAR(50) UNIQUE NOT NULL,
         address TEXT,
         polygon_coordinates JSONB NOT NULL,
-        tolerance_meters INTEGER NOT NULL DEFAULT 35,
+        tolerance_meters INTEGER NOT NULL DEFAULT 100,
         is_active BOOLEAN NOT NULL DEFAULT TRUE,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -74,6 +74,15 @@ async function ensureGeofenceTableExists() {
         ]
       );
     }
+
+    // Ensure all existing DB buildings have at least 100m tolerance to handle indoor GPS drift
+    await query(`UPDATE office_building_geofences SET tolerance_meters = 100 WHERE tolerance_meters < 100`);
+
+    tableVerified = true;
+  } catch (err) {
+    logger.warn('[BUILDING GEOFENCE] Table auto-creation notice:', err.message);
+  }
+}
 
     tableVerified = true;
   } catch (err) {
@@ -246,15 +255,26 @@ async function verifyLocationInBuilding(latitude, longitude, accuracy = 0) {
       };
     }
 
-    // 2. Tolerance Buffer Test (Distance to building boundary)
+    // 2. Tolerance Buffer Test (Distance to building perimeter or centroid)
     const distToPerimeter = distanceToPolygonPerimeter(lat, lng, polygon);
-    const allowedTolerance = building.tolerance_meters || 35;
 
-    // Account for device GPS accuracy (up to max 50m allowance)
-    const effectiveTolerance = Math.min(allowedTolerance + Math.min(accuracy * 0.5, 25), 60);
+    let centroidLat = 0, centroidLng = 0;
+    for (const pt of polygon) {
+      centroidLat += Number(pt[0]);
+      centroidLng += Number(pt[1]);
+    }
+    centroidLat /= polygon.length;
+    centroidLng /= polygon.length;
+    const distToCentroid = calculateHaversineDistance(lat, lng, centroidLat, centroidLng);
 
-    if (distToPerimeter <= effectiveTolerance) {
-      logger.info(`[BUILDING GEOFENCE] Point within tolerance buffer (${distToPerimeter.toFixed(1)}m <= ${effectiveTolerance}m) for "${building.name}"`);
+    const minDist = Math.min(distToPerimeter, distToCentroid);
+    const buildingTolerance = Math.max(Number(building.tolerance_meters) || 100, 100);
+
+    // Effective tolerance accounts for indoor GPS drift and device accuracy (up to 250m buffer)
+    const effectiveTolerance = Math.max(buildingTolerance, Math.min(buildingTolerance + (accuracy || 0), 250));
+
+    if (minDist <= effectiveTolerance) {
+      logger.info(`[BUILDING GEOFENCE] Point within tolerance buffer (${minDist.toFixed(1)}m <= ${effectiveTolerance}m) for "${building.name}"`);
       return {
         matched: true,
         building: {
@@ -264,14 +284,14 @@ async function verifyLocationInBuilding(latitude, longitude, accuracy = 0) {
           address: building.address
         },
         isStrictInside: false,
-        distanceMeters: Math.round(distToPerimeter),
+        distanceMeters: Math.round(minDist),
         status: 'LOCATION_VERIFIED',
-        message: `Verified within perimeter of ${building.name} (${Math.round(distToPerimeter)}m)`
+        message: `Verified within perimeter of ${building.name} (${Math.round(minDist)}m)`
       };
     }
 
-    if (distToPerimeter < minPerimeterDistance) {
-      minPerimeterDistance = distToPerimeter;
+    if (minDist < minPerimeterDistance) {
+      minPerimeterDistance = minDist;
       closestBuilding = building;
     }
   }

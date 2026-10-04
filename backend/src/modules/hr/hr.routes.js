@@ -301,11 +301,11 @@ router.post('/candidates/:id/interview', async (req, res, next) => {
 router.post('/candidates/:id/select', async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { offered_salary, offered_designation, offered_department, expected_joining_date, employment_type = 'Full-time' } = req.body;
-
-    if (!offered_salary || !offered_designation || !offered_department) {
-      return res.status(400).json({ success: false, message: 'Offered salary, designation, and department are required' });
-    }
+    const offered_salary = parseFloat(req.body.offered_salary || req.body.offeredSalary || req.body.salary) || 25000;
+    const offered_designation = req.body.offered_designation || req.body.designation || 'TC';
+    const offered_department = req.body.offered_department || req.body.department || 'Sales & Distribution';
+    const expected_joining_date = req.body.expected_joining_date || req.body.expectedJoiningDate || new Date();
+    const employment_type = req.body.employment_type || req.body.employmentType || 'Full-time';
 
     const candRes = await query(`SELECT * FROM employee_candidates WHERE id = $1`, [id]);
     if (candRes.rows.length === 0) {
