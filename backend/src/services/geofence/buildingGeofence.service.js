@@ -19,6 +19,35 @@ const DEFAULT_BUILDINGS = [
   }
 ];
 
+let tableVerified = false;
+
+/**
+ * Ensure office_building_geofences table exists idempotently
+ */
+async function ensureGeofenceTableExists() {
+  if (tableVerified) return;
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS office_building_geofences (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        name VARCHAR(150) NOT NULL,
+        code VARCHAR(50) UNIQUE NOT NULL,
+        address TEXT,
+        polygon_coordinates JSONB NOT NULL,
+        tolerance_meters INTEGER NOT NULL DEFAULT 35,
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_office_buildings_code ON office_building_geofences(code);
+      CREATE INDEX IF NOT EXISTS idx_office_buildings_active ON office_building_geofences(is_active);
+    `);
+    tableVerified = true;
+  } catch (err) {
+    logger.warn('[BUILDING GEOFENCE] Table auto-creation notice:', err.message);
+  }
+}
+
 /**
  * Ray-Casting Algorithm for Point-in-Polygon
  * @param {number} latitude 
@@ -103,6 +132,7 @@ function distanceToPolygonPerimeter(latitude, longitude, polygon) {
  * Fetch all active buildings from database with fallback to default buildings
  */
 async function getActiveBuildings() {
+  await ensureGeofenceTableExists();
   try {
     const { rows } = await query(
       `SELECT id, name, code, address, polygon_coordinates, tolerance_meters, is_active 
@@ -229,6 +259,7 @@ async function verifyLocationInBuilding(latitude, longitude, accuracy = 0) {
  * Super Admin: Get all buildings (active and inactive)
  */
 async function getAllBuildings() {
+  await ensureGeofenceTableExists();
   try {
     const { rows } = await query(
       `SELECT id, name, code, address, polygon_coordinates, tolerance_meters, is_active, created_at, updated_at
@@ -253,6 +284,7 @@ async function getAllBuildings() {
  * Super Admin: Create new building geofence
  */
 async function createBuilding({ name, code, address, polygon_coordinates, tolerance_meters = 35, is_active = true }) {
+  await ensureGeofenceTableExists();
   if (!name || !code || !polygon_coordinates || !Array.isArray(polygon_coordinates) || polygon_coordinates.length < 3) {
     const error = new Error('Building name, unique code, and at least 3 corner [lat, lng] coordinates are required.');
     error.statusCode = 400;
