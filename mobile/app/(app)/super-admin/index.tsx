@@ -110,6 +110,13 @@ export default function SuperAdminMenuScreen() {
       color: '#6B7280',
       path: '/super-admin/settings',
     },
+    {
+      title: 'Support Desk',
+      description: 'Inquiries and ticket resolution',
+      icon: 'message-square',
+      color: '#0284C7',
+      path: '/super-admin/support',
+    },
   ];
 
   return (

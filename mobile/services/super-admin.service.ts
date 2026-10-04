@@ -372,3 +372,183 @@ export const createContest = async (data: any) => {
   }
 };
 
+/**
+ * Super Admin Leads & CRM
+ */
+export const fetchSuperAdminLeads = async (params: { search?: string; status?: string; page?: number; limit?: number } = {}) => {
+  try {
+    const res = await apiClient.get('/leads', { params });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch leads' };
+  }
+};
+
+export const fetchDirectLeads = async (params: { search?: string; page?: number; limit?: number } = {}) => {
+  try {
+    const res = await apiClient.get('/leads/direct', { params });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch direct leads' };
+  }
+};
+
+export const updateLeadStatus = async (leadId: string, status: string, notes?: string) => {
+  try {
+    const res = await apiClient.put(`/leads/${leadId}/status`, { status, notes });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to update lead status' };
+  }
+};
+
+/**
+ * Super Admin Applications
+ */
+export const fetchSuperAdminApplications = async (params: { search?: string; status?: string; bank_id?: string; date_range?: string; page?: number; limit?: number } = {}) => {
+  try {
+    const res = await apiClient.get('/applications', { params });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch applications' };
+  }
+};
+
+export const approveApplication = async (applicationId: string, remarks?: string) => {
+  try {
+    const res = await apiClient.post('/superadmin/application/approve', { applicationId, remarks });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to approve application' };
+  }
+};
+
+export const rejectApplication = async (applicationId: string, reason: string) => {
+  try {
+    const res = await apiClient.post('/superadmin/application/reject', { applicationId, reason });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to reject application' };
+  }
+};
+
+export const reassignApplication = async (applicationId: string, targetUserId: string) => {
+  try {
+    const res = await apiClient.post('/superadmin/application/reassign', { applicationId, targetUserId });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to reassign application' };
+  }
+};
+
+/**
+ * Commission Rules
+ */
+export const fetchCommissionRules = async () => {
+  try {
+    const res = await apiClient.get('/superadmin/commission-rules');
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch commission rules' };
+  }
+};
+
+export const createCommissionRule = async (payload: any) => {
+  try {
+    const res = await apiClient.post('/superadmin/commission-rules', payload);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to create commission rule' };
+  }
+};
+
+/**
+ * Bank Partner Master
+ */
+export const fetchBanksList = async () => {
+  try {
+    const res = await apiClient.get('/banks');
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch banks' };
+  }
+};
+
+export const assignBankOperationHead = async (bankId: string, operationHeadId: string) => {
+  try {
+    const res = await apiClient.put('/superadmin/assign-bank-operation-head', { bankId, operationHeadId });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to assign bank operation head' };
+  }
+};
+
+/**
+ * Working Hours & Holiday Settings
+ */
+export const fetchWorkingHoursConfig = async () => {
+  try {
+    const res = await apiClient.get('/superadmin/working-hours');
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch working hours' };
+  }
+};
+
+export const updateWorkingHoursConfig = async (config: any) => {
+  try {
+    const res = await apiClient.put('/superadmin/working-hours', config);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to update working hours' };
+  }
+};
+
+export const fetchHolidaysList = async () => {
+  try {
+    const res = await apiClient.get('/superadmin/working-hours/holidays');
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch holidays' };
+  }
+};
+
+export const createHolidayItem = async (data: { name: string; date: string; description?: string }) => {
+  try {
+    const res = await apiClient.post('/superadmin/working-hours/holiday', data);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to create holiday' };
+  }
+};
+
+export const deleteHolidayItem = async (holidayId: string) => {
+  try {
+    const res = await apiClient.delete(`/superadmin/working-hours/holiday/${holidayId}`);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to delete holiday' };
+  }
+};
+
+/**
+ * Support Tickets
+ */
+export const fetchSupportTicketsList = async (params: { status?: string; page?: number; limit?: number } = {}) => {
+  try {
+    const res = await apiClient.get('/support/tickets', { params });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch support tickets' };
+  }
+};
+
+export const updateTicketStatus = async (ticketId: string, status: string, responseNote?: string) => {
+  try {
+    const res = await apiClient.put(`/support/tickets/${ticketId}`, { status, response: responseNote });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to update ticket status' };
+  }
+};
+
