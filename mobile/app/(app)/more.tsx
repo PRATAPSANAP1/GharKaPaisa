@@ -139,6 +139,41 @@ export default function MoreScreen() {
       route: '/(app)/partner-kyc'
     },
     {
+      id: 'employee-incentives',
+      title: 'Employee Incentives',
+      subtitle: 'Monthly incentive tiers, target meters & bonus ledger',
+      icon: '🎁',
+      route: '/(app)/employee-incentives'
+    },
+    {
+      id: 'employee-sales-report',
+      title: 'Daily Sales Report',
+      subtitle: 'Submit bank-wise daily cards sold with remarks',
+      icon: '📝',
+      route: '/(app)/employee-sales-report'
+    },
+    {
+      id: 'employee-onboarding',
+      title: 'Employee Joining & KYC',
+      subtitle: 'Complete onboarding form & verification tracker',
+      icon: '📋',
+      route: '/(app)/employee-onboarding'
+    },
+    {
+      id: 'hr-dashboard',
+      title: 'HR Recruitment Desk',
+      subtitle: 'Candidate interview scheduling & talent pipeline',
+      icon: '👔',
+      route: '/(app)/hr-dashboard'
+    },
+    {
+      id: 'super-admin-hub',
+      title: 'Super Admin Control Center',
+      subtitle: 'Master control center for all platform operations',
+      icon: '👑',
+      route: '/(app)/super-admin'
+    },
+    {
       id: 'support',
       title: 'Support Tickets',
       subtitle: 'Connect to support desk & manage open tickets',

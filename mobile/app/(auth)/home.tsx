@@ -237,17 +237,45 @@ export default function HomeScreen() {
         />
       </Card>
 
+      {/* Customer Quick Self-Service */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Customer Services</Text>
+        <View style={styles.serviceRow}>
+          <TouchableOpacity
+            style={styles.serviceBtn}
+            onPress={() => router.push('/(public)/track-application' as any)}
+          >
+            <Icon name="search" size={20} color={colors.primaryLight} />
+            <Text style={styles.serviceBtnText}>Track Application</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.serviceBtn}
+            onPress={() => router.push('/(public)/careers' as any)}
+          >
+            <Icon name="briefcase" size={20} color={colors.primaryLight} />
+            <Text style={styles.serviceBtnText}>Careers & Hiring</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.serviceBtn}
+            onPress={() => router.push('/(public)/contact' as any)}
+          >
+            <Icon name="headphones" size={20} color={colors.primaryLight} />
+            <Text style={styles.serviceBtnText}>Helpline</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       {/* Footer */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>© 2024 GharKaPaisa. All rights reserved.</Text>
+        <Text style={styles.footerText}>© 2026 GharKaPaisa. All rights reserved.</Text>
         <View style={styles.footerLinks}>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/(public)/policy' as any)}>
             <Text style={styles.footerLink}>Privacy Policy</Text>
           </TouchableOpacity>
-          <TouchableOpacity>
-            <Text style={styles.footerLink}>Terms of Service</Text>
+          <TouchableOpacity onPress={() => router.push('/(public)/policy' as any)}>
+            <Text style={styles.footerLink}>Terms & Conditions</Text>
           </TouchableOpacity>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/(public)/contact' as any)}>
             <Text style={styles.footerLink}>Contact Us</Text>
           </TouchableOpacity>
         </View>
@@ -505,7 +533,27 @@ const styles = StyleSheet.create({
   },
   footerLink: {
     fontSize: 12,
-    color: colors.primary,
+    color: colors.primaryLight,
     fontWeight: '600',
+  },
+  serviceRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  serviceBtn: {
+    flex: 1,
+    backgroundColor: '#1E293B',
+    padding: spacing.md,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  serviceBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center',
   },
 });

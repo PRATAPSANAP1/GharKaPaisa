@@ -212,3 +212,45 @@ export const fetchEmployeeOnboardingStatus = async (): Promise<OnboardingCheckli
     return null;
   }
 };
+
+export const fetchDailySalesReports = async () => {
+  try {
+    const res = await apiClient.get('/employees/sales-reports');
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch sales reports' };
+  }
+};
+
+export const submitDailySalesReport = async (reportData: {
+  report_date: string;
+  total_cards: number;
+  remark?: string;
+  photo_url?: string;
+  banks?: Array<{ bank_id: string; cards_sold: number }>;
+}) => {
+  try {
+    const res = await apiClient.post('/employees/sales-reports', reportData);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to submit sales report' };
+  }
+};
+
+export const submitJoiningDetails = async (formData: any) => {
+  try {
+    const res = await apiClient.post('/employee/joining-details', formData);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to submit joining details' };
+  }
+};
+
+export const submitEmployeeKYC = async (formData: any) => {
+  try {
+    const res = await apiClient.post('/employee/kyc', formData);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to submit employee KYC' };
+  }
+};

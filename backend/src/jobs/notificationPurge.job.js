@@ -14,7 +14,6 @@ const purgeExpiredReadNotifications = async () => {
       WHERE is_read = true 
         AND (
           read_at < NOW() - INTERVAL '2 hours'
-          OR (read_at IS NULL AND updated_at < NOW() - INTERVAL '2 hours')
           OR (read_at IS NULL AND created_at < NOW() - INTERVAL '2 hours')
         )
     `);

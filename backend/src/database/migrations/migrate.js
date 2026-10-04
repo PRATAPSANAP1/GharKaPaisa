@@ -843,8 +843,9 @@ const migrate = async () => {
       link       VARCHAR(500),
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
-  `);
   await query(`CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read)`);
+  await query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ NULL`);
+  await query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`);
 
   // ── Refresh Tokens ────────────────────────────────────────────
   await query(`

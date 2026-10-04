@@ -33,7 +33,7 @@ const getNotifications = async (req, res, next) => {
     const { page, limit, offset } = getPaginationParams(req.query);
     const { unread_only, category, search } = req.query;
 
-    let where = `WHERE user_id = $1 AND (is_read = false OR COALESCE(read_at, updated_at, created_at) >= NOW() - INTERVAL '2 hours')`;
+    let where = `WHERE user_id = $1 AND (is_read = false OR COALESCE(read_at, created_at) >= NOW() - INTERVAL '2 hours')`;
     const values = [req.user.id];
     let idx = 2;
 

@@ -196,6 +196,13 @@ export default function AppLayout() {
       <Tabs.Screen name="super-admin" options={{ href: null }} />
       <Tabs.Screen name="employee-team" options={{ href: null }} />
       <Tabs.Screen name="employee-referrals" options={{ href: null }} />
+      <Tabs.Screen name="employee-incentives" options={{ href: null }} />
+      <Tabs.Screen name="employee-sales-report" options={{ href: null }} />
+      <Tabs.Screen name="employee-onboarding" options={{ href: null }} />
+      <Tabs.Screen name="hr-dashboard" options={{ href: null }} />
+      <Tabs.Screen name="security" options={{ href: null }} />
+      <Tabs.Screen name="work" options={{ href: null }} />
+      <Tabs.Screen name="attendance" options={{ href: null }} />
     </Tabs>
   );
 }
