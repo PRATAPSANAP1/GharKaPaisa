@@ -193,6 +193,7 @@ export default function AppLayout() {
       <Tabs.Screen name="training" options={{ href: null }} />
       <Tabs.Screen name="vault" options={{ href: null }} />
       <Tabs.Screen name="share-tracking" options={{ href: null }} />
+      <Tabs.Screen name="super-admin" options={{ href: null }} />
       <Tabs.Screen name="employee-team" options={{ href: null }} />
       <Tabs.Screen name="employee-referrals" options={{ href: null }} />
     </Tabs>

@@ -109,6 +109,14 @@ const purgeExpiredMessengerMessages = async () => {
       WHERE created_at < NOW() - INTERVAL '48 hours'
     `);
 
+    // Delete any message_reads records for messages sent or read > 48 hours ago
+    const { rowCount: deletedReadsCount } = await query(`
+      DELETE FROM message_reads
+      WHERE read_at < NOW() - INTERVAL '48 hours'
+         OR message_id NOT IN (SELECT id FROM messages)
+    `);
+    logger.info(`[Messenger Purge] Deleted ${deletedReadsCount || 0} expired message_reads records.`);
+
     // 4. Update last_message metadata in conversations
     // A) For conversations with remaining messages, update last_message to latest remaining
     await query(`

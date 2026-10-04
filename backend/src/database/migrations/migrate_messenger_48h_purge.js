@@ -6,6 +6,7 @@ async function migrateMessenger48hPurge() {
   try {
     await query(`CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at DESC)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_message_attachments_created_at ON message_attachments(created_at DESC)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_message_reads_read_at ON message_reads(read_at DESC)`);
     logger.info('[MIGRATION COMPLETE] Messenger 48-Hour Purge indexes verified.');
   } catch (err) {
     logger.error('Messenger 48-Hour Purge Migration Error:', err);

@@ -118,6 +118,14 @@ const AdminLayout = () => {
   const [openProductsMenu, setOpenProductsMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Responsive Mobile State
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Notification & Messenger State
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
   const [messengerUnread, setMessengerUnread] = useState(0);
@@ -787,6 +795,7 @@ const AdminLayout = () => {
               flex: 1, 
               overflowY: isMessenger ? 'hidden' : 'auto', 
               padding: isMessenger ? 0 : '16px', 
+              paddingBottom: isMobile && !isMessenger ? '76px' : isMessenger ? 0 : '16px',
               boxSizing: 'border-box',
               display: isMessenger ? 'flex' : 'block',
               flexDirection: 'column'
@@ -797,6 +806,108 @@ const AdminLayout = () => {
             </main>
           );
         })()}
+
+        {/* ── Mobile Bottom Navigation Bar ── */}
+        {isMobile && (
+          <nav
+            style={{
+              position: 'fixed', bottom: 0, left: 0, right: 0, height: 'calc(60px + env(safe-area-inset-bottom, 0px))',
+              paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+              background: C.card, borderTop: `1px solid ${C.border}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-around',
+              zIndex: 990, boxShadow: '0 -4px 15px rgba(0,0,0,0.08)',
+              boxSizing: 'border-box'
+            }}
+            className="md:hidden"
+          >
+            {/* Dashboard */}
+            <NavLink
+              to={isHR ? "/hr/dashboard" : "/admin/dashboard"}
+              onClick={() => setMobileMenuOpen(false)}
+              style={({ isActive }) => ({
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                gap: '3px', textDecoration: 'none', color: isActive ? '#3b82f6' : C.textSecondary,
+                fontSize: '11px', fontWeight: isActive ? 800 : 600, flex: 1
+              })}
+            >
+              <Icons.dashboard size={18} />
+              <span>{isHR ? 'HR' : 'Dashboard'}</span>
+            </NavLink>
+
+            {/* Applications */}
+            {!isHR && (
+              <NavLink
+                to="/admin/applications"
+                onClick={() => setMobileMenuOpen(false)}
+                style={({ isActive }) => ({
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  gap: '3px', textDecoration: 'none', color: isActive ? '#3b82f6' : C.textSecondary,
+                  fontSize: '11px', fontWeight: isActive ? 800 : 600, flex: 1
+                })}
+              >
+                <Icons.creditCard size={18} />
+                <span>Apps</span>
+              </NavLink>
+            )}
+
+            {/* Messenger */}
+            <NavLink
+              to="/admin/messenger"
+              onClick={() => setMobileMenuOpen(false)}
+              style={({ isActive }) => ({
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                gap: '3px', textDecoration: 'none', color: isActive ? '#3b82f6' : C.textSecondary,
+                fontSize: '11px', fontWeight: isActive ? 800 : 600, flex: 1, position: 'relative'
+              })}
+            >
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <FaComments size={18} />
+                {messengerUnread > 0 && (
+                  <span style={{
+                    position: 'absolute', top: '-6px', right: '-8px',
+                    background: '#EF4444', color: '#fff', fontSize: '9px', fontWeight: 900,
+                    minWidth: '14px', height: '14px', borderRadius: '7px', padding: '0 2px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    {messengerUnread > 99 ? '99+' : messengerUnread}
+                  </span>
+                )}
+              </div>
+              <span>Message</span>
+            </NavLink>
+
+            {/* Customers / Leads */}
+            {!isHR && !isPanChecker && !isRemarkOperator && !isQdOperator && !isKycOperator && (
+              <NavLink
+                to="/admin/leads"
+                onClick={() => setMobileMenuOpen(false)}
+                style={({ isActive }) => ({
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  gap: '3px', textDecoration: 'none', color: isActive ? '#3b82f6' : C.textSecondary,
+                  fontSize: '11px', fontWeight: isActive ? 800 : 600, flex: 1
+                })}
+              >
+                <Icons.trending size={18} />
+                <span>Leads</span>
+              </NavLink>
+            )}
+
+            {/* Menu / More Drawer Toggle */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                gap: '3px', background: 'none', border: 'none', cursor: 'pointer',
+                color: mobileMenuOpen ? '#3b82f6' : C.textSecondary, fontSize: '11px', fontWeight: mobileMenuOpen ? 800 : 600,
+                flex: 1
+              }}
+            >
+              <div style={{ fontSize: '16px', fontWeight: 900, lineHeight: 1 }}>☰</div>
+              <span>Menu</span>
+            </button>
+          </nav>
+        )}
       </div>
     </div>
   );
