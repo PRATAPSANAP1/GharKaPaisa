@@ -249,6 +249,24 @@ export const rejectCandidate = async (candidateId: string, reason: string) => {
   }
 };
 
+export const assignEmployeeHierarchy = async (employeeId: string, data: { hierarchy_level: string; branch_head_id?: string | null; senior_manager_id?: string | null; manager_id?: string | null; team_leader_id?: string | null }) => {
+  try {
+    const res = await apiClient.post(`/employees/${employeeId}/hierarchy`, data);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to assign hierarchy' };
+  }
+};
+
+export const unassignEmployeeHierarchy = async (employeeId: string) => {
+  try {
+    const res = await apiClient.post(`/employees/${employeeId}/unassign-hierarchy`);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to unassign hierarchy' };
+  }
+};
+
 /**
  * Fetch Partners List
  */
