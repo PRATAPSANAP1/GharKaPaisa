@@ -22,11 +22,18 @@ const purgeExpiredReadNotifications = async () => {
       logger.info(`[Notification Purge] Successfully deleted ${rowCount} read notifications older than 2 hours from database.`);
     }
 
-    // Also clean up any read team/broadcast notification recipient logs older than 2 hours
+    // Also clean up any read team/broadcast notification recipient logs older than 2 hours if table exists
     try {
       await query(`
-        DELETE FROM team_notification_reads
-        WHERE read_at < NOW() - INTERVAL '2 hours'
+        DO $$ 
+        BEGIN
+          IF EXISTS (SELECT 1 FROM pg_tables WHERE tablename = 'announcement_reads') THEN
+            DELETE FROM announcement_reads WHERE read_at < NOW() - INTERVAL '2 hours';
+          END IF;
+          IF EXISTS (SELECT 1 FROM pg_tables WHERE tablename = 'team_notification_reads') THEN
+            DELETE FROM team_notification_reads WHERE read_at < NOW() - INTERVAL '2 hours';
+          END IF;
+        END $$;
       `);
     } catch (e) {}
 
