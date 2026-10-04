@@ -339,10 +339,33 @@ async function updateMemberCommissionRate(req, res, next) {
   }
 }
 
+/**
+ * GET /api/v1/team/deleted
+ */
+async function getDeletedMembers(req, res, next) {
+  try {
+    const partnerId = await resolvePartnerId(req);
+    const options = {
+      ...req.query,
+      status: 'inactive',
+      viewerRole: req.user?.role
+    };
+    const result = await teamService.getTeamMembersList(partnerId, options);
+    return res.json({
+      success: true,
+      data: result.members,
+      pagination: result.pagination
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getDashboard,
   getTree,
   getMembersList,
+  getDeletedMembers,
   getAnalytics,
   getActivity,
   getGoals,

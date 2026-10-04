@@ -87,7 +87,7 @@ export default function InterviewRegistration() {
   // Check for referral code in URL parameters
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const refParam = params.get('ref') || params.get('referral_code') || params.get('token');
+    const refParam = params.get('ref') || params.get('emp') || params.get('employee_code') || params.get('referral_code') || params.get('referral') || params.get('referralCode') || params.get('token') || params.get('code');
     if (refParam) {
       setReferredByCode(refParam);
       setFormData(prev => ({

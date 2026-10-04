@@ -1033,34 +1033,61 @@ const { generateTeamCode, generateRandomReferralCode } = require('../../utils/he
  * 17. GET REFERS LIST (invitation history + referral stats)
  */
 async function getRefersList(partnerId) {
+  const pId = await getPartnerProfileIdByUserId(partnerId) || partnerId;
   const { rows: [p] } = await query(
-    `SELECT partner_code FROM partner_profiles WHERE id = $1`,
-    [partnerId]
+    `SELECT id, partner_code, first_name, last_name FROM partner_profiles WHERE id = $1 OR user_id = $1`,
+    [pId]
   );
 
   const frontendUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
-  const referralLink = `${frontendUrl}/register?ref=${p?.partner_code}`;
+  const partnerCode = p?.partner_code || '';
+  const referralLink = `${frontendUrl}/register?ref=${partnerCode}`;
 
   const { rows: invites } = await query(
-    `SELECT id, recipient_name, recipient_email, recipient_mobile, status, sent_at, registered_at
-     FROM invitation_history WHERE partner_id = $1 ORDER BY sent_at DESC LIMIT 50`,
-    [partnerId]
-  );
+    `SELECT ih.id,
+            COALESCE(ih.invitee_name, ih.recipient_name, 'Invitee') as recipient_name,
+            COALESCE(ih.invitee_name, ih.recipient_name, 'Invitee') as invitee_name,
+            COALESCE(ih.invitee_mobile, ih.recipient_mobile) as recipient_mobile,
+            COALESCE(ih.invitee_mobile, ih.recipient_mobile) as invitee_mobile,
+            COALESCE(ih.invitee_email, ih.recipient_email) as recipient_email,
+            COALESCE(ih.invitee_email, ih.recipient_email) as invitee_email,
+            COALESCE(ih.invite_code, ih.referral_code, $2) as referral_code,
+            COALESCE(ih.invite_code, ih.referral_code, $2) as invite_code,
+            ih.status,
+            COALESCE(ih.created_at, ih.sent_at, NOW()) as sent_at,
+            ih.registered_at,
+            cp.partner_code as child_partner_code, 
+            cp.first_name as child_first_name, 
+            cp.last_name as child_last_name, 
+            cp.kyc_status
+     FROM invitation_history ih
+     LEFT JOIN partner_profiles cp ON cp.id = COALESCE(ih.accepted_by_partner_id, NULL)
+     WHERE ih.partner_id = $1
+     ORDER BY COALESCE(ih.created_at, ih.sent_at, NOW()) DESC LIMIT 100`,
+    [pId, partnerCode]
+  ).catch(err => {
+    logger.warn('[getRefersList] Invites query fallback:', err.message);
+    return query(
+      `SELECT id, COALESCE(recipient_name, 'Invitee') as recipient_name, recipient_mobile, recipient_email, referral_code, status, sent_at, registered_at
+       FROM invitation_history WHERE partner_id = $1 ORDER BY sent_at DESC LIMIT 50`,
+      [pId]
+    ).catch(() => ({ rows: [] }));
+  });
 
   const { rows: [stats] } = await query(
     `SELECT 
        COALESCE(total_invites, 0) AS total_invites,
        COALESCE(total_registered, 0) AS total_registered
      FROM partner_referrals WHERE partner_id = $1`,
-    [partnerId]
-  );
+    [pId]
+  ).catch(() => ({ rows: [{ total_invites: 0, total_registered: 0 }] }));
 
   return {
-    referral_code: p?.partner_code,
+    referral_code: partnerCode,
     referral_link: referralLink,
     total_invites: parseInt(stats?.total_invites) || invites.length,
-    total_registered: parseInt(stats?.total_registered) || 0,
-    invites,
+    total_registered: parseInt(stats?.total_registered) || invites.filter(i => i.status === 'registered' || i.status === 'completed' || i.registered_at).length,
+    invites: invites || [],
   };
 }
 
@@ -1326,37 +1353,6 @@ async function sendTeamInvitation(partnerId, payload) {
     invitee_email: email || null,
     status: 'sent'
   };
-}
-
-/**
- * Get Referred / Invited List
- */
-async function getRefersList(partnerId) {
-  const pId = await getPartnerProfileIdByUserId(partnerId) || partnerId;
-  const { rows } = await query(
-    `SELECT ih.id,
-            COALESCE(ih.invitee_name, ih.recipient_name, 'Invitee') as invitee_name,
-            COALESCE(ih.invitee_mobile, ih.recipient_mobile) as invitee_mobile,
-            COALESCE(ih.invitee_email, ih.recipient_email) as invitee_email,
-            COALESCE(ih.invite_code, ih.referral_code) as invite_code,
-            ih.status,
-            COALESCE(ih.created_at, ih.sent_at, NOW()) as created_at,
-            cp.partner_code, cp.first_name, cp.last_name, cp.kyc_status
-     FROM invitation_history ih
-     LEFT JOIN partner_profiles cp ON cp.id = COALESCE(ih.accepted_by_partner_id, NULL)
-     WHERE ih.partner_id = $1
-     ORDER BY COALESCE(ih.created_at, ih.sent_at, NOW()) DESC`,
-    [pId]
-  ).catch(err => {
-    logger.warn('[getRefersList] Fallback query executed:', err.message);
-    return query(
-      `SELECT id, COALESCE(recipient_name, 'Invitee') as invitee_name, recipient_mobile as invitee_mobile, recipient_email as invitee_email, referral_code as invite_code, status, sent_at as created_at
-       FROM invitation_history WHERE partner_id = $1 ORDER BY sent_at DESC`,
-      [pId]
-    ).catch(() => ({ rows: [] }));
-  });
-
-  return rows;
 }
 
 module.exports = {

@@ -42,6 +42,28 @@ async function ensureGeofenceTableExists() {
       CREATE INDEX IF NOT EXISTS idx_office_buildings_code ON office_building_geofences(code);
       CREATE INDEX IF NOT EXISTS idx_office_buildings_active ON office_building_geofences(is_active);
     `);
+
+    // Auto-seed default building if table is empty
+    const { rows } = await query(`SELECT COUNT(*)::int AS count FROM office_building_geofences`);
+    if (rows[0] && rows[0].count === 0) {
+      for (const def of DEFAULT_BUILDINGS) {
+        await query(
+          `INSERT INTO office_building_geofences (id, name, code, address, polygon_coordinates, tolerance_meters, is_active)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           ON CONFLICT (code) DO NOTHING`,
+          [
+            def.id,
+            def.name,
+            def.code,
+            def.address,
+            JSON.stringify(def.polygon_coordinates),
+            def.tolerance_meters,
+            def.is_active
+          ]
+        );
+      }
+    }
+
     tableVerified = true;
   } catch (err) {
     logger.warn('[BUILDING GEOFENCE] Table auto-creation notice:', err.message);
@@ -285,10 +307,24 @@ async function getAllBuildings() {
  */
 async function createBuilding({ name, code, address, polygon_coordinates, tolerance_meters = 35, is_active = true }) {
   await ensureGeofenceTableExists();
-  if (!name || !code || !polygon_coordinates || !Array.isArray(polygon_coordinates) || polygon_coordinates.length < 3) {
-    const error = new Error('Building name, unique code, and at least 3 corner [lat, lng] coordinates are required.');
+  if (!name || !polygon_coordinates || !Array.isArray(polygon_coordinates) || polygon_coordinates.length < 3) {
+    const error = new Error('Building name and at least 3 corner [lat, lng] coordinates are required.');
     error.statusCode = 400;
     throw error;
+  }
+
+  let finalCode = (code || '').trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+  if (!finalCode) {
+    finalCode = name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '_') + '_' + Math.floor(100 + Math.random() * 900);
+  }
+
+  // Check code conflict
+  const { rows: existingCode } = await query(
+    `SELECT id FROM office_building_geofences WHERE code = $1 LIMIT 1`,
+    [finalCode]
+  );
+  if (existingCode.length > 0) {
+    finalCode = `${finalCode}_${Math.floor(1000 + Math.random() * 9000)}`;
   }
 
   const { rows: [created] } = await query(
@@ -297,7 +333,7 @@ async function createBuilding({ name, code, address, polygon_coordinates, tolera
      RETURNING id, name, code, address, polygon_coordinates, tolerance_meters, is_active, created_at, updated_at`,
     [
       name.trim(),
-      code.trim().toUpperCase(),
+      finalCode,
       address ? address.trim() : null,
       JSON.stringify(polygon_coordinates),
       parseInt(tolerance_meters) || 35,
@@ -312,15 +348,15 @@ async function createBuilding({ name, code, address, polygon_coordinates, tolera
  * Super Admin: Update existing building geofence
  */
 async function updateBuilding(id, { name, code, address, polygon_coordinates, tolerance_meters, is_active }) {
+  await ensureGeofenceTableExists();
   const { rows: [existing] } = await query(
     `SELECT id FROM office_building_geofences WHERE id = $1 LIMIT 1`,
     [id]
   );
 
   if (!existing) {
-    const error = new Error('Building not found');
-    error.statusCode = 404;
-    throw error;
+    // If not existing in DB, create new building
+    return createBuilding({ name, code, address, polygon_coordinates, tolerance_meters, is_active });
   }
 
   const updates = [];
@@ -331,9 +367,9 @@ async function updateBuilding(id, { name, code, address, polygon_coordinates, to
     updates.push(`name = $${idx++}`);
     values.push(name.trim());
   }
-  if (code !== undefined) {
+  if (code !== undefined && code.trim()) {
     updates.push(`code = $${idx++}`);
-    values.push(code.trim().toUpperCase());
+    values.push(code.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_'));
   }
   if (address !== undefined) {
     updates.push(`address = $${idx++}`);

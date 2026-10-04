@@ -15,6 +15,7 @@ router.get('/team-dashboard', ctrl.getDashboard);
 router.get('/tree', ctrl.getTree);
 router.get('/list', ctrl.getMembersList);
 router.get('/members', ctrl.getMembersList);
+router.get('/deleted', ctrl.getDeletedMembers);
 router.get('/analytics', ctrl.getAnalytics);
 router.get('/activity', ctrl.getActivity);
 router.get('/goals', ctrl.getGoals);

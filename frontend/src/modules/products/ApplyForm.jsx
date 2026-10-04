@@ -45,7 +45,7 @@ export default function ApplyForm() {
   useEffect(() => {
     // Check partner code from URL query params (e.g. ?ref=PARTNER123 or ?partner_code=PARTNER123)
     const params = new URLSearchParams(location.search);
-    const ref = params.get('ref') || params.get('partner_code') || params.get('p_code');
+    const ref = params.get('ref') || params.get('partner_code') || params.get('partnerCode') || params.get('p_code') || params.get('emp') || params.get('employee_code') || params.get('referral') || params.get('code');
     if (ref) setForm(prev => ({ ...prev, partner_code: ref }));
 
     if (targetProductId) {

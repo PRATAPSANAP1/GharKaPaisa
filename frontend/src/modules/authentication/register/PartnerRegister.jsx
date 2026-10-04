@@ -241,8 +241,8 @@ export default function PartnerRegister() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token") || params.get("invite");
-    const ref = params.get("ref");
-    const team = params.get("team");
+    const ref = params.get("ref") || params.get("referral") || params.get("referral_code") || params.get("referralCode") || params.get("partnerCode") || params.get("partner_code") || params.get("emp") || params.get("employee_code") || params.get("code");
+    const team = params.get("team") || params.get("team_code") || params.get("teamCode");
 
     if (token) {
       api.get(`/auth/resolve-invite?token=${encodeURIComponent(token)}`)

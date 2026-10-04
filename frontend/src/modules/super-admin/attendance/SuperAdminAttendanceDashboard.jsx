@@ -288,9 +288,14 @@ export default function SuperAdminAttendanceDashboard() {
         return;
       }
 
+      let codeVal = (buildingForm.code || '').trim().toUpperCase().replace(/\s+/g, '_');
+      if (!codeVal && buildingForm.name.trim()) {
+        codeVal = buildingForm.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '_');
+      }
+
       const payload = {
         name: buildingForm.name.trim(),
-        code: buildingForm.code.trim().toUpperCase().replace(/\\s+/g, '_'),
+        code: codeVal,
         address: buildingForm.address.trim(),
         tolerance_meters: Number(buildingForm.tolerance_meters) || 35,
         polygon_coordinates: parsedCoords,
@@ -1737,11 +1742,10 @@ export default function SuperAdminAttendanceDashboard() {
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '12.5px', fontWeight: 800, color: C.text, display: 'block', marginBottom: '6px' }}>
-                    Building Code *
+                    Building Code <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 500 }}>(Optional - Auto-generated if blank)</span>
                   </label>
                   <input
                     type="text"
-                    required
                     placeholder="e.g., MAIN_OFFICE_HQ"
                     value={buildingForm.code}
                     onChange={(e) => setBuildingForm({ ...buildingForm, code: e.target.value })}
