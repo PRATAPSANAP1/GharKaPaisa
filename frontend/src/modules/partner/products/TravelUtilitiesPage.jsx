@@ -205,7 +205,7 @@ export default function TravelUtilitiesPage() {
             }}>
               <span style={{ fontSize: '10px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '4px' }}>{t("Total Volume")}</span>
               <span style={{ fontSize: '17px', fontWeight: 800, color: C.text }}>
-                ₹{transactions.reduce((acc, t) => acc + parseInt(t.amount.replace('₹', '')), 0).toLocaleString('en-IN')}
+                ₹{(Array.isArray(transactions) ? transactions : []).reduce((acc, t) => acc + (parseInt(String(t?.amount || '0').replace(/[^0-9]/g, '')) || 0), 0).toLocaleString('en-IN')}
               </span>
             </div>
             <div style={{
@@ -214,14 +214,14 @@ export default function TravelUtilitiesPage() {
             }}>
               <span style={{ fontSize: '10px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '4px' }}>{t("Commission")}</span>
               <span style={{ fontSize: '17px', fontWeight: 800, color: C.green }}>
-                ₹{transactions.reduce((acc, t) => acc + parseFloat(t.commission.replace('₹', '')), 0).toFixed(2)}
+                ₹{(Array.isArray(transactions) ? transactions : []).reduce((acc, t) => acc + (parseFloat(String(t?.commission || '0').replace(/[^0-9.]/g, '')) || 0), 0).toFixed(2)}
               </span>
             </div>
           </div>
 
           {/* Transaction list */}
           <div style={{ maxHeight: '220px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {transactions.map(t => (
+            {(Array.isArray(transactions) ? transactions : []).map(t => (
               <div key={t.id} style={{
                 fontSize: '12px', padding: '12px', background: C.bgSecondary,
                 border: `1px solid ${C.border}`, borderRadius: '12px',

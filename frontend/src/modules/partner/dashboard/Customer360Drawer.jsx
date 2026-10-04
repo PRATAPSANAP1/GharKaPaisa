@@ -47,8 +47,8 @@ export default function Customer360Drawer({ customer, allLeads = [], onClose }) 
   })();
 
   // Calculate total estimated payout from real applications
-  const estPayoutTotal = customerApps.reduce((acc, app) => {
-    const amt = parseFloat(app.commission_amount || app.payout || app.amount || 0);
+  const estPayoutTotal = (Array.isArray(customerApps) ? customerApps : []).reduce((acc, app) => {
+    const amt = parseFloat(app?.commission_amount || app?.payout || app?.amount || 0);
     return acc + (isNaN(amt) ? 0 : amt);
   }, 0);
 

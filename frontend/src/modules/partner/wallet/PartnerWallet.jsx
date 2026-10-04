@@ -290,15 +290,16 @@ export default function PartnerWallet() {
   const openingBal = parseFloat(dashboardData?.wallet?.opening_balance ?? dashboardData?.opening_balance ?? 0);
 
   // Compute exact pending withdrawal requests amount and count
-  const pendingWithdrawalList = (Array.isArray(withdrawals) ? withdrawals : []).filter(w => {
-    const s = String(w.status || '').toLowerCase();
+  const safeWithdrawals = Array.isArray(withdrawals) ? withdrawals : [];
+  const pendingWithdrawalList = safeWithdrawals.filter(w => {
+    const s = String(w?.status || '').toLowerCase();
     return s.includes('pending') && !s.includes('reject') && !s.includes('fail') && !s.includes('cancel');
   });
-  const pendingWithdrawalAmt = pendingWithdrawalList.reduce((acc, w) => acc + parseFloat(w.amount || 0), 0);
+  const pendingWithdrawalAmt = pendingWithdrawalList.reduce((acc, w) => acc + parseFloat(w?.amount || 0), 0);
   const pendingWithdrawalCount = pendingWithdrawalList.length;
 
-  const totalWdrCount = withdrawals.length;
-  const approvedWdrCount = (Array.isArray(withdrawals) ? withdrawals : []).filter(w => ['approved', 'completed', 'paid', 'processed', 'transferred', 'released'].includes(String(w.status).toLowerCase())).length;
+  const totalWdrCount = safeWithdrawals.length;
+  const approvedWdrCount = safeWithdrawals.filter(w => ['approved', 'completed', 'paid', 'processed', 'transferred', 'released'].includes(String(w?.status).toLowerCase())).length;
   const successRate = totalWdrCount > 0 ? ((approvedWdrCount / totalWdrCount) * 100).toFixed(1) : '100.0';
 
   // Donut Dynamic Breakdown Data
@@ -323,16 +324,16 @@ export default function PartnerWallet() {
       }))
     : [];
 
-  const chartVals = chartData.map(d => d.val).filter(v => typeof v === 'number');
+  const chartVals = (Array.isArray(chartData) ? chartData : []).map(d => d?.val).filter(v => typeof v === 'number');
   const minEarnings = chartVals.length > 0 ? Math.min(...chartVals) : 0;
   const maxEarnings = chartVals.length > 0 ? Math.max(...chartVals) : 0;
   const avgEarnings = chartVals.length > 0 ? Math.round(chartVals.reduce((a, b) => a + b, 0) / chartVals.length) : 0;
 
   // Dynamic Recent Withdrawals List
-  const displayWithdrawals = withdrawals.slice(0, 5);
+  const displayWithdrawals = safeWithdrawals.slice(0, 5);
 
   // Dynamic Recent Payouts List
-  const displayPayouts = (Array.isArray(withdrawals) ? withdrawals : []).filter(w => ['processed', 'transferred', 'completed', 'paid', 'released'].includes(String(w.status).toLowerCase()))
+  const displayPayouts = safeWithdrawals.filter(w => ['processed', 'transferred', 'completed', 'paid', 'released'].includes(String(w?.status).toLowerCase()))
     .slice(0, 5);
 
   const renderStatusBadge = (status) => {

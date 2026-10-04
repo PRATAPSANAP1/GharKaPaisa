@@ -2532,10 +2532,11 @@ export default function EmployeeManagement() {
         {/* Manage Bonus & Targets Tab View */}
         {activeTab === 'bonus' && (() => {
           // Dynamic months list extracted from configured rules
+          const safeBonusRules = Array.isArray(bonusRulesList) ? bonusRulesList : [];
           const availableMonthsSet = new Set(
-            bonusRulesList.flatMap(r => [
-              r.start_date ? r.start_date.substring(0, 7) : null,
-              r.end_date ? r.end_date.substring(0, 7) : null
+            safeBonusRules.flatMap(r => [
+              r?.start_date ? r.start_date.substring(0, 7) : null,
+              r?.end_date ? r.end_date.substring(0, 7) : null
             ]).filter(Boolean)
           );
           // Always ensure current month (e.g. 2026-09) is present
@@ -2544,7 +2545,8 @@ export default function EmployeeManagement() {
           const availableMonthsList = Array.from(availableMonthsSet).sort().reverse();
 
           // Filter rules by month & search query
-          const displayRules = (Array.isArray(bonusRulesList) ? bonusRulesList : []).filter(rule => {
+          const displayRules = safeBonusRules.filter(rule => {
+            if (!rule) return false;
             if (selectedBonusMonth !== 'ALL') {
               const sM = rule.start_date ? rule.start_date.substring(0, 7) : '';
               const eM = rule.end_date ? rule.end_date.substring(0, 7) : '';
@@ -2563,9 +2565,9 @@ export default function EmployeeManagement() {
 
           // Compute summary stats for the current filter view
           const totalTargetsConfigured = displayRules.length;
-          const totalTargetCardsSum = displayRules.reduce((acc, r) => acc + parseInt(r.target_count || 0, 10), 0);
-          const totalApprovedCardsSum = displayRules.reduce((acc, r) => acc + parseInt(r.approved_count || 0, 10), 0);
-          const totalUnlockedBonusSum = displayRules.reduce((acc, r) => acc + (r.target_achieved ? parseFloat(r.earned_bonus || 0) : 0), 0);
+          const totalTargetCardsSum = displayRules.reduce((acc, r) => acc + parseInt(r?.target_count || 0, 10), 0);
+          const totalApprovedCardsSum = displayRules.reduce((acc, r) => acc + parseInt(r?.approved_count || 0, 10), 0);
+          const totalUnlockedBonusSum = displayRules.reduce((acc, r) => acc + (r?.target_achieved ? parseFloat(r?.earned_bonus || 0) : 0), 0);
 
           return (
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', minHeight: '450px', padding: '24px' }}>
@@ -3535,7 +3537,8 @@ export default function EmployeeManagement() {
                 )}
 
                 {hierarchyForm.hierarchy_level === 'BRANCH_HEAD' && (() => {
-                  const candidateSMs = (Array.isArray(targetEmployeeList) ? targetEmployeeList : []).filter(e => e.id !== hierarchyModalEmp.id)
+                  const candidateSMs = (Array.isArray(targetEmployeeList) ? targetEmployeeList : [])
+                    .filter(e => e && e.id !== hierarchyModalEmp.id)
                     .filter(e => {
                       if (!subordinateSearchText.trim()) return true;
                       const q = subordinateSearchText.toLowerCase().trim();
@@ -3599,7 +3602,8 @@ export default function EmployeeManagement() {
                 })()}
 
                 {hierarchyForm.hierarchy_level === 'SENIOR_MANAGER' && (() => {
-                  const candidateMgrs = (Array.isArray(targetEmployeeList) ? targetEmployeeList : []).filter(e => e.id !== hierarchyModalEmp.id)
+                  const candidateMgrs = (Array.isArray(targetEmployeeList) ? targetEmployeeList : [])
+                    .filter(e => e && e.id !== hierarchyModalEmp.id)
                     .filter(e => {
                       if (!subordinateSearchText.trim()) return true;
                       const q = subordinateSearchText.toLowerCase().trim();
@@ -3663,7 +3667,8 @@ export default function EmployeeManagement() {
                 })()}
 
                 {hierarchyForm.hierarchy_level === 'MANAGER' && (() => {
-                  const candidateTLs = (Array.isArray(targetEmployeeList) ? targetEmployeeList : []).filter(e => e.id !== hierarchyModalEmp.id)
+                  const candidateTLs = (Array.isArray(targetEmployeeList) ? targetEmployeeList : [])
+                    .filter(e => e && e.id !== hierarchyModalEmp.id)
                     .filter(e => {
                       if (!subordinateSearchText.trim()) return true;
                       const q = subordinateSearchText.toLowerCase().trim();
@@ -3733,10 +3738,11 @@ export default function EmployeeManagement() {
                       Assign Telecallers to Selected Team Leaders
                     </label>
                     {hierarchyForm.selected_tl_ids.map(tlId => {
-                      const tl = targetEmployeeList.find(e => e.id === tlId);
+                      const tl = (Array.isArray(targetEmployeeList) ? targetEmployeeList : []).find(e => e.id === tlId);
                       if (!tl) return null;
                       const currentTCs = hierarchyForm.tl_tc_mapping[tlId] || [];
-                      const candidateTCs = (Array.isArray(targetEmployeeList) ? targetEmployeeList : []).filter(e => e.id !== hierarchyModalEmp.id && e.id !== tlId)
+                      const candidateTCs = (Array.isArray(targetEmployeeList) ? targetEmployeeList : [])
+                        .filter(e => e && e.id !== hierarchyModalEmp.id && e.id !== tlId)
                         .filter(e => {
                           if (!subordinateSearchText.trim()) return true;
                           const q = subordinateSearchText.toLowerCase().trim();
@@ -3809,7 +3815,8 @@ export default function EmployeeManagement() {
                 )}
 
                 {hierarchyForm.hierarchy_level === 'TEAM_LEADER' && (() => {
-                  const candidateTCs = (Array.isArray(targetEmployeeList) ? targetEmployeeList : []).filter(e => e.id !== hierarchyModalEmp.id)
+                  const candidateTCs = (Array.isArray(targetEmployeeList) ? targetEmployeeList : [])
+                    .filter(e => e && e.id !== hierarchyModalEmp.id)
                     .filter(e => {
                       if (!subordinateSearchText.trim()) return true;
                       const q = subordinateSearchText.toLowerCase().trim();

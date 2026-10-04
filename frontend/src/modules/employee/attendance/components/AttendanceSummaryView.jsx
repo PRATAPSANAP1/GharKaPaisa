@@ -10,14 +10,15 @@ export default function AttendanceSummaryView({
   onBackToDashboard
 }) {
   // Compute metrics from real backend summary & history records
-  const totalDays = summary.total || history.length || 0;
-  const presentDays = summary.present || (Array.isArray(history) ? history : []).filter(item => item.check_in_time).length;
-  const completedDays = (Array.isArray(history) ? history : []).filter(item => item.check_in_time && item.check_out_time).length;
+  const safeHistory = Array.isArray(history) ? history : [];
+  const totalDays = summary?.total || safeHistory.length || 0;
+  const presentDays = summary?.present || safeHistory.filter(item => item?.check_in_time).length;
+  const completedDays = safeHistory.filter(item => item?.check_in_time && item?.check_out_time).length;
 
   // Calculate total hours
-  const totalHours = history.reduce((acc, curr) => {
-    if (curr.total_hours) return acc + Number(curr.total_hours);
-    if (curr.check_in_time && curr.check_out_time) {
+  const totalHours = safeHistory.reduce((acc, curr) => {
+    if (curr?.total_hours) return acc + Number(curr.total_hours);
+    if (curr?.check_in_time && curr?.check_out_time) {
       const diff = (new Date(curr.check_out_time) - new Date(curr.check_in_time)) / (1000 * 60 * 60);
       return acc + (diff > 0 ? diff : 0);
     }

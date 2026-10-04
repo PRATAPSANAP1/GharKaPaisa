@@ -1797,7 +1797,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
             {/* Sub Filter Chips */}
             <div style={{ display: 'flex', gap: '6px', marginTop: '12px', overflowX: 'auto', paddingBottom: '2px' }}>
               {[
-                { id: 'ALL', label: `All ${conversations.reduce((acc, c) => acc + (c.unread_count || 0), 0) ? `(${conversations.reduce((acc, c) => acc + (c.unread_count || 0), 0)})` : ''}`.trim() },
+                { id: 'ALL', label: `All ${(Array.isArray(conversations) ? conversations : []).reduce((acc, c) => acc + (c?.unread_count || 0), 0) ? `(${(Array.isArray(conversations) ? conversations : []).reduce((acc, c) => acc + (c?.unread_count || 0), 0)})` : ''}`.trim() },
                 { id: 'EMPLOYEES', label: 'Employees' },
                 { id: 'PARTNERS', label: 'Partners' },
                 { id: 'GROUPS', label: 'Groups' },

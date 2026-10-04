@@ -311,16 +311,17 @@ export default function ManageAnnouncements() {
   });
 
   // Calculate dynamic KPIs from API stats or active array
-  const totalCount = stats?.kpis?.total ?? announcements.length;
-  const publishedCount = stats?.kpis?.published ?? (Array.isArray(announcements) ? announcements : []).filter(a => (a.status || '').toUpperCase() === 'PUBLISHED').length;
-  const scheduledCount = stats?.kpis?.scheduled ?? (Array.isArray(announcements) ? announcements : []).filter(a => (a.status || '').toUpperCase() === 'SCHEDULED').length;
-  const draftCount = stats?.kpis?.drafts ?? (Array.isArray(announcements) ? announcements : []).filter(a => (a.status || '').toUpperCase() === 'DRAFT').length;
-  const totalReachSum = stats?.kpis?.total_reach ?? announcements.reduce((sum, a) => sum + (parseInt(a.reach) || 0), 0);
+  const safeAnnouncements = Array.isArray(announcements) ? announcements : [];
+  const totalCount = stats?.kpis?.total ?? safeAnnouncements.length;
+  const publishedCount = stats?.kpis?.published ?? safeAnnouncements.filter(a => (a?.status || '').toUpperCase() === 'PUBLISHED').length;
+  const scheduledCount = stats?.kpis?.scheduled ?? safeAnnouncements.filter(a => (a?.status || '').toUpperCase() === 'SCHEDULED').length;
+  const draftCount = stats?.kpis?.drafts ?? safeAnnouncements.filter(a => (a?.status || '').toUpperCase() === 'DRAFT').length;
+  const totalReachSum = stats?.kpis?.total_reach ?? safeAnnouncements.reduce((sum, a) => sum + (parseInt(a?.reach) || 0), 0);
 
   // Highest performing announcement calculated dynamically
   const topPerformingAnn = (stats?.top_performing && stats.top_performing.length > 0)
     ? stats.top_performing[0]
-    : [...announcements].sort((a, b) => (b.engagement_rate || 0) - (a.engagement_rate || 0))[0];
+    : [...safeAnnouncements].sort((a, b) => (b?.engagement_rate || 0) - (a?.engagement_rate || 0))[0];
 
   const getPriorityBadge = (pri) => {
     const p = (pri || 'MEDIUM').toUpperCase();

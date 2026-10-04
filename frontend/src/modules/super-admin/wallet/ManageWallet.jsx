@@ -1557,18 +1557,19 @@ export default function ManageWallet() {
                 <svg width="160" height="160" viewBox="0 0 42 42">
                   <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke={isDark ? '#27272A' : '#E5E7EB'} strokeWidth="6" />
                   {(() => {
-                    const totalBal = partnersOverview.reduce((sum, p) => sum + parseFloat(p.balance || 0), 0) || 1;
+                    const safePartners = Array.isArray(partnersOverview) ? partnersOverview : [];
+                    const totalBal = safePartners.reduce((sum, p) => sum + parseFloat(p?.balance || 0), 0) || 1;
                     const fallbackColors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6'];
                     let currentAccumulated = 0;
 
-                    return partnersOverview.map((p, idx) => {
-                      const val = parseFloat(p.balance || 0);
+                    return safePartners.map((p, idx) => {
+                      const val = parseFloat(p?.balance || 0);
                       const pct = (val / totalBal) * 100;
                       if (pct <= 0) return null;
                       const strokeDasharray = `${pct.toFixed(2)} ${(100 - pct).toFixed(2)}`;
                       const strokeDashoffset = (25 - currentAccumulated).toFixed(2);
                       currentAccumulated += pct;
-                      const strokeColor = p.color || fallbackColors[idx % fallbackColors.length];
+                      const strokeColor = p?.color || fallbackColors[idx % fallbackColors.length];
 
                       return (
                         <circle
@@ -1589,7 +1590,7 @@ export default function ManageWallet() {
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
                   <span style={{ fontSize: '10px', color: C.textLight, fontWeight: 700 }}>Total Balance</span>
                   <strong style={{ fontSize: '13px', fontWeight: 900, color: C.text }}>
-                    ₹{(partnersOverview.reduce((sum, p) => sum + parseFloat(p.balance || 0), 0)).toLocaleString('en-IN')}
+                    ₹{(Array.isArray(partnersOverview) ? partnersOverview : []).reduce((sum, p) => sum + parseFloat(p?.balance || 0), 0).toLocaleString('en-IN')}
                   </strong>
                 </div>
               </div>

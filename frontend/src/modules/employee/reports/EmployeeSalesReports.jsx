@@ -214,7 +214,7 @@ export default function EmployeeSalesReports() {
     }
   };
 
-  const totalCardsCalculated = bankRows.reduce((sum, b) => sum + (parseInt(b.cards_sold) || 0), 0);
+  const totalCardsCalculated = (Array.isArray(bankRows) ? bankRows : []).reduce((sum, b) => sum + (parseInt(b?.cards_sold) || 0), 0);
 
   if (loading) {
     return (
