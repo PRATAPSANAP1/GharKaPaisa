@@ -465,8 +465,10 @@ router.get('/', async (req, res, next) => {
     const enrichedRows = await Promise.all(rows.map(async (emp) => {
       try {
         const vState = await calculateEmployeeVerificationState(emp.id);
+        const resolvedPhoto = vState.profile_photo_url || (emp.profile_photo_url ? await resolveS3Url(emp.profile_photo_url) : null);
         return {
           ...emp,
+          profile_photo_url: resolvedPhoto,
           overall_verification_status: vState.overall_status,
           information_status: vState.information_status,
           documents_summary: vState.documents_summary,
@@ -825,6 +827,13 @@ router.get('/:id', async (req, res, next) => {
     `, [id]);
 
     // Resolve S3 document URLs to signed URLs to allow public viewing in dashboard
+    const vState = await calculateEmployeeVerificationState(id).catch(() => null);
+    if (vState && vState.profile_photo_url) {
+      employee.profile_photo_url = vState.profile_photo_url;
+    } else if (employee.profile_photo_url) {
+      employee.profile_photo_url = await resolveS3Url(employee.profile_photo_url);
+    }
+
     if (employee.resume_url) {
       employee.resume_url = await resolveS3Url(employee.resume_url);
     }

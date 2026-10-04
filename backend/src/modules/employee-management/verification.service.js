@@ -39,7 +39,7 @@ const REQUIRED_DOC_TYPES = [
 async function calculateEmployeeVerificationState(employeeId) {
   // 1. Fetch Employee record
   const empRes = await query(`
-    SELECT e.*, u.id as user_id
+    SELECT e.*, u.id as user_id, u.profile_photo_url as user_profile_photo_url
     FROM employees e
     LEFT JOIN users u ON u.id = e.user_id
     WHERE e.id = $1
@@ -248,7 +248,7 @@ async function calculateEmployeeVerificationState(employeeId) {
 
   // 6. Fetch Face Biometric Reference Template
   const bioRes = await query(`
-    SELECT id, status FROM employee_biometric_templates WHERE employee_id = $1 AND status = 'ACTIVE' LIMIT 1
+    SELECT id, status, s3_key FROM employee_biometric_templates WHERE employee_id = $1 AND status = 'ACTIVE' LIMIT 1
   `, [employeeId]).catch(() => ({ rows: [] }));
   const hasBiometricReference = bioRes.rows.length > 0;
   const biometricStatus = hasBiometricReference ? 'VERIFIED' : 'NOT_COMPLETED';
@@ -306,10 +306,19 @@ async function calculateEmployeeVerificationState(employeeId) {
     `, [kyc.id, overallStatus]).catch(() => {});
   }
 
+  // Extract & resolve employee profile photo
+  const photoDoc = docsRes.rows.find(d => {
+    const t = String(d.document_type || '').toLowerCase().trim();
+    return ['photo', 'photograph', 'profile_photo', 'passport_photo', 'avatar'].includes(t);
+  });
+  const rawPhotoKey = employee.profile_photo_url || employee.user_profile_photo_url || photoDoc?.document_url || bioRes.rows[0]?.s3_key || null;
+  const resolvedProfilePhoto = rawPhotoKey ? await resolveS3Url(rawPhotoKey) : null;
+
   return {
     employee_id: employeeId,
     employee_code: employee.employee_id,
     full_name: employee.full_name,
+    profile_photo_url: resolvedProfilePhoto,
     overall_status: overallStatus,
     information_status: infoStatus,
     documents_summary: `${approvedDocsCount}/${totalRequiredDocs}`,

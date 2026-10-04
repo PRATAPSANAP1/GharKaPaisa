@@ -5110,6 +5110,14 @@ const migrate = async () => {
     logger.error('Attendance Consumed At V1 migration error note:', consumedAtErr.message);
   }
 
+  // Fix Attendance Verification Sessions Status Constraint (include CONSUMED)
+  try {
+    const { migrateFixStatusConstraint } = require('./migrate_fix_status_constraint');
+    await migrateFixStatusConstraint();
+  } catch (statusConstraintErr) {
+    logger.error('Status constraint fix migration error note:', statusConstraintErr.message);
+  }
+
   // LOC/EOC Category Migration
   try {
     const { migrateLocEocCategory } = require('./migrate_loc_eoc_category');

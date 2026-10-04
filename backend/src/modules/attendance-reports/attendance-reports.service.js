@@ -135,7 +135,12 @@ const getAttendanceReports = async ({
   }
 
   if (employeeId && employeeId.trim()) {
-    baseWhere += ` AND (att.employee_id = $${paramIdx} OR e.employee_id = $${paramIdx})`;
+    const isEmpUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(employeeId.trim());
+    if (isEmpUuid) {
+      baseWhere += ` AND (att.employee_id = $${paramIdx} OR e.employee_id = $${paramIdx} OR e.user_id = $${paramIdx})`;
+    } else {
+      baseWhere += ` AND (e.employee_id = $${paramIdx} OR e.mobile_number = $${paramIdx})`;
+    }
     params.push(employeeId.trim());
     paramIdx++;
   }
@@ -341,7 +346,12 @@ const exportAttendanceReports = async ({
   }
 
   if (employeeId && employeeId.trim()) {
-    baseWhere += ` AND (att.employee_id = $${paramIdx} OR e.employee_id = $${paramIdx})`;
+    const isEmpUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(employeeId.trim());
+    if (isEmpUuid) {
+      baseWhere += ` AND (att.employee_id = $${paramIdx} OR e.employee_id = $${paramIdx} OR e.user_id = $${paramIdx})`;
+    } else {
+      baseWhere += ` AND (e.employee_id = $${paramIdx} OR e.mobile_number = $${paramIdx})`;
+    }
     params.push(employeeId.trim());
     paramIdx++;
   }

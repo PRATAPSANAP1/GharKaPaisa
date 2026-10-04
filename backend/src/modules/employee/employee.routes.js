@@ -215,10 +215,29 @@ router.use(jwtAuth);
 // Middleware to resolve employee table record id for authenticated user
 async function resolveEmployee(req, res, next) {
   try {
-    let { rows } = await query(
-      `SELECT * FROM employees WHERE user_id = $1 OR mobile_number = $2 OR (email_id IS NOT NULL AND email_id = $3)`, 
-      [req.user.id, req.user.mobile, req.user.email]
-    );
+    let rows = [];
+
+    // 1. If req.user specifies employee_id / emp_code (e.g. CAND10001)
+    const reqEmpCode = req.user.employee_id || req.user.emp_code || req.user.employeeCode;
+    if (reqEmpCode && typeof reqEmpCode === 'string' && !reqEmpCode.includes('-')) {
+      const { rows: matched } = await query(`SELECT * FROM employees WHERE employee_id = $1 LIMIT 1`, [reqEmpCode.trim()]);
+      if (matched.length > 0) rows = matched;
+    }
+
+    // 2. Match by user_id
+    if (rows.length === 0 && req.user.id) {
+      const { rows: matched } = await query(`SELECT * FROM employees WHERE user_id = $1 LIMIT 1`, [req.user.id]);
+      if (matched.length > 0) rows = matched;
+    }
+
+    // 3. Match by mobile / email
+    if (rows.length === 0 && (req.user.mobile || req.user.email)) {
+      const { rows: matched } = await query(
+        `SELECT * FROM employees WHERE mobile_number = $1 OR (email_id IS NOT NULL AND LOWER(email_id) = LOWER($2)) LIMIT 1`, 
+        [req.user.mobile || '', req.user.email || '']
+      );
+      if (matched.length > 0) rows = matched;
+    }
 
     if (rows.length === 0) {
       // Auto-create employee record if user registered via candidate portal

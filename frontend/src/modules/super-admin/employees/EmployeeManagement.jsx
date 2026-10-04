@@ -180,9 +180,9 @@ export default function EmployeeManagement() {
         full_name: drawerEmp.full_name || '',
         mobile_number: drawerEmp.mobile_number || '',
         email_id: drawerEmp.email_id || drawerEmp.email || '',
-        designation: drawerEmp.designation || 'Branch Head',
-        department: drawerEmp.department || 'Sales & Support',
-        manager_name: drawerEmp.manager_name || 'Suresh Yadav'
+        designation: drawerEmp.designation || '',
+        department: drawerEmp.department || '',
+        manager_name: drawerEmp.manager_name || drawerEmp.reporting_manager || drawerEmp.team_leader_name || ''
       });
       setDocIdentityFields({
         aadhaar_number: drawerEmp.aadhaar_number || 'N/A',
@@ -2787,9 +2787,26 @@ export default function EmployeeManagement() {
             <div style={{ background: C.card, borderRadius: '24px', padding: '28px', width: '100%', maxWidth: '850px', maxHeight: '90vh', overflowY: 'auto', border: `1px solid ${C.border}` }}>
               
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px' }}>
-                <div>
-                  <span style={{ fontSize: '12px', fontWeight: 800, color: C.teal, textTransform: 'uppercase' }}>Employee 360° Profile Inspector</span>
-                  <h2 style={{ fontSize: '22px', fontWeight: 900, margin: 0, color: C.text }}>{selectedEmp.full_name} ({selectedEmp.employee_code || selectedEmp.employee_id || selectedEmp.emp_code || selectedEmp.code || 'N/A'})</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{
+                    width: '52px', height: '52px', borderRadius: '50%', background: `${C.teal}20`, color: C.teal,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '20px', flexShrink: 0,
+                    border: `2px solid ${C.teal}40`, overflow: 'hidden', boxShadow: '0 4px 10px rgba(0,0,0,0.08)'
+                  }}>
+                    {(selectedEmp.profile_photo_url || selectedEmp.face_reference_url || selectedEmp.avatar_url || selectedEmp.photo || emp360Data?.employee?.profile_photo_url) ? (
+                      <img 
+                        src={selectedEmp.profile_photo_url || selectedEmp.face_reference_url || selectedEmp.avatar_url || selectedEmp.photo || emp360Data?.employee?.profile_photo_url} 
+                        alt={selectedEmp.full_name} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                      />
+                    ) : (
+                      selectedEmp.full_name ? selectedEmp.full_name[0].toUpperCase() : 'E'
+                    )}
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: C.teal, textTransform: 'uppercase' }}>Employee 360° Profile Inspector</span>
+                    <h2 style={{ fontSize: '20px', fontWeight: 900, margin: 0, color: C.text }}>{selectedEmp.full_name} ({selectedEmp.employee_code || selectedEmp.employee_id || selectedEmp.emp_code || selectedEmp.code || 'N/A'})</h2>
+                  </div>
                 </div>
                 <button onClick={() => setSelectedEmp(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', fontWeight: 900 }}>✕</button>
               </div>
@@ -4320,7 +4337,7 @@ export default function EmployeeManagement() {
                       </span>
                     </div>
                     <div style={{ fontSize: '11.5px', fontWeight: 700, color: C.teal, marginTop: '2px' }}>
-                      ID: {drawerEmp.employee_code || drawerEmp.employee_id || drawerEmp.emp_code || (drawerEmp.id ? String(drawerEmp.id).slice(0, 8) : 'CAND10001')} • {drawerEmp.designation || 'Branch Head'}
+                      ID: {drawerEmp.employee_code || drawerEmp.employee_id || drawerEmp.emp_code || (drawerEmp.id ? String(drawerEmp.id).slice(0, 8) : 'N/A')}{drawerEmp.designation ? ` • ${drawerEmp.designation}` : ''}
                     </div>
                     <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px', display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
                       <span>📞 {drawerEmp.mobile_number || 'N/A'}</span>
@@ -4404,60 +4421,60 @@ export default function EmployeeManagement() {
                         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '10px' : '14px', fontSize: '12.5px' }}>
                           <div>
                             <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Full Name</span>
-                            <strong style={{ color: C.text }}>{drawerEmp.full_name}</strong>
+                            <strong style={{ color: C.text }}>{drawerEmp.full_name || 'N/A'}</strong>
                           </div>
                           <div>
                             <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Date of Joining</span>
-                            <strong style={{ color: C.text }}>{drawerEmp.created_at ? new Date(drawerEmp.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Oct 2, 2026'}</strong>
+                            <strong style={{ color: C.text }}>{drawerEmp.joining_date || drawerEmp.date_of_joining || (drawerEmp.created_at ? new Date(drawerEmp.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A')}</strong>
                           </div>
 
                           <div>
                             <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Employee Code</span>
-                            <strong style={{ color: C.text }}>{drawerEmp.employee_code || drawerEmp.employee_id || drawerEmp.emp_code || 'CAND10001'}</strong>
+                            <strong style={{ color: C.text }}>{drawerEmp.employee_code || drawerEmp.employee_id || drawerEmp.emp_code || drawerEmp.code || (drawerEmp.id ? String(drawerEmp.id).slice(0, 8) : 'N/A')}</strong>
                           </div>
                           <div>
                             <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Account Status</span>
-                            <span style={{ padding: '2px 8px', borderRadius: '0px', fontSize: '11px', fontWeight: 800, background: '#D1FAE5', color: '#065F46', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                              ✓ Active
+                            <span style={{ padding: '2px 8px', borderRadius: '0px', fontSize: '11px', fontWeight: 800, background: drawerEmp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7', color: drawerEmp.activation_status === 'APPROVED' ? '#065F46' : '#92400E', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              {drawerEmp.activation_status === 'APPROVED' ? '✓ Active' : '● Pending'}
                             </span>
                           </div>
 
                           <div>
                             <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Mobile Number</span>
-                            <strong style={{ color: C.text }}>{drawerEmp.mobile_number || '+91 98765 43210'}</strong>
+                            <strong style={{ color: C.text }}>{drawerEmp.mobile_number || 'N/A'}</strong>
                           </div>
                           <div>
                             <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Reporting Manager</span>
-                            <strong style={{ color: C.text }}>{drawerEmp.manager_name || 'Suresh Yadav'}</strong>
+                            <strong style={{ color: C.text }}>{drawerEmp.manager_name || drawerEmp.reporting_manager || drawerEmp.team_leader_name || 'N/A'}</strong>
                           </div>
 
                           <div>
                             <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Email Address</span>
-                            <strong style={{ color: C.text }}>{drawerEmp.email_id || drawerEmp.email || 'pratap.sanap@gharkapaisa.in'}</strong>
+                            <strong style={{ color: C.text }}>{drawerEmp.email_id || drawerEmp.email || 'N/A'}</strong>
                           </div>
                           <div>
                             <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Team</span>
-                            <strong style={{ color: C.text }}>Team Alpha</strong>
+                            <strong style={{ color: C.text }}>{drawerEmp.team_name || drawerEmp.team || (drawerEmp.team_leader_name ? `${drawerEmp.team_leader_name}'s Team` : 'N/A')}</strong>
                           </div>
 
                           <div>
                             <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Designation</span>
-                            <strong style={{ color: C.text }}>{drawerEmp.designation || 'Branch Head'}</strong>
+                            <strong style={{ color: C.text }}>{drawerEmp.designation || drawerEmp.role || 'N/A'}</strong>
                           </div>
                           <div>
                             <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Attendance Access</span>
-                            <span style={{ padding: '2px 8px', borderRadius: '0px', fontSize: '11px', fontWeight: 800, background: '#D1FAE5', color: '#065F46', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                              ✓ Enabled
+                            <span style={{ padding: '2px 8px', borderRadius: '0px', fontSize: '11px', fontWeight: 800, background: (drawerEmp.attendance_access === false || drawerEmp.attendance_enabled === false) ? '#FEE2E2' : '#D1FAE5', color: (drawerEmp.attendance_access === false || drawerEmp.attendance_enabled === false) ? '#991B1B' : '#065F46', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              {(drawerEmp.attendance_access === false || drawerEmp.attendance_enabled === false) ? '✕ Disabled' : '✓ Enabled'}
                             </span>
                           </div>
 
                           <div>
                             <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Department</span>
-                            <strong style={{ color: C.text }}>{drawerEmp.department || 'Sales & Support'}</strong>
+                            <strong style={{ color: C.text }}>{drawerEmp.department || 'N/A'}</strong>
                           </div>
                           <div>
                             <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Bank Access</span>
-                            <strong style={{ color: C.text }}>2 Banks Assigned</strong>
+                            <strong style={{ color: C.text }}>{drawerEmp.active_links_count !== undefined ? `${drawerEmp.active_links_count} Products Assigned` : (drawerEmp.bank_count !== undefined ? `${drawerEmp.bank_count} Banks Assigned` : 'N/A')}</strong>
                           </div>
                         </div>
                       </div>

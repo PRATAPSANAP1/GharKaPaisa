@@ -231,7 +231,12 @@ const getAdminAttendanceHistory = async ({
   }
 
   if (employeeId && employeeId.trim()) {
-    baseWhere += ` AND (att.employee_id = $${paramIdx} OR e.employee_id = $${paramIdx})`;
+    const isEmpUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(employeeId.trim());
+    if (isEmpUuid) {
+      baseWhere += ` AND (att.employee_id = $${paramIdx} OR e.employee_id = $${paramIdx} OR e.user_id = $${paramIdx})`;
+    } else {
+      baseWhere += ` AND (e.employee_id = $${paramIdx} OR e.mobile_number = $${paramIdx})`;
+    }
     params.push(employeeId.trim());
     paramIdx++;
   }
@@ -337,14 +342,31 @@ const getEmployeeAttendanceDetails = async (employeeId, month, year) => {
   const targetMonth = month ? parseInt(month, 10) : parseInt(todayParts[1], 10);
   const targetYear = year ? parseInt(year, 10) : parseInt(todayParts[0], 10);
 
+  const cleanEmpId = String(employeeId || '').trim();
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanEmpId);
+
   // Fetch employee details
-  const { rows: [emp] } = await query(
-    `SELECT id, employee_id, full_name, email_id, mobile_number, designation, department, work_location, joining_date, employee_status
-     FROM employees 
-     WHERE (id = $1 OR employee_id = $1) AND employee_status != 'TERMINATED'
-     LIMIT 1`,
-    [employeeId]
-  );
+  let empQuery;
+  let empParams;
+  if (isUuid) {
+    empQuery = `
+      SELECT id, employee_id, full_name, email_id, mobile_number, designation, department, work_location, joining_date, employee_status
+      FROM employees 
+      WHERE (id = $1 OR user_id = $1 OR candidate_id = $1) AND employee_status != 'TERMINATED'
+      LIMIT 1
+    `;
+    empParams = [cleanEmpId];
+  } else {
+    empQuery = `
+      SELECT id, employee_id, full_name, email_id, mobile_number, designation, department, work_location, joining_date, employee_status
+      FROM employees 
+      WHERE (employee_id = $1 OR mobile_number = $1) AND employee_status != 'TERMINATED'
+      LIMIT 1
+    `;
+    empParams = [cleanEmpId];
+  }
+
+  const { rows: [emp] } = await query(empQuery, empParams);
 
   if (!emp) {
     const error = new Error('Employee not found or terminated');

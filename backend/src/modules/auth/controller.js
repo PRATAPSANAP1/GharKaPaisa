@@ -68,12 +68,16 @@ const getMe = async (req, res, next) => {
     const { rows: [user] } = await query(`
         SELECT u.id, u.email, u.mobile, u.role, u.status, u.last_login, u.must_change_password,
           u.full_name, u.department, u.designation,
+          COALESCE(e.employee_id, u.employee_id) as employee_id,
+          COALESCE(e.employee_id, u.employee_id) as employee_code,
+          e.id as employee_uuid,
           ap.id as partner_id, ap.partner_code, ap.first_name, ap.last_name,
           ap.kyc_status, ap.company_name, ap.profile_photo_url, ap.current_address,
           ap.business_location, ap.gst_number, ap.company_type, ap.pincode,
           pbd.bank_name, pbd.account_number, pbd.ifsc_code, pbd.account_holder_name,
           w.available_balance, w.hold_balance as pending_amount, w.total_earned, w.total_withdrawn
         FROM users u
+        LEFT JOIN employees e ON e.user_id = u.id
         LEFT JOIN partner_profiles ap ON ap.user_id = u.id
         LEFT JOIN partner_bank_details pbd ON pbd.partner_id = ap.id
         LEFT JOIN partner_wallets w ON w.partner_id = ap.id
