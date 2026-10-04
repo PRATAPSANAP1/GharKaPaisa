@@ -5135,6 +5135,14 @@ const migrate = async () => {
     logger.error('Notification 2h Purge migration error note:', nPurgeErr.message);
   }
 
+  // Office Building Geofences Migration
+  try {
+    const { migrateOfficeBuildingGeofences } = require('./migrate_office_building_geofences');
+    await migrateOfficeBuildingGeofences();
+  } catch (geoErr) {
+    logger.error('Office Building Geofences migration error note:', geoErr.message);
+  }
+
   // LOC/EOC Category Migration
   try {
     const { migrateLocEocCategory } = require('./migrate_loc_eoc_category');
