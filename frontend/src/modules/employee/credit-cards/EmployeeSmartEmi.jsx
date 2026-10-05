@@ -50,6 +50,7 @@ export default function EmployeeSmartEmi() {
     processingFee: '₹199 + GST',
     conversionSpeed: 'Instant / Within 24 Hrs',
     badge: 'Popular Scheme',
+    apply_url: 'https://applyonline.hdfc.bank.in/loan-against-assets/smartemi/smartemi?rpo=total&Channel=DSA&DSACode=XYOH&LC1=YOH5&LC2=YOH5&SMCode=S54558&LGCode=YOH5',
     features: [
       'Instant 1-click conversion via NetBanking, MobileBanking, or SMS',
       'Convert big-ticket credit card purchases within 60 days of transaction',
@@ -97,6 +98,7 @@ export default function EmployeeSmartEmi() {
                 processingFee: p.annual_fee || p.fees_charges || '₹199 + GST',
                 conversionSpeed: 'Instant / Within 24 Hrs',
                 badge: p.badge || 'Popular Scheme',
+                apply_url: p.apply_url || p.direct_url || p.link || 'https://applyonline.hdfc.bank.in/loan-against-assets/smartemi/smartemi?rpo=total&Channel=DSA&DSACode=XYOH&LC1=YOH5&LC2=YOH5&SMCode=S54558&LGCode=YOH5',
                 features: parsedFeatures.length > 0 ? parsedFeatures : defaultHdfcScheme.features
               };
             });
@@ -275,6 +277,17 @@ export default function EmployeeSmartEmi() {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
       }
+
+      const defaultSmartEmiDirectUrl = 'https://applyonline.hdfc.bank.in/loan-against-assets/smartemi/smartemi?rpo=total&Channel=DSA&DSACode=XYOH&LC1=YOH5&LC2=YOH5&SMCode=S54558&LGCode=YOH5';
+      const targetDirectUrl = applyScheme?.apply_url || applyScheme?.direct_link || applyScheme?.direct_url || defaultSmartEmiDirectUrl;
+
+      if (processBy === 'Direct link') {
+        window.open(targetDirectUrl, '_blank');
+      } else if (processBy === 'Linked share') {
+        const msg = encodeURIComponent(`Apply for ${applyScheme?.bank || 'HDFC Bank'} Smart EMI on Credit Card here: ${targetDirectUrl}`);
+        window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
+      }
+
       setSubmitSuccess(true);
       setTimeout(() => {
         setSubmitSuccess(false);
@@ -287,6 +300,17 @@ export default function EmployeeSmartEmi() {
       }, 2500);
     } catch (err) {
       console.error('Failed to submit Smart EMI lead:', err);
+
+      const defaultSmartEmiDirectUrl = 'https://applyonline.hdfc.bank.in/loan-against-assets/smartemi/smartemi?rpo=total&Channel=DSA&DSACode=XYOH&LC1=YOH5&LC2=YOH5&SMCode=S54558&LGCode=YOH5';
+      const targetDirectUrl = applyScheme?.apply_url || applyScheme?.direct_link || applyScheme?.direct_url || defaultSmartEmiDirectUrl;
+
+      if (processBy === 'Direct link') {
+        window.open(targetDirectUrl, '_blank');
+      } else if (processBy === 'Linked share') {
+        const msg = encodeURIComponent(`Apply for ${applyScheme?.bank || 'HDFC Bank'} Smart EMI on Credit Card here: ${targetDirectUrl}`);
+        window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
+      }
+
       setSubmitSuccess(true);
       setTimeout(() => {
         setSubmitSuccess(false);
