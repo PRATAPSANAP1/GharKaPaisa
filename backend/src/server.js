@@ -248,6 +248,12 @@ if (process.env.NODE_ENV !== 'production' && process.env.ENABLE_TEST_EMAIL_ROUTE
 }
 
 // ── Error Handling ─────────────────────────────────────────────
+app.use((req, res, next) => {
+  if (req.path && (req.path.startsWith('/socket.io') || req.originalUrl.includes('/socket.io'))) {
+    return;
+  }
+  next();
+});
 app.use(notFoundHandler);
 app.use(errorHandler);
 
@@ -345,16 +351,27 @@ const startServer = async () => {
 
     server = http.createServer(app);
     const allowedOrigins = process.env.CORS_ORIGIN 
-      ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
-      : ['https://gharkapaisa.in', 'https://www.gharkapaisa.in', 'http://localhost:5173', 'http://localhost:3000'];
+      ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()).filter(Boolean)
+      : [
+          'https://gharkapaisa.in',
+          'https://www.gharkapaisa.in',
+          'https://admin.gharkapaisa.in',
+          'https://api.gharkapaisa.in',
+          'http://localhost:5173',
+          'http://localhost:5174',
+          'http://localhost:3000',
+          'http://localhost:4173'
+        ];
 
     const io = new Server(server, {
+      path: '/socket.io',
+      transports: ['websocket', 'polling'],
       cors: {
         origin: (origin, callback) => {
           if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
             callback(null, true);
           } else {
-            callback(null, true); // Fallback allow in dev
+            callback(null, true); // Fallback allow
           }
         },
         methods: ['GET', 'POST'],
