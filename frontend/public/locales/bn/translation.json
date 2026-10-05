@@ -2,6 +2,8 @@
   "partnerLayout": {
     "dashboard": "ড্যাশবোর্ড",
     "credit_card": "ক্রেডিট কার্ড",
+    "loan_on_credit_card": "ক্রেডিট কার্ডে ঋণ",
+    "smart_emi": "ক্রেডিট কার্ডে স্মার্ট ইএমআই",
     "loans": "ঋণ",
     "insurance": "বীমা",
     "marketplace": "মার্কেটপ্লেস",

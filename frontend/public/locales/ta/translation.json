@@ -2,6 +2,8 @@
   "partnerLayout": {
     "dashboard": "டாஷ்போர்டு",
     "credit_card": "கிரெடிட் கார்டுகள்",
+    "loan_on_credit_card": "கிரெடிட் கார்டு கடன்",
+    "smart_emi": "கிரெடிட் கார்டு ஸ்மார்ட் EMI",
     "loans": "கடன்கள்",
     "insurance": "காப்பீடு",
     "marketplace": "சந்தை",

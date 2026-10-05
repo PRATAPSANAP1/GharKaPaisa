@@ -164,7 +164,7 @@ export default function PartnerLayout() {
       clearInterval(interval);
     };
   }, [user?.id, location.pathname, fetchProfile]);
-  const accountStatus = user?.status || 'pending';
+  const accountStatus = (user?.status || 'active').toLowerCase();
   const kycStatus = user?.kyc_status || 'pending';
   const isKycPage = location.pathname === '/partner/kyc-centre';
 
@@ -385,7 +385,7 @@ export default function PartnerLayout() {
       ? location.pathname.startsWith('/partner/customers')
       : item.path.includes('?')
         ? currentPathAndQuery === item.path
-        : location.pathname === item.path || (item.path === '/partner/team' && location.pathname === '/partner/team-network');
+        : location.pathname === item.path || (item.path === '/partner/team' && location.pathname === '/partner/team-network') || (item.id === 'smart_emi' && location.pathname === '/partner/smart-emi-on-credit-card');
 
     return (
       <NavLink
@@ -414,7 +414,7 @@ export default function PartnerLayout() {
         }}
       >
         <Icon size={isMobileNav ? 22 : 20} style={{ color: isActive ? '#fff' : SIDEBAR_TEXT }} />
-        {t('partnerLayout.' + item.id.replace(/-/g, ''), item.label)}
+        <span>{t('partnerLayout.' + item.id.replace(/-/g, ''), { defaultValue: item.label }) || item.label}</span>
         {item.id === 'messenger' && messengerUnread > 0 && (
           <span style={{
             marginLeft: 'auto',

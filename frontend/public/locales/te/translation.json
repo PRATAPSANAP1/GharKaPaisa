@@ -2,6 +2,8 @@
   "partnerLayout": {
     "dashboard": "డాష్‌బోర్డ్",
     "credit_card": "క్రెడిట్ కార్డ్‌లు",
+    "loan_on_credit_card": "క్రెడిట్ కార్డ్‌పై లోన్",
+    "smart_emi": "క్రెడిట్ కార్డ్‌పై స్మార్ట్ ఈఎంఐ",
     "loans": "రుణాలు",
     "insurance": "ఇన్సూరెన్స్",
     "marketplace": "మార్కెట్‌ప్లేస్",

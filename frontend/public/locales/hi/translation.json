@@ -559,6 +559,8 @@
   "partnerLayout": {
     "dashboard": "डैशबोर्ड",
     "credit_card": "क्रेडिट कार्ड",
+    "loan_on_credit_card": "क्रेडिट कार्ड पर लोन",
+    "smart_emi": "स्मार्ट ईएमआई",
     "loans": "ऋण",
     "insurance": "बीमा",
     "marketplace": "मार्केटप्लेस",

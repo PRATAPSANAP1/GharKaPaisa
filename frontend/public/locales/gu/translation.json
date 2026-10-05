@@ -2,6 +2,8 @@
   "partnerLayout": {
     "dashboard": "ડેશબોર્ડ",
     "credit_card": "ક્રેડિટ કાર્ડ્સ",
+    "loan_on_credit_card": "ક્રેડિટ કાર્ડ પર લોન",
+    "smart_emi": "ક્રેડિટ કાર્ડ પર સ્માર્ટ EMI",
     "loans": "લોન",
     "insurance": "વીમો",
     "marketplace": "માર્કેટપ્લેસ",
