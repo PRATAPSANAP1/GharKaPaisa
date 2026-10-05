@@ -38,7 +38,7 @@ jobs:
           COMMAND_ID=$(aws ssm send-command \
             --region ap-south-1 \
             --document-name "AWS-RunShellScript" \
-            --instance-ids "i-07600948e01bb2aa3" "i-0571c49ce76d13b8b" \
+            --instance-ids "i-07600948e01bb2aa3" \
             --parameters "commands=[\"sudo -u ubuntu -H bash -c 'cd /home/ubuntu/GharKaPaisa/backend && git fetch origin master && git reset --hard origin/master && npm ci && node --check src/server.js && pm2 reload gharkapaisa-backend && pm2 save'\"]" \
             --query 'Command.CommandId' \
             --output text)
@@ -49,11 +49,6 @@ jobs:
             --region ap-south-1 \
             --command-id "$COMMAND_ID" \
             --instance-id i-07600948e01bb2aa3
-
-          aws ssm wait command-executed \
-            --region ap-south-1 \
-            --command-id "$COMMAND_ID" \
-            --instance-id i-0571c49ce76d13b8b
 
       - name: Deployment complete
         run: |
