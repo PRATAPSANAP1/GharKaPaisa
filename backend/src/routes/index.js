@@ -131,6 +131,7 @@ router.use('/whatsapp', whatsappRoute);
 // ── Attendance Phase 6-2, 6-3, 6-4, 6-5, 6-7 ──
 router.use('/attendance/enrollment', attendanceEnrollmentRoute);
 router.use('/attendance/verification', attendanceVerificationRoute);
+router.use('/attendance-verification', attendanceVerificationRoute);
 router.use('/attendance/admin/reports', attendanceReportsRoute);
 router.use('/attendance/admin', attendanceAdminRoute);
 router.use('/attendance', attendanceRoute);

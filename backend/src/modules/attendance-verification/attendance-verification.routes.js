@@ -9,20 +9,25 @@ router.use(authenticate, syncUser);
 
 // 1. Create verification session
 router.post('/session', ctrl.createSession);
+router.post('/verification/session', ctrl.createSession);
 
 // 2. Initiate liveness session
 router.post('/liveness/session', ctrl.createLivenessSession);
+router.post('/verification/liveness/session', ctrl.createLivenessSession);
 
 // 3. Issue short-lived temporary AWS credentials for browser-side liveness challenge
 router.post('/liveness/credentials', ctrl.getLivenessCredentials);
+router.post('/verification/liveness/credentials', ctrl.getLivenessCredentials);
 
 // 4. Validate liveness session result
 router.post('/liveness/result', ctrl.validateLivenessResult);
+router.post('/verification/liveness/result', ctrl.validateLivenessResult);
 
 // 4. Complete verification pipeline (Liveness -> Face -> Environment -> Policy)
 router.post('/complete', upload.single('face_image'), ctrl.completeVerification);
 
 // 5. Get session status
 router.get('/session/:sessionId', ctrl.getSessionStatus);
+router.get('/verification/session/:sessionId', ctrl.getSessionStatus);
 
 module.exports = router;
