@@ -45,13 +45,21 @@ const ensureRemindersTable = async () => {
 const resolveEmployeeId = async (reqUser) => {
   if (!reqUser) return null;
   
-  // 1. If employee_id is already a valid UUID, return it
+  // 1. Authoritative: resolve employee by authenticated user_id
+  if (reqUser.id) {
+    try {
+      const { rows: [emp] } = await query(`SELECT id FROM employees WHERE user_id = $1 LIMIT 1`, [reqUser.id]);
+      if (emp) return emp.id;
+    } catch (e) {}
+  }
+
+  // 2. If employee_id is already a valid UUID, return it
   const empId = reqUser.employeeId || reqUser.employee_id;
   if (typeof empId === 'string' && empId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
     return empId;
   }
   
-  // 2. If employee_code is provided, map it to employee_id (UUID)
+  // 3. If employee_code is provided, map it to employee_id (UUID)
   const empCode = reqUser.employee_code || reqUser.emp_code || (typeof empId === 'string' && !empId.includes('-') ? empId : null);
   if (empCode) {
     try {
@@ -63,14 +71,6 @@ const resolveEmployeeId = async (reqUser) => {
     } catch (e) {
       logger.error('Error resolving employee_code to employee_id:', e.message);
     }
-  }
-  
-  // 3. Fallback: resolve employee by user_id
-  if (reqUser.id) {
-    try {
-      const { rows: [emp] } = await query(`SELECT id FROM employees WHERE user_id = $1 LIMIT 1`, [reqUser.id]);
-      if (emp) return emp.id;
-    } catch (e) {}
   }
   
   return null;

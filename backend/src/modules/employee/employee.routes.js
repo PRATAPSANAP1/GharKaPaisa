@@ -217,23 +217,25 @@ async function resolveEmployee(req, res, next) {
   try {
     let rows = [];
 
-    // 1. If req.user specifies employee_id / emp_code (e.g. CAND10001)
-    const reqEmpCode = req.user.employee_id || req.user.emp_code || req.user.employeeCode;
-    if (reqEmpCode && typeof reqEmpCode === 'string' && !reqEmpCode.includes('-')) {
-      const { rows: matched } = await query(`SELECT * FROM employees WHERE employee_id = $1 LIMIT 1`, [reqEmpCode.trim()]);
-      if (matched.length > 0) rows = matched;
-    }
-
-    // 2. Match by user_id
-    if (rows.length === 0 && req.user.id) {
+    // 1. Primary & Authoritative: Match by authenticated user_id
+    if (req.user.id) {
       const { rows: matched } = await query(`SELECT * FROM employees WHERE user_id = $1 LIMIT 1`, [req.user.id]);
       if (matched.length > 0) rows = matched;
     }
 
-    // 3. Match by mobile / email
+    // 2. Fallback: If req.user specifies employee_id / emp_code (e.g. CAND10001) only when user_id not yet linked
+    if (rows.length === 0) {
+      const reqEmpCode = req.user.employee_id || req.user.emp_code || req.user.employeeCode;
+      if (reqEmpCode && typeof reqEmpCode === 'string' && !reqEmpCode.includes('-')) {
+        const { rows: matched } = await query(`SELECT * FROM employees WHERE employee_id = $1 LIMIT 1`, [reqEmpCode.trim()]);
+        if (matched.length > 0) rows = matched;
+      }
+    }
+
+    // 3. Fallback: Match by mobile / email
     if (rows.length === 0 && (req.user.mobile || req.user.email)) {
       const { rows: matched } = await query(
-        `SELECT * FROM employees WHERE mobile_number = $1 OR (email_id IS NOT NULL AND LOWER(email_id) = LOWER($2)) LIMIT 1`, 
+        `SELECT * FROM employees WHERE mobile_number = $1 OR (email_id IS NOT NULL AND email_id != '' AND LOWER(email_id) = LOWER($2)) LIMIT 1`, 
         [req.user.mobile || '', req.user.email || '']
       );
       if (matched.length > 0) rows = matched;
@@ -242,7 +244,7 @@ async function resolveEmployee(req, res, next) {
     if (rows.length === 0) {
       // Auto-create employee record if user registered via candidate portal
       const candRes = await query(
-        `SELECT * FROM employee_candidates WHERE mobile_number = $1 OR (email_id IS NOT NULL AND email_id = $2)`,
+        `SELECT * FROM employee_candidates WHERE mobile_number = $1 OR (email_id IS NOT NULL AND email_id != '' AND LOWER(email_id) = LOWER($2)) ORDER BY created_at DESC LIMIT 1`,
         [req.user.mobile, req.user.email]
       );
       
@@ -277,6 +279,12 @@ async function resolveEmployee(req, res, next) {
       // Ensure user_id is linked to employee record
       if (!req.employee.user_id && req.user.id) {
         await query(`UPDATE employees SET user_id = $1 WHERE id = $2`, [req.user.id, req.employee.id]).catch(() => {});
+        req.employee.user_id = req.user.id;
+      }
+      // Ensure users table employee_id is strictly in sync with the employee's true code
+      if (req.user.id && req.employee.employee_id && req.user.employee_id !== req.employee.employee_id) {
+        await query(`UPDATE users SET employee_id = $1 WHERE id = $2`, [req.employee.employee_id, req.user.id]).catch(() => {});
+        req.user.employee_id = req.employee.employee_id;
       }
       return next();
     }
@@ -316,19 +324,19 @@ router.get('/profile', async (req, res, next) => {
     const empCode = req.employee.employee_id || req.employee.emp_code;
     const empMobile = req.employee.mobile_number || req.employee.mobile;
 
-    // 1. Employee profile record
+    // 1. Employee profile record (strict join on candidate_id or exact reference_code)
     const empRes = await query(`
       SELECT e.*, c.resume_url
       FROM employees e
-      LEFT JOIN employee_candidates c ON c.id = e.candidate_id OR c.mobile_number = e.mobile_number
+      LEFT JOIN employee_candidates c ON (e.candidate_id IS NOT NULL AND c.id = e.candidate_id) OR (e.candidate_id IS NULL AND c.reference_code = e.employee_id)
       WHERE e.id = $1
     `, [empId]);
     const employee = empRes.rows[0] || req.employee;
 
     // 2. Joining details
     const joiningRes = await query(
-      `SELECT * FROM employee_joining_details WHERE employee_id = $1 OR mobile_number = $2 ORDER BY created_at DESC LIMIT 1`,
-      [empId, empMobile]
+      `SELECT * FROM employee_joining_details WHERE employee_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [empId]
     );
 
     // 3. KYC details

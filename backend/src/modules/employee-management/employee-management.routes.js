@@ -204,21 +204,21 @@ async function syncAndSeedEmployees() {
       ON CONFLICT (mobile_number) DO UPDATE SET user_id = EXCLUDED.user_id
     `).catch(e => logger.warn('Employee candidate sync note:', e.message));
 
-    // Fix existing employees/users to use candidate reference_code (e.g. CAND10073) instead of YOH- prefixes
+    // Fix existing employees/users to use candidate reference_code strictly via candidate_id & user_id linkage
     await query(`
-      UPDATE users u
-      SET employee_id = c.reference_code
-      FROM employee_candidates c
-      WHERE (u.mobile = TRIM(c.mobile_number) OR (u.email IS NOT NULL AND LOWER(u.email) = LOWER(TRIM(c.email_id))))
-        AND c.reference_code IS NOT NULL AND c.reference_code != ''
-        AND (u.employee_id LIKE 'YOH-%' OR u.employee_id IS NULL OR u.employee_id = '');
-
       UPDATE employees e
       SET employee_id = c.reference_code
       FROM employee_candidates c
-      WHERE (e.candidate_id = c.id OR e.mobile_number = TRIM(c.mobile_number) OR (e.email_id IS NOT NULL AND LOWER(e.email_id) = LOWER(TRIM(c.email_id))))
+      WHERE e.candidate_id = c.id
         AND c.reference_code IS NOT NULL AND c.reference_code != ''
         AND (e.employee_id LIKE 'YOH-%' OR e.employee_id IS NULL OR e.employee_id = '');
+
+      UPDATE users u
+      SET employee_id = e.employee_id
+      FROM employees e
+      WHERE e.user_id = u.id
+        AND e.employee_id IS NOT NULL AND e.employee_id != ''
+        AND (u.employee_id IS NULL OR u.employee_id != e.employee_id);
     `).catch(e => logger.warn('Refcode sync note:', e.message));
 
     // Delete any partner_profiles for users with EMPLOYEE role
@@ -728,7 +728,7 @@ router.get('/:id', async (req, res, next) => {
     const empRes = await query(`
       SELECT e.*, c.resume_url
       FROM employees e
-      LEFT JOIN employee_candidates c ON c.id = e.candidate_id OR c.mobile_number = e.mobile_number
+      LEFT JOIN employee_candidates c ON (e.candidate_id IS NOT NULL AND c.id = e.candidate_id) OR (e.candidate_id IS NULL AND c.reference_code = e.employee_id)
       WHERE e.id = $1
     `, [id]);
 
@@ -737,10 +737,10 @@ router.get('/:id', async (req, res, next) => {
     }
     const employee = empRes.rows[0];
 
-    // 2. Joining details (check by employee_id or mobile_number)
+    // 2. Joining details
     const joiningRes = await query(
-      `SELECT * FROM employee_joining_details WHERE employee_id = $1 OR mobile_number = $2 ORDER BY created_at DESC LIMIT 1`,
-      [id, employee.mobile_number]
+      `SELECT * FROM employee_joining_details WHERE employee_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [id]
     );
 
     // 3. KYC details (check by employee_id or mobile_number)

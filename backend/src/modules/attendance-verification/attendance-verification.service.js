@@ -15,9 +15,17 @@ const isValidUuid = (str) => typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4
 const resolveEmployeeId = async (reqUser) => {
   if (!reqUser) return null;
 
+  // 1. Authoritative: resolve employee by authenticated user_id
+  if (reqUser.id && isValidUuid(reqUser.id)) {
+    try {
+      const { rows: [emp] } = await query(`SELECT id FROM employees WHERE user_id = $1 LIMIT 1`, [reqUser.id]);
+      if (emp && isValidUuid(emp.id)) return emp.id;
+    } catch (e) {}
+  }
+
   const candidate = reqUser.employeeId || reqUser.employee_id || reqUser.employee_code || reqUser.emp_code;
   
-  // 1. If candidate is already a valid UUID format and exists in employees table, return it
+  // 2. If candidate is already a valid UUID format and exists in employees table, return it
   if (candidate && isValidUuid(candidate)) {
     try {
       const { rows: [emp] } = await query(`SELECT id FROM employees WHERE id = $1 LIMIT 1`, [candidate]);
@@ -25,7 +33,7 @@ const resolveEmployeeId = async (reqUser) => {
     } catch (e) {}
   }
   
-  // 2. If candidate string code like "CAND10001" or "EMP1001", query employee_id explicitly FIRST
+  // 3. If candidate string code like "CAND10001" or "EMP1001", query employee_id explicitly
   if (candidate && typeof candidate === 'string') {
     try {
       const cleanCandidate = candidate.trim();
@@ -38,20 +46,12 @@ const resolveEmployeeId = async (reqUser) => {
       logger.error('Error resolving employee code to UUID:', e.message);
     }
   }
-  
-  // 3. Fallback: try to resolve employee by user_id
-  if (reqUser.id && isValidUuid(reqUser.id)) {
-    try {
-      const { rows: [emp] } = await query(`SELECT id FROM employees WHERE user_id = $1 LIMIT 1`, [reqUser.id]);
-      if (emp && isValidUuid(emp.id)) return emp.id;
-    } catch (e) {}
-  }
 
   // 4. Fallback: try to resolve employee by mobile or email
   if (reqUser.mobile || reqUser.email) {
     try {
       const { rows: [emp] } = await query(
-        `SELECT id FROM employees WHERE mobile_number = $1 OR (email_id IS NOT NULL AND LOWER(email_id) = LOWER($2)) LIMIT 1`,
+        `SELECT id FROM employees WHERE mobile_number = $1 OR (email_id IS NOT NULL AND email_id != '' AND LOWER(email_id) = LOWER($2)) LIMIT 1`,
         [reqUser.mobile || '', reqUser.email || '']
       );
       if (emp && isValidUuid(emp.id)) return emp.id;
