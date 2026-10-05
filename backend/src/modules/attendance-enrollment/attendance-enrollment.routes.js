@@ -22,9 +22,12 @@ router.get('/employee/:employeeId', ctrl.getEmployeeStatus);
 
 // ── Super Admin Missing Enrollments & Reminders ──────────────────
 router.get('/missing', authorize('SUPER_ADMIN', 'ADMIN', 'HR'), ctrl.getMissingList);
-router.post('/reminder', authorize('SUPER_ADMIN', 'ADMIN'), ctrl.sendReminder);
+router.post('/reminder', authorize('SUPER_ADMIN', 'ADMIN', 'HR'), ctrl.sendReminder);
+router.post('/reminders', authorize('SUPER_ADMIN', 'ADMIN', 'HR'), ctrl.sendReminder);
 router.get('/reminders/:employeeId', authorize('SUPER_ADMIN', 'ADMIN', 'HR'), ctrl.getReminderHistory);
+router.get('/reminder/:employeeId', authorize('SUPER_ADMIN', 'ADMIN', 'HR'), ctrl.getReminderHistory);
 router.post('/reminders/:id/seen', ctrl.markReminderSeen);
+router.post('/reminder/:id/seen', ctrl.markReminderSeen);
 
 // ── Super Admin Re-Enrollment ────────────────────────────────────
 router.post('/re-enrollment/session', authorize('SUPER_ADMIN'), ctrl.createReEnrollmentSession);

@@ -97,7 +97,8 @@ export default function BiometricManagementModal({ isOpen, onClose, employee = n
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data?.success) {
-        setReminderHistory(res.data.data.reminders || []);
+        const list = Array.isArray(res.data.data) ? res.data.data : (res.data.data?.reminders || []);
+        setReminderHistory(list);
       }
     } catch (err) {
       console.warn('Failed to fetch reminder history:', err);
@@ -215,13 +216,14 @@ export default function BiometricManagementModal({ isOpen, onClose, employee = n
   };
 
   const handleSendReminder = async () => {
-    if (!reminderEmp?.id) return;
+    const targetEmpId = reminderEmp?.id || reminderEmp?.employee_id || reminderEmp?.user_id;
+    if (!targetEmpId) return;
     setSendingReminder(true);
     setReminderAlert(null);
     try {
       const token = localStorage.getItem('token');
       const res = await axios.post(`${getApiV1Url()}/attendance/enrollment/reminder`, {
-        employee_id: reminderEmp.id,
+        employee_id: targetEmpId,
         message: reminderMessage.trim()
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -231,7 +233,7 @@ export default function BiometricManagementModal({ isOpen, onClose, employee = n
         setReminderAlert({ type: 'success', text: res.data.message || '✓ Verification reminder dispatched successfully!' });
         setTimeout(() => {
           setShowReminderModal(false);
-          if (selectedEmp?.id === reminderEmp.id) {
+          if (selectedEmp?.id === reminderEmp?.id) {
             fetchReminderHistory(selectedEmp.id);
           }
           if (activeTab === 'missing_queue') {
@@ -240,6 +242,26 @@ export default function BiometricManagementModal({ isOpen, onClose, employee = n
         }, 1200);
       }
     } catch (err) {
+      // Fallback to employee management reminder endpoint
+      try {
+        const token = localStorage.getItem('token');
+        const fallbackRes = await axios.post(`${getApiV1Url()}/employees/${targetEmpId}/send-reminder`, {
+          message: reminderMessage.trim()
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (fallbackRes.data?.success) {
+          setReminderAlert({ type: 'success', text: '✓ Verification reminder dispatched successfully!' });
+          setTimeout(() => {
+            setShowReminderModal(false);
+            if (selectedEmp?.id === reminderEmp?.id) {
+              fetchReminderHistory(selectedEmp.id);
+            }
+          }, 1200);
+          return;
+        }
+      } catch (fbErr) {}
+
       const msg = err.response?.data?.message || 'Failed to send reminder';
       setReminderAlert({ type: 'error', text: msg });
     } finally {
@@ -258,10 +280,11 @@ export default function BiometricManagementModal({ isOpen, onClose, employee = n
     let throttledCount = 0;
 
     for (const emp of missingList) {
+      const empIdentifier = emp.id || emp.employee_id || emp.user_id;
       try {
         const token = localStorage.getItem('token');
         await axios.post(`${getApiV1Url()}/attendance/enrollment/reminder`, {
-          employee_id: emp.id,
+          employee_id: empIdentifier,
           message: 'Please complete your KYC Face Verification to activate daily biometric attendance.'
         }, {
           headers: { Authorization: `Bearer ${token}` }

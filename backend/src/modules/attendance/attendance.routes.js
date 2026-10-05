@@ -22,4 +22,22 @@ router.get('/enrollment/status', (req, res, next) => {
   }
 });
 
+router.post(['/enrollment/reminder', '/enrollment/reminders', '/reminder', '/reminders'], (req, res, next) => {
+  try {
+    const enrollmentCtrl = require('../attendance-enrollment/attendance-enrollment.controller');
+    return enrollmentCtrl.sendReminder(req, res, next);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get(['/enrollment/reminders/:employeeId', '/enrollment/reminder/:employeeId', '/reminders/:employeeId', '/reminder/:employeeId'], (req, res, next) => {
+  try {
+    const enrollmentCtrl = require('../attendance-enrollment/attendance-enrollment.controller');
+    return enrollmentCtrl.getReminderHistory(req, res, next);
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

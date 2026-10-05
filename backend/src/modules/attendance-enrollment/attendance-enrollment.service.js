@@ -488,11 +488,32 @@ const getMissingBiometrics = async ({ search = '', status = 'ALL', page = 1, lim
 const sendFaceVerificationReminder = async ({ employeeId, message, reqUser }) => {
   await ensureRemindersTable();
 
-  // Validate employee
-  const { rows: [emp] } = await query(
-    `SELECT id, employee_id, full_name, user_id FROM employees WHERE id = $1`,
-    [employeeId]
-  );
+  if (!employeeId) {
+    const error = new Error('employee_id is required');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const rawId = String(employeeId).trim();
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawId);
+
+  // Validate employee across id (UUID), user_id (UUID), employee_id string code, or candidate_id
+  let emp = null;
+  if (isUuid) {
+    const { rows: [foundEmp] } = await query(
+      `SELECT id, employee_id, full_name, user_id FROM employees WHERE id = $1 OR user_id = $1 LIMIT 1`,
+      [rawId]
+    );
+    emp = foundEmp;
+  }
+
+  if (!emp) {
+    const { rows: [foundEmpByCode] } = await query(
+      `SELECT id, employee_id, full_name, user_id FROM employees WHERE employee_id = $1 OR candidate_id::text = $1 LIMIT 1`,
+      [rawId]
+    );
+    emp = foundEmpByCode;
+  }
 
   if (!emp) {
     const error = new Error('Employee record not found');
@@ -500,12 +521,14 @@ const sendFaceVerificationReminder = async ({ employeeId, message, reqUser }) =>
     throw error;
   }
 
+  const targetEmpId = emp.id;
+
   // Anti-Spam Check: Disallow sending reminder if one was sent in the last 10 minutes
   const { rows: [recentReminder] } = await query(
     `SELECT id, sent_at FROM face_verification_reminders 
      WHERE employee_id = $1 AND sent_at > NOW() - INTERVAL '10 minutes' AND status = 'SENT'
      LIMIT 1`,
-    [employeeId]
+    [targetEmpId]
   );
 
   if (recentReminder) {
@@ -524,7 +547,7 @@ const sendFaceVerificationReminder = async ({ employeeId, message, reqUser }) =>
      (employee_id, sent_by, message, status, sent_at, created_at, updated_at)
      VALUES ($1, $2, $3, 'SENT', NOW(), NOW(), NOW())
      RETURNING id, employee_id, sent_by, message, status, sent_at`,
-    [employeeId, reqUser.id, defaultMsg]
+    [targetEmpId, reqUser.id, defaultMsg]
   );
 
   // 2. Dispatch in-app notification if user_id exists
@@ -546,7 +569,7 @@ const sendFaceVerificationReminder = async ({ employeeId, message, reqUser }) =>
   }
 
   // 3. Audit Action
-  await logAction(reqUser, 'FACE_VERIFICATION_REMINDER_SENT', employeeId, {
+  await logAction(reqUser, 'FACE_VERIFICATION_REMINDER_SENT', targetEmpId, {
     reminder_id: reminder.id,
     message: defaultMsg,
   });
@@ -571,6 +594,26 @@ const sendFaceVerificationReminder = async ({ employeeId, message, reqUser }) =>
 const getReminderHistory = async (employeeId) => {
   await ensureRemindersTable();
 
+  if (!employeeId) return [];
+
+  const rawId = String(employeeId).trim();
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawId);
+
+  let targetEmpId = rawId;
+  if (isUuid) {
+    const { rows: [foundEmp] } = await query(
+      `SELECT id FROM employees WHERE id = $1 OR user_id = $1 LIMIT 1`,
+      [rawId]
+    );
+    if (foundEmp) targetEmpId = foundEmp.id;
+  } else {
+    const { rows: [foundEmpByCode] } = await query(
+      `SELECT id FROM employees WHERE employee_id = $1 OR candidate_id::text = $1 LIMIT 1`,
+      [rawId]
+    );
+    if (foundEmpByCode) targetEmpId = foundEmpByCode.id;
+  }
+
   const { rows: history } = await query(
     `SELECT r.id, r.employee_id, r.message, r.status, r.sent_at, r.seen_at, r.completed_at,
             u.full_name as sent_by_name
@@ -578,7 +621,7 @@ const getReminderHistory = async (employeeId) => {
      LEFT JOIN users u ON u.id = r.sent_by
      WHERE r.employee_id = $1
      ORDER BY r.sent_at DESC`,
-    [employeeId]
+    [targetEmpId]
   );
 
   return history;
