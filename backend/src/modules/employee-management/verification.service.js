@@ -39,7 +39,7 @@ const REQUIRED_DOC_TYPES = [
 async function calculateEmployeeVerificationState(employeeId) {
   // 1. Fetch Employee record
   const empRes = await query(`
-    SELECT e.*, u.id as user_id, u.profile_photo_url as user_profile_photo_url
+    SELECT e.*, u.id as user_id, NULL as user_profile_photo_url
     FROM employees e
     LEFT JOIN users u ON u.id = e.user_id
     WHERE e.id = $1
