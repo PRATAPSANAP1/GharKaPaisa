@@ -139,9 +139,10 @@ export default function EmployeeSmartEmi() {
   const [custMobile, setCustMobile] = useState('');
   const [smartEmiAmt, setSmartEmiAmt] = useState('');
   const [smartEmiTenure, setSmartEmiTenure] = useState('06 Months');
+  const [processBy, setProcessBy] = useState('Punching Only');
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  const empCode = user?.employee_id || user?.emp_code || user?.id || '';
+  const empCode = user?.partner_code || user?.employee_id || user?.emp_code || user?.referral_code || user?.id || '';
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://gharkapaisa.in';
 
   // Rate percent map
@@ -221,16 +222,53 @@ export default function EmployeeSmartEmi() {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       }
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(applyScheme?.id);
-      await axios.post(`${getApiV1Url()}/employee/leads`, {
-        full_name: custName,
-        mobile: custMobile,
-        smart_emi_amount: smartEmiAmt,
-        tenure: smartEmiTenure,
-        card_bank: applyScheme?.bank,
-        card_name: applyScheme?.title || applyScheme?.name,
-        product_id: isUuid ? applyScheme?.id : undefined,
-        product_type: 'smart_emi'
-      });
+      const isPartner = user?.role === 'PARTNER' || user?.role === 'TEAM_MEMBER' || !!user?.partner_code;
+
+      if (isPartner) {
+        await axios.post(`${getApiV1Url()}/applications/partner-apply`, {
+          product_id: isUuid ? applyScheme?.id : undefined,
+          full_name: custName,
+          mobile: custMobile,
+          product_type: 'smart_emi',
+          smart_emi_amount: smartEmiAmt,
+          tenure: smartEmiTenure,
+          process_by: processBy,
+          card_bank: applyScheme?.bank,
+          card_name: applyScheme?.title || applyScheme?.name,
+          process_type: 'lead_punching',
+          agree_terms: true
+        }, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        }).catch(async () => {
+          return axios.post(`${getApiV1Url()}/employee/leads`, {
+            full_name: custName,
+            mobile: custMobile,
+            smart_emi_amount: smartEmiAmt,
+            tenure: smartEmiTenure,
+            process_by: processBy,
+            card_bank: applyScheme?.bank,
+            card_name: applyScheme?.title || applyScheme?.name,
+            product_id: isUuid ? applyScheme?.id : undefined,
+            product_type: 'smart_emi'
+          }, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {}
+          });
+        });
+      } else {
+        await axios.post(`${getApiV1Url()}/employee/leads`, {
+          full_name: custName,
+          mobile: custMobile,
+          smart_emi_amount: smartEmiAmt,
+          tenure: smartEmiTenure,
+          process_by: processBy,
+          card_bank: applyScheme?.bank,
+          card_name: applyScheme?.title || applyScheme?.name,
+          product_id: isUuid ? applyScheme?.id : undefined,
+          product_type: 'smart_emi'
+        }, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+      }
       setSubmitSuccess(true);
       setTimeout(() => {
         setSubmitSuccess(false);
@@ -239,6 +277,7 @@ export default function EmployeeSmartEmi() {
         setCustMobile('');
         setSmartEmiAmt('');
         setSmartEmiTenure('06 Months');
+        setProcessBy('Punching Only');
       }, 2500);
     } catch (err) {
       console.error('Failed to submit Smart EMI lead:', err);
@@ -250,6 +289,7 @@ export default function EmployeeSmartEmi() {
         setCustMobile('');
         setSmartEmiAmt('');
         setSmartEmiTenure('06 Months');
+        setProcessBy('Punching Only');
       }, 2500);
     } finally {
       setIsSubmitting(false);
@@ -728,6 +768,19 @@ export default function EmployeeSmartEmi() {
                     <option value="02 Years">02 Years</option>
                     <option value="03 Years">03 Years</option>
                     <option value="04 Years">04 Years</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, display: 'block', marginBottom: '4px' }}>Process By</label>
+                  <select
+                    value={processBy}
+                    onChange={(e) => setProcessBy(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '13px', fontWeight: 600 }}
+                  >
+                    <option value="Punching Only">1. Punching Only</option>
+                    <option value="Linked share">2. Linked share</option>
+                    <option value="Direct link">3. Direct link</option>
                   </select>
                 </div>
 

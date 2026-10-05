@@ -975,7 +975,7 @@ router.post('/leads', async (req, res, next) => {
     let { 
       full_name, mobile, email, product_id, city, state, pincode, 
       monthly_income, employment_type, card_bank, card_name, product_type,
-      smart_emi_amount, loan_required_amount, tenure
+      smart_emi_amount, loan_required_amount, tenure, process_by
     } = req.body;
 
     if (!full_name || !mobile) {
@@ -1088,13 +1088,16 @@ router.post('/leads', async (req, res, next) => {
       logger.warn('Employee lead direct_card_applications sync warning:', directErr.message);
     }
 
+    const processByVal = process_by || 'Punching Only';
+
     const metadataObj = {
       smart_emi_amount: smart_emi_amount || null,
       loan_required_amount: loan_required_amount || null,
       tenure: tenure || null,
       card_bank: bankNameInput,
       card_name: cardNameInput,
-      product_type: leadCategory
+      product_type: leadCategory,
+      process_by: processByVal
     };
 
     // 6. Create Application record with employee attribution
@@ -1105,12 +1108,12 @@ router.post('/leads', async (req, res, next) => {
         smart_emi_amount, loan_required_amount, tenure, metadata
       ) VALUES (
         $1, $2, $3, $4, '00000000-0000-0000-0000-000000000000', $5, $6, $7,
-        'EMPLOYEE', 'lead_punching', 'lead_punching', 'submitted', $8, $9, $10,
+        'EMPLOYEE', 'lead_punching', $15, 'submitted', $8, $9, $10,
         $11, $12, $13, $14::jsonb
       ) RETURNING *`,
       [
         app_number, customerId, matchedProductId, matchedBankId, req.user.id, empId, linkId, incentiveAmt, full_name, mobile,
-        smart_emi_amount || null, loan_required_amount || null, tenure || null, JSON.stringify(metadataObj)
+        smart_emi_amount || null, loan_required_amount || null, tenure || null, JSON.stringify(metadataObj), processByVal
       ]
     );
 

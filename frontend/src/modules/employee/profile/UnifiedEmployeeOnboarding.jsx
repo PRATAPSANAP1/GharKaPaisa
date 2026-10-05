@@ -394,9 +394,10 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
 
   // --- Step 3 Handlers ---
   const handleKycSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!panNum || !aadhaarNum || !bankAccNum) {
-      alert('Please fill in PAN, Aadhaar, and Bank details.');
+      alert('Please fill in PAN, Aadhaar, and Bank details in Step 3.');
+      setActiveTab(3);
       return;
     }
 
@@ -417,9 +418,9 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
       });
 
       if (res.data.success) {
-        alert('✓ Step 3: KYC Documents Submitted Successfully! Proceeding to Biometric Face Enrollment.');
+        setKycCompleted(true);
+        alert('✓ KYC Documents Submitted Successfully!');
         loadMasterProfile();
-        setActiveTab(4);
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to submit KYC documents');
@@ -932,8 +933,12 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
               {existingBankUrl && <div style={{ marginTop: '8px' }}><a href={existingBankUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11.5px', color: C.teal, fontWeight: 800 }}>View Current Bank Proof File ↗</a></div>}
             </div>
 
-            <button type="submit" disabled={loading} style={{ width: '100%', background: C.teal || '#0F766E', color: '#fff', border: 'none', padding: '16px', borderRadius: '14px', fontSize: '15px', fontWeight: 900, cursor: 'pointer', boxShadow: '0 4px 16px rgba(15,118,110,0.3)' }}>
-              {loading ? 'Submitting & Updating KYC...' : 'Submit & Save KYC Documents'}
+            <button 
+              type="button" 
+              onClick={() => setActiveTab(4)} 
+              style={{ width: '100%', background: C.teal || '#0F766E', color: '#fff', border: 'none', padding: '16px', borderRadius: '14px', fontSize: '15px', fontWeight: 900, cursor: 'pointer', boxShadow: '0 4px 16px rgba(15,118,110,0.3)' }}
+            >
+              Proceed to Step 4: Face Enrollment →
             </button>
 
           </form>
@@ -948,9 +953,39 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
                 <FaCamera style={{ fontSize: '20px' }} />
               </div>
               <div>
-                <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A', margin: 0 }}>Step 4: Face Verification Enrollment</h3>
-                <p style={{ fontSize: '12px', color: '#64748B', margin: 0 }}>Enroll your official face biometric reference for secure server-side attendance verification.</p>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A', margin: 0 }}>Step 4: Face Verification Enrollment & Final KYC Submission</h3>
+                <p style={{ fontSize: '12px', color: '#64748B', margin: 0 }}>Submit & save your KYC documents and enroll your official face biometric reference.</p>
               </div>
+            </div>
+
+            {/* KYC Submission Action Section in Step 4 */}
+            <div style={{ background: `${C.teal || '#0F766E'}0D`, border: `1px solid ${C.teal || '#0F766E'}30`, borderRadius: '18px', padding: '20px', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <FaIdCard style={{ color: C.teal || '#0F766E', fontSize: '20px' }} />
+                  <div>
+                    <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text || '#0F172A', margin: 0 }}>KYC Document Submission</h4>
+                    <p style={{ fontSize: '12px', color: C.textMid || '#64748B', margin: '2px 0 0 0' }}>Save and submit all your uploaded PAN, Aadhaar, and Bank proof details.</p>
+                  </div>
+                </div>
+                {kycCompleted && (
+                  <span style={{ background: '#D1FAE5', color: '#065F46', padding: '4px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800 }}>
+                    ✓ KYC Submitted & Saved
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleKycSubmit}
+                disabled={loading}
+                style={{
+                  width: '100%', background: C.teal || '#0F766E', color: '#fff', border: 'none',
+                  padding: '14px', borderRadius: '12px', fontSize: '14.5px', fontWeight: 900,
+                  cursor: 'pointer', boxShadow: '0 4px 14px rgba(15,118,110,0.25)'
+                }}
+              >
+                {loading ? 'Submitting & Updating KYC...' : 'Submit & Save KYC Documents'}
+              </button>
             </div>
 
             {/* Mandatory Biometric Policy Notice */}

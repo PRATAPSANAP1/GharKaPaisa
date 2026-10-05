@@ -257,6 +257,10 @@ const AppRoutes = () => {
             <Route path="/partner/credit-cards/:bankSlug" element={<PartnerEntityDetail />} />
             <Route path="/partner/credit-cards/:bankSlug/:tab" element={<PartnerEntityDetail />} />
 
+            <Route path="/partner/loan-on-credit-card" element={<EmployeeLoanOnCreditCard />} />
+            <Route path="/partner/smart-emi" element={<EmployeeSmartEmi />} />
+            <Route path="/partner/smart-emi-on-credit-card" element={<EmployeeSmartEmi />} />
+
             <Route path="/partner/loans" element={<PartnerCategoryOverview defaultCategory="loans" />} />
             <Route path="/partner/loans/:loanTypeSlug" element={<PartnerEntityDetail />} />
             <Route path="/partner/loans/:loanTypeSlug/product" element={<PartnerEntityDetail />} />

@@ -750,21 +750,26 @@ router.get('/:id', async (req, res, next) => {
     );
 
     let kycData = kycRes.rows[0] || null;
+    const joiningData = joiningRes.rows[0] || {};
 
     if (!kycData) {
-      const joiningData = joiningRes.rows[0] || {};
-      if (joiningData.pan_number || joiningData.aadhaar_number || joiningData.bank_account_number) {
+      if (joiningData.pan_number || joiningData.aadhaar_number || joiningData.bank_account_number || employee.pan_number || employee.aadhaar_number) {
         kycData = {
-          pan_number: joiningData.pan_number || null,
+          pan_number: joiningData.pan_number || employee.pan_number || null,
           pan_document_url: null,
-          aadhaar_number: joiningData.aadhaar_number || null,
+          aadhaar_number: joiningData.aadhaar_number || employee.aadhaar_number || null,
           aadhaar_document_url: null,
-          bank_account_number: joiningData.bank_account_number || null,
-          ifsc_code: joiningData.ifsc_code || null,
+          bank_account_number: joiningData.bank_account_number || employee.bank_account_number || null,
+          ifsc_code: joiningData.ifsc_code || employee.ifsc_code || null,
           bank_document_url: null,
           kyc_status: 'SUBMITTED'
         };
       }
+    } else {
+      kycData.pan_number = kycData.pan_number || joiningData.pan_number || employee.pan_number || null;
+      kycData.aadhaar_number = kycData.aadhaar_number || joiningData.aadhaar_number || employee.aadhaar_number || null;
+      kycData.bank_account_number = kycData.bank_account_number || joiningData.bank_account_number || employee.bank_account_number || null;
+      kycData.ifsc_code = kycData.ifsc_code || joiningData.ifsc_code || employee.ifsc_code || null;
     }
 
     // 4. Documents (check employee_documents, plus add candidate resume if present)
@@ -2939,7 +2944,29 @@ router.post('/:id/verify-section', async (req, res, next) => {
 router.post('/:id/kyc-verify', async (req, res, next) => {
   try {
     const empId = req.params.id;
-    const { kyc_status, review_notes, pan_action, pan_reason, aadhaar_action, aadhaar_reason, bank_proof_action, bank_proof_reason, video_action, video_reason } = req.body;
+    const { kyc_status, review_notes, pan_action, pan_reason, aadhaar_action, aadhaar_reason, bank_proof_action, bank_proof_reason, video_action, video_reason, aadhaar_number, pan_number, bank_account, ifsc_code } = req.body;
+
+    // 0. Update identity details if passed
+    if (aadhaar_number || pan_number || bank_account || ifsc_code) {
+      const existingKyc = await query(`SELECT id FROM employee_kyc WHERE employee_id = $1 LIMIT 1`, [empId]);
+      if (existingKyc.rows.length > 0) {
+        await query(`
+          UPDATE employee_kyc
+          SET aadhaar_number = COALESCE($1, aadhaar_number),
+              pan_number = COALESCE($2, pan_number),
+              bank_account_number = COALESCE($3, bank_account_number),
+              ifsc_code = COALESCE($4, ifsc_code),
+              review_notes = COALESCE($5, review_notes),
+              updated_at = NOW()
+          WHERE employee_id = $6
+        `, [aadhaar_number || null, pan_number || null, bank_account || null, ifsc_code || null, review_notes || null, empId]).catch(() => {});
+      } else {
+        await query(`
+          INSERT INTO employee_kyc (employee_id, aadhaar_number, pan_number, bank_account_number, ifsc_code, review_notes, kyc_status)
+          VALUES ($1, $2, $3, $4, $5, $6, 'SUBMITTED')
+        `, [empId, aadhaar_number || null, pan_number || null, bank_account || null, ifsc_code || null, review_notes || null]).catch(() => {});
+      }
+    }
 
     // 1. Bulk KYC verification (Approve All or Reject All)
     if (kyc_status) {

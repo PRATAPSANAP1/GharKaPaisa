@@ -29,6 +29,8 @@ import AnnouncementBanner from '../components/AnnouncementBanner';
 const NAV_ITEMS = [
   { id: 'dashboard', path: '/partner/dashboard', label: 'Dashboard', icon: MdDashboard },
   { id: 'credit_card', path: '/partner/credit-cards', label: 'Credit Cards', icon: MdCreditCard },
+  { id: 'loan_on_credit_card', path: '/partner/loan-on-credit-card', label: 'Loan on Credit Card', icon: MdAccountBalanceWallet },
+  { id: 'smart_emi', path: '/partner/smart-emi', label: 'Smart EMI on Credit Card', icon: MdCreditCard },
   { id: 'loans', path: '/partner/loans', label: 'Loans', icon: MdAccountBalanceWallet },
   { id: 'insurance', path: '/partner/insurance', label: 'Insurance', icon: MdShield },
   {

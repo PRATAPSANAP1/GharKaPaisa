@@ -4805,6 +4805,29 @@ export default function EmployeeManagement() {
                           placeholder="Add KYC notes or verification remarks..."
                         />
                       </div>
+
+                      <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'flex-end' }}>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await api.post(`/employees/${drawerEmp.id}/kyc-verify`, {
+                                aadhaar_number: docIdentityFields.aadhaar_number,
+                                pan_number: docIdentityFields.pan_number,
+                                bank_account: docIdentityFields.bank_account,
+                                ifsc_code: docIdentityFields.ifsc_code,
+                                review_notes: docIdentityFields.admin_remarks
+                              });
+                              alert('Identity details updated successfully!');
+                              fetchDrawerEmp360(drawerEmp.id);
+                            } catch (err) {
+                              alert('Failed to update identity details');
+                            }
+                          }}
+                          style={{ padding: '8px 16px', background: C.teal, color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}
+                        >
+                          💾 Save Identity Details
+                        </button>
+                      </div>
                     </div>
 
                     {/* 360° Document Inspection & Action Center */}
