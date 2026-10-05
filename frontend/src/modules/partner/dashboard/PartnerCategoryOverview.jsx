@@ -271,6 +271,11 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
 
   const filteredBanks = useMemo(() => {
     let list = (Array.isArray(bankList) ? bankList : []).filter(b => {
+      const bSlug = (b.slug || '').toLowerCase();
+      const bName = (b.name || '').toLowerCase();
+      if (bSlug.includes('loc_eoc') || bSlug.includes('loc-eoc') || bName.includes('loc/eoc') || bName.includes('loan on card') || bName.includes('smart emi')) {
+        return false;
+      }
       const q = searchQuery.toLowerCase().trim();
       const matchesQuery = !q || b.name.toLowerCase().includes(q) || b.slug.toLowerCase().includes(q);
       const matchesCategory = bankCategoryFilter === 'all' || 

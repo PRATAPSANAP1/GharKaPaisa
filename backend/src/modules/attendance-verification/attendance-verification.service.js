@@ -452,7 +452,32 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
   const hasClientCoordinates = latitude !== undefined && longitude !== undefined && latitude !== null && longitude !== null;
 
   if (hasClientCoordinates) {
-    geoResult = await buildingGeofenceService.verifyLocationInBuilding(latitude, longitude, accuracy || 0);
+    // Check if employee has an active DB bypass approval
+    let hasDbBypass = false;
+    try {
+      const { rows: bypassRows } = await query(
+        `SELECT id FROM environment_bypass_approvals 
+         WHERE employee_id = $1 AND is_active = TRUE AND start_date <= CURRENT_DATE AND end_date >= CURRENT_DATE LIMIT 1`,
+        [authEmpId]
+      );
+      if (bypassRows && bypassRows.length > 0) {
+        hasDbBypass = true;
+      }
+    } catch (e) {}
+
+    if (hasDbBypass || process.env.ATTENDANCE_GEOFENCE_BYPASS === 'true' || process.env.DISABLE_GEOFENCE === 'true') {
+      logger.info(`[ATTENDANCE GEOFENCE] Location verification bypassed for employee ${authEmpId} (Active DB Bypass / ENV Override)`);
+      geoResult = {
+        matched: true,
+        building: { id: '00000000-0000-0000-0000-000000000001', name: 'Main Office Building (Pune - Approved Bypass)' },
+        isStrictInside: true,
+        distanceMeters: 0,
+        status: 'LOCATION_VERIFIED',
+        message: 'Location verified via approved bypass'
+      };
+    } else {
+      geoResult = await buildingGeofenceService.verifyLocationInBuilding(latitude, longitude, accuracy || 0);
+    }
 
     if (!geoResult.matched) {
       try {

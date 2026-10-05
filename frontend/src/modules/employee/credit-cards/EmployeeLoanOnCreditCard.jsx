@@ -133,7 +133,8 @@ export default function EmployeeLoanOnCreditCard() {
   const [tenureMonths, setTenureMonths] = useState(24);
   const [copiedId, setCopiedId] = useState(null);
 
-  // Apply Modal State
+  // Apply Modal & Benefits State
+  const [showBenefitsOffer, setShowBenefitsOffer] = useState(null);
   const [applyOffer, setApplyOffer] = useState(null);
   const [custName, setCustName] = useState('');
   const [custMobile, setCustMobile] = useState('');
@@ -612,7 +613,7 @@ export default function EmployeeLoanOnCreditCard() {
 
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
-                    onClick={() => handleCopyShareLink(offer)}
+                    onClick={() => setShowBenefitsOffer(offer)}
                     style={{
                       flex: 1,
                       padding: '9px',
@@ -629,7 +630,7 @@ export default function EmployeeLoanOnCreditCard() {
                       gap: '6px'
                     }}
                   >
-                    <FaCopy size={12} /> {copiedId === offer.id ? 'Copied!' : 'Copy Link'}
+                    <FaInfoCircle size={12} /> Benefits
                   </button>
 
                   <button
@@ -659,7 +660,85 @@ export default function EmployeeLoanOnCreditCard() {
         </div>
       )}
 
-      {/* ── 5. QUICK APPLY MODAL ── */}
+      {/* ── 5. BENEFITS MODAL ── */}
+      {showBenefitsOffer && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div style={{
+            background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px',
+            width: '100%', maxWidth: '520px', maxHeight: '85vh', display: 'flex', flexDirection: 'column',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.3)', overflow: 'hidden'
+          }}>
+            <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0 }}>
+                  {showBenefitsOffer.bank} — {showBenefitsOffer.title}
+                </h3>
+                <span style={{ fontSize: '12px', color: C.textMid }}>Product Details & Key Benefits</span>
+              </div>
+              <button onClick={() => setShowBenefitsOffer(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', color: C.textMid }}>✕</button>
+            </div>
+
+            <div style={{ padding: '24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', background: isDark ? '#0F172A' : '#F8FAFC', padding: '14px', borderRadius: '12px' }}>
+                <div>
+                  <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Max Loan Limit</span>
+                  <strong style={{ fontSize: '14px', color: C.text, fontWeight: 900 }}>{showBenefitsOffer.maxLoan}</strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Interest Rate</span>
+                  <strong style={{ fontSize: '14px', color: '#10B981', fontWeight: 900 }}>{showBenefitsOffer.minRoi}</strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Tenure</span>
+                  <strong style={{ fontSize: '13.5px', color: C.text, fontWeight: 800 }}>{showBenefitsOffer.tenure}</strong>
+                </div>
+                <div>
+                  <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Disbursal Time</span>
+                  <strong style={{ fontSize: '13.5px', color: showBenefitsOffer.accent, fontWeight: 800 }}>{showBenefitsOffer.disbursalTime}</strong>
+                </div>
+              </div>
+
+              <div>
+                <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.text, marginBottom: '10px' }}>Key Product Features:</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {showBenefitsOffer.features.map((feat, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '13px', color: C.textMid, lineHeight: 1.4 }}>
+                      <FaCheckCircle color="#10B981" size={14} style={{ marginTop: '2px', flexShrink: 0 }} />
+                      <span>{feat}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding: '16px 24px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: '10px', background: C.bgSecondary }}>
+              <button
+                type="button"
+                onClick={() => setShowBenefitsOffer(null)}
+                style={{ flex: 1, padding: '11px', borderRadius: '12px', border: `1px solid ${C.border}`, background: C.card, color: C.text, fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const offerToApply = showBenefitsOffer;
+                  setShowBenefitsOffer(null);
+                  setApplyOffer(offerToApply);
+                }}
+                style={{ flex: 1.5, padding: '11px', borderRadius: '12px', border: 'none', background: C.employeePrimary || '#0F766E', color: '#FFFFFF', fontWeight: 800, fontSize: '13.5px', cursor: 'pointer' }}
+              >
+                Apply for Customer Now →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 6. QUICK APPLY MODAL ── */}
       {applyOffer && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
@@ -739,16 +818,85 @@ export default function EmployeeLoanOnCreditCard() {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, display: 'block', marginBottom: '4px' }}>Process By</label>
-                  <select
-                    value={processBy}
-                    onChange={(e) => setProcessBy(e.target.value)}
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '13px', fontWeight: 600 }}
-                  >
-                    <option value="Punching Only">1. Punching Only</option>
-                    <option value="Linked share">2. Linked share</option>
-                    <option value="Direct link">3. Direct link</option>
-                  </select>
+                  <label style={{ fontSize: '12.5px', fontWeight: 800, color: C.text, display: 'block', marginBottom: '8px' }}>3. Process By *</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    
+                    {/* Option 1: Lead punching only */}
+                    <label style={{
+                      display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px', borderRadius: '12px',
+                      border: `2px solid ${processBy === 'Punching Only' ? (C.employeePrimary || '#0F766E') : C.border}`,
+                      background: processBy === 'Punching Only' ? `${C.employeePrimary || '#0F766E'}0D` : C.card,
+                      cursor: 'pointer', transition: 'all 0.2s'
+                    }}>
+                      <input
+                        type="radio"
+                        name="processBy"
+                        value="Punching Only"
+                        checked={processBy === 'Punching Only'}
+                        onChange={(e) => setProcessBy(e.target.value)}
+                        style={{ marginTop: '2px', accentColor: C.employeePrimary || '#0F766E' }}
+                      />
+                      <div>
+                        <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>
+                          1. Lead punching only
+                        </div>
+                        <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
+                          Records lead directly into your Partner CRM &amp; Applications queue for internal processing.
+                        </div>
+                      </div>
+                    </label>
+
+                    {/* Option 2: Linked share */}
+                    <label style={{
+                      display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px', borderRadius: '12px',
+                      border: `2px solid ${processBy === 'Linked share' ? (C.employeePrimary || '#0F766E') : C.border}`,
+                      background: processBy === 'Linked share' ? `${C.employeePrimary || '#0F766E'}0D` : C.card,
+                      cursor: 'pointer', transition: 'all 0.2s'
+                    }}>
+                      <input
+                        type="radio"
+                        name="processBy"
+                        value="Linked share"
+                        checked={processBy === 'Linked share'}
+                        onChange={(e) => setProcessBy(e.target.value)}
+                        style={{ marginTop: '2px', accentColor: C.employeePrimary || '#0F766E' }}
+                      />
+                      <div>
+                        <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>
+                          2. Linked share
+                        </div>
+                        <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
+                          Generates &amp; opens a pre-filled WhatsApp share link embedded with the official bank URL.
+                        </div>
+                      </div>
+                    </label>
+
+                    {/* Option 3: Direct bank process */}
+                    <label style={{
+                      display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px', borderRadius: '12px',
+                      border: `2px solid ${processBy === 'Direct link' ? (C.employeePrimary || '#0F766E') : C.border}`,
+                      background: processBy === 'Direct link' ? `${C.employeePrimary || '#0F766E'}0D` : C.card,
+                      cursor: 'pointer', transition: 'all 0.2s'
+                    }}>
+                      <input
+                        type="radio"
+                        name="processBy"
+                        value="Direct link"
+                        checked={processBy === 'Direct link'}
+                        onChange={(e) => setProcessBy(e.target.value)}
+                        style={{ marginTop: '2px', accentColor: C.employeePrimary || '#0F766E' }}
+                      />
+                      <div>
+                        <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>
+                          3. Direct bank process
+                        </div>
+                        <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
+                          Immediately opens the official bank portal in a new tab for direct customer application.
+                        </div>
+                      </div>
+                    </label>
+
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>

@@ -988,18 +988,7 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
               </button>
             </div>
 
-            {/* Mandatory Biometric Policy Notice */}
-            <div style={{ background: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: '16px', padding: '16px 20px', marginBottom: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#2563EB', fontSize: '13.5px', marginBottom: '4px' }}>
-                <FaShieldAlt /> ATTENDANCE BIOMETRIC REFERENCE ≠ PROFILE PHOTO
-              </div>
-              <p style={{ fontSize: '12.5px', color: '#0F172A', margin: '0 0 6px 0', lineHeight: 1.5 }}>
-                The face captured during KYC is stored specifically as your official <strong>Attendance Biometric Reference</strong>.
-              </p>
-              <p style={{ fontSize: '12px', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
-                This reference is immutable for the employee. Changing your profile picture later will NOT modify or replace your authoritative attendance biometric reference.
-              </p>
-            </div>
+
 
             {/* Enrolled & Locked State Banner */}
             {(faceEnrollCompleted || faceEnrollStatus?.is_enrolled) ? (

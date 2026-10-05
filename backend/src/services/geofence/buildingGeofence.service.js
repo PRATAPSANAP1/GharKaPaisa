@@ -210,6 +210,7 @@ async function verifyLocationInBuilding(latitude, longitude, accuracy = 0) {
   const lng = parseFloat(longitude);
 
   if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    console.warn(`[BUILDING GEOFENCE] Invalid GPS coordinates provided: Latitude=${latitude}, Longitude=${longitude}`);
     return {
       matched: false,
       building: null,
@@ -217,6 +218,28 @@ async function verifyLocationInBuilding(latitude, longitude, accuracy = 0) {
       distanceMeters: null,
       status: 'INVALID_COORDINATES',
       message: 'Invalid GPS latitude/longitude coordinates provided.'
+    };
+  }
+
+  console.log(`[BUILDING GEOFENCE] ================= GEOFENCE CHECK =================`);
+  console.log(`[BUILDING GEOFENCE] Device GPS Coordinates: Latitude = ${lat}, Longitude = ${lng}, Accuracy = ${accuracy}m`);
+
+  // Check Environment Bypass override
+  if (process.env.ATTENDANCE_GEOFENCE_BYPASS === 'true' || process.env.DISABLE_GEOFENCE === 'true') {
+    console.log(`[BUILDING GEOFENCE] ENVIRONMENT BYPASS ACTIVE: Skipping strict location check.`);
+    logger.info(`[BUILDING GEOFENCE] Geofence bypass enabled via environment variable.`);
+    return {
+      matched: true,
+      building: {
+        id: '00000000-0000-0000-0000-000000000001',
+        name: 'Main Office Building (Pune - Bypass Mode)',
+        code: 'MAIN_OFFICE_HQ',
+        address: 'Bypass Verified Premises'
+      },
+      isStrictInside: true,
+      distanceMeters: 0,
+      status: 'LOCATION_VERIFIED',
+      message: 'Verified via Environment Geofence Bypass'
     };
   }
 
@@ -228,11 +251,13 @@ async function verifyLocationInBuilding(latitude, longitude, accuracy = 0) {
 
   for (const building of activeBuildings) {
     const polygon = building.polygon_coordinates;
+    console.log(`[BUILDING GEOFENCE] Building: "${building.name}" (${building.code}) | 4 Corner Points:`, JSON.stringify(polygon));
     if (!polygon || polygon.length < 3) continue;
 
     // 1. Strict Polygon Test (Point-in-Polygon)
     const inside = isPointInPolygon(lat, lng, polygon);
     if (inside) {
+      console.log(`[BUILDING GEOFENCE] ✅ MATCH SUCCESS! Device coordinates (${lat}, ${lng}) fall INSIDE the 4 points of building: "${building.name}"`);
       logger.info(`[BUILDING GEOFENCE] Point is strictly inside building: "${building.name}" (${building.code})`);
       return {
         matched: true,
@@ -264,10 +289,14 @@ async function verifyLocationInBuilding(latitude, longitude, accuracy = 0) {
     const minDist = Math.min(distToPerimeter, distToCentroid);
     const buildingTolerance = Math.max(Number(building.tolerance_meters) || 100, 100);
 
-    // Effective tolerance accounts for indoor GPS drift and device accuracy (up to 250m buffer)
-    const effectiveTolerance = Math.max(buildingTolerance, Math.min(buildingTolerance + (accuracy || 0), 250));
+    // Effective tolerance accounts for indoor GPS drift and device accuracy (configurable max buffer)
+    const maxBuffer = parseInt(process.env.ATTENDANCE_LOCATION_TOLERANCE_METERS) || 500;
+    const effectiveTolerance = Math.max(buildingTolerance, Math.min(buildingTolerance + (accuracy || 0), maxBuffer));
+
+    console.log(`[BUILDING GEOFENCE] Building "${building.name}": Distance to perimeter/centroid = ${minDist.toFixed(1)}m (Effective Tolerance = ${effectiveTolerance}m)`);
 
     if (minDist <= effectiveTolerance) {
+      console.log(`[BUILDING GEOFENCE] ✅ MATCH SUCCESS! Device within tolerance buffer (${minDist.toFixed(1)}m <= ${effectiveTolerance}m) for building: "${building.name}"`);
       logger.info(`[BUILDING GEOFENCE] Point within tolerance buffer (${minDist.toFixed(1)}m <= ${effectiveTolerance}m) for "${building.name}"`);
       return {
         matched: true,
@@ -290,6 +319,7 @@ async function verifyLocationInBuilding(latitude, longitude, accuracy = 0) {
     }
   }
 
+  console.warn(`[BUILDING GEOFENCE] ❌ LOCATION MISMATCH: Device (${lat}, ${lng}) is outside all buildings. Closest: "${closestBuilding?.name || 'N/A'}" (${Math.round(minPerimeterDistance)}m away).`);
   logger.warn(`[BUILDING GEOFENCE] Location outside all buildings. Closest: "${closestBuilding?.name || 'N/A'}" (${Math.round(minPerimeterDistance)}m away).`);
 
   return {

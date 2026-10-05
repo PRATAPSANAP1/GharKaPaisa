@@ -206,19 +206,22 @@ export default function AttendanceVerificationModal({
   const getDeviceLocation = useCallback(() => {
     return new Promise((resolve) => {
       if (!navigator?.geolocation) {
+        console.warn('[ATTENDANCE GEOFENCE] Geolocation API not available on device');
         resolve(null);
         return;
       }
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          resolve({
+          const loc = {
             latitude: pos.coords.latitude,
             longitude: pos.coords.longitude,
             accuracy: pos.coords.accuracy,
-          });
+          };
+          console.log('[ATTENDANCE GEOFENCE] Device GPS Captured:', `Latitude: ${loc.latitude}, Longitude: ${loc.longitude}, Accuracy: ${loc.accuracy}m`);
+          resolve(loc);
         },
         (err) => {
-          console.warn('Geolocation retrieval error:', err);
+          console.warn('[ATTENDANCE GEOFENCE] Geolocation retrieval error:', err);
           resolve(null);
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -244,6 +247,7 @@ export default function AttendanceVerificationModal({
 
       // 2. Fetch current GPS location for office building geofence verification
       const locationData = await getDeviceLocation();
+      console.log('[ATTENDANCE GEOFENCE] Verifying location against office/test building 4-corner polygon coordinates:', locationData);
 
       // 3. Validate AWS Rekognition Liveness & Building Geofence on Backend
       const validateRes = await attendanceService.validateLivenessResult(
