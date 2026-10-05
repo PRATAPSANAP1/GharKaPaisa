@@ -235,8 +235,11 @@ app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 // ── API Routes ─────────────────────────────────────────────────
 const apiRouter = require('./routes/index');
+const messengerRoute = require('./modules/messenger/messenger.routes.js');
 app.use('/api/v1', apiRouter);
 app.use('/team', apiRouter);
+app.use('/messenger', messengerRoute);
+app.use('/api/v1/messenger', messengerRoute);
 
 // ── Test Routes ────────────────────────────────────────────────
 if (process.env.NODE_ENV !== 'production' && process.env.ENABLE_TEST_EMAIL_ROUTE === 'true') {
