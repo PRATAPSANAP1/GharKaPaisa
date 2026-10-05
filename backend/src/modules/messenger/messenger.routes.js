@@ -59,22 +59,27 @@ const upload = multer({
 });
 
 const handleUploadMiddleware = (req, res, next) => {
-  upload.single('file')(req, res, (err) => {
+  upload.any()(req, res, (err) => {
     if (err) {
       if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(400).json({ success: false, message: 'File size exceeds maximum allowed limit of 10 MB.' });
       }
       return res.status(400).json({ success: false, message: err.message || 'File upload error' });
     }
+    if (req.files && req.files.length > 0) {
+      req.file = req.files[0];
+    }
     next();
   });
 };
 
-router.post('/messages', messengerLimiter, controller.sendMessage);
+router.post('/messages', messengerLimiter, handleUploadMiddleware, controller.sendMessage);
 router.post('/attachments/upload', messengerLimiter, handleUploadMiddleware, controller.uploadAttachment);
 router.post('/attachment/upload', messengerLimiter, handleUploadMiddleware, controller.uploadAttachment);
 router.post('/upload', messengerLimiter, handleUploadMiddleware, controller.uploadAttachment);
 router.post('/files/upload', messengerLimiter, handleUploadMiddleware, controller.uploadAttachment);
+router.post('/attachments', messengerLimiter, handleUploadMiddleware, controller.uploadAttachment);
+router.post('/attachment', messengerLimiter, handleUploadMiddleware, controller.uploadAttachment);
 router.get('/media/:attachmentId', controller.getMediaAttachment);
 router.get('/attachments/file/:attachmentId', controller.getMediaAttachment);
 router.get('/attachments/:attachmentId', controller.getMediaAttachment);

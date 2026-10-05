@@ -29,12 +29,12 @@ export function getMessengerSocket() {
   socket = io(serverOrigin, {
     path: '/socket.io',
     auth: { token },
-    transports: ['polling', 'websocket'],
+    transports: ['websocket', 'polling'],
     withCredentials: true,
     autoConnect: true,
     reconnection: true,
-    reconnectionAttempts: 10,
-    reconnectionDelay: 1000
+    reconnectionAttempts: 5,
+    reconnectionDelay: 3000
   });
 
   socket.on('connect', () => {

@@ -130,14 +130,37 @@ async function sendMessage(req, res, next) {
   try {
     const senderId = req.user.id;
     logger.info(`[Messenger] sendMessage: sender_id=${senderId}, name="${req.user.full_name || 'N/A'}", email="${req.user.email || 'N/A'}"`);
-    const { conversation_id, message_type, message_text, reply_to_message_id, attachments } = req.body;
+    let { conversation_id, message_type, message_text, reply_to_message_id, attachments } = req.body || {};
+    
+    if (typeof attachments === 'string') {
+      try {
+        attachments = JSON.parse(attachments);
+      } catch (e) {
+        attachments = [];
+      }
+    }
+    if (!Array.isArray(attachments)) {
+      attachments = attachments ? [attachments] : [];
+    }
+
+    const fileToUpload = req.file || (req.files && req.files.length > 0 ? req.files[0] : null);
+    if (fileToUpload) {
+      const uploaded = await service.uploadAttachment(fileToUpload);
+      if (uploaded) {
+        attachments.push(uploaded);
+        if (!message_type || message_type === 'TEXT') {
+          message_type = uploaded.file_type || 'IMAGE';
+        }
+      }
+    }
+
     if (!conversation_id) {
       return error(res, 'conversation_id is required', 400);
     }
     const msg = await service.postMessage(senderId, {
       conversation_id,
-      message_type,
-      message_text,
+      message_type: message_type || (attachments.length > 0 ? (attachments[0].file_type || 'IMAGE') : 'TEXT'),
+      message_text: message_text || '',
       reply_to_message_id,
       attachments
     }, req.user);
@@ -374,10 +397,11 @@ async function updateGroupName(req, res, next) {
 
 async function uploadAttachment(req, res, next) {
   try {
-    if (!req.file) {
+    const file = req.file || (req.files && req.files.length > 0 ? req.files[0] : null);
+    if (!file) {
       return error(res, 'No file uploaded', 400);
     }
-    const uploaded = await service.uploadAttachment(req.file);
+    const uploaded = await service.uploadAttachment(file);
     return success(res, uploaded, 'Attachment uploaded successfully');
   } catch (err) {
     next(err);

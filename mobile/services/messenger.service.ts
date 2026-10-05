@@ -121,6 +121,30 @@ export const sendMessage = async (data: {
   return res.data?.data;
 };
 
+export const uploadAttachment = async (
+  fileUri: string,
+  fileName?: string,
+  fileMimeType?: string
+): Promise<any> => {
+  const name = fileName || fileUri.split('/').pop() || `file_${Date.now()}.jpg`;
+  const match = /\.(\w+)$/.exec(name);
+  const type = fileMimeType || (match ? `image/${match[1]}` : 'image/jpeg');
+
+  const formData = new FormData();
+  formData.append('file', {
+    uri: fileUri,
+    name: name,
+    type: type,
+  } as any);
+
+  const res = await apiClient.post('/messenger/attachments/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return res.data?.data;
+};
+
 export const sendMessageWithAttachment = async (
   conversationId: string,
   imageUri: string,
