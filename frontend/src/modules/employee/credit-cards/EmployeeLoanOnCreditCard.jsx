@@ -780,15 +780,25 @@ export default function EmployeeLoanOnCreditCard() {
         }}>
           <div style={{
             background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px',
-            width: '100%', maxWidth: '480px', padding: '28px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+            width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto', padding: '28px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
             position: 'relative'
           }}>
-            <h3 style={{ fontSize: '20px', fontWeight: 900, color: C.text, margin: '0 0 6px 0' }}>
-              Apply {applyOffer.bank} {applyOffer.title}
-            </h3>
-            <p style={{ fontSize: '13px', color: C.textMid, margin: '0 0 20px 0' }}>
-              Submit lead details for customer card loan eligibility verification.
-            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <h3 style={{ fontSize: '20px', fontWeight: 900, color: C.text, margin: '0 0 6px 0' }}>
+                  Apply {applyOffer.bank} {applyOffer.title}
+                </h3>
+                <p style={{ fontSize: '13px', color: C.textMid, margin: '0 0 20px 0' }}>
+                  Submit lead details for customer card loan eligibility verification.
+                </p>
+              </div>
+              <button 
+                onClick={() => setApplyOffer(null)} 
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', color: C.textMid, padding: '4px' }}
+              >
+                ✕
+              </button>
+            </div>
 
             {submitSuccess ? (
               <div style={{ textAlign: 'center', padding: '24px 0' }}>
