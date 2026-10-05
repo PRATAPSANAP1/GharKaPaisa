@@ -12,4 +12,14 @@ router.get('/today', ctrl.getTodayAttendance);
 router.get('/my-attendance', ctrl.getMyAttendance);
 router.get('/my-summary', ctrl.getMySummary);
 
+// Fallback alias routes for enrollment & verification status
+router.get('/enrollment/status', (req, res, next) => {
+  try {
+    const enrollmentCtrl = require('../attendance-enrollment/attendance-enrollment.controller');
+    return enrollmentCtrl.getMyStatus(req, res, next);
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
