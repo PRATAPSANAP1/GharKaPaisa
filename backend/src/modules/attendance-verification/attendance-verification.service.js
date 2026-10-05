@@ -86,14 +86,35 @@ const createVerificationSession = async ({ reqUser }) => {
   }
 
   // Check for ACTIVE KYC Biometric Template (Authoritative source for attendance)
-  const { rows: [activeTemplate] } = await query(
+  let { rows: [activeTemplate] } = await query(
     `SELECT id, version, s3_key, status FROM employee_biometric_templates WHERE employee_id = $1 AND status = 'ACTIVE' LIMIT 1`,
     [authEmpId]
   );
 
+  // Fallback: If no explicit template is indexed yet, check if employee has a verified photo in employees or employee_documents
   if (!activeTemplate || !activeTemplate.s3_key) {
-    const error = new Error('Attendance Biometric Enrollment is required before marking attendance. Please complete biometric enrollment in the KYC panel.');
-    error.statusCode = 404;
+    const { rows: [photoDoc] } = await query(
+      `SELECT document_url, s3_key, file_path 
+       FROM employee_documents 
+       WHERE employee_id = $1 AND LOWER(document_type) IN ('photo', 'profile_photo', 'face', 'kyc_photo')
+       ORDER BY created_at DESC LIMIT 1`,
+      [authEmpId]
+    ).catch(() => ({ rows: [] }));
+
+    const photoKey = photoDoc?.s3_key || photoDoc?.file_path || employee.profile_photo_url || employee.face_reference_url;
+    if (photoKey) {
+      activeTemplate = {
+        version: 1,
+        s3_key: photoKey,
+        status: 'ACTIVE'
+      };
+    }
+  }
+
+  if (!activeTemplate || !activeTemplate.s3_key) {
+    const error = new Error('Attendance Biometric Enrollment is required before marking attendance. Please complete your face verification photograph in the employee KYC panel.');
+    error.statusCode = 400;
+    error.reason = 'BIOMETRIC_ENROLLMENT_REQUIRED';
     throw error;
   }
 

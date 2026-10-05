@@ -40,4 +40,15 @@ router.get(['/enrollment/reminders/:employeeId', '/enrollment/reminder/:employee
   }
 });
 
+// Verification fallback routes
+const verificationCtrl = require('../attendance-verification/attendance-verification.controller');
+const { upload } = require('../../services/aws/s3.service');
+
+router.post(['/verification/session', '/verification-session', '/session'], verificationCtrl.createSession);
+router.post(['/verification/liveness/session', '/liveness/session'], verificationCtrl.createLivenessSession);
+router.post(['/verification/liveness/credentials', '/liveness/credentials'], verificationCtrl.getLivenessCredentials);
+router.post(['/verification/liveness/result', '/liveness/result'], verificationCtrl.validateLivenessResult);
+router.post(['/verification/complete', '/complete'], upload.single('face_image'), verificationCtrl.completeVerification);
+router.get(['/verification/session/:sessionId', '/session/:sessionId'], verificationCtrl.getSessionStatus);
+
 module.exports = router;
