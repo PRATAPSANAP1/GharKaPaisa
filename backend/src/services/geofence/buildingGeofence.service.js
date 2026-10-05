@@ -9,12 +9,12 @@ const DEFAULT_BUILDINGS = [
     code: 'MAIN_OFFICE_HQ',
     address: 'Primary Office Building Premises',
     polygon_coordinates: [
-      [18.619358, 73.874924],
-      [18.619565, 73.874942],
-      [18.619585, 73.874550],
-      [18.619377, 73.874543]
+      [18.619900, 73.875100],
+      [18.619900, 73.874300],
+      [18.619200, 73.874300],
+      [18.619200, 73.875100]
     ],
-    tolerance_meters: 100,
+    tolerance_meters: 150,
     is_active: true
   },
   {
@@ -23,12 +23,12 @@ const DEFAULT_BUILDINGS = [
     code: 'BRANCH_OFFICE_02',
     address: 'Secondary Office Building Premises',
     polygon_coordinates: [
-      [19.381363, 75.467645],
-      [19.381447, 75.467656],
-      [19.381458, 75.467571],
-      [19.381371, 75.467558]
+      [19.762000, 75.249000],
+      [19.762000, 75.245000],
+      [19.759000, 75.245000],
+      [19.759000, 75.249000]
     ],
-    tolerance_meters: 100,
+    tolerance_meters: 150,
     is_active: true
   }
 ];
@@ -57,26 +57,28 @@ async function ensureGeofenceTableExists() {
       CREATE INDEX IF NOT EXISTS idx_office_buildings_active ON office_building_geofences(is_active);
     `);
 
-    // Ensure default buildings exist in DB
+    // Ensure default buildings exist in DB and update polygon_coordinates if already present
     for (const def of DEFAULT_BUILDINGS) {
       await query(
         `INSERT INTO office_building_geofences (id, name, code, address, polygon_coordinates, tolerance_meters, is_active)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (code) DO NOTHING`,
+         VALUES ($1, $2, $3, $4, $5, $6, TRUE)
+         ON CONFLICT (code) DO UPDATE SET 
+           polygon_coordinates = EXCLUDED.polygon_coordinates,
+           tolerance_meters = EXCLUDED.tolerance_meters,
+           updated_at = NOW()`,
         [
           def.id,
           def.name,
           def.code,
           def.address,
           JSON.stringify(def.polygon_coordinates),
-          def.tolerance_meters,
-          def.is_active
+          def.tolerance_meters
         ]
       );
     }
 
-    // Ensure all existing DB buildings have at least 100m tolerance to handle indoor GPS drift
-    await query(`UPDATE office_building_geofences SET tolerance_meters = 100 WHERE tolerance_meters < 100`);
+    // Ensure all existing DB buildings have at least 150m tolerance to handle indoor GPS drift
+    await query(`UPDATE office_building_geofences SET tolerance_meters = 150 WHERE tolerance_meters < 150`);
 
     tableVerified = true;
   } catch (err) {
@@ -287,10 +289,11 @@ async function verifyLocationInBuilding(latitude, longitude, accuracy = 0) {
     const distToCentroid = calculateHaversineDistance(lat, lng, centroidLat, centroidLng);
 
     const minDist = Math.min(distToPerimeter, distToCentroid);
-    const buildingTolerance = Math.max(Number(building.tolerance_meters) || 100, 100);
+    const buildingTolerance = Math.max(Number(building.tolerance_meters) || 150, 150);
 
-    // Effective tolerance accounts for indoor GPS drift and device accuracy (configurable max buffer)
-    const maxBuffer = parseInt(process.env.ATTENDANCE_LOCATION_TOLERANCE_METERS) || 500;
+    // Effective tolerance accounts for indoor GPS drift, hardware inaccuracy, and desktop browser IP geolocation (e.g. 50,000m)
+    const defaultMaxBuffer = (accuracy && accuracy >= 1000) ? Math.min(accuracy + 1000, 100000) : 1000;
+    const maxBuffer = parseInt(process.env.ATTENDANCE_LOCATION_TOLERANCE_METERS) || defaultMaxBuffer;
     const effectiveTolerance = Math.max(buildingTolerance, Math.min(buildingTolerance + (accuracy || 0), maxBuffer));
 
     console.log(`[BUILDING GEOFENCE] Building "${building.name}": Distance to perimeter/centroid = ${minDist.toFixed(1)}m (Effective Tolerance = ${effectiveTolerance}m)`);
