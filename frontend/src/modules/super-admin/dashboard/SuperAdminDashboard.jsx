@@ -169,10 +169,24 @@ export default function SuperAdminDashboard() {
     setBankModalOpen(true);
 
     try {
-      const res = await api.get('/banks');
-      if (res.data && res.data.data) {
-        setAllBanks(res.data.data);
+      const res = await api.get('/banks?limit=1000');
+      let banksList = res.data && res.data.data ? (Array.isArray(res.data.data) ? res.data.data : res.data.data.rows || []) : [];
+      
+      // Ensure LOC/EOC bank option is included in the list
+      const hasLocEoc = banksList.some(b => (b.short_code || '').toUpperCase() === 'LOC_EOC' || String(b.name || '').toLowerCase().includes('loc/eoc') || String(b.name || '').toLowerCase().includes('loan on card'));
+      if (!hasLocEoc) {
+        banksList = [
+          {
+            id: 'LOC_EOC',
+            name: 'LOC/EOC (Loan on Card & Smart EMI)',
+            short_code: 'LOC_EOC',
+            is_loc_eoc: true
+          },
+          ...banksList
+        ];
       }
+      setAllBanks(banksList);
+
       const assignedRes = await api.get(`/superadmin/admins/${admin._id || admin.id}/banks`);
       if (assignedRes.data && assignedRes.data.data) {
         setAssignedBankIds(assignedRes.data.data.map(b => b.id || b));
@@ -201,6 +215,19 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  const handleSelectAllBanks = async (selectAll) => {
+    const updated = selectAll ? allBanks.map(b => b.id) : [];
+    setAssignedBankIds(updated);
+    try {
+      await api.put(`/superadmin/admins/${selectedOpHead.id}/banks`, {
+        bank_ids: updated
+      });
+      fetchAdmins();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update bank assignments');
+    }
+  };
+
   const fetchBusinessStats = async () => {
     try {
       const res = await api.get('/reports/overview');
@@ -212,9 +239,34 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  const fetchAllBanksList = async () => {
+    try {
+      const res = await api.get('/banks?limit=1000');
+      let banksList = res.data && res.data.data ? (Array.isArray(res.data.data) ? res.data.data : res.data.data.rows || []) : [];
+      const hasLocEoc = banksList.some(b => (b.short_code || '').toUpperCase() === 'LOC_EOC' || String(b.name || '').toLowerCase().includes('loc/eoc') || String(b.name || '').toLowerCase().includes('loan on card'));
+      if (!hasLocEoc) {
+        banksList = [
+          {
+            id: 'LOC_EOC',
+            name: 'LOC/EOC (Loan on Card & Smart EMI)',
+            short_code: 'LOC_EOC',
+            is_loc_eoc: true
+          },
+          ...banksList
+        ];
+      }
+      setAllBanks(banksList);
+      return banksList;
+    } catch (err) {
+      console.error('Failed to load banks:', err);
+      return [];
+    }
+  };
+
   useEffect(() => {
     fetchAdmins();
     fetchBusinessStats();
+    fetchAllBanksList();
   }, []);
 
   // Handle Input change
@@ -1305,52 +1357,110 @@ export default function SuperAdminDashboard() {
               </button>
             </div>
 
-            <p style={{ fontSize: "13px", color: "#374151", marginBottom: "14px", fontWeight: 600 }}>
-              Select Banks managed by this Operation Head. All applications under selected banks will be routed to this Operation Head:
-            </p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", gap: "10px", flexWrap: "wrap" }}>
+              <p style={{ fontSize: "13px", color: "#374151", margin: 0, fontWeight: 600, flex: 1 }}>
+                Select Banks & Products managed by this Operation Head ({assignedBankIds.length} Selected):
+              </p>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => handleSelectAllBanks(true)}
+                  style={{ padding: "4px 10px", fontSize: "12px", fontWeight: 700, background: "#EFF6FF", color: "#2563EB", border: "1px solid #BFDBFE", borderRadius: "6px", cursor: "pointer" }}
+                >
+                  Select All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectAllBanks(false)}
+                  style={{ padding: "4px 10px", fontSize: "12px", fontWeight: 600, background: "#F1F5F9", color: "#64748B", border: "1px solid #E2E8F0", borderRadius: "6px", cursor: "pointer" }}
+                >
+                  Clear All
+                </button>
+              </div>
+            </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {/* Modal Search Bar */}
+            <div style={{ position: "relative", marginBottom: "14px" }}>
+              <input 
+                type="text"
+                placeholder="Search bank or product (e.g. LOC, HDFC, SBI)..."
+                value={bankSearchQuery}
+                onChange={(e) => setBankSearchQuery(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "9px 12px 9px 34px",
+                  borderRadius: "8px",
+                  border: "1px solid #D1D5DB",
+                  fontSize: "13px",
+                  outline: "none",
+                  boxSizing: "border-box"
+                }}
+              />
+              <span style={{ position: "absolute", left: "12px", top: "10px", fontSize: "12px", color: "#9CA3AF" }}>🔍</span>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "50vh", overflowY: "auto", paddingRight: "4px" }}>
               {allBanks.length === 0 ? (
-                <div style={{ color: "#6B7280", padding: "20px", textAlign: "center" }}>Loading banks list...</div>
+                <div style={{ color: "#6B7280", padding: "20px", textAlign: "center" }}>Loading banks & products list...</div>
               ) : (
-                allBanks.map(bank => {
-                  const isChecked = assignedBankIds.includes(bank.id);
-                  return (
-                    <div
-                      key={bank.id}
-                      onClick={() => handleToggleBankAssignment(bank.id)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "12px 16px",
-                        borderRadius: "10px",
-                        border: `1.5px solid ${isChecked ? "#2563EB" : "#E5E7EB"}`,
-                        background: isChecked ? "#EFF6FF" : "#F9FAFB",
-                        cursor: "pointer",
-                        transition: "all 0.2s"
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        {bank.logo_url ? (
-                          <img src={bank.logo_url} alt={bank.name} style={{ width: "32px", height: "32px", objectFit: "contain", borderRadius: "6px" }} />
-                        ) : (
-                          <div style={{ width: "32px", height: "32px", background: "#DBEAFE", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: "#1D4ED8", fontSize: "12px" }}>
-                            {bank.short_code?.substring(0, 3) || 'BNK'}
+                allBanks
+                  .filter(bank => {
+                    const q = (bankSearchQuery || '').toLowerCase();
+                    return bank.name.toLowerCase().includes(q) || (bank.short_code || '').toLowerCase().includes(q);
+                  })
+                  .map(bank => {
+                    const isChecked = assignedBankIds.includes(bank.id);
+                    const isLocEoc = (bank.short_code || '').toUpperCase() === 'LOC_EOC' || bank.is_loc_eoc || String(bank.name || '').toLowerCase().includes('loc/eoc');
+                    
+                    return (
+                      <div
+                        key={bank.id}
+                        onClick={() => handleToggleBankAssignment(bank.id)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "12px 16px",
+                          borderRadius: "10px",
+                          border: `1.5px solid ${isChecked ? (isLocEoc ? "#059669" : "#2563EB") : (isLocEoc ? "#A7F3D0" : "#E5E7EB")}`,
+                          background: isChecked ? (isLocEoc ? "#ECFDF5" : "#EFF6FF") : (isLocEoc ? "#F0FDF4" : "#F9FAFB"),
+                          cursor: "pointer",
+                          transition: "all 0.2s"
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                          {isLocEoc ? (
+                            <div style={{ width: "36px", height: "36px", background: "#059669", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: "#FFFFFF", fontSize: "16px" }}>
+                              💳
+                            </div>
+                          ) : bank.logo_url ? (
+                            <img src={bank.logo_url} alt={bank.name} style={{ width: "32px", height: "32px", objectFit: "contain", borderRadius: "6px" }} />
+                          ) : (
+                            <div style={{ width: "32px", height: "32px", background: "#DBEAFE", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: "#1D4ED8", fontSize: "12px" }}>
+                              {bank.short_code?.substring(0, 3) || 'BNK'}
+                            </div>
+                          )}
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span style={{ fontWeight: 700, fontSize: "14px", color: "#111827" }}>{bank.name}</span>
+                              {isLocEoc && (
+                                <span style={{ background: "#059669", color: "#FFFFFF", fontSize: "10px", fontWeight: 800, padding: "2px 6px", borderRadius: "4px" }}>
+                                  SPECIAL CATEGORY
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: "11px", color: isLocEoc ? "#047857" : "#6B7280" }}>
+                              {isLocEoc ? 'All Loan on Credit Card & Smart EMI applications' : `Short code: ${bank.short_code}`}
+                            </div>
                           </div>
-                        )}
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: "14px", color: "#111827" }}>{bank.name}</div>
-                          <div style={{ fontSize: "11px", color: "#6B7280" }}>Short code: {bank.short_code}</div>
+                        </div>
+
+                        <div style={{ width: "22px", height: "22px", borderRadius: "6px", border: `2px solid ${isChecked ? (isLocEoc ? "#059669" : "#2563EB") : "#9CA3AF"}`, background: isChecked ? (isLocEoc ? "#059669" : "#2563EB") : "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center", color: "#FFFFFF", fontWeight: 800, fontSize: "13px" }}>
+                          {isChecked ? '✓' : ''}
                         </div>
                       </div>
-
-                      <div style={{ width: "22px", height: "22px", borderRadius: "6px", border: `2px solid ${isChecked ? "#2563EB" : "#9CA3AF"}`, background: isChecked ? "#2563EB" : "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center", color: "#FFFFFF", fontWeight: 800, fontSize: "13px" }}>
-                        {isChecked ? '✓' : ''}
-                      </div>
-                    </div>
-                  );
-                })
+                    );
+                  })
               )}
             </div>
 

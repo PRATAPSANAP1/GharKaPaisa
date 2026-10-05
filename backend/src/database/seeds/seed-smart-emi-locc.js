@@ -18,11 +18,11 @@ const LOAN_ON_CARD_AND_SMART_EMI_PRODUCTS = [
   {
     bank_name: 'HDFC Bank',
     short_code: 'HDFC',
-    name: 'HDFC Bank Insta Loan & Jumbo Loan',
+    name: 'HDFC Bank Instant & Jumbo Loan',
     category: 'loc_eoc',
     sub_category: 'LOC',
     short_description: 'Over-and-above credit limit pre-approved instant cash loan transferred directly to savings account.',
-    description: 'HDFC Bank Insta Loan and Insta Jumbo Loan provide pre-approved instant cash funds credited to your savings account in 10 seconds. Jumbo Loans do not block your credit card spending limit.',
+    description: 'HDFC Bank Instant Loan and Jumbo Loan provide pre-approved instant cash funds credited to your savings account in 10 seconds. Jumbo Loans do not block your credit card spending limit.',
     annual_fee: '₹999 + GST Fee',
     joining_fee: 'Nil',
     interest_rate: '11.49% - 15.50% p.a.',
@@ -41,7 +41,7 @@ const LOAN_ON_CARD_AND_SMART_EMI_PRODUCTS = [
   {
     bank_name: 'HDFC Bank',
     short_code: 'HDFC',
-    name: 'HDFC Bank SmartEMI on Credit Card',
+    name: 'HDFC Bank EMI on Credit Card',
     category: 'loc_eoc',
     sub_category: 'EOC',
     short_description: 'Convert HDFC credit card purchases into flexible EMIs up to 48 months with low interest rates.',
@@ -64,6 +64,21 @@ const LOAN_ON_CARD_AND_SMART_EMI_PRODUCTS = [
 async function seedSmartEmiAndLoccProducts() {
   logger.info('Starting LOC/EOC products seeding process...');
 
+  // 1. Ensure LOC_EOC bank exists in banks table for Operation Head routing
+  try {
+    await query(`
+      INSERT INTO banks (name, short_code, is_active, status)
+      VALUES ('LOC/EOC (Loan on Card & Smart EMI)', 'LOC_EOC', true, 'Active')
+      ON CONFLICT (short_code) DO UPDATE SET 
+        name = 'LOC/EOC (Loan on Card & Smart EMI)',
+        is_active = true,
+        status = 'Active'
+    `);
+    logger.info("Ensured 'LOC/EOC' bank entry exists in banks table");
+  } catch (err) {
+    logger.warn('Could not insert LOC_EOC bank:', err.message);
+  }
+
   // Ensure product_category enum includes 'loc_eoc'
   try {
     const { rows } = await query(`
@@ -84,14 +99,14 @@ async function seedSmartEmiAndLoccProducts() {
     await query(`
       DELETE FROM products 
       WHERE (category::text IN ('loan_on_credit_card', 'smart_emi') OR category::text = 'loc_eoc')
-        AND name NOT IN ('HDFC Bank Insta Loan & Jumbo Loan', 'HDFC Bank SmartEMI on Credit Card')
+        AND name NOT IN ('HDFC Bank Instant & Jumbo Loan', 'HDFC Bank Insta Loan & Jumbo Loan', 'HDFC Bank EMI on Credit Card', 'HDFC Bank SmartEMI on Credit Card')
         AND id NOT IN (SELECT product_id FROM applications WHERE product_id IS NOT NULL)
     `);
     await query(`
       UPDATE products 
       SET is_active = false, status = 'Inactive'
       WHERE (category::text IN ('loan_on_credit_card', 'smart_emi') OR category::text = 'loc_eoc')
-        AND name NOT IN ('HDFC Bank Insta Loan & Jumbo Loan', 'HDFC Bank SmartEMI on Credit Card')
+        AND name NOT IN ('HDFC Bank Instant & Jumbo Loan', 'HDFC Bank Insta Loan & Jumbo Loan', 'HDFC Bank EMI on Credit Card', 'HDFC Bank SmartEMI on Credit Card')
     `);
   } catch (cleanErr) {
     logger.warn('Error cleaning legacy card loan / smart EMI products:', cleanErr.message);

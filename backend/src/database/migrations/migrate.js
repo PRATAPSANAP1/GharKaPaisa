@@ -4565,6 +4565,20 @@ const migrate = async () => {
 
     try {
       await query(`
+        INSERT INTO banks (name, short_code, is_active, status)
+        VALUES ('LOC/EOC (Loan on Card & Smart EMI)', 'LOC_EOC', true, 'Active')
+        ON CONFLICT (short_code) DO UPDATE SET 
+          name = 'LOC/EOC (Loan on Card & Smart EMI)',
+          is_active = true,
+          status = 'Active'
+      `);
+      logger.info("LOC/EOC bank entry verified in banks table");
+    } catch (locErr) {
+      logger.warn('LOC_EOC bank entry migration notice:', locErr.message);
+    }
+
+    try {
+      await query(`
         ALTER TABLE customer_activity_logs ALTER COLUMN device TYPE TEXT;
         ALTER TABLE customer_activity_logs ALTER COLUMN ip_address TYPE VARCHAR(100);
         ALTER TABLE customer_activity_logs ALTER COLUMN activity_type TYPE VARCHAR(255);

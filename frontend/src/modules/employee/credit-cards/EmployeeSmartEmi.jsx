@@ -36,6 +36,27 @@ export default function EmployeeSmartEmi() {
     return hdfcLogo;
   };
 
+  // Canonical HDFC Bank EMI on Credit Card product
+  const defaultHdfcScheme = useMemo(() => ({
+    id: 'hdfc-smart-emi',
+    bank: 'HDFC Bank',
+    title: 'HDFC Bank EMI on Credit Card',
+    logo: hdfcLogo,
+    accent: '#2563EB',
+    minTransaction: '₹2,500',
+    minRoi: '1.15% per month (13.80% p.a.)',
+    tenure: '3 - 48 Months',
+    processingFee: '₹199 + GST',
+    conversionSpeed: 'Instant / Within 24 Hrs',
+    badge: 'Popular Scheme',
+    features: [
+      'Instant 1-click conversion via NetBanking, MobileBanking, or SMS',
+      'Convert big-ticket credit card purchases within 60 days of transaction',
+      'No-Cost EMI options available across 5,000+ top retail & online merchant outlets',
+      'Retain original reward points earned on card before EMI conversion'
+    ]
+  }), []);
+
   // Fetch dynamic schemes from backend API
   React.useEffect(() => {
     const fetchDynamicSchemes = async () => {
@@ -46,57 +67,62 @@ export default function EmployeeSmartEmi() {
         });
         const prods = res.data?.data?.rows || res.data?.data || res.data?.products || [];
         if (Array.isArray(prods) && prods.length > 0) {
-          // Filter products relevant for Smart EMI / EMI on credit card
-          const smartEmiProds = (Array.isArray(prods) ? prods : []).filter(p => {
+          // Strictly filter only HDFC Bank Smart EMI / EMI on credit card products
+          const smartEmiProds = prods.filter(p => {
             const cat = String(p.category || '').toLowerCase();
             const subCat = String(p.sub_category || '').toLowerCase();
             const pName = String(p.name || '').toLowerCase();
-            return cat.includes('loc_eoc') || cat.includes('smart_emi') || 
-                   subCat.includes('eoc') || subCat.includes('smart emi') || 
-                   pName.includes('emi') || 
-                   pName.includes('flexipay') || 
-                   pName.includes('convert') ||
-                   (cat.includes('loan') && (subCat.includes('emi') || pName.includes('smart')));
+            const bName = String(p.bank_name || p.bank || '').toLowerCase();
+            
+            const isHdfc = bName.includes('hdfc') || pName.includes('hdfc');
+            const isEmi = cat === 'loc_eoc' || cat === 'smart_emi' ||
+                          subCat === 'eoc' || subCat.includes('smart emi') ||
+                          pName.includes('smartemi') || pName.includes('smart emi') || pName.includes('emi');
+            
+            return isHdfc && isEmi;
           });
 
-          const targetProds = smartEmiProds.length > 0 ? smartEmiProds : (Array.isArray(prods) ? prods : []).filter(p => String(p.category || '').toLowerCase().includes('loan'));
-
-          if (targetProds.length > 0) {
-            const mapped = targetProds.map(p => {
+          if (smartEmiProds.length > 0) {
+            const mapped = smartEmiProds.map(p => {
               let parsedFeatures = [];
               try {
                 parsedFeatures = typeof p.features === 'string' ? JSON.parse(p.features) : (Array.isArray(p.features) ? p.features : []);
               } catch (e) {
                 parsedFeatures = [p.description || 'Flexible EMI conversion'];
               }
-              const bName = p.bank_name || p.bank || 'Partner Bank';
+              const bName = p.bank_name || p.bank || 'HDFC Bank';
               return {
                 id: p.id,
                 bank_id: p.bank_id,
-                bank: bName,
-                title: p.name,
-                logo: getBankLogo(bName, p.bank_logo || p.logo || p.image_url),
+                bank: 'HDFC Bank',
+                title: p.name?.includes('EMI') ? p.name : 'HDFC Bank EMI on Credit Card',
+                logo: getBankLogo('HDFC Bank', p.bank_logo || p.logo || p.image_url),
                 accent: '#2563EB',
-                minTransaction: p.joining_fee || '₹2,500',
-                minRoi: p.interest_rate || '1.15% per month (13.8% p.a.)',
-                tenure: p.time_period || '3 - 36 Months',
+                minTransaction: p.joining_fee && p.joining_fee !== 'Nil' ? p.joining_fee : '₹2,500',
+                minRoi: p.interest_rate || '1.15% per month (13.80% p.a.)',
+                tenure: p.time_period || '3 - 48 Months',
                 processingFee: p.annual_fee || p.processing_fee || '₹199 + GST',
                 conversionSpeed: 'Instant / Within 24 Hrs',
                 badge: p.badge || 'Popular Scheme',
-                features: parsedFeatures.length > 0 ? parsedFeatures : [p.description || 'Convert purchases into easy EMIs']
+                features: parsedFeatures.length > 0 ? parsedFeatures : defaultHdfcScheme.features
               };
             });
             setDbSchemes(mapped);
+          } else {
+            setDbSchemes([defaultHdfcScheme]);
           }
+        } else {
+          setDbSchemes([defaultHdfcScheme]);
         }
       } catch (err) {
         console.error('Failed to load dynamic Smart EMI schemes:', err);
+        setDbSchemes([defaultHdfcScheme]);
       } finally {
         setLoadingProds(false);
       }
     };
     fetchDynamicSchemes();
-  }, []);
+  }, [defaultHdfcScheme]);
 
   const activeSchemes = dbSchemes;
 
@@ -460,22 +486,8 @@ export default function EmployeeSmartEmi() {
               cursor: 'pointer'
             }}
           >
-            <option value="ALL">All Banks</option>
+            <option value="ALL">All Banks (HDFC Bank)</option>
             <option value="HDFC Bank">HDFC Bank</option>
-            <option value="SBI Card">SBI Card</option>
-            <option value="ICICI Bank">ICICI Bank</option>
-            <option value="Axis Bank">Axis Bank</option>
-            <option value="IDFC FIRST Bank">IDFC FIRST Bank</option>
-            <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
-            <option value="RBL Bank">RBL Bank</option>
-            <option value="IndusInd Bank">IndusInd Bank</option>
-            <option value="AU Small Finance Bank">AU Small Finance Bank</option>
-            <option value="Federal Bank">Federal Bank</option>
-            <option value="YES Bank">YES Bank</option>
-            <option value="Bank of Baroda">Bank of Baroda</option>
-            <option value="Standard Chartered Bank">Standard Chartered Bank</option>
-            <option value="Canara Bank">Canara Bank</option>
-            <option value="Union Bank of India">Union Bank of India</option>
           </select>
         </div>
       </div>

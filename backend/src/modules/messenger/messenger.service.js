@@ -586,6 +586,21 @@ async function updateGroupName(conversationId, name, userId, userRole) {
   return updated;
 }
 
+async function updateGroupAvatar(conversationId, avatarUrl, userId, userRole) {
+  const isSuperAdmin = (userRole || '').toUpperCase() === 'SUPER_ADMIN';
+  if (!isSuperAdmin) {
+    throw new Error('Access denied. Only Super Admin can edit the group photo.');
+  }
+  if (!avatarUrl) {
+    throw new Error('Group photo URL is required.');
+  }
+  const updated = await repo.updateGroupAvatar(conversationId, avatarUrl);
+  if (!updated) {
+    throw new Error('Group conversation not found.');
+  }
+  return updated;
+}
+
 async function addGroupMembers(conversationId, currentUserId, memberUserIds = [], userRole = null) {
   const isSuperAdmin = (userRole || '').toUpperCase() === 'SUPER_ADMIN';
   if (!isSuperAdmin) {
@@ -804,6 +819,7 @@ module.exports = {
   startOrGetApplicationChat,
   createGroup,
   updateGroupName,
+  updateGroupAvatar,
   getConversationDetails,
   getMessages,
   postMessage,

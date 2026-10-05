@@ -36,6 +36,27 @@ export default function EmployeeLoanOnCreditCard() {
     return hdfcLogo;
   };
 
+  // Canonical HDFC Bank Instant & Jumbo Loan product
+  const defaultHdfcOffer = useMemo(() => ({
+    id: 'hdfc-instant-jumbo-loan',
+    bank: 'HDFC Bank',
+    title: 'HDFC Bank Instant & Jumbo Loan',
+    logo: hdfcLogo,
+    accent: '#0F766E',
+    maxLoan: '₹10,00,000',
+    minRoi: '11.49% - 15.50% p.a.',
+    tenure: '12 - 60 Months',
+    processingFee: '₹999 + GST',
+    disbursalTime: 'Instant (10 Seconds)',
+    badge: 'Pre-Approved',
+    features: [
+      'Instant 10-second cash credit directly into your bank savings account',
+      'Insta Jumbo Loan option available over and above existing credit card limit',
+      'Zero physical documentation with complete digital journey',
+      'Flexible foreclosure options after 12 monthly installments'
+    ]
+  }), []);
+
   // Fetch dynamic offers from backend API
   React.useEffect(() => {
     const fetchDynamicOffers = async () => {
@@ -46,54 +67,62 @@ export default function EmployeeLoanOnCreditCard() {
         });
         const prods = res.data?.data?.rows || res.data?.data || res.data?.products || [];
         if (Array.isArray(prods) && prods.length > 0) {
-          // Filter products relevant for Loan on Credit Card
-          const cardLoanProds = (Array.isArray(prods) ? prods : []).filter(p => {
+          // Strictly filter only HDFC Bank Instant & Jumbo Loan products
+          const cardLoanProds = prods.filter(p => {
             const cat = String(p.category || '').toLowerCase();
             const subCat = String(p.sub_category || '').toLowerCase();
             const pName = String(p.name || '').toLowerCase();
-            return cat.includes('loc_eoc') || cat.includes('loan_on_credit_card') || 
-                   subCat.includes('loc') || subCat.includes('loan on credit card') || 
-                   (cat.includes('loan') && (pName.includes('credit card') || pName.includes('insta') || pName.includes('jumbo') || pName.includes('encash') || pName.includes('dial') || subCat.includes('loan')));
+            const bName = String(p.bank_name || p.bank || '').toLowerCase();
+            
+            const isHdfc = bName.includes('hdfc') || pName.includes('hdfc');
+            const isCardLoan = cat === 'loc_eoc' || cat === 'loan_on_credit_card' ||
+                               subCat === 'loc' || subCat.includes('loan on credit card') ||
+                               pName.includes('insta') || pName.includes('instant') || pName.includes('jumbo');
+            
+            return isHdfc && isCardLoan;
           });
 
-          const targetProds = cardLoanProds.length > 0 ? cardLoanProds : (Array.isArray(prods) ? prods : []).filter(p => String(p.category || '').toLowerCase().includes('loan'));
-
-          if (targetProds.length > 0) {
-            const mapped = targetProds.map(p => {
+          if (cardLoanProds.length > 0) {
+            const mapped = cardLoanProds.map(p => {
               let parsedFeatures = [];
               try {
                 parsedFeatures = typeof p.features === 'string' ? JSON.parse(p.features) : (Array.isArray(p.features) ? p.features : []);
               } catch (e) {
                 parsedFeatures = [p.description || 'Pre-approved instant cash loan'];
               }
-              const bName = p.bank_name || p.bank || 'Partner Bank';
+              const bName = p.bank_name || p.bank || 'HDFC Bank';
               return {
                 id: p.id,
                 bank_id: p.bank_id,
-                bank: bName,
-                title: p.name,
-                logo: getBankLogo(bName, p.bank_logo || p.logo || p.image_url),
+                bank: 'HDFC Bank',
+                title: p.name?.includes('Instant') ? p.name : 'HDFC Bank Instant & Jumbo Loan',
+                logo: getBankLogo('HDFC Bank', p.bank_logo || p.logo || p.image_url),
                 accent: '#0F766E',
-                maxLoan: p.joining_fee || '₹10,000,000',
-                minRoi: p.interest_rate || '11.49% p.a.',
+                maxLoan: p.joining_fee && p.joining_fee !== 'Nil' ? p.joining_fee : '₹10,00,000',
+                minRoi: p.interest_rate || '11.49% - 15.50% p.a.',
                 tenure: p.time_period || '12 - 60 Months',
                 processingFee: p.annual_fee || '₹999 + GST',
                 disbursalTime: 'Instant (10 Seconds)',
                 badge: p.badge || 'Pre-Approved',
-                features: parsedFeatures.length > 0 ? parsedFeatures : [p.description || 'Pre-approved cash loan over credit limit']
+                features: parsedFeatures.length > 0 ? parsedFeatures : defaultHdfcOffer.features
               };
             });
             setDbOffers(mapped);
+          } else {
+            setDbOffers([defaultHdfcOffer]);
           }
+        } else {
+          setDbOffers([defaultHdfcOffer]);
         }
       } catch (err) {
         console.error('Failed to load dynamic Card Loan offers:', err);
+        setDbOffers([defaultHdfcOffer]);
       } finally {
         setLoadingProds(false);
       }
     };
     fetchDynamicOffers();
-  }, []);
+  }, [defaultHdfcOffer]);
 
   const activeOffers = dbOffers;
 
@@ -420,22 +449,8 @@ export default function EmployeeLoanOnCreditCard() {
               cursor: 'pointer'
             }}
           >
-            <option value="ALL">All Banks</option>
+            <option value="ALL">All Banks (HDFC Bank)</option>
             <option value="HDFC Bank">HDFC Bank</option>
-            <option value="SBI Card">SBI Card</option>
-            <option value="ICICI Bank">ICICI Bank</option>
-            <option value="Axis Bank">Axis Bank</option>
-            <option value="IDFC FIRST Bank">IDFC FIRST Bank</option>
-            <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
-            <option value="RBL Bank">RBL Bank</option>
-            <option value="IndusInd Bank">IndusInd Bank</option>
-            <option value="AU Small Finance Bank">AU Small Finance Bank</option>
-            <option value="Federal Bank">Federal Bank</option>
-            <option value="YES Bank">YES Bank</option>
-            <option value="Bank of Baroda">Bank of Baroda</option>
-            <option value="Standard Chartered Bank">Standard Chartered Bank</option>
-            <option value="Canara Bank">Canara Bank</option>
-            <option value="Union Bank of India">Union Bank of India</option>
           </select>
         </div>
       </div>

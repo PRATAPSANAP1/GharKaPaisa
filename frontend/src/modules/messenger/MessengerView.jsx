@@ -5,7 +5,7 @@ import {
   FaTimes, FaPhone, FaVideo, FaEllipsisV, FaCircle, FaRedo,
   FaFilter, FaArrowLeft, FaDownload, FaCheck, FaUserPlus, FaVolumeMute,
   FaIdCard, FaCopy, FaEnvelope, FaUserCircle, FaTrashAlt, FaLock, FaSignOutAlt, FaEdit, FaImage,
-  FaMicrophone, FaSearchPlus, FaBell, FaMinus
+  FaMicrophone, FaSearchPlus, FaBell, FaMinus, FaChevronUp, FaChevronDown, FaCamera
 } from 'react-icons/fa';
 import api from '../../services/api';
 import { getImageUrl } from '../../config/api';
@@ -296,6 +296,70 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showChatSearch, setShowChatSearch] = useState(false);
   const [msgSearch, setMsgSearch] = useState('');
+  const [currentMatchIdx, setCurrentMatchIdx] = useState(0);
+  const [selectedSearchMsgId, setSelectedSearchMsgId] = useState(null);
+  const groupAvatarInputRef = useRef(null);
+
+  const handleGroupAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeConv || !isSuperAdmin) return;
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploadRes = await api.post('/messenger/attachments/upload', formData);
+      const fileUrl = uploadRes.data?.data?.file_url || uploadRes.data?.file_url;
+      if (!fileUrl) throw new Error('Failed to upload photo');
+
+      await api.put(`/messenger/conversations/${activeConv.id}/avatar`, { avatar_url: fileUrl });
+
+      const updatedConv = { ...activeConv, avatar_url: fileUrl, icon_url: fileUrl };
+      setActiveConv(updatedConv);
+      setConversations(prev => (Array.isArray(prev) ? prev : []).map(c => c.id === activeConv.id ? updatedConv : c));
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Failed to update group profile photo');
+    } finally {
+      if (groupAvatarInputRef.current) groupAvatarInputRef.current.value = '';
+    }
+  };
+
+  const matchingMsgList = React.useMemo(() => {
+    if (!msgSearch || !msgSearch.trim()) return [];
+    const q = msgSearch.trim().toLowerCase();
+    return (filteredMessages || []).filter(m => {
+      const textMatch = (m.message_text || '').toLowerCase().includes(q);
+      const senderMatch = (m.sender_name || '').toLowerCase().includes(q);
+      const attMatch = (m.attachments || []).some(a => (a.file_name || '').toLowerCase().includes(q));
+      return textMatch || senderMatch || attMatch;
+    });
+  }, [filteredMessages, msgSearch]);
+
+  const handleJumpToMatch = useCallback((index) => {
+    if (!matchingMsgList.length) return;
+    let targetIdx = index;
+    if (targetIdx < 0) targetIdx = matchingMsgList.length - 1;
+    if (targetIdx >= matchingMsgList.length) targetIdx = 0;
+
+    setCurrentMatchIdx(targetIdx);
+    const targetMsg = matchingMsgList[targetIdx];
+    if (targetMsg) {
+      setSelectedSearchMsgId(targetMsg.id);
+      setTimeout(() => {
+        const el = document.getElementById(`msg-bubble-${targetMsg.id}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 80);
+    }
+  }, [matchingMsgList]);
+
+  useEffect(() => {
+    if (msgSearch && msgSearch.trim() && matchingMsgList.length > 0) {
+      handleJumpToMatch(0);
+    } else if (!msgSearch) {
+      setSelectedSearchMsgId(null);
+      setCurrentMatchIdx(0);
+    }
+  }, [msgSearch, matchingMsgList, handleJumpToMatch]);
   const [callStatus, setCallStatus] = useState(null); // { type: 'voice' | 'video', active: true }
   const [activeCall, setActiveCall] = useState(null); // Active WebRTC Call Session
   const activeCallRef = useRef(activeCall);
@@ -2018,17 +2082,70 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                     </button>
                   )}
 
+                  <input
+                    type="file"
+                    ref={groupAvatarInputRef}
+                    onChange={handleGroupAvatarUpload}
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                  />
+
                   <div style={{ position: 'relative', flexShrink: 0 }}>
-                    <div style={{
-                      width: isMobile ? '36px' : '42px', height: isMobile ? '36px' : '42px', borderRadius: '50%',
-                      background: activeConv.conversation_type === 'GROUP' ? '#3B82F6' : '#0EA5E9',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontWeight: 700, color: '#fff', fontSize: isMobile ? '15px' : '17px'
-                    }}>
-                      {activeConv.conversation_type === 'GROUP' ? <FaUsers size={isMobile ? 17 : 20} /> : getConvTitle(activeConv).charAt(0).toUpperCase()}
-                    </div>
+                    {(() => {
+                      const targetUser = activeConv.other_participants?.find(p => (p.user_id || p.id) !== user?.id) || activeConv.other_participants?.[0];
+                      const headerAvatarUrl = activeConv.icon_url || activeConv.avatar_url || targetUser?.profile_photo || targetUser?.avatar_url || targetUser?.photo;
+
+                      return (
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (activeConv.conversation_type === 'GROUP') {
+                              if (isSuperAdmin) {
+                                groupAvatarInputRef.current?.click();
+                              } else {
+                                openGroupMembersModal(activeConv);
+                              }
+                            } else {
+                              openUserProfile(targetUser || { full_name: getConvTitle(activeConv) });
+                            }
+                          }}
+                          style={{
+                            width: isMobile ? '38px' : '44px', height: isMobile ? '38px' : '44px', borderRadius: '50%',
+                            background: activeConv.conversation_type === 'GROUP' ? '#3B82F6' : '#0EA5E9',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontWeight: 700, color: '#fff', fontSize: isMobile ? '15px' : '17px',
+                            overflow: 'hidden', cursor: 'pointer', position: 'relative',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                          }}
+                          title={activeConv.conversation_type === 'GROUP' ? (isSuperAdmin ? "Click to change group photo" : "Click to view group details") : "Click to view profile photo"}
+                        >
+                          {headerAvatarUrl ? (
+                            <AuthenticatedImage
+                              src={headerAvatarUrl}
+                              alt={getConvTitle(activeConv)}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            activeConv.conversation_type === 'GROUP' ? <FaUsers size={isMobile ? 18 : 22} /> : getConvTitle(activeConv).charAt(0).toUpperCase()
+                          )}
+
+                          {activeConv.conversation_type === 'GROUP' && isSuperAdmin && (
+                            <div style={{
+                              position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              opacity: 0, transition: 'opacity 0.2s', borderRadius: '50%'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                            onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
+                            >
+                              <FaCamera size={14} color="#FFFFFF" />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                     <span style={{
-                      position: 'absolute', bottom: 0, right: 0, width: '9px', height: '9px',
+                      position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px',
                       borderRadius: '50%',
                       background: getActiveConvStatus(activeConv).isOnline ? '#22C55E' : '#94A3B8',
                       border: '2px solid #FFFFFF'
@@ -2227,9 +2344,35 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                     value={msgSearch}
                     onChange={(e) => setMsgSearch(e.target.value)}
                     style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '13px', color: '#1E3A8A' }}
+                    autoFocus
                   />
+                  {msgSearch && msgSearch.trim() && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '12px', color: matchingMsgList.length > 0 ? '#1E40AF' : '#DC2626', fontWeight: 600 }}>
+                        {matchingMsgList.length > 0 ? `${currentMatchIdx + 1} of ${matchingMsgList.length}` : 'Not found'}
+                      </span>
+                      {matchingMsgList.length > 0 && (
+                        <div style={{ display: 'flex', gap: '2px' }}>
+                          <button
+                            onClick={() => handleJumpToMatch(currentMatchIdx - 1)}
+                            title="Previous match"
+                            style={{ background: '#DBEAFE', border: 'none', borderRadius: '4px', color: '#1E40AF', padding: '3px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                          >
+                            <FaChevronUp size={10} />
+                          </button>
+                          <button
+                            onClick={() => handleJumpToMatch(currentMatchIdx + 1)}
+                            title="Next match"
+                            style={{ background: '#DBEAFE', border: 'none', borderRadius: '4px', color: '#1E40AF', padding: '3px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                          >
+                            <FaChevronDown size={10} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {msgSearch && (
-                    <button onClick={() => setMsgSearch('')} style={{ background: 'transparent', border: 'none', color: '#2563EB', cursor: 'pointer', fontSize: '12px' }}>Clear</button>
+                    <button onClick={() => { setMsgSearch(''); setSelectedSearchMsgId(null); }} style={{ background: 'transparent', border: 'none', color: '#64748B', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>Clear</button>
                   )}
                 </div>
               )}
@@ -2384,19 +2527,25 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                             maxWidth: '100%', position: 'relative'
                           }}>
                             {/* Message Bubble Container */}
-                            <div style={{
-                              maxWidth: isMobile ? '86%' : '65%', padding: isMobile ? '10px 14px' : '12px 18px',
-                              borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                              background: isMe ? 'linear-gradient(135deg, #2563EB, #1D4ED8)' : '#FFFFFF',
-                              border: isMe ? 'none' : '1px solid #E2E8F0',
-                              color: isMe ? '#FFFFFF' : '#0F172A',
-                              boxShadow: isMe ? '0 4px 12px rgba(37,99,235,0.25)' : '0 2px 6px rgba(0,0,0,0.03)',
-                              fontSize: isMobile ? '13.5px' : '14px', lineHeight: 1.5,
-                              position: 'relative',
-                              overflowWrap: 'anywhere',
-                              wordBreak: 'break-word',
-                              boxSizing: 'border-box'
-                            }}>
+                            <div 
+                              id={`msg-bubble-${msg.id}`}
+                              style={{
+                                maxWidth: isMobile ? '86%' : '65%', padding: isMobile ? '10px 14px' : '12px 18px',
+                                borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                                background: isMe ? 'linear-gradient(135deg, #2563EB, #1D4ED8)' : '#FFFFFF',
+                                border: selectedSearchMsgId === msg.id ? '2px solid #2563EB' : (isMe ? 'none' : '1px solid #E2E8F0'),
+                                color: isMe ? '#FFFFFF' : '#0F172A',
+                                boxShadow: selectedSearchMsgId === msg.id 
+                                  ? '0 0 22px rgba(37, 99, 235, 0.75)' 
+                                  : (isMe ? '0 4px 12px rgba(37,99,235,0.25)' : '0 2px 6px rgba(0,0,0,0.03)'),
+                                transform: selectedSearchMsgId === msg.id ? 'scale(1.02)' : 'none',
+                                transition: 'all 0.25s ease',
+                                fontSize: isMobile ? '13.5px' : '14px', lineHeight: 1.5,
+                                position: 'relative',
+                                overflowWrap: 'anywhere',
+                                wordBreak: 'break-word',
+                                boxSizing: 'border-box'
+                              }}>
                               {isEditingThis ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                   <input

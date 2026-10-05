@@ -959,12 +959,24 @@ async function updateGroupName(conversationId, name) {
   return rows[0] || null;
 }
 
+async function updateGroupAvatar(conversationId, avatarUrl) {
+  const sql = `
+    UPDATE conversations
+    SET avatar_url = $2, updated_at = NOW()
+    WHERE id = $1 AND conversation_type IN ('GROUP', 'DEPARTMENT')
+    RETURNING *
+  `;
+  const { rows } = await query(sql, [conversationId, avatarUrl]);
+  return rows[0] || null;
+}
+
 module.exports = {
   getConversationsForUser,
   findDirectConversation,
   findApplicationConversation,
   createConversation,
   updateGroupName,
+  updateGroupAvatar,
   addParticipant,
   removeParticipant,
   getConversationById,

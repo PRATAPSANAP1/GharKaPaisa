@@ -106,10 +106,10 @@ export default function EmployeeToolsScreen({ navigation }) {
         {/* Tab 1: Smart EMI Calculator */}
         {activeTab === 'smart_emi' && (
           <View style={styles.card}>
-            <Text style={styles.cardHeaderTitle}>Smart Credit Card & Loan EMI Calculator</Text>
-            <Text style={styles.cardHeaderSub}>Calculate monthly installment payouts for customer loan conversions.</Text>
+            <Text style={styles.cardHeaderTitle}>HDFC Bank EMI on Credit Card Calculator</Text>
+            <Text style={styles.cardHeaderSub}>Calculate monthly installment payouts for HDFC Bank SmartEMI conversions.</Text>
 
-            <Text style={styles.label}>Principal Loan Amount (₹)</Text>
+            <Text style={styles.label}>Principal Transaction Amount (₹)</Text>
             <TextInput
               style={styles.input}
               keyboardType="numeric"
@@ -139,7 +139,7 @@ export default function EmployeeToolsScreen({ navigation }) {
             </View>
 
             <View style={styles.emiResultBox}>
-              <Text style={styles.emiResultLabel}>ESTIMATED MONTHLY EMI</Text>
+              <Text style={styles.emiResultLabel}>ESTIMATED MONTHLY EMI (HDFC BANK)</Text>
               <Text style={styles.emiResultVal}>₹{calculateEMI().toLocaleString('en-IN')} / month</Text>
               <Text style={styles.emiResultTotal}>Total Payable: ₹{(calculateEMI() * (parseInt(emiTenure) || 1)).toLocaleString('en-IN')}</Text>
             </View>
@@ -182,7 +182,7 @@ export default function EmployeeToolsScreen({ navigation }) {
                 <Text style={styles.label}>Applications Punched *</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="e.g. 5"
+                  placeholder="e.g. 4"
                   placeholderTextColor="#94A3B8"
                   keyboardType="numeric"
                   value={reportForm.applications_punched}
@@ -225,18 +225,18 @@ export default function EmployeeToolsScreen({ navigation }) {
         {/* Tab 3: Loan on Credit Card Assistance */}
         {activeTab === 'loan_on_card' && (
           <View style={styles.card}>
-            <Text style={styles.cardHeaderTitle}>Loan on Credit Card Eligibility Check</Text>
-            <Text style={styles.cardHeaderSub}>Check pre-approved jumbo loan eligibility against existing customer credit limit.</Text>
+            <Text style={styles.cardHeaderTitle}>HDFC Bank Instant & Jumbo Loan Eligibility</Text>
+            <Text style={styles.cardHeaderSub}>Check pre-approved jumbo loan eligibility against existing customer HDFC credit limit.</Text>
 
             <Text style={styles.label}>Select Issuing Bank</Text>
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-              {['HDFC', 'SBI', 'AXIS', 'ICICI'].map((b) => (
+              {['HDFC Bank'].map((b) => (
                 <TouchableOpacity
                   key={b}
-                  style={[styles.chip, bankSelected === b && styles.chipActive]}
+                  style={[styles.chip, styles.chipActive]}
                   onPress={() => setBankSelected(b)}
                 >
-                  <Text style={[styles.chipText, bankSelected === b && styles.chipTextActive]}>{b}</Text>
+                  <Text style={[styles.chipText, styles.chipTextActive]}>🏦 {b}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -256,13 +256,13 @@ export default function EmployeeToolsScreen({ navigation }) {
               onPress={() => {
                 const limit = parseFloat(cardLimit) || 0;
                 if (limit < 30000) {
-                  Alert.alert('Notice', 'Minimum ₹30,000 credit card limit required for Jumbo Loan eligibility.');
+                  Alert.alert('Notice', 'Minimum ₹30,000 credit card limit required for HDFC Jumbo Loan eligibility.');
                 } else {
-                  Alert.alert('Pre-Approved Offer! 🎉', `Customer is eligible for up to ₹${(limit * 2.5).toLocaleString('en-IN')} Jumbo Loan on ${bankSelected} credit card with zero documentation.`);
+                  Alert.alert('Pre-Approved Offer! 🎉', `Customer is eligible for up to ₹${(limit * 2.5).toLocaleString('en-IN')} HDFC Bank Instant & Jumbo Loan on credit card with zero physical documentation.`);
                 }
               }}
             >
-              <Text style={styles.submitBtnText}>Check Jumbo Loan Eligibility ⚡</Text>
+              <Text style={styles.submitBtnText}>Check HDFC Jumbo Loan Eligibility ⚡</Text>
             </TouchableOpacity>
           </View>
         )}

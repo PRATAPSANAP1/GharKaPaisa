@@ -22,6 +22,8 @@ router.post('/conversations/direct', messengerLimiter, controller.createDirectCh
 router.post('/conversations/application', messengerLimiter, controller.createApplicationChat);
 router.post('/conversations/group', messengerLimiter, controller.createGroupChat);
 router.put('/conversations/:id/name', requireSuperAdmin, messengerLimiter, controller.updateGroupName);
+router.put('/conversations/:id/avatar', requireSuperAdmin, messengerLimiter, controller.updateGroupAvatar);
+router.put('/conversations/:id/photo', requireSuperAdmin, messengerLimiter, controller.updateGroupAvatar);
 
 router.get('/conversations/:id', controller.getConversation);
 router.get('/conversations/:id/messages', controller.getMessages);

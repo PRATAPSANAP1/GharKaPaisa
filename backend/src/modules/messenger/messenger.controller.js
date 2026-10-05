@@ -459,6 +459,17 @@ async function getMediaAttachment(req, res, next) {
   }
 }
 
+async function updateGroupAvatar(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { avatar_url } = req.body;
+    const result = await service.updateGroupAvatar(id, avatar_url, req.user?.id, req.user?.role);
+    return success(res, result, 'Group photo updated successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getTurnCredentials,
   getConversations,
@@ -466,6 +477,7 @@ module.exports = {
   createApplicationChat,
   createGroupChat,
   updateGroupName,
+  updateGroupAvatar,
   getConversation,
   getMessages,
   sendMessage,

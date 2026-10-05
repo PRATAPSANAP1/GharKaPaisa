@@ -26,6 +26,7 @@ const BANKS = [
   { name: 'ICICI Lombard', short_code: 'ICICILOMBARD' },
   { name: 'Scapia', short_code: 'SCAPIA' },
   { name: 'Tata', short_code: 'TATA' },
+  { name: 'LOC/EOC (Loan on Card & Smart EMI)', short_code: 'LOC_EOC' },
 ];
 
 const seed = async () => {
