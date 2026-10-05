@@ -344,6 +344,32 @@ const commitFaceEnrollment = async ({ sessionToken, imageBuffer, originalName, m
  * Fetch employee biometric enrollment status
  */
 const getEmployeeBiometricStatus = async (employeeId, reqUser) => {
+  if (!employeeId) {
+    return {
+      is_enrolled: false,
+      status: 'NOT_ENROLLED',
+      message: 'Employee ID required'
+    };
+  }
+
+  const rawId = String(employeeId).trim();
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawId);
+
+  let targetEmpId = rawId;
+  if (isUuid) {
+    const { rows: [foundEmp] } = await query(
+      `SELECT id FROM employees WHERE id = $1 OR user_id = $1 LIMIT 1`,
+      [rawId]
+    );
+    if (foundEmp) targetEmpId = foundEmp.id;
+  } else {
+    const { rows: [foundEmpByCode] } = await query(
+      `SELECT id FROM employees WHERE employee_id = $1 OR candidate_id::text = $1 LIMIT 1`,
+      [rawId]
+    );
+    if (foundEmpByCode) targetEmpId = foundEmpByCode.id;
+  }
+
   const { rows: templates } = await query(
     `SELECT t.id, t.employee_id, t.employee_code, t.version, t.status, t.enrollment_source, t.enrolled_at, t.revoked_at, t.revocation_reason,
             u.full_name as enrolled_by_name
@@ -351,7 +377,7 @@ const getEmployeeBiometricStatus = async (employeeId, reqUser) => {
      LEFT JOIN users u ON u.id = t.enrolled_by
      WHERE t.employee_id = $1
      ORDER BY t.version DESC`,
-    [employeeId]
+    [targetEmpId]
   );
 
   const activeTemplate = templates.find(t => t.status === 'ACTIVE') || null;
