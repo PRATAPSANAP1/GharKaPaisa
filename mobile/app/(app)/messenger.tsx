@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,65 +12,90 @@ import {
   RefreshControl,
   SafeAreaView,
   Image,
-  Alert
+  Alert,
+  Modal,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
+import { Icon } from '../../components/Icon';
+import { Card } from '../../components/Card';
 import {
   getConversations,
+  getContacts,
+  startDirectChat,
   getMessages,
   sendMessage,
   sendMessageWithAttachment,
   markRead,
+  togglePinConversation,
+  maskSensitiveData,
   MessengerConversation,
-  MessengerMessage
+  MessengerContact,
+  MessengerMessage,
 } from '../../services/messenger.service';
 
 import { AppState } from 'react-native';
 import { getMessengerSocket } from '../../services/messengerSocket';
 
+const TABS = [
+  { key: 'ALL', label: 'All' },
+  { key: 'DIRECT', label: 'Direct' },
+  { key: 'GROUP', label: 'Groups' },
+  { key: 'APPLICATION', label: 'Applications' },
+];
+
 export default function MessengerScreen() {
-  const { user, userRole } = useAuth();
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'ALL' | 'DIRECT' | 'GROUP' | 'APPLICATION'>('ALL');
   const [conversations, setConversations] = useState<MessengerConversation[]>([]);
   const [activeConv, setActiveConv] = useState<MessengerConversation | null>(null);
   const [messages, setMessages] = useState<MessengerMessage[]>([]);
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [uploadingImage, setUploadingImage] = useState(false);
   const [typingUser, setTypingUser] = useState<string | null>(null);
-  const flatListRef = useRef<FlatList>(null);
 
+  // New Chat Modal State
+  const [newChatModalVisible, setNewChatModalVisible] = useState(false);
+  const [contacts, setContacts] = useState<MessengerContact[]>([]);
+  const [contactSearch, setContactSearch] = useState('');
+  const [loadingContacts, setLoadingContacts] = useState(false);
+  const [startingChat, setStartingChat] = useState(false);
+
+  const flatListRef = useRef<FlatList>(null);
   const activeConvRef = useRef<MessengerConversation | null>(null);
+
   useEffect(() => {
     activeConvRef.current = activeConv;
   }, [activeConv]);
 
-  const fetchConvs = async () => {
+  const fetchConvs = useCallback(async () => {
     try {
-      const data = await getConversations();
+      const data = await getConversations(activeTab, searchQuery);
       setConversations(data);
     } catch (e) {
-      console.error(e);
+      console.error('Error fetching conversations:', e);
     } finally {
       setLoadingConvs(false);
       setRefreshing(false);
     }
-  };
+  }, [activeTab, searchQuery]);
 
+  useEffect(() => {
+    fetchConvs();
+  }, [fetchConvs]);
+
+  // Socket event subscription
   useEffect(() => {
     let isMounted = true;
 
-    // Initial fetch
-    fetchConvs();
-
-    // Subscribe to Socket.IO real-time updates (no polling loop)
     const setupSocketListeners = async () => {
       const socket = await getMessengerSocket();
       if (!socket || !isMounted) return;
@@ -94,7 +119,7 @@ export default function MessengerScreen() {
           }
         }
 
-        // 2. Incrementally update conversation list without refetching all
+        // 2. Incrementally update conversation list
         setConversations((prevConvs) => {
           const targetIndex = prevConvs.findIndex((c) => c.id === conversation_id);
           const isCurrentActive = activeConvRef.current?.id === conversation_id;
@@ -119,7 +144,6 @@ export default function MessengerScreen() {
             updatedList.splice(targetIndex, 1);
             return [targetConv, ...updatedList];
           } else {
-            // New conversation arrived, fetch updated list
             fetchConvs();
             return prevConvs;
           }
@@ -179,9 +203,17 @@ export default function MessengerScreen() {
         );
       };
 
-      const handleTypingUpdate = (data: { conversation_id: string; user_id: string; user_name: string; is_typing: boolean }) => {
+      const handleTypingUpdate = (data: {
+        conversation_id: string;
+        user_id: string;
+        user_name: string;
+        is_typing: boolean;
+      }) => {
         if (!data) return;
-        if (activeConvRef.current?.id === data.conversation_id && String(data.user_id).toLowerCase() !== String(user?.id).toLowerCase()) {
+        if (
+          activeConvRef.current?.id === data.conversation_id &&
+          String(data.user_id).toLowerCase() !== String(user?.id).toLowerCase()
+        ) {
           setTypingUser(data.is_typing ? data.user_name || 'Someone' : null);
         }
       };
@@ -231,7 +263,7 @@ export default function MessengerScreen() {
       isMounted = false;
       if (cleanupFn) cleanupFn();
     };
-  }, []);
+  }, [user?.id, fetchConvs]);
 
   const openConversation = async (conv: MessengerConversation) => {
     setActiveConv(conv);
@@ -244,7 +276,7 @@ export default function MessengerScreen() {
         prev.map((c) => (c.id === conv.id ? { ...c, unread_count: 0 } : c))
       );
     } catch (e) {
-      console.error(e);
+      console.error('Failed to load messages:', e);
     } finally {
       setLoadingMsgs(false);
     }
@@ -265,18 +297,72 @@ export default function MessengerScreen() {
         sent = await sendMessage({
           conversation_id: activeConv.id,
           message_text: textToSend,
-          message_type: 'TEXT'
+          message_type: 'TEXT',
         });
       }
       if (sent) {
-        setMessages(prev => [...prev, sent]);
+        setMessages((prev) => [...prev, sent]);
         setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
       }
     } catch (e) {
-      console.error(e);
+      console.error('Failed to send message:', e);
       Alert.alert('Error', 'Failed to send message');
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleTogglePin = async (convId: string) => {
+    try {
+      const res = await togglePinConversation(convId);
+      setConversations((prev) =>
+        prev.map((c) => (c.id === convId ? { ...c, is_pinned: res.is_pinned } : c))
+      );
+      if (activeConv?.id === convId) {
+        setActiveConv((prev) => (prev ? { ...prev, is_pinned: res.is_pinned } : prev));
+      }
+    } catch (err: any) {
+      Alert.alert('Error', 'Could not update pin status');
+    }
+  };
+
+  const openNewChatModal = async () => {
+    setNewChatModalVisible(true);
+    setLoadingContacts(true);
+    try {
+      const list = await getContacts(contactSearch);
+      setContacts(list);
+    } catch (err) {
+      console.error('Failed to load contacts:', err);
+    } finally {
+      setLoadingContacts(false);
+    }
+  };
+
+  const handleSearchContacts = async (query: string) => {
+    setContactSearch(query);
+    try {
+      const list = await getContacts(query);
+      setContacts(list);
+    } catch (err) {
+      console.error('Error searching contacts:', err);
+    }
+  };
+
+  const handleSelectContact = async (contact: MessengerContact) => {
+    try {
+      setStartingChat(true);
+      const conv = await startDirectChat(contact.id);
+      setNewChatModalVisible(false);
+      setContactSearch('');
+      await fetchConvs();
+      if (conv) {
+        openConversation(conv);
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to start chat with contact');
+    } finally {
+      setStartingChat(false);
     }
   };
 
@@ -304,17 +390,16 @@ export default function MessengerScreen() {
     }
   };
 
-  const removeSelectedImage = () => {
-    setSelectedImage(null);
-  };
-
   const onRefresh = () => {
     setRefreshing(true);
     fetchConvs();
   };
 
-  // If viewing a single conversation thread
+  // Conversation Thread View
   if (activeConv) {
+    const convName = activeConv.name || activeConv.other_user?.full_name || 'Conversation';
+    const convRole = activeConv.other_user?.role || activeConv.conversation_type;
+
     return (
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
@@ -325,22 +410,36 @@ export default function MessengerScreen() {
           {/* Thread Header */}
           <View style={styles.threadHeader}>
             <TouchableOpacity onPress={() => setActiveConv(null)} style={styles.backBtn}>
-              <Text style={styles.backText}>← Back</Text>
+              <Icon name="chevron-left" size={22} color="#fff" />
             </TouchableOpacity>
+
+            <View style={styles.threadAvatar}>
+              <Text style={styles.threadAvatarText}>{(convName || 'C').charAt(0).toUpperCase()}</Text>
+            </View>
+
             <View style={styles.threadTitleContainer}>
               <Text style={styles.threadTitle} numberOfLines={1}>
-                {activeConv.name || activeConv.other_user?.full_name || 'Conversation'}
+                {convName}
               </Text>
               <Text style={styles.threadSubtitle}>
-                {activeConv.conversation_type}
+                {convRole} • Internal Channel
               </Text>
             </View>
+
+            <TouchableOpacity onPress={() => handleTogglePin(activeConv.id)} style={styles.pinHeaderBtn}>
+              <Icon
+                name="bookmark"
+                size={18}
+                color={activeConv.is_pinned ? '#F59E0B' : '#94A3B8'}
+              />
+            </TouchableOpacity>
           </View>
 
           {/* Messages Stream */}
           {loadingMsgs ? (
             <View style={styles.loaderContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.loadingSubText}>Decrypting & loading chat history...</Text>
             </View>
           ) : (
             <FlatList
@@ -353,7 +452,7 @@ export default function MessengerScreen() {
                 const isMe = String(item.sender_id).toLowerCase() === String(user?.id).toLowerCase();
                 const hasAttachment = item.attachments && item.attachments.length > 0;
                 const attachment = hasAttachment ? item.attachments[0] : null;
-                const isImage = attachment && (attachment.file_type?.startsWith('image/') || attachment.file_name?.match(/\.(jpg|jpeg|png|gif)$/i));
+                const isImage = attachment && (attachment.file_type?.startsWith('image/') || attachment.file_name?.match(/\.(jpg|jpeg|png|gif|webp)$/i));
 
                 return (
                   <View style={[styles.msgRow, isMe ? styles.msgRowRight : styles.msgRowLeft]}>
@@ -361,6 +460,7 @@ export default function MessengerScreen() {
                       {!isMe && item.sender_name && (
                         <Text style={styles.senderName}>{item.sender_name}</Text>
                       )}
+
                       {isImage && attachment?.file_url && (
                         <Image
                           source={{ uri: attachment.file_url }}
@@ -368,14 +468,21 @@ export default function MessengerScreen() {
                           resizeMode="cover"
                         />
                       )}
+
                       {item.message_text && (
                         <Text style={[styles.msgText, isMe ? styles.msgTextMe : styles.msgTextOther]}>
-                          {item.message_text}
+                          {maskSensitiveData(item.message_text)}
                         </Text>
                       )}
-                      <Text style={[styles.msgTime, isMe ? styles.msgTimeMe : styles.msgTimeOther]}>
-                        {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </Text>
+
+                      <View style={styles.msgMetaRow}>
+                        <Text style={[styles.msgTime, isMe ? styles.msgTimeMe : styles.msgTimeOther]}>
+                          {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                        {isMe && (
+                          <Icon name="check" size={12} color="#93C5FD" />
+                        )}
+                      </View>
                     </View>
                   </View>
                 );
@@ -383,41 +490,53 @@ export default function MessengerScreen() {
             />
           )}
 
+          {/* Typing Indicator */}
+          {typingUser && (
+            <View style={styles.typingBox}>
+              <Text style={styles.typingText}>{typingUser} is typing...</Text>
+            </View>
+          )}
+
+          {/* Image Preview before Sending */}
+          {selectedImage && (
+            <View style={styles.imagePreviewContainer}>
+              <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
+              <TouchableOpacity onPress={() => setSelectedImage(null)} style={styles.removeImageBtn}>
+                <Icon name="x" size={14} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Message Composer */}
           <View style={styles.composerBar}>
             <TouchableOpacity onPress={pickImage} style={styles.attachBtn}>
-              <Text style={styles.attachBtnText}>📷</Text>
+              <Icon name="camera" size={20} color={colors.primary} />
             </TouchableOpacity>
+
             <TextInput
               style={styles.composerInput}
-              placeholder="Type a message..."
+              placeholder="Type your message..."
               placeholderTextColor={colors.textLight}
               value={inputText}
               onChangeText={setInputText}
               multiline
             />
+
             <TouchableOpacity
               onPress={handleSend}
               disabled={sending || (!inputText.trim() && !selectedImage)}
-              style={[styles.sendBtn, (!inputText.trim() && !selectedImage || sending) && styles.sendBtnDisabled]}
+              style={[
+                styles.sendBtn,
+                (!inputText.trim() && !selectedImage || sending) && styles.sendBtnDisabled,
+              ]}
             >
               {sending ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Text style={styles.sendBtnText}>Send</Text>
+                <Icon name="send" size={16} color="#fff" />
               )}
             </TouchableOpacity>
           </View>
-
-          {/* Image Preview */}
-          {selectedImage && (
-            <View style={styles.imagePreviewContainer}>
-              <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
-              <TouchableOpacity onPress={removeSelectedImage} style={styles.removeImageBtn}>
-                <Text style={styles.removeImageText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-          )}
         </KeyboardAvoidingView>
       </SafeAreaView>
     );
@@ -427,14 +546,58 @@ export default function MessengerScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
+        {/* Header */}
         <View style={styles.listHeader}>
-          <Text style={styles.screenTitle}>Messenger</Text>
-          <Text style={styles.screenSubtitle}>Real-time internal chat & support</Text>
+          <View>
+            <Text style={styles.screenSubtitle}>INTERNAL CHAT & SUPPORT</Text>
+            <Text style={styles.screenTitle}>Messenger</Text>
+          </View>
+          <TouchableOpacity style={styles.newChatBtn} onPress={openNewChatModal}>
+            <Icon name="plus" size={16} color="#fff" />
+            <Text style={styles.newChatBtnText}>New Chat</Text>
+          </TouchableOpacity>
         </View>
 
+        {/* Filter Tabs */}
+        <View style={styles.tabBar}>
+          {TABS.map((tab) => {
+            const isSelected = activeTab === tab.key;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                style={[styles.tabItem, isSelected && styles.tabItemActive]}
+                onPress={() => setActiveTab(tab.key as any)}
+              >
+                <Text style={[styles.tabItemText, isSelected && styles.tabItemTextActive]}>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Search Box */}
+        <View style={styles.searchBox}>
+          <Icon name="search" size={16} color={colors.textLight} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search conversations..."
+            placeholderTextColor={colors.textLight}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Icon name="x" size={14} color={colors.textLight} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Conversations List */}
         {loadingConvs ? (
           <View style={styles.loaderContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingSubText}>Loading conversations...</Text>
           </View>
         ) : (
           <FlatList
@@ -444,34 +607,47 @@ export default function MessengerScreen() {
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyTitle}>No Conversations Yet</Text>
-                <Text style={styles.emptyText}>Start messaging team members or support directly.</Text>
+                <Icon name="message-square" size={48} color={colors.textLight} />
+                <Text style={styles.emptyTitle}>No Conversations Found</Text>
+                <Text style={styles.emptyText}>
+                  {searchQuery ? 'Try another search query' : 'Tap "+ New Chat" to start messaging team members'}
+                </Text>
               </View>
             }
             renderItem={({ item }) => {
               const displayName = item.name || item.other_user?.full_name || 'Chat';
               const lastText = item.last_message?.message_text || 'No messages yet';
               const hasUnread = (item.unread_count || 0) > 0;
+              const isPinned = item.is_pinned;
 
               return (
-                <TouchableOpacity style={styles.convCard} onPress={() => openConversation(item)}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{displayName[0].toUpperCase()}</Text>
+                <TouchableOpacity
+                  style={[styles.convCard, isPinned && styles.pinnedConvCard]}
+                  onPress={() => openConversation(item)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.avatar, isPinned && styles.pinnedAvatar]}>
+                    <Text style={styles.avatarText}>{displayName[0]?.toUpperCase() || 'C'}</Text>
                   </View>
+
                   <View style={styles.convInfo}>
                     <View style={styles.convRow}>
-                      <Text style={[styles.convTitle, hasUnread && styles.unreadTitle]} numberOfLines={1}>
-                        {displayName}
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 }}>
+                        {isPinned && <Icon name="bookmark" size={12} color="#F59E0B" />}
+                        <Text style={[styles.convTitle, hasUnread && styles.unreadTitle]} numberOfLines={1}>
+                          {displayName}
+                        </Text>
+                      </View>
                       {item.last_message && (
                         <Text style={styles.convTime}>
                           {new Date(item.last_message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </Text>
                       )}
                     </View>
+
                     <View style={styles.convRow}>
                       <Text style={[styles.lastMsgText, hasUnread && styles.unreadText]} numberOfLines={1}>
-                        {lastText}
+                        {maskSensitiveData(lastText)}
                       </Text>
                       {hasUnread && (
                         <View style={styles.unreadBadge}>
@@ -485,6 +661,69 @@ export default function MessengerScreen() {
             }}
           />
         )}
+
+        {/* Start New Chat Modal */}
+        <Modal visible={newChatModalVisible} transparent animationType="slide">
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>New Conversation</Text>
+                <TouchableOpacity onPress={() => setNewChatModalVisible(false)}>
+                  <Icon name="x" size={20} color={colors.textLight} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.contactSearchBox}>
+                <Icon name="search" size={16} color={colors.textLight} />
+                <TextInput
+                  style={styles.contactSearchInput}
+                  placeholder="Search staff, partners, or supervisors..."
+                  placeholderTextColor={colors.textLight}
+                  value={contactSearch}
+                  onChangeText={handleSearchContacts}
+                />
+              </View>
+
+              {loadingContacts || startingChat ? (
+                <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  <Text style={{ marginTop: 8, fontSize: 12, color: colors.textMid }}>
+                    {startingChat ? 'Connecting direct channel...' : 'Searching contacts...'}
+                  </Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={contacts}
+                  keyExtractor={(item) => item.id}
+                  style={{ maxHeight: 350 }}
+                  ListEmptyComponent={
+                    <View style={{ padding: 20, alignItems: 'center' }}>
+                      <Text style={{ color: colors.textMid, fontSize: 13 }}>No contacts matching "{contactSearch}"</Text>
+                    </View>
+                  }
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.contactItem}
+                      onPress={() => handleSelectContact(item)}
+                      disabled={startingChat}
+                    >
+                      <View style={styles.contactAvatar}>
+                        <Text style={styles.contactAvatarText}>{(item.full_name || 'U')[0].toUpperCase()}</Text>
+                      </View>
+                      <View style={{ flex: 1, marginLeft: spacing.sm }}>
+                        <Text style={styles.contactName}>{item.full_name}</Text>
+                        <Text style={styles.contactSub}>
+                          {item.role} {item.partner_code ? `• ${item.partner_code}` : ''} {item.employee_id ? `• ${item.employee_id}` : ''}
+                        </Text>
+                      </View>
+                      <Icon name="chevron-right" size={16} color={colors.textLight} />
+                    </TouchableOpacity>
+                  )}
+                />
+              )}
+            </View>
+          </View>
+        </Modal>
       </View>
     </SafeAreaView>
   );
@@ -493,285 +732,448 @@ export default function MessengerScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.bg
+    backgroundColor: colors.bg,
   },
   container: {
     flex: 1,
-    backgroundColor: colors.bg
+    backgroundColor: colors.bg,
   },
   listHeader: {
-    padding: spacing.md,
-    backgroundColor: colors.card,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border
-  },
-  screenTitle: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.text
+    backgroundColor: '#0F172A',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xl + 4,
+    paddingBottom: spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   screenSubtitle: {
-    fontSize: typography.sizes.xs,
-    color: colors.textLight,
-    marginTop: 2
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#94A3B8',
+    letterSpacing: 1.2,
+  },
+  screenTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  newChatBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 4,
+  },
+  newChatBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    gap: 6,
+  },
+  tabItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  tabItemActive: {
+    backgroundColor: '#0F172A',
+    borderColor: '#0F172A',
+  },
+  tabItemText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textMid,
+  },
+  tabItemTextActive: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    margin: spacing.md,
+    marginBottom: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.text,
+    padding: 0,
   },
   loaderContainer: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  loadingSubText: {
+    fontSize: 12,
+    color: colors.textMid,
+    marginTop: 8,
   },
   convList: {
-    padding: spacing.sm
+    padding: spacing.md,
   },
   convCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.card,
+    backgroundColor: '#fff',
     padding: spacing.md,
     borderRadius: 12,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
     borderWidth: 1,
-    borderColor: colors.border
+    borderColor: '#F1F5F9',
+  },
+  pinnedConvCard: {
+    backgroundColor: '#FFFDF5',
+    borderColor: '#FEF3C7',
   },
   avatar: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.primary,
+    backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.sm
+  },
+  pinnedAvatar: {
+    backgroundColor: '#FEF3C7',
   },
   avatarText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: typography.weights.bold
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.primary,
   },
   convInfo: {
-    flex: 1
+    flex: 1,
+    marginLeft: spacing.sm,
   },
   convRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4
+    alignItems: 'center',
   },
   convTitle: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
+    fontSize: 14,
+    fontWeight: '700',
     color: colors.text,
-    flex: 1
   },
   unreadTitle: {
-    color: colors.primary
+    fontWeight: '800',
+    color: '#0F172A',
   },
   convTime: {
-    fontSize: typography.sizes.xs,
+    fontSize: 10,
     color: colors.textLight,
-    marginLeft: 6
   },
   lastMsgText: {
-    fontSize: typography.sizes.xs,
-    color: colors.textLight,
-    flex: 1
+    fontSize: 12,
+    color: colors.textMid,
+    marginTop: 2,
+    flex: 1,
   },
   unreadText: {
+    fontWeight: '700',
     color: colors.text,
-    fontWeight: typography.weights.bold
   },
   unreadBadge: {
-    backgroundColor: colors.error,
+    backgroundColor: colors.primary,
     borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+    minWidth: 18,
+    height: 18,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 4,
-    marginLeft: 6
+    marginLeft: 4,
   },
   unreadBadgeText: {
     color: '#fff',
-    fontSize: 11,
-    fontWeight: typography.weights.bold
+    fontSize: 10,
+    fontWeight: '800',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: spacing.xl
+    paddingVertical: 60,
   },
   emptyTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.text
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: spacing.sm,
   },
   emptyText: {
-    fontSize: typography.sizes.xs,
-    color: colors.textLight,
+    fontSize: 12,
+    color: colors.textMid,
     marginTop: 4,
-    textAlign: 'center'
+    textAlign: 'center',
   },
-
-  // Thread styles
   threadHeader: {
+    backgroundColor: '#0F172A',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xl + 4,
+    paddingBottom: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
-    backgroundColor: colors.card,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border
   },
   backBtn: {
-    paddingRight: spacing.md
+    marginRight: spacing.sm,
+    padding: 4,
   },
-  backText: {
-    color: colors.primary,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold
+  threadAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#334155',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  threadAvatarText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 14,
   },
   threadTitleContainer: {
-    flex: 1
+    flex: 1,
+    marginLeft: spacing.sm,
   },
   threadTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.text
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#fff',
   },
   threadSubtitle: {
-    fontSize: typography.sizes.xs,
-    color: colors.textLight
+    fontSize: 11,
+    color: '#94A3B8',
+  },
+  pinHeaderBtn: {
+    padding: 6,
   },
   messagesList: {
-    padding: spacing.md
+    padding: spacing.md,
   },
   msgRow: {
-    marginBottom: spacing.md,
-    flexDirection: 'row'
+    marginBottom: spacing.sm,
+    flexDirection: 'row',
   },
   msgRowLeft: {
-    justifyContent: 'flex-start'
+    justifyContent: 'flex-start',
   },
   msgRowRight: {
-    justifyContent: 'flex-end'
+    justifyContent: 'flex-end',
   },
   msgBubble: {
-    maxWidth: '80%',
-    padding: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: 16
+    maxWidth: '82%',
+    padding: 10,
+    borderRadius: 14,
   },
   msgBubbleMe: {
     backgroundColor: colors.primary,
-    borderBottomRightRadius: 2
+    borderBottomRightRadius: 2,
   },
   msgBubbleOther: {
-    backgroundColor: colors.card,
+    backgroundColor: '#fff',
+    borderBottomLeftRadius: 2,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderBottomLeftRadius: 2
+    borderColor: '#E2E8F0',
   },
   senderName: {
     fontSize: 10,
-    fontWeight: typography.weights.bold,
+    fontWeight: '700',
     color: colors.primary,
-    marginBottom: 2
-  },
-  msgText: {
-    fontSize: typography.sizes.sm,
-    lineHeight: 18
-  },
-  msgTextMe: {
-    color: '#fff'
-  },
-  msgTextOther: {
-    color: colors.text
-  },
-  msgTime: {
-    fontSize: 9,
-    marginTop: 4,
-    alignSelf: 'flex-end'
-  },
-  msgTimeMe: {
-    color: 'rgba(255,255,255,0.7)'
-  },
-  msgTimeOther: {
-    color: colors.textLight
-  },
-  composerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.sm,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.card,
-    borderTopWidth: 1,
-    borderTopColor: colors.border
-  },
-  composerInput: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 20,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 8,
-    maxHeight: 100,
-    fontSize: typography.sizes.sm,
-    color: colors.text
-  },
-  sendBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: 20,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-    marginLeft: spacing.sm
-  },
-  sendBtnDisabled: {
-    opacity: 0.5
-  },
-  sendBtnText: {
-    color: '#fff',
-    fontWeight: typography.weights.bold,
-    fontSize: typography.sizes.xs
-  },
-  attachBtn: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 8,
-    marginRight: spacing.sm
-  },
-  attachBtnText: {
-    fontSize: 20
+    marginBottom: 2,
   },
   attachmentImage: {
     width: 200,
     height: 150,
     borderRadius: 8,
-    marginBottom: spacing.xs
+    marginBottom: 6,
+  },
+  msgText: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  msgTextMe: {
+    color: '#fff',
+  },
+  msgTextOther: {
+    color: colors.text,
+  },
+  msgMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 4,
+  },
+  msgTime: {
+    fontSize: 9,
+  },
+  msgTimeMe: {
+    color: '#E0E7FF',
+  },
+  msgTimeOther: {
+    color: colors.textLight,
+  },
+  typingBox: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+  },
+  typingText: {
+    fontSize: 11,
+    color: colors.textMid,
+    fontStyle: 'italic',
   },
   imagePreviewContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.sm,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.card,
+    backgroundColor: '#F8FAFC',
     borderTopWidth: 1,
-    borderTopColor: colors.border
+    borderTopColor: '#E2E8F0',
   },
   imagePreview: {
-    width: 60,
-    height: 60,
-    borderRadius: 8
+    width: 50,
+    height: 50,
+    borderRadius: 6,
   },
   removeImageBtn: {
-    marginLeft: spacing.sm,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.error,
+    position: 'absolute',
+    top: 4,
+    left: 48,
+    backgroundColor: '#EF4444',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
   },
-  removeImageText: {
-    color: '#fff',
+  composerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    gap: spacing.xs,
+  },
+  attachBtn: {
+    padding: 8,
+  },
+  composerInput: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    maxHeight: 80,
+    fontSize: 13,
+    color: colors.text,
+  },
+  sendBtn: {
+    backgroundColor: colors.primary,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendBtnDisabled: {
+    backgroundColor: '#CBD5E1',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: spacing.md,
+  },
+  modalCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: spacing.md,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  contactSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: spacing.sm,
+    gap: 6,
+  },
+  contactSearchInput: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.text,
+    padding: 0,
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+  },
+  contactAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contactAvatarText: {
     fontSize: 14,
-    fontWeight: typography.weights.bold
-  }
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  contactName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  contactSub: {
+    fontSize: 10,
+    color: colors.textMid,
+    marginTop: 1,
+  },
 });
