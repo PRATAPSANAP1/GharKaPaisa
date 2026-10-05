@@ -50,6 +50,7 @@ export default function EmployeeLoanOnCreditCard() {
     processingFee: '₹999 + GST',
     disbursalTime: 'Instant (10 Seconds)',
     badge: 'Pre-Approved',
+    apply_url: 'https://applyonline.hdfc.bank.in/loan-against-assets/insta-jumbo-loan/insta-jumbo-form.html?&XSELLINSHI=Y&XSELLINSLP=Y&Channel=DSA&DSACode=XYOH&LGCode=XYOH&LC1=YOH5&LC2=YOH5&SMCode=S54558#nbb',
     features: [
       'Instant 10-second cash credit directly into your bank savings account',
       'Insta Jumbo Loan option available over and above existing credit card limit',
@@ -97,6 +98,7 @@ export default function EmployeeLoanOnCreditCard() {
                 processingFee: p.annual_fee || p.fees_charges || '₹999 + GST',
                 disbursalTime: 'Instant (10 Seconds)',
                 badge: p.badge || 'Pre-Approved',
+                apply_url: p.apply_url || p.direct_url || p.link || 'https://applyonline.hdfc.bank.in/loan-against-assets/insta-jumbo-loan/insta-jumbo-form.html?&XSELLINSHI=Y&XSELLINSLP=Y&Channel=DSA&DSACode=XYOH&LGCode=XYOH&LC1=YOH5&LC2=YOH5&SMCode=S54558#nbb',
                 features: parsedFeatures.length > 0 ? parsedFeatures : defaultHdfcOffer.features
               };
             });
@@ -254,6 +256,17 @@ export default function EmployeeLoanOnCreditCard() {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
       }
+
+      const defaultLoanDirectUrl = 'https://applyonline.hdfc.bank.in/loan-against-assets/insta-jumbo-loan/insta-jumbo-form.html?&XSELLINSHI=Y&XSELLINSLP=Y&Channel=DSA&DSACode=XYOH&LGCode=XYOH&LC1=YOH5&LC2=YOH5&SMCode=S54558#nbb';
+      const targetDirectUrl = applyOffer?.apply_url || applyOffer?.direct_link || applyOffer?.direct_url || defaultLoanDirectUrl;
+
+      if (processBy === 'Direct link') {
+        window.open(targetDirectUrl, '_blank');
+      } else if (processBy === 'Linked share') {
+        const msg = encodeURIComponent(`Apply for ${applyOffer?.bank || 'HDFC Bank'} Loan on Credit Card here: ${targetDirectUrl}`);
+        window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
+      }
+
       setSubmitSuccess(true);
       setTimeout(() => {
         setSubmitSuccess(false);
@@ -266,6 +279,17 @@ export default function EmployeeLoanOnCreditCard() {
       }, 2500);
     } catch (err) {
       console.error('Failed to submit card loan lead:', err);
+
+      const defaultLoanDirectUrl = 'https://applyonline.hdfc.bank.in/loan-against-assets/insta-jumbo-loan/insta-jumbo-form.html?&XSELLINSHI=Y&XSELLINSLP=Y&Channel=DSA&DSACode=XYOH&LGCode=XYOH&LC1=YOH5&LC2=YOH5&SMCode=S54558#nbb';
+      const targetDirectUrl = applyOffer?.apply_url || applyOffer?.direct_link || applyOffer?.direct_url || defaultLoanDirectUrl;
+
+      if (processBy === 'Direct link') {
+        window.open(targetDirectUrl, '_blank');
+      } else if (processBy === 'Linked share') {
+        const msg = encodeURIComponent(`Apply for ${applyOffer?.bank || 'HDFC Bank'} Loan on Credit Card here: ${targetDirectUrl}`);
+        window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
+      }
+
       setSubmitSuccess(true);
       setTimeout(() => {
         setSubmitSuccess(false);
