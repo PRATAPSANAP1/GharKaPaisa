@@ -61,6 +61,30 @@ export function normalizeMessengerAttachment(att) {
   };
 }
 
+export function formatDayHeader(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  const isSameDay = (d1, d2) =>
+    d1.getFullYear() === d2.getFullYear() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getDate() === d2.getDate();
+
+  if (isSameDay(d, today)) return 'Today';
+  if (isSameDay(d, yesterday)) return 'Yesterday';
+
+  return d.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
+  });
+}
+
 export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props }) {
   const [blobUrl, setBlobUrl] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1830,15 +1854,29 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
               if (filter === 'EMPLOYEES') {
                 const targetUser = conv.other_participants?.find(p => (p.user_id || p.id) !== user?.id) || conv.other_participants?.[0];
                 const role = (targetUser?.role || targetUser?.participant_role || '').toUpperCase();
-                return role === 'EMPLOYEE' || role === 'ADMIN' || role === 'SUPER_ADMIN' || !!targetUser?.employee_code || conv.conversation_type === 'GROUP';
-              }
-              if (filter === 'PARTNERS') {
+                if (role !== 'EMPLOYEE' && role !== 'ADMIN' && role !== 'SUPER_ADMIN' && !targetUser?.employee_code && conv.conversation_type !== 'GROUP') return false;
+              } else if (filter === 'PARTNERS') {
                 const targetUser = conv.other_participants?.find(p => (p.user_id || p.id) !== user?.id) || conv.other_participants?.[0];
                 const role = (targetUser?.role || targetUser?.participant_role || '').toUpperCase();
-                return role === 'PARTNER' || role === 'CHANNEL_PARTNER' || !!targetUser?.partner_code;
+                if (role !== 'PARTNER' && role !== 'CHANNEL_PARTNER' && !targetUser?.partner_code) return false;
+              } else if (filter === 'GROUPS') {
+                if (conv.conversation_type !== 'GROUP') return false;
+              } else if (filter === 'UNREAD') {
+                if ((conv.unread_count || 0) <= 0) return false;
               }
-              if (filter === 'GROUPS') return conv.conversation_type === 'GROUP';
-              if (filter === 'UNREAD') return conv.unread_count > 0;
+
+              if (search && search.trim()) {
+                const q = search.trim().toLowerCase();
+                const title = getConvTitle(conv).toLowerCase();
+                const convName = (conv.name || '').toLowerCase();
+                const lastMsg = (conv.last_message_text || '').toLowerCase();
+                const participantDetails = (conv.other_participants || [])
+                  .map(p => `${p.full_name || ''} ${p.name || ''} ${p.email || ''} ${p.mobile || ''} ${p.partner_code || ''} ${p.employee_code || ''}`)
+                  .join(' ')
+                  .toLowerCase();
+
+                return title.includes(q) || convName.includes(q) || lastMsg.includes(q) || participantDetails.includes(q);
+              }
               return true;
             }).length === 0 ? (
               <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>
@@ -1850,15 +1888,29 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                 if (filter === 'EMPLOYEES') {
                   const targetUser = conv.other_participants?.find(p => (p.user_id || p.id) !== user?.id) || conv.other_participants?.[0];
                   const role = (targetUser?.role || targetUser?.participant_role || '').toUpperCase();
-                  return role === 'EMPLOYEE' || role === 'ADMIN' || role === 'SUPER_ADMIN' || !!targetUser?.employee_code || conv.conversation_type === 'GROUP';
-                }
-                if (filter === 'PARTNERS') {
+                  if (role !== 'EMPLOYEE' && role !== 'ADMIN' && role !== 'SUPER_ADMIN' && !targetUser?.employee_code && conv.conversation_type !== 'GROUP') return false;
+                } else if (filter === 'PARTNERS') {
                   const targetUser = conv.other_participants?.find(p => (p.user_id || p.id) !== user?.id) || conv.other_participants?.[0];
                   const role = (targetUser?.role || targetUser?.participant_role || '').toUpperCase();
-                  return role === 'PARTNER' || role === 'CHANNEL_PARTNER' || !!targetUser?.partner_code;
+                  if (role !== 'PARTNER' && role !== 'CHANNEL_PARTNER' && !targetUser?.partner_code) return false;
+                } else if (filter === 'GROUPS') {
+                  if (conv.conversation_type !== 'GROUP') return false;
+                } else if (filter === 'UNREAD') {
+                  if ((conv.unread_count || 0) <= 0) return false;
                 }
-                if (filter === 'GROUPS') return conv.conversation_type === 'GROUP';
-                if (filter === 'UNREAD') return conv.unread_count > 0;
+
+                if (search && search.trim()) {
+                  const q = search.trim().toLowerCase();
+                  const title = getConvTitle(conv).toLowerCase();
+                  const convName = (conv.name || '').toLowerCase();
+                  const lastMsg = (conv.last_message_text || '').toLowerCase();
+                  const participantDetails = (conv.other_participants || [])
+                    .map(p => `${p.full_name || ''} ${p.name || ''} ${p.email || ''} ${p.mobile || ''} ${p.partner_code || ''} ${p.employee_code || ''}`)
+                    .join(' ')
+                    .toLowerCase();
+
+                  return title.includes(q) || convName.includes(q) || lastMsg.includes(q) || participantDetails.includes(q);
+                }
                 return true;
               }).map(conv => {
                 const isSelected = activeConv?.id === conv.id;
@@ -2225,36 +2277,44 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                       </div>
                     </div>
 
-                    {/* Centered Date Separator Bubble & Older Loading */}
+                    {/* Centered Date Separator & Older Loading */}
                     {loadingOlder && (
                       <div style={{ textAlign: 'center', margin: '4px 0', color: '#64748B', fontSize: '11.5px', fontWeight: 600 }}>
                         <span>Loading older messages...</span>
                       </div>
                     )}
-                    <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0 10px 0' }}>
-                      <span style={{
-                        padding: '5px 16px', borderRadius: '20px', background: '#E0F2FE',
-                        color: '#0369A1', fontSize: '11.5px', fontWeight: 700, boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-                      }}>
-                        Today
-                      </span>
-                    </div>
 
                     {filteredMessages.map((msg, msgIdx) => {
+                      const currentDateHeader = formatDayHeader(msg.created_at);
+                      const prevDateHeader = msgIdx > 0 ? formatDayHeader(filteredMessages[msgIdx - 1].created_at) : null;
+                      const showDayHeader = Boolean(currentDateHeader && currentDateHeader !== prevDateHeader);
+
                       if (msg.message_type === 'SYSTEM') {
                         const sysTxt = (msg.message_text || '').toLowerCase();
                         if (sysTxt.includes('added') || sysTxt.includes('removed') || sysTxt.includes('left') || sysTxt.includes('joined')) {
                           return null;
                         }
                         return (
-                          <div key={msg.id} style={{ display: 'flex', justifyContent: 'center', margin: '4px 0' }}>
-                            <span style={{
-                              padding: '5px 14px', borderRadius: '16px', background: '#F1F5F9', border: '1px solid #CBD5E1',
-                              color: '#475569', fontSize: '11.5px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px'
-                            }}>
-                              {msg.message_text}
-                            </span>
-                          </div>
+                          <React.Fragment key={msg.id || `sys-${msgIdx}`}>
+                            {showDayHeader && (
+                              <div style={{ display: 'flex', justifyContent: 'center', margin: '12px 0 8px 0' }}>
+                                <span style={{
+                                  padding: '4px 14px', borderRadius: '16px', background: '#E0F2FE', border: '1px solid #BAE6FD',
+                                  color: '#0369A1', fontSize: '11px', fontWeight: 700, letterSpacing: '0.2px', boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                                }}>
+                                  {currentDateHeader}
+                                </span>
+                              </div>
+                            )}
+                            <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0' }}>
+                              <span style={{
+                                padding: '5px 14px', borderRadius: '16px', background: '#F1F5F9', border: '1px solid #CBD5E1',
+                                color: '#475569', fontSize: '11.5px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px'
+                              }}>
+                                {msg.message_text}
+                              </span>
+                            </div>
+                          </React.Fragment>
                         );
                       }
 
@@ -2270,17 +2330,27 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                       const isPickerOpen = activeReactionPickerMsgId === msg.id;
 
                       return (
-                        <div
-                          key={msg.id}
-                          onMouseEnter={() => setHoveredMsgId(msg.id)}
-                          onMouseLeave={() => setHoveredMsgId(null)}
-                          style={{
-                            display: 'flex', flexDirection: 'column',
-                            alignItems: isMe ? 'flex-end' : 'flex-start',
-                            position: 'relative',
-                            width: '100%'
-                          }}
-                        >
+                        <React.Fragment key={msg.id || `msg-${msgIdx}`}>
+                          {showDayHeader && (
+                            <div style={{ display: 'flex', justifyContent: 'center', margin: '12px 0 8px 0', width: '100%' }}>
+                              <span style={{
+                                padding: '4px 14px', borderRadius: '16px', background: '#E0F2FE', border: '1px solid #BAE6FD',
+                                color: '#0369A1', fontSize: '11px', fontWeight: 700, letterSpacing: '0.2px', boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                              }}>
+                                {currentDateHeader}
+                              </span>
+                            </div>
+                          )}
+                          <div
+                            onMouseEnter={() => setHoveredMsgId(msg.id)}
+                            onMouseLeave={() => setHoveredMsgId(null)}
+                            style={{
+                              display: 'flex', flexDirection: 'column',
+                              alignItems: isMe ? 'flex-end' : 'flex-start',
+                              position: 'relative',
+                              width: '100%'
+                            }}
+                          >
                           {!isMe && (
                             <span 
                               onClick={() => {
@@ -2633,8 +2703,9 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                             )}
                           </div>
                         </div>
-                      );
-                    })}</>
+                      </React.Fragment>
+                    );
+                  })}</>
                 )}
                 <div ref={messagesEndRef} />
               </div>
