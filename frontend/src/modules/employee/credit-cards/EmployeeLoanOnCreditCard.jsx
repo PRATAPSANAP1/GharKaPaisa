@@ -6,7 +6,7 @@ import { useAuthStore } from '../../../app/store/authStore';
 import { 
   FaCoins, FaCalculator, FaCheckCircle, FaBolt, FaShieldAlt, 
   FaShareAlt, FaCopy, FaExternalLinkAlt, FaSearch, FaChevronRight,
-  FaPercentage, FaCalendarAlt, FaUserCheck, FaInfoCircle
+  FaPercentage, FaCalendarAlt, FaUserCheck, FaInfoCircle, FaBalanceScale
 } from 'react-icons/fa';
 import hdfcLogo from '../../home/components/banks/hdfc_bank.png';
 import sbiLogo from '../../home/components/banks/sbi_card.png';
@@ -133,15 +133,20 @@ export default function EmployeeLoanOnCreditCard() {
   const [tenureMonths, setTenureMonths] = useState(24);
   const [copiedId, setCopiedId] = useState(null);
 
-  // Apply Modal & Benefits State
+  // Apply Modal & Benefits & Compare State
   const [showBenefitsOffer, setShowBenefitsOffer] = useState(null);
   const [applyOffer, setApplyOffer] = useState(null);
+  const [compareList, setCompareList] = useState([]);
   const [custName, setCustName] = useState('');
   const [custMobile, setCustMobile] = useState('');
   const [loanRequiredAmt, setLoanRequiredAmt] = useState('');
   const [loanTenure, setLoanTenure] = useState('6 Months');
   const [processBy, setProcessBy] = useState('Punching Only');
   const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  const handleToggleCompare = (offer) => {
+    setCompareList(prev => prev.includes(offer.id) ? prev.filter(id => id !== offer.id) : [...prev, offer.id]);
+  };
 
   const empCode = user?.partner_code || user?.employee_id || user?.emp_code || user?.referral_code || user?.id || '';
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://gharkapaisa.in';
@@ -587,33 +592,60 @@ export default function EmployeeLoanOnCreditCard() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Buttons: 4 Grid Buttons like Credit Cards */}
               <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <button
-                  onClick={() => setApplyOffer(offer)}
-                  style={{
-                    width: '100%',
-                    padding: '11px',
-                    borderRadius: '12px',
-                    border: 'none',
-                    background: C.employeePrimary || '#0F766E',
-                    color: '#FFFFFF',
-                    fontSize: '13.5px',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    boxShadow: '0 4px 12px rgba(15, 118, 110, 0.2)'
-                  }}
-                >
-                  <FaUserCheck /> Apply for Customer Now
-                </button>
+                {/* Row 1: Share & Compare */}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => handleWhatsAppShare(offer)}
+                    type="button"
+                    style={{
+                      flex: 1,
+                      padding: '9px',
+                      borderRadius: '10px',
+                      border: `1px solid ${C.border}`,
+                      background: C.bgSecondary,
+                      color: C.text,
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <FaShareAlt size={12} /> Share
+                  </button>
 
+                  <button
+                    onClick={() => handleToggleCompare(offer)}
+                    type="button"
+                    style={{
+                      flex: 1,
+                      padding: '9px',
+                      borderRadius: '10px',
+                      border: `1px solid ${compareList.includes(offer.id) ? (C.employeePrimary || '#0F766E') : C.border}`,
+                      background: compareList.includes(offer.id) ? `${C.employeePrimary || '#0F766E'}15` : C.bgSecondary,
+                      color: compareList.includes(offer.id) ? (C.employeePrimary || '#0F766E') : C.text,
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <FaBalanceScale size={13} /> {compareList.includes(offer.id) ? '✓ Compared' : 'Compare'}
+                  </button>
+                </div>
+
+                {/* Row 2: Benefits & Apply */}
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
                     onClick={() => setShowBenefitsOffer(offer)}
+                    type="button"
                     style={{
                       flex: 1,
                       padding: '9px',
@@ -634,13 +666,14 @@ export default function EmployeeLoanOnCreditCard() {
                   </button>
 
                   <button
-                    onClick={() => handleWhatsAppShare(offer)}
+                    onClick={() => setApplyOffer(offer)}
+                    type="button"
                     style={{
                       flex: 1,
                       padding: '9px',
                       borderRadius: '10px',
                       border: 'none',
-                      background: '#25D366',
+                      background: C.employeePrimary || '#0F766E',
                       color: '#FFFFFF',
                       fontSize: '12.5px',
                       fontWeight: 800,
@@ -648,10 +681,11 @@ export default function EmployeeLoanOnCreditCard() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '6px'
+                      gap: '6px',
+                      boxShadow: '0 4px 12px rgba(15, 118, 110, 0.2)'
                     }}
                   >
-                    <FaShareAlt size={12} /> WhatsApp
+                    <FaUserCheck size={12} /> Apply
                   </button>
                 </div>
               </div>

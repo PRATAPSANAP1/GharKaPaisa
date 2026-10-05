@@ -6,7 +6,7 @@ import { useAuthStore } from '../../../app/store/authStore';
 import { 
   FaCreditCard, FaCalculator, FaCheckCircle, FaBolt, FaShieldAlt, 
   FaShareAlt, FaCopy, FaExternalLinkAlt, FaSearch, FaShoppingBag,
-  FaPercentage, FaCalendarAlt, FaUserCheck, FaInfoCircle
+  FaPercentage, FaCalendarAlt, FaUserCheck, FaInfoCircle, FaBalanceScale
 } from 'react-icons/fa';
 import hdfcLogo from '../../home/components/banks/hdfc_bank.png';
 import sbiLogo from '../../home/components/banks/sbi_card.png';
@@ -133,15 +133,20 @@ export default function EmployeeSmartEmi() {
   const [rateType, setRateType] = useState('LOW_COST'); // 'NO_COST', 'LOW_COST', 'STANDARD'
   const [copiedId, setCopiedId] = useState(null);
 
-  // Apply Modal & Benefits State
+  // Apply Modal & Benefits & Compare State
   const [showBenefitsOffer, setShowBenefitsOffer] = useState(null);
   const [applyScheme, setApplyScheme] = useState(null);
+  const [compareList, setCompareList] = useState([]);
   const [custName, setCustName] = useState('');
   const [custMobile, setCustMobile] = useState('');
   const [smartEmiAmt, setSmartEmiAmt] = useState('');
   const [smartEmiTenure, setSmartEmiTenure] = useState('06 Months');
   const [processBy, setProcessBy] = useState('Punching Only');
   const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  const handleToggleCompare = (scheme) => {
+    setCompareList(prev => prev.includes(scheme.id) ? prev.filter(id => id !== scheme.id) : [...prev, scheme.id]);
+  };
 
   const empCode = user?.partner_code || user?.employee_id || user?.emp_code || user?.referral_code || user?.id || '';
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://gharkapaisa.in';
@@ -621,33 +626,60 @@ export default function EmployeeSmartEmi() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Buttons: 4 Grid Buttons like Credit Cards */}
               <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <button
-                  onClick={() => setApplyScheme(scheme)}
-                  style={{
-                    width: '100%',
-                    padding: '11px',
-                    borderRadius: '12px',
-                    border: 'none',
-                    background: '#4338CA',
-                    color: '#FFFFFF',
-                    fontSize: '13.5px',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    boxShadow: '0 4px 12px rgba(67, 56, 202, 0.2)'
-                  }}
-                >
-                  <FaUserCheck /> Submit Smart EMI Lead
-                </button>
+                {/* Row 1: Share & Compare */}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => handleWhatsAppShare(scheme)}
+                    type="button"
+                    style={{
+                      flex: 1,
+                      padding: '9px',
+                      borderRadius: '10px',
+                      border: `1px solid ${C.border}`,
+                      background: C.bgSecondary,
+                      color: C.text,
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <FaShareAlt size={12} /> Share
+                  </button>
 
+                  <button
+                    onClick={() => handleToggleCompare(scheme)}
+                    type="button"
+                    style={{
+                      flex: 1,
+                      padding: '9px',
+                      borderRadius: '10px',
+                      border: `1px solid ${compareList.includes(scheme.id) ? '#4338CA' : C.border}`,
+                      background: compareList.includes(scheme.id) ? '#4338CA15' : C.bgSecondary,
+                      color: compareList.includes(scheme.id) ? '#4338CA' : C.text,
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <FaBalanceScale size={13} /> {compareList.includes(scheme.id) ? '✓ Compared' : 'Compare'}
+                  </button>
+                </div>
+
+                {/* Row 2: Benefits & Apply */}
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
                     onClick={() => setShowBenefitsOffer(scheme)}
+                    type="button"
                     style={{
                       flex: 1,
                       padding: '9px',
@@ -668,13 +700,14 @@ export default function EmployeeSmartEmi() {
                   </button>
 
                   <button
-                    onClick={() => handleWhatsAppShare(scheme)}
+                    onClick={() => setApplyScheme(scheme)}
+                    type="button"
                     style={{
                       flex: 1,
                       padding: '9px',
                       borderRadius: '10px',
                       border: 'none',
-                      background: '#25D366',
+                      background: '#4338CA',
                       color: '#FFFFFF',
                       fontSize: '12.5px',
                       fontWeight: 800,
@@ -682,10 +715,11 @@ export default function EmployeeSmartEmi() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '6px'
+                      gap: '6px',
+                      boxShadow: '0 4px 12px rgba(67, 56, 202, 0.2)'
                     }}
                   >
-                    <FaShareAlt size={12} /> WhatsApp
+                    <FaUserCheck size={12} /> Apply
                   </button>
                 </div>
               </div>
