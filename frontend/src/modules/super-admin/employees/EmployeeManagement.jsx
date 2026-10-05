@@ -108,7 +108,7 @@ export default function EmployeeManagement() {
         const aadhaarUrl = kyc.aadhaar_document_url || aadhaarDoc?.document_url || null;
         const panUrl = kyc.pan_document_url || panDoc?.document_url || null;
         const bankUrl = kyc.bank_document_url || bankDoc?.document_url || null;
-        const photoUrl = emp.profile_photo_url || emp.face_reference_url || photoDoc?.document_url || null;
+        const photoUrl = emp.profile_photo_url || photoDoc?.document_url || null;
         const offerUrl = offerDoc?.document_url || emp.resume_url || null;
 
         setDocStatuses({
@@ -1651,8 +1651,8 @@ export default function EmployeeManagement() {
                             display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '16px', flexShrink: 0,
                             overflow: 'hidden', border: `1px solid ${C.teal}40`
                           }}>
-                            {emp.profile_photo_url || emp.face_reference_url || emp.avatar_url || emp.photo ? (
-                              <img src={emp.profile_photo_url || emp.face_reference_url || emp.avatar_url || emp.photo} alt={emp.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            {emp.profile_photo_url || emp.avatar_url || emp.photo ? (
+                              <img src={emp.profile_photo_url || emp.avatar_url || emp.photo} alt={emp.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             ) : (
                               emp.full_name ? emp.full_name[0].toUpperCase() : 'E'
                             )}
@@ -1743,8 +1743,8 @@ export default function EmployeeManagement() {
                           display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '15px', flexShrink: 0,
                           overflow: 'hidden', border: `1px solid ${C.teal}40`
                         }}>
-                          {emp.profile_photo_url || emp.face_reference_url || emp.avatar_url || emp.photo ? (
-                            <img src={emp.profile_photo_url || emp.face_reference_url || emp.avatar_url || emp.photo} alt={emp.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          {emp.profile_photo_url || emp.avatar_url || emp.photo ? (
+                            <img src={emp.profile_photo_url || emp.avatar_url || emp.photo} alt={emp.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           ) : (
                             emp.full_name ? emp.full_name[0].toUpperCase() : 'E'
                           )}
@@ -1835,8 +1835,8 @@ export default function EmployeeManagement() {
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px', flexShrink: 0,
                                 overflow: 'hidden', border: `1px solid ${C.teal}40`
                               }}>
-                                {emp.profile_photo_url || emp.face_reference_url || emp.avatar_url || emp.photo ? (
-                                  <img src={emp.profile_photo_url || emp.face_reference_url || emp.avatar_url || emp.photo} alt={emp.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                {emp.profile_photo_url || emp.avatar_url || emp.photo ? (
+                                  <img src={emp.profile_photo_url || emp.avatar_url || emp.photo} alt={emp.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 ) : (
                                   emp.full_name ? emp.full_name[0].toUpperCase() : 'E'
                                 )}
@@ -2838,9 +2838,9 @@ export default function EmployeeManagement() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '20px', flexShrink: 0,
                     border: `2px solid ${C.teal}40`, overflow: 'hidden', boxShadow: '0 4px 10px rgba(0,0,0,0.08)'
                   }}>
-                    {(selectedEmp.profile_photo_url || selectedEmp.face_reference_url || selectedEmp.avatar_url || selectedEmp.photo || emp360Data?.employee?.profile_photo_url) ? (
+                    {(selectedEmp.profile_photo_url || selectedEmp.avatar_url || selectedEmp.photo || emp360Data?.employee?.profile_photo_url) ? (
                       <img 
-                        src={selectedEmp.profile_photo_url || selectedEmp.face_reference_url || selectedEmp.avatar_url || selectedEmp.photo || emp360Data?.employee?.profile_photo_url} 
+                        src={selectedEmp.profile_photo_url || selectedEmp.avatar_url || selectedEmp.photo || emp360Data?.employee?.profile_photo_url} 
                         alt={selectedEmp.full_name} 
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                       />
@@ -4368,8 +4368,8 @@ export default function EmployeeManagement() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: isMobile ? '18px' : '24px', flexShrink: 0,
                     border: `2px solid ${C.teal}30`, overflow: 'hidden'
                   }}>
-                    {drawerEmp.profile_photo_url || drawerEmp.face_reference_url || drawerEmp.avatar_url || drawerEmp.photo ? (
-                      <img src={drawerEmp.profile_photo_url || drawerEmp.face_reference_url || drawerEmp.avatar_url || drawerEmp.photo} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {drawerEmp.profile_photo_url || drawerEmp.avatar_url || drawerEmp.photo ? (
+                      <img src={drawerEmp.profile_photo_url || drawerEmp.avatar_url || drawerEmp.photo} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       drawerEmp.full_name ? drawerEmp.full_name[0].toUpperCase() : 'E'
                     )}

@@ -306,12 +306,12 @@ async function calculateEmployeeVerificationState(employeeId) {
     `, [kyc.id, overallStatus]).catch(() => {});
   }
 
-  // Extract & resolve employee profile photo
+  // Extract & resolve employee profile photo (strictly uploaded profile photo)
   const photoDoc = docsRes.rows.find(d => {
     const t = String(d.document_type || '').toLowerCase().trim();
     return ['photo', 'photograph', 'profile_photo', 'passport_photo', 'avatar'].includes(t);
   });
-  const rawPhotoKey = employee.profile_photo_url || employee.user_profile_photo_url || photoDoc?.document_url || bioRes.rows[0]?.s3_key || null;
+  const rawPhotoKey = employee.profile_photo_url || employee.user_profile_photo_url || photoDoc?.document_url || null;
   const resolvedProfilePhoto = rawPhotoKey ? await resolveS3Url(rawPhotoKey) : null;
 
   return {
