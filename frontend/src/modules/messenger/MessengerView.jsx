@@ -325,13 +325,13 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   const matchingMsgList = React.useMemo(() => {
     if (!msgSearch || !msgSearch.trim()) return [];
     const q = msgSearch.trim().toLowerCase();
-    return (filteredMessages || []).filter(m => {
+    return (messages || []).filter(m => {
       const textMatch = (m.message_text || '').toLowerCase().includes(q);
       const senderMatch = (m.sender_name || '').toLowerCase().includes(q);
       const attMatch = (m.attachments || []).some(a => (a.file_name || '').toLowerCase().includes(q));
       return textMatch || senderMatch || attMatch;
     });
-  }, [filteredMessages, msgSearch]);
+  }, [messages, msgSearch]);
 
   const handleJumpToMatch = useCallback((index) => {
     if (!matchingMsgList.length) return;

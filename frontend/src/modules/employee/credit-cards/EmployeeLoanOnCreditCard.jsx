@@ -67,19 +67,11 @@ export default function EmployeeLoanOnCreditCard() {
         });
         const prods = res.data?.data?.rows || res.data?.data || res.data?.products || [];
         if (Array.isArray(prods) && prods.length > 0) {
-          // Strictly filter only HDFC Bank Instant & Jumbo Loan products
+          // Strictly filter products added in super-admin loc_eoc with subcategory LOC
           const cardLoanProds = prods.filter(p => {
-            const cat = String(p.category || '').toLowerCase();
-            const subCat = String(p.sub_category || '').toLowerCase();
-            const pName = String(p.name || '').toLowerCase();
-            const bName = String(p.bank_name || p.bank || '').toLowerCase();
-            
-            const isHdfc = bName.includes('hdfc') || pName.includes('hdfc');
-            const isCardLoan = cat === 'loc_eoc' || cat === 'loan_on_credit_card' ||
-                               subCat === 'loc' || subCat.includes('loan on credit card') ||
-                               pName.includes('insta') || pName.includes('instant') || pName.includes('jumbo');
-            
-            return isHdfc && isCardLoan;
+            const cat = String(p.category || '').toLowerCase().trim();
+            const subCat = String(p.sub_category || '').toUpperCase().trim();
+            return cat === 'loc_eoc' && (subCat === 'LOC' || subCat === 'LOAN ON CREDIT CARD');
           });
 
           if (cardLoanProds.length > 0) {
@@ -94,14 +86,14 @@ export default function EmployeeLoanOnCreditCard() {
               return {
                 id: p.id,
                 bank_id: p.bank_id,
-                bank: 'HDFC Bank',
-                title: p.name?.includes('Instant') ? p.name : 'HDFC Bank Instant & Jumbo Loan',
-                logo: getBankLogo('HDFC Bank', p.bank_logo || p.logo || p.image_url),
+                bank: bName,
+                title: p.name || 'Loan on Credit Card',
+                logo: getBankLogo(bName, p.bank_logo || p.logo || p.image_url),
                 accent: '#0F766E',
                 maxLoan: p.joining_fee && p.joining_fee !== 'Nil' ? p.joining_fee : '₹10,00,000',
                 minRoi: p.interest_rate || '11.49% - 15.50% p.a.',
-                tenure: p.time_period || '12 - 60 Months',
-                processingFee: p.annual_fee || '₹999 + GST',
+                tenure: p.time_period || p.tenure || '12 - 60 Months',
+                processingFee: p.annual_fee || p.fees_charges || '₹999 + GST',
                 disbursalTime: 'Instant (10 Seconds)',
                 badge: p.badge || 'Pre-Approved',
                 features: parsedFeatures.length > 0 ? parsedFeatures : defaultHdfcOffer.features
@@ -109,14 +101,14 @@ export default function EmployeeLoanOnCreditCard() {
             });
             setDbOffers(mapped);
           } else {
-            setDbOffers([defaultHdfcOffer]);
+            setDbOffers([]);
           }
         } else {
-          setDbOffers([defaultHdfcOffer]);
+          setDbOffers([]);
         }
       } catch (err) {
         console.error('Failed to load dynamic Card Loan offers:', err);
-        setDbOffers([defaultHdfcOffer]);
+        setDbOffers([]);
       } finally {
         setLoadingProds(false);
       }
@@ -125,6 +117,14 @@ export default function EmployeeLoanOnCreditCard() {
   }, [defaultHdfcOffer]);
 
   const activeOffers = dbOffers;
+
+  const availableBanks = useMemo(() => {
+    const bSet = new Set();
+    (Array.isArray(dbOffers) ? dbOffers : []).forEach(o => {
+      if (o.bank) bSet.add(o.bank);
+    });
+    return Array.from(bSet);
+  }, [dbOffers]);
 
   // Calculator States
   const [loanAmount, setLoanAmount] = useState(150000);
@@ -449,8 +449,10 @@ export default function EmployeeLoanOnCreditCard() {
               cursor: 'pointer'
             }}
           >
-            <option value="ALL">All Banks (HDFC Bank)</option>
-            <option value="HDFC Bank">HDFC Bank</option>
+            <option value="ALL">All Banks {availableBanks.length > 0 ? `(${availableBanks.length})` : ''}</option>
+            {availableBanks.map(b => (
+              <option key={b} value={b}>{b}</option>
+            ))}
           </select>
         </div>
       </div>

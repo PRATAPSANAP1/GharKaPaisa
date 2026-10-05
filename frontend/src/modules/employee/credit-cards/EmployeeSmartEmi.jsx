@@ -67,19 +67,11 @@ export default function EmployeeSmartEmi() {
         });
         const prods = res.data?.data?.rows || res.data?.data || res.data?.products || [];
         if (Array.isArray(prods) && prods.length > 0) {
-          // Strictly filter only HDFC Bank Smart EMI / EMI on credit card products
+          // Strictly filter products added in super-admin loc_eoc with subcategory EOC
           const smartEmiProds = prods.filter(p => {
-            const cat = String(p.category || '').toLowerCase();
-            const subCat = String(p.sub_category || '').toLowerCase();
-            const pName = String(p.name || '').toLowerCase();
-            const bName = String(p.bank_name || p.bank || '').toLowerCase();
-            
-            const isHdfc = bName.includes('hdfc') || pName.includes('hdfc');
-            const isEmi = cat === 'loc_eoc' || cat === 'smart_emi' ||
-                          subCat === 'eoc' || subCat.includes('smart emi') ||
-                          pName.includes('smartemi') || pName.includes('smart emi') || pName.includes('emi');
-            
-            return isHdfc && isEmi;
+            const cat = String(p.category || '').toLowerCase().trim();
+            const subCat = String(p.sub_category || '').toUpperCase().trim();
+            return cat === 'loc_eoc' && (subCat === 'EOC' || subCat === 'SMART EMI ON CREDIT CARD');
           });
 
           if (smartEmiProds.length > 0) {
@@ -94,14 +86,14 @@ export default function EmployeeSmartEmi() {
               return {
                 id: p.id,
                 bank_id: p.bank_id,
-                bank: 'HDFC Bank',
-                title: p.name?.includes('EMI') ? p.name : 'HDFC Bank EMI on Credit Card',
-                logo: getBankLogo('HDFC Bank', p.bank_logo || p.logo || p.image_url),
+                bank: bName,
+                title: p.name || 'Credit Card EMI & Smart EMI',
+                logo: getBankLogo(bName, p.bank_logo || p.logo || p.image_url),
                 accent: '#2563EB',
                 minTransaction: p.joining_fee && p.joining_fee !== 'Nil' ? p.joining_fee : '₹2,500',
                 minRoi: p.interest_rate || '1.15% per month (13.80% p.a.)',
-                tenure: p.time_period || '3 - 48 Months',
-                processingFee: p.annual_fee || p.processing_fee || '₹199 + GST',
+                tenure: p.time_period || p.tenure || '3 - 48 Months',
+                processingFee: p.annual_fee || p.fees_charges || '₹199 + GST',
                 conversionSpeed: 'Instant / Within 24 Hrs',
                 badge: p.badge || 'Popular Scheme',
                 features: parsedFeatures.length > 0 ? parsedFeatures : defaultHdfcScheme.features
@@ -109,14 +101,14 @@ export default function EmployeeSmartEmi() {
             });
             setDbSchemes(mapped);
           } else {
-            setDbSchemes([defaultHdfcScheme]);
+            setDbSchemes([]);
           }
         } else {
-          setDbSchemes([defaultHdfcScheme]);
+          setDbSchemes([]);
         }
       } catch (err) {
         console.error('Failed to load dynamic Smart EMI schemes:', err);
-        setDbSchemes([defaultHdfcScheme]);
+        setDbSchemes([]);
       } finally {
         setLoadingProds(false);
       }
@@ -125,6 +117,14 @@ export default function EmployeeSmartEmi() {
   }, [defaultHdfcScheme]);
 
   const activeSchemes = dbSchemes;
+
+  const availableBanks = useMemo(() => {
+    const bSet = new Set();
+    (Array.isArray(dbSchemes) ? dbSchemes : []).forEach(s => {
+      if (s.bank) bSet.add(s.bank);
+    });
+    return Array.from(bSet);
+  }, [dbSchemes]);
 
   // Calculator States
   const [purchaseAmt, setPurchaseAmt] = useState(75000);
@@ -486,8 +486,10 @@ export default function EmployeeSmartEmi() {
               cursor: 'pointer'
             }}
           >
-            <option value="ALL">All Banks (HDFC Bank)</option>
-            <option value="HDFC Bank">HDFC Bank</option>
+            <option value="ALL">All Banks {availableBanks.length > 0 ? `(${availableBanks.length})` : ''}</option>
+            {availableBanks.map(b => (
+              <option key={b} value={b}>{b}</option>
+            ))}
           </select>
         </div>
       </div>

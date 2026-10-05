@@ -14,8 +14,6 @@ import {
 const CATEGORY_MAP = {
   credit_card: "Credit Cards",
   loc_eoc: "LOC/EOC",
-  loan_on_credit_card: "Loan on Credit Card (LOC)",
-  smart_emi: "Credit Card EMI & Smart EMI (EOC)",
   loans: "Loans",
   insurance: "Insurance",
   savings_account: "Savings Account",
@@ -96,7 +94,7 @@ export default function ManageAdminProducts() {
     name: "",
     bank_id: "",
     category: activeCategory,
-    sub_category: "Core Cards",
+    sub_category: activeCategory === 'loc_eoc' ? 'LOC' : activeCategory === 'loans' ? 'Personal Loan' : activeCategory === 'insurance' ? 'Health Insurance' : 'Core Cards',
     description: "",
     image_url: "",
     status: "Active",
@@ -162,8 +160,6 @@ export default function ManageAdminProducts() {
                     activeCategory === 'loans' ? '%loan%' :
                     activeCategory === 'insurance' ? '%insurance%' :
                     activeCategory === 'loc_eoc' ? 'loc_eoc' :
-                    activeCategory === 'loan_on_credit_card' ? 'loan_on_credit_card' :
-                    activeCategory === 'smart_emi' ? 'smart_emi' :
                     activeCategory,
           is_active: 'all',
           limit: 1000
@@ -220,7 +216,7 @@ export default function ManageAdminProducts() {
       name: "",
       bank_id: banks[0]?.id || "",
       category: activeCategory,
-      sub_category: activeCategory === 'loan_on_credit_card' ? 'Loan on Credit Card' : activeCategory === 'smart_emi' ? 'Smart EMI on Credit Card' : activeCategory === 'loans' ? 'Personal Loan' : activeCategory === 'insurance' ? 'Health Insurance' : 'Core Cards',
+      sub_category: activeCategory === 'loc_eoc' ? 'LOC' : activeCategory === 'loans' ? 'Personal Loan' : activeCategory === 'insurance' ? 'Health Insurance' : 'Core Cards',
       description: "",
       image_url: "",
       status: "Active",
@@ -649,14 +645,21 @@ export default function ManageAdminProducts() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: isMobile ? '1 1 calc(50% - 6px)' : 'none' }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>Card Type</span>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>{activeCategory === 'loc_eoc' ? 'Subcategory' : 'Product Type'}</span>
             <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} style={{ ...S.input, height: '42px', minWidth: isMobile ? '100%' : '150px', width: '100%', padding: '0 12px', fontSize: '13px', fontWeight: 700, borderRadius: '10px', boxSizing: 'border-box' }}>
-              <option value="All">All Product Types</option>
-              <option value="Core Cards">Core Cards</option>
-              <option value="Co-Branded Cards">Co-Branded Cards</option>
-              <option value="Secured Cards">Secured Cards</option>
-              <option value="Loan on Credit Card">Loan on Credit Card</option>
-              <option value="Smart EMI on Credit Card">Smart EMI on Credit Card</option>
+              <option value="All">All {activeCategory === 'loc_eoc' ? 'Subcategories' : 'Product Types'}</option>
+              {activeCategory === 'loc_eoc' ? (
+                <>
+                  <option value="LOC">LOC (Loan on Credit Card)</option>
+                  <option value="EOC">EOC (Smart EMI on Credit Card)</option>
+                </>
+              ) : (
+                <>
+                  <option value="Core Cards">Core Cards</option>
+                  <option value="Co-Branded Cards">Co-Branded Cards</option>
+                  <option value="Secured Cards">Secured Cards</option>
+                </>
+              )}
             </select>
           </div>
 
@@ -698,7 +701,8 @@ export default function ManageAdminProducts() {
       {/* PRODUCT LIST TABLE */}
       <div style={{ background: C.card, borderRadius: '20px', border: `1px solid ${C.border}`, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
         {(() => {
-          const isLoanOrEmi = activeCategory === 'loan_on_credit_card' || activeCategory === 'smart_emi';
+          const isLocEoc = activeCategory === 'loc_eoc';
+          const isLoanOrEmi = isLocEoc || activeCategory === 'loan_on_credit_card' || activeCategory === 'smart_emi';
           return (
         <table style={{ width: '100%', minWidth: '950px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
           <thead>
@@ -706,7 +710,13 @@ export default function ManageAdminProducts() {
               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Image</th>
               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Product Name</th>
               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Bank</th>
-              {isLoanOrEmi ? (
+              {isLocEoc ? (
+                <>
+                  <th style={{ padding: '14px 16px', fontWeight: 800 }}>Subcategory</th>
+                  <th style={{ padding: '14px 16px', fontWeight: 800 }}>Interest Rate</th>
+                  <th style={{ padding: '14px 16px', fontWeight: 800 }}>Tenure</th>
+                </>
+              ) : isLoanOrEmi ? (
                 <>
                   <th style={{ padding: '14px 16px', fontWeight: 800 }}>Interest Rate</th>
                   <th style={{ padding: '14px 16px', fontWeight: 800 }}>Tenure</th>
@@ -723,9 +733,9 @@ export default function ManageAdminProducts() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>Loading products...</td></tr>
+              <tr><td colSpan={isLocEoc ? 8 : 7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>Loading products...</td></tr>
             ) : filteredProducts.length === 0 ? (
-              <tr><td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>No products match your selected filters. Click <strong>Reset Filters</strong> or add a new product!</td></tr>
+              <tr><td colSpan={isLocEoc ? 8 : 7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>No products match your selected filters. Click <strong>Reset Filters</strong> or add a new product!</td></tr>
             ) : (
               paginatedProducts.map(prod => (
                 <tr key={prod.id} style={{ borderBottom: `1px solid ${C.border}` }}>
@@ -756,7 +766,21 @@ export default function ManageAdminProducts() {
                     {prod.badge && <span style={{ marginLeft: '8px', fontSize: '10px', padding: '2px 6px', background: '#F59E0B20', color: '#D97706', borderRadius: '4px', fontWeight: 800 }}>{prod.badge}</span>}
                   </td>
                   <td style={{ padding: '14px 16px', fontWeight: 700, color: C.teal }}>{prod.bank_name || 'Generic'}</td>
-                  {isLoanOrEmi ? (
+                  {isLocEoc ? (
+                    <>
+                      <td style={{ padding: '14px 16px' }}>
+                        <span style={{
+                          padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800,
+                          background: String(prod.sub_category || '').toUpperCase() === 'LOC' ? '#0F766E20' : '#2563EB20',
+                          color: String(prod.sub_category || '').toUpperCase() === 'LOC' ? '#0F766E' : '#2563EB'
+                        }}>
+                          {String(prod.sub_category || '').toUpperCase() === 'LOC' ? 'LOC (Loan)' : 'EOC (Smart EMI)'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '14px 16px', fontWeight: 700, color: '#6366F1' }}>{prod.interest_rate || '—'}</td>
+                      <td style={{ padding: '14px 16px', fontSize: '12px', fontWeight: 700 }}>{prod.time_period || '—'}</td>
+                    </>
+                  ) : isLoanOrEmi ? (
                     <>
                       <td style={{ padding: '14px 16px', fontWeight: 700, color: '#6366F1' }}>{prod.interest_rate || '—'}</td>
                       <td style={{ padding: '14px 16px', fontSize: '12px', fontWeight: 700 }}>{prod.time_period || '—'}</td>
@@ -919,33 +943,20 @@ export default function ManageAdminProducts() {
                   </div>
 
                   <div>
-                    <label style={S.label}>{activeCategory === 'loans' ? 'Loan Sub-Category *' : activeCategory === 'insurance' ? 'Insurance Type *' : activeCategory === 'loan_on_credit_card' ? 'Loan Type *' : activeCategory === 'smart_emi' ? 'EMI Type *' : 'Credit Card Type *'}</label>
+                    <label style={S.label}>{activeCategory === 'loans' ? 'Loan Sub-Category *' : activeCategory === 'insurance' ? 'Insurance Type *' : activeCategory === 'loc_eoc' ? 'LOC / EOC Subcategory *' : 'Credit Card Type *'}</label>
                     <select
                       required
                       value={form.sub_category}
                       onChange={(e) => setForm({ ...form, sub_category: e.target.value })}
                       style={{ ...S.input, height: '42px', fontWeight: 700 }}
                     >
-                      {activeCategory === 'loan_on_credit_card' ? (
+                      {activeCategory === 'loc_eoc' ? (
                         <>
-                          <option value="Loan on Credit Card">Loan on Credit Card</option>
-                          <option value="Insta Loan">Insta Loan</option>
-                          <option value="Jumbo Loan">Jumbo Loan</option>
-                          <option value="Cash on Card">Cash on Card</option>
-                          <option value="Encash">Encash</option>
-                        </>
-                      ) : activeCategory === 'smart_emi' ? (
-                        <>
-                          <option value="EMI on Credit Card">EMI on Credit Card</option>
-                          <option value="Smart EMI on Credit Card">Smart EMI on Credit Card</option>
-                          <option value="Flexipay">Flexipay</option>
-                          <option value="Balance Transfer EMI">Balance Transfer EMI</option>
-                          <option value="No Cost EMI">No Cost EMI</option>
+                          <option value="LOC">LOC (Loan on Credit Card)</option>
+                          <option value="EOC">EOC (Smart EMI on Credit Card)</option>
                         </>
                       ) : activeCategory === 'loans' ? (
                         <>
-                          <option value="Loan on Credit Card">Loan on Credit Card</option>
-                          <option value="Smart EMI on Credit Card">Smart EMI on Credit Card</option>
                           <option value="Personal Loan">Personal Loan</option>
                           <option value="Home Loan">Home Loan</option>
                           <option value="Business Loan">Business Loan</option>
