@@ -14,6 +14,7 @@ import iciciLogo from '../../home/components/banks/icici_bank.png';
 import axisLogo from '../../home/components/banks/axis_bank.png';
 import idfcLogo from '../../home/components/banks/idfc_first_bank.png';
 import kotakLogo from '../../home/components/banks/kotak_bank.png';
+import LoadingLogo from '../../../components/Loader/LoadingLogo';
 
 export default function EmployeeLoanOnCreditCard() {
   const { C, isDark } = useTheme();
@@ -459,9 +460,8 @@ export default function EmployeeLoanOnCreditCard() {
 
       {/* ── 4. OFFERS GRID ── */}
       {loadingProds ? (
-        <div style={{ textAlign: 'center', padding: '60px 20px', background: C.card, borderRadius: '20px', border: `1px solid ${C.border}` }}>
-          <div style={{ width: '32px', height: '32px', border: `3px solid ${C.employeePrimary || '#0F766E'}`, borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto 12px', animation: 'spin 1s linear infinite' }}></div>
-          <p style={{ color: C.textMid, fontSize: '14px', fontWeight: 600 }}>Loading dynamic Loan on Credit Card offers from database...</p>
+        <div style={{ textAlign: 'center', padding: '60px 20px', background: C.card, borderRadius: '20px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '220px' }}>
+          <LoadingLogo size={80} />
         </div>
       ) : filteredOffers.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', background: C.card, borderRadius: '20px', border: `1px solid ${C.border}` }}>

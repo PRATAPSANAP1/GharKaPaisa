@@ -14,6 +14,7 @@ import iciciLogo from '../../home/components/banks/icici_bank.png';
 import axisLogo from '../../home/components/banks/axis_bank.png';
 import rblLogo from '../../home/components/banks/rbl_bank.png';
 import kotakLogo from '../../home/components/banks/kotak_bank.png';
+import LoadingLogo from '../../../components/Loader/LoadingLogo';
 
 export default function EmployeeSmartEmi() {
   const { C, isDark } = useTheme();
@@ -496,8 +497,8 @@ export default function EmployeeSmartEmi() {
 
       {/* ── 4. SCHEMES GRID ── */}
       {loadingProds ? (
-        <div style={{ padding: '60px', textAlign: 'center', color: C.textMid, fontWeight: 700 }}>
-          Loading dynamic Smart EMI schemes...
+        <div style={{ textAlign: 'center', padding: '60px 20px', background: C.card, borderRadius: '20px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '220px' }}>
+          <LoadingLogo size={80} />
         </div>
       ) : filteredSchemes.length === 0 ? (
         <div style={{ padding: '60px', textAlign: 'center', color: C.textMid, fontWeight: 700, background: C.card, borderRadius: '16px', border: `1px solid ${C.border}` }}>

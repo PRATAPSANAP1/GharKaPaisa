@@ -12,6 +12,7 @@ import { getImageUrl } from '../../config/api';
 import { useAuthStore } from '../../app/store/authStore';
 import { getMessengerSocket } from '../../services/messengerSocket';
 import MessengerCallModal from './MessengerCallModal';
+import LoadingLogo from '../../components/Loader/LoadingLogo';
 
 export function maskSensitiveData(text) {
   if (!text || typeof text !== 'string') return text;
@@ -1911,8 +1912,8 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
           {/* Conversation Cards List */}
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {loadingConvs ? (
-              <div style={{ padding: '30px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>
-                Loading conversations...
+              <div style={{ padding: '40px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <LoadingLogo size={70} />
               </div>
             ) : (Array.isArray(conversations) ? conversations : []).filter(conv => {
               if (filter === 'EMPLOYEES') {
@@ -2384,8 +2385,8 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                 style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '14px 12px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative' }}
               >
                 {loadingMsgs ? (
-                  <div style={{ textAlign: 'center', color: '#94A3B8', fontSize: '13px', marginTop: '40px' }}>
-                    Loading conversation...
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '60px' }}>
+                    <LoadingLogo size={70} />
                   </div>
                 ) : filteredMessages.length === 0 ? (
                   <div style={{ textAlign: 'center', color: '#94A3B8', fontSize: '13px', marginTop: '60px' }}>
