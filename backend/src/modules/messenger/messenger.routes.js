@@ -72,7 +72,10 @@ const handleUploadMiddleware = (req, res, next) => {
 
 router.post('/messages', messengerLimiter, controller.sendMessage);
 router.post('/attachments/upload', messengerLimiter, handleUploadMiddleware, controller.uploadAttachment);
+router.post('/attachment/upload', messengerLimiter, handleUploadMiddleware, controller.uploadAttachment);
 router.get('/media/:attachmentId', controller.getMediaAttachment);
+router.get('/attachments/file/:attachmentId', controller.getMediaAttachment);
+router.get('/attachments/:attachmentId', controller.getMediaAttachment);
 router.put('/messages/:id', messengerLimiter, controller.editMessage);
 router.delete('/messages/:id', messengerLimiter, controller.deleteMessage);
 router.get('/unread-count', controller.getUnreadCount);
