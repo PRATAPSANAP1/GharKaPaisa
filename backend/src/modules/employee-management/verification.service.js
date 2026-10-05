@@ -366,6 +366,18 @@ async function sendVerificationReminder(employeeId, sentByUserId = null, customN
 
   const defaultMsg = customNote || `Please complete your employee verification. The following items require your immediate action: ${cleanMissingNames.join(', ')}`;
 
+  // Ensure employee_verification_reminders table exists
+  await query(`
+    CREATE TABLE IF NOT EXISTS employee_verification_reminders (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+      sent_by UUID,
+      message TEXT NOT NULL,
+      missing_documents JSONB DEFAULT '[]'::jsonb,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    )
+  `).catch(e => logger.warn('Reminders table auto-create warning:', e.message));
+
   // 1. Insert into employee_verification_reminders
   const { rows: [reminder] } = await query(`
     INSERT INTO employee_verification_reminders (employee_id, sent_by, message, missing_documents)

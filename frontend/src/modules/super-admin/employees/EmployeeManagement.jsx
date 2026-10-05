@@ -1069,12 +1069,27 @@ export default function EmployeeManagement() {
   });
 
   const handleSendReminder = async (empId, empName) => {
+    if (!empId) {
+      alert('Employee ID is missing');
+      return;
+    }
     setSendingReminder(prev => ({ ...prev, [empId]: true }));
     try {
-      const res = await api.post(`/employees/${empId}/send-reminder`);
-      if (res.data?.success) {
-        alert(`✓ Verification reminder notification successfully sent to ${empName}!`);
-        fetchData();
+      // 1. Dispatch via employee verification reminder route
+      const res1 = await api.post(`/employees/${empId}/send-reminder`).catch(e => e.response);
+
+      // 2. Dispatch via attendance enrollment reminder route as dual dispatch / fallback
+      const res2 = await api.post('/attendance/enrollment/reminder', {
+        employee_id: empId,
+        message: 'Please complete your Face Verification in the GharKaPaisa portal to activate daily attendance.'
+      }).catch(e => e.response);
+
+      if ((res1 && res1.data && res1.data.success) || (res2 && res2.data && res2.data.success)) {
+        alert(`✓ Verification reminder notification successfully sent to ${empName || 'Employee'}!`);
+        if (typeof fetchData === 'function') fetchData();
+      } else {
+        const msg = res1?.data?.message || res2?.data?.message || 'Failed to send verification reminder';
+        alert(msg);
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to send verification reminder');
