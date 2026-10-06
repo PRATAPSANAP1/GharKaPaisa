@@ -196,10 +196,36 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  const isBankAssigned = (bank) => {
+    if (!bank) return false;
+    if (assignedBankIds.includes(bank.id)) return true;
+    const isLocEoc = (bank.short_code || '').toUpperCase() === 'LOC_EOC' || bank.is_loc_eoc || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(bank.name || '');
+    if (isLocEoc) {
+      return assignedBankIds.some(id => {
+        if (id === 'LOC_EOC' || id === bank.id) return true;
+        const b = allBanks.find(item => item.id === id);
+        return b && ((b.short_code || '').toUpperCase() === 'LOC_EOC' || b.is_loc_eoc || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || ''));
+      });
+    }
+    return false;
+  };
+
   const handleToggleBankAssignment = async (bankId) => {
+    const targetBank = allBanks.find(b => b.id === bankId) || { id: bankId };
+    const isLocEoc = (targetBank.short_code || '').toUpperCase() === 'LOC_EOC' || targetBank.is_loc_eoc || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(targetBank.name || '');
+    const isCurrentlyAssigned = isBankAssigned(targetBank);
+
     let updated;
-    if (assignedBankIds.includes(bankId)) {
-      updated = (Array.isArray(assignedBankIds) ? assignedBankIds : []).filter(id => id !== bankId);
+    if (isCurrentlyAssigned) {
+      if (isLocEoc) {
+        updated = (Array.isArray(assignedBankIds) ? assignedBankIds : []).filter(id => {
+          if (id === 'LOC_EOC' || id === bankId) return false;
+          const b = allBanks.find(item => item.id === id);
+          return !(b && ((b.short_code || '').toUpperCase() === 'LOC_EOC' || b.is_loc_eoc || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '')));
+        });
+      } else {
+        updated = (Array.isArray(assignedBankIds) ? assignedBankIds : []).filter(id => id !== bankId);
+      }
     } else {
       updated = [...assignedBankIds, bankId];
     }
@@ -1409,7 +1435,7 @@ export default function SuperAdminDashboard() {
                     return bank.name.toLowerCase().includes(q) || (bank.short_code || '').toLowerCase().includes(q);
                   })
                   .map(bank => {
-                    const isChecked = assignedBankIds.includes(bank.id);
+                    const isChecked = isBankAssigned(bank);
                     const isLocEoc = (bank.short_code || '').toUpperCase() === 'LOC_EOC' || bank.is_loc_eoc || String(bank.name || '').toLowerCase().includes('loc/eoc');
                     
                     return (

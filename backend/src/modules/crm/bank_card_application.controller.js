@@ -286,11 +286,27 @@ const listBankCardApplications = async (req, res, next) => {
     const isQdOperatorUser = ['QD OPERATOR', 'QD_OPERATOR'].includes(userDesignation) || ['QD OPERATOR', 'QD_OPERATOR'].includes(userRole);
 
     if (userRole !== 'SUPER_ADMIN' && req.user?.id) {
-      const { rows: abRows } = await query(`SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`, [req.user.id]);
+      const { rows: abRows } = await query(`
+        SELECT aba.bank_id, b.short_code, b.name 
+        FROM admin_bank_assignments aba
+        LEFT JOIN banks b ON b.id = aba.bank_id
+        WHERE aba.admin_id = $1
+      `, [req.user.id]);
       if (abRows.length > 0) {
-        whereClause += ` AND (combined.bank_id IN (SELECT bank_id::text FROM admin_bank_assignments WHERE admin_id = $${idx}::uuid) OR combined.bank_id IN (SELECT b.id::text FROM banks b WHERE b.operation_head_id = $${idx}::uuid))`;
-        values.push(req.user.id);
-        idx++;
+        const hasLocEoc = abRows.some(b => (b.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || ''));
+        const regBankRows = abRows.filter(b => (b.short_code || '').toUpperCase() !== 'LOC_EOC' && !/loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || ''));
+        const locCondition = `(LOWER(COALESCE(combined.category, '')) IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi') OR LOWER(COALESCE(combined.card_name, '')) LIKE '%insta loan%' OR LOWER(COALESCE(combined.card_name, '')) LIKE '%jumbo loan%' OR LOWER(COALESCE(combined.card_name, '')) LIKE '%smartemi%')`;
+        if (hasLocEoc && regBankRows.length === 0) {
+          whereClause += ` AND ${locCondition}`;
+        } else if (hasLocEoc && regBankRows.length > 0) {
+          whereClause += ` AND ((combined.bank_id IN (SELECT bank_id::text FROM admin_bank_assignments WHERE admin_id = $${idx}::uuid) OR combined.bank_id IN (SELECT b.id::text FROM banks b WHERE b.operation_head_id = $${idx}::uuid)) OR ${locCondition})`;
+          values.push(req.user.id);
+          idx++;
+        } else {
+          whereClause += ` AND (combined.bank_id IN (SELECT bank_id::text FROM admin_bank_assignments WHERE admin_id = $${idx}::uuid) OR combined.bank_id IN (SELECT b.id::text FROM banks b WHERE b.operation_head_id = $${idx}::uuid))`;
+          values.push(req.user.id);
+          idx++;
+        }
       }
     }
 

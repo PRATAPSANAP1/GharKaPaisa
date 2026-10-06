@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { Icons } from "../../../components/Icon/PartnerIcons";
@@ -50,10 +51,21 @@ export default function ManageApplications() {
   const [dateRange, setDateRange] = useState("all");
   const [processTypeFilter, setProcessTypeFilter] = useState("all");
   const [sourceTypeFilter, setSourceTypeFilter] = useState("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const categoryParam = searchParams.get('category');
+
+  const assignedList = user?.assigned_banks?.length ? user.assigned_banks : (user?.permissions?.assigned_banks || []);
+  const hasLocEocAssigned = !!user?.has_loc_eoc || assignedList.some(b => (b.short_code || '').toUpperCase() === 'LOC_EOC' || b.is_loc_eoc || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || ''));
+  const isOnlyLocEocAssigned = hasLocEocAssigned && !assignedList.some(b => (b.short_code || '').toUpperCase() !== 'LOC_EOC' && !b.is_loc_eoc && !/loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || ''));
+
   const [partnerFilter, setPartnerFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [commFilter, setCommFilter] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState(() => {
+    if (categoryParam) return categoryParam;
+    if (isOnlyLocEocAssigned) return "loc_eoc";
+    return "all";
+  });
 
   // Detail / Review Modal State
   const [selectedApp, setSelectedApp] = useState(null);
@@ -134,6 +146,24 @@ export default function ManageApplications() {
     fetchApplications();
   }, [page, limit, status, processTypeFilter, categoryFilter]);
 
+  useEffect(() => {
+    const cat = searchParams.get('category');
+    if (cat && cat !== categoryFilter) {
+      setCategoryFilter(cat);
+      setPage(1);
+    }
+  }, [searchParams]);
+
+  const isLocEocApp = (app) => {
+    if (!app) return false;
+    const cat = String(app.category || '').toLowerCase();
+    const subCat = String(app.sub_category || '').toLowerCase();
+    const pName = String(app.product_name || '').toLowerCase();
+    return ['loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loc', 'eoc'].includes(cat) ||
+      ['loc', 'eoc'].includes(subCat) ||
+      /insta\s*loan|jumbo\s*loan|smart\s*emi|smartemi|loan\s*on\s*card/i.test(pName);
+  };
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setPage(1);
@@ -146,7 +176,7 @@ export default function ManageApplications() {
     setStatus("");
     setStatusFilter("all");
     setCommFilter("all");
-    setCategoryFilter("all");
+    setCategoryFilter(isOnlyLocEocAssigned ? "loc_eoc" : "all");
     setDateRange("all");
     setProcessTypeFilter("all");
     setSourceTypeFilter("all");
@@ -465,6 +495,71 @@ export default function ManageApplications() {
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* ── 2.5 CATEGORY QUICK TOGGLE PILLS (LOC & EOC SUPPORT) ── */}
+      {(hasLocEocAssigned || isSuperAdmin) && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, marginRight: '4px' }}>
+            Category Scope:
+          </span>
+          <button
+            type="button"
+            onClick={() => { setCategoryFilter('all'); setPage(1); }}
+            style={{
+              padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+              border: `1.5px solid ${categoryFilter === 'all' ? '#3B82F6' : C.border}`,
+              background: categoryFilter === 'all' ? '#EFF6FF' : C.card,
+              color: categoryFilter === 'all' ? '#1D4ED8' : C.text
+            }}
+          >
+            All Products
+          </button>
+          <button
+            type="button"
+            onClick={() => { setCategoryFilter('loc_eoc'); setPage(1); }}
+            style={{
+              padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              border: `1.5px solid ${['loc_eoc', 'loan_on_credit_card', 'smart_emi'].includes(categoryFilter) ? '#10B981' : C.border}`,
+              background: ['loc_eoc', 'loan_on_credit_card', 'smart_emi'].includes(categoryFilter) ? '#ECFDF5' : C.card,
+              color: ['loc_eoc', 'loan_on_credit_card', 'smart_emi'].includes(categoryFilter) ? '#047857' : C.text
+            }}
+          >
+            <span>💳 LOC &amp; EOC Applications</span>
+            <span style={{ fontSize: '10px', background: '#10B981', color: '#FFFFFF', padding: '1px 6px', borderRadius: '10px' }}>
+              LOC/EOC
+            </span>
+          </button>
+          {['loc_eoc', 'loan_on_credit_card', 'smart_emi'].includes(categoryFilter) && (
+            <div style={{ display: 'inline-flex', gap: '6px', marginLeft: '6px' }}>
+              <button
+                type="button"
+                onClick={() => { setCategoryFilter('loan_on_credit_card'); setPage(1); }}
+                style={{
+                  padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+                  border: `1px solid ${categoryFilter === 'loan_on_credit_card' ? '#059669' : C.border}`,
+                  background: categoryFilter === 'loan_on_credit_card' ? '#D1FAE5' : 'transparent',
+                  color: categoryFilter === 'loan_on_credit_card' ? '#065F46' : C.textLight
+                }}
+              >
+                LOC Only (Insta / Jumbo)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setCategoryFilter('smart_emi'); setPage(1); }}
+                style={{
+                  padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+                  border: `1px solid ${categoryFilter === 'smart_emi' ? '#059669' : C.border}`,
+                  background: categoryFilter === 'smart_emi' ? '#D1FAE5' : 'transparent',
+                  color: categoryFilter === 'smart_emi' ? '#065F46' : C.textLight
+                }}
+              >
+                EOC Only (Smart EMI)
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -810,7 +905,17 @@ export default function ManageApplications() {
                       {/* Product & Bank */}
                       {!isPanCheckerUser && !isRemarkOperatorUser && !isQdOperatorUser && (
                         <td style={{ padding: '14px 16px' }}>
-                          <div style={{ fontWeight: 800, color: C.text }}>{app.bank_name || app.bank_code || 'Bank Partner'}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: 800, color: C.text }}>{app.bank_name || app.bank_code || 'Bank Partner'}</span>
+                            {isLocEocApp(app) && (
+                              <span style={{
+                                fontSize: '10px', fontWeight: 800, background: '#ECFDF5', color: '#047857',
+                                border: '1px solid #A7F3D0', padding: '1px 6px', borderRadius: '4px', whiteSpace: 'nowrap'
+                              }}>
+                                {String(app.sub_category || '').toUpperCase() === 'EOC' || /smart\s*emi/i.test(app.product_name || '') ? 'EOC (Smart EMI)' : 'LOC (Loan on Card)'}
+                              </span>
+                            )}
+                          </div>
                           <div style={{ fontSize: '11px', color: C.textLight }}>{app.product_name || app.category || 'Financial Product'}</div>
                         </td>
                       )}

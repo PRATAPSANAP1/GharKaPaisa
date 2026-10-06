@@ -6,6 +6,34 @@ const { getPaginationParams, sanitizeMobile } = require('../../utils/helpers/hel
 const { success, created, error, paginate, notFound } = require('../../utils/response/response');
 const logger = require('../../config/logger');
 
+const resolveBankId = async (bId) => {
+  if (!bId) return null;
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(bId).trim());
+  if (isUuid) return String(bId).trim();
+  const str = String(bId).trim();
+  if (str.toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(str)) {
+    const { rows } = await query(`
+      SELECT id FROM banks 
+      WHERE UPPER(short_code) = 'LOC_EOC' 
+         OR LOWER(name) LIKE '%loc/eoc%' 
+         OR LOWER(name) LIKE '%loan on card%' 
+      LIMIT 1
+    `);
+    if (rows.length > 0) return rows[0].id;
+    const { rows: created } = await query(`
+      INSERT INTO banks (name, short_code, is_active, status)
+      VALUES ('LOC/EOC (Loan on Card & Smart EMI)', 'LOC_EOC', true, 'Active')
+      ON CONFLICT (short_code) DO UPDATE SET 
+        name = 'LOC/EOC (Loan on Card & Smart EMI)',
+        is_active = true,
+        status = 'Active'
+      RETURNING id
+    `);
+    return created[0]?.id || null;
+  }
+  return null;
+};
+
 /**
  * POST /api/v1/superadmin/create-admin
  * Provision a new admin or employee in Firebase Auth and PostgreSQL.
@@ -164,10 +192,16 @@ const createAdmin = async (req, res, next) => {
     }
 
     if (bankIds.length > 0) {
-      for (const bId of bankIds) {
+      for (const rawBId of bankIds) {
+        const bId = await resolveBankId(rawBId);
+        if (!bId) continue;
         await query(`INSERT INTO admin_bank_assignments (admin_id, bank_id, created_by) VALUES ($1, $2, $3) ON CONFLICT (admin_id, bank_id) DO NOTHING`, [dbUser.id, bId, req.user.id]);
         await query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [dbUser.id, bId]);
         await query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [dbUser.id, bId]);
+        const { rows: bRows } = await query(`SELECT short_code, name FROM banks WHERE id = $1`, [bId]);
+        if (bRows.length > 0 && ((bRows[0].short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(bRows[0].name || ''))) {
+          await query(`UPDATE products SET operation_head_id = $1 WHERE category = 'loc_eoc' OR category::text IN ('loan_on_credit_card', 'smart_emi')`, [dbUser.id]);
+        }
       }
     }
     await logAction(req, 'CREATE_USER', dbUser.id, { email, role: dbUser.role, bankIds });
@@ -216,7 +250,8 @@ const listAdmins = async (req, res, next) => {
     const adminBankIdMap = {};
     assignments.forEach(a => {
       if (!adminBankMap[a.admin_id]) { adminBankMap[a.admin_id] = []; adminBankIdMap[a.admin_id] = []; }
-      adminBankMap[a.admin_id].push({ id: a.bank_id, name: a.bank_name, short_code: a.short_code || a.code, logo_url: a.logo_url });
+      const isLocEoc = (a.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(a.bank_name || '');
+      adminBankMap[a.admin_id].push({ id: a.bank_id, name: a.bank_name, short_code: a.short_code || a.code, logo_url: a.logo_url, is_loc_eoc: isLocEoc });
       adminBankIdMap[a.admin_id].push(a.bank_id);
     });
     const result = admins.map(a => ({ ...a, id: a._id, assigned_banks: adminBankMap[a._id] || [], bank_ids: adminBankIdMap[a._id] || [] }));
@@ -281,11 +316,17 @@ const updateAdmin = async (req, res, next) => {
       const currentDesig = designation !== undefined ? designation.trim() : existing.designation;
       const isRemarkOp = ['Remark Operator', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'QD Operator', 'QD_OPERATOR', 'QD OPERATOR'].includes(currentDesig);
 
-      for (const bId of targetBankIds) {
+      for (const rawBId of targetBankIds) {
+        const bId = await resolveBankId(rawBId);
+        if (!bId) continue;
         await query(`INSERT INTO admin_bank_assignments (admin_id, bank_id, created_by) VALUES ($1, $2, $3) ON CONFLICT (admin_id, bank_id) DO NOTHING`, [existing.id, bId, req.user.id]);
         if (!isRemarkOp) {
           await query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [existing.id, bId]);
           await query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [existing.id, bId]);
+          const { rows: bRows } = await query(`SELECT short_code, name FROM banks WHERE id = $1`, [bId]);
+          if (bRows.length > 0 && ((bRows[0].short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(bRows[0].name || ''))) {
+            await query(`UPDATE products SET operation_head_id = $1 WHERE category = 'loc_eoc' OR category::text IN ('loan_on_credit_card', 'smart_emi')`, [existing.id]);
+          }
         }
       }
     }
@@ -307,7 +348,11 @@ const getAdminBanks = async (req, res, next) => {
       JOIN banks b ON b.id = aba.bank_id
       WHERE aba.admin_id::text = $1
     `, [id]);
-    return success(res, rows);
+    const mapped = rows.map(b => ({
+      ...b,
+      is_loc_eoc: (b.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '')
+    }));
+    return success(res, mapped);
   } catch (err) {
     next(err);
   }
@@ -325,11 +370,17 @@ const updateAdminBanks = async (req, res, next) => {
     await query(`DELETE FROM admin_bank_assignments WHERE admin_id = $1`, [userRec.id]);
     const isRemarkOp = ['Remark Operator', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'QD Operator', 'QD_OPERATOR', 'QD OPERATOR'].includes(userRec.designation);
 
-    for (const bId of targetBankIds) {
+    for (const rawBId of targetBankIds) {
+      const bId = await resolveBankId(rawBId);
+      if (!bId) continue;
       await query(`INSERT INTO admin_bank_assignments (admin_id, bank_id, created_by) VALUES ($1, $2, $3) ON CONFLICT (admin_id, bank_id) DO NOTHING`, [userRec.id, bId, req.user.id]);
       if (!isRemarkOp) {
         await query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [userRec.id, bId]);
         await query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [userRec.id, bId]);
+        const { rows: bRows } = await query(`SELECT short_code, name FROM banks WHERE id = $1`, [bId]);
+        if (bRows.length > 0 && ((bRows[0].short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(bRows[0].name || ''))) {
+          await query(`UPDATE products SET operation_head_id = $1 WHERE category = 'loc_eoc' OR category::text IN ('loan_on_credit_card', 'smart_emi')`, [userRec.id]);
+        }
       }
     }
 

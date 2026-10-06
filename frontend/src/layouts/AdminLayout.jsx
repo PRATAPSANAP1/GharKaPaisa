@@ -101,8 +101,11 @@ const AdminLayout = () => {
   const isFinalStatusOperator = ['Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userDesignation) || ['FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userRole);
   const isBackend = ['Backend', 'BACKEND', 'Backend Operation', 'BACKEND_OPERATION', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
   const assignedList = user?.assigned_banks?.length ? user.assigned_banks : (user?.permissions?.assigned_banks || []);
-  if ((isOpHead || isBackend || isRemarkOperator || isSalesExec || isPanChecker || isQdOperator || isKycOperator || isFinalStatusOperator || assignedList.length > 0) && assignedList.length > 0) {
-    banks = assignedList.map(b => ({
+  const hasLocEocAssigned = !!user?.has_loc_eoc || assignedList.some(b => (b.short_code || '').toUpperCase() === 'LOC_EOC' || b.is_loc_eoc || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || ''));
+  const regularBanks = assignedList.filter(b => (b.short_code || '').toUpperCase() !== 'LOC_EOC' && !b.is_loc_eoc && !/loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || ''));
+
+  if ((isOpHead || isBackend || isRemarkOperator || isSalesExec || isPanChecker || isQdOperator || isKycOperator || isFinalStatusOperator || assignedList.length > 0) && regularBanks.length > 0) {
+    banks = regularBanks.map(b => ({
       id: b.id,
       name: b.name || b.bank_name || b.short_code,
       short_code: b.short_code || b.code || b.name,
@@ -380,10 +383,40 @@ const AdminLayout = () => {
             )}
 
             {/* Applications */}
-            <NavLink to="/admin/applications" style={navLinkStyle}>
+            <NavLink 
+              to="/admin/applications" 
+              style={({ isActive }) => {
+                const isRegularActive = isActive && !location.search.includes('category=loc_eoc');
+                return navLinkStyle({ isActive: isRegularActive });
+              }}
+            >
               <Icons.creditCard size={18} />
               <span>{isKycOperator ? 'KYC Operator' : isQdOperator ? 'QD Operator' : isRemarkOperator ? 'Remark Operator' : isPanChecker ? 'PAN Checker' : isFinalStatusOperator ? 'Final Status Operator' : 'Applications'}</span>
             </NavLink>
+
+            {/* LOC / EOC Applications (When assigned to admin or Super Admin) */}
+            {(hasLocEocAssigned || isSuperAdmin) && (
+              <NavLink 
+                to="/admin/applications?category=loc_eoc" 
+                style={() => {
+                  const isLocEocActive = location.pathname === '/admin/applications' && location.search.includes('category=loc_eoc');
+                  return {
+                    display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '12px',
+                    fontSize: '13.5px', fontWeight: 800, color: isLocEocActive ? '#34d399' : 'rgba(255, 255, 255, 0.75)',
+                    background: isLocEocActive ? 'linear-gradient(90deg, rgba(16,185,129,0.22), rgba(5,150,105,0.08))' : 'transparent',
+                    borderLeft: isLocEocActive ? '3px solid #10b981' : '3px solid transparent', textDecoration: 'none', transition: 'all 0.2s ease'
+                  };
+                }}
+              >
+                <Icons.wallet size={18} />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <span>LOC / EOC Applications</span>
+                  <span style={{ fontSize: '10px', fontWeight: 800, background: '#10B981', color: '#FFFFFF', padding: '1px 6px', borderRadius: '4px' }}>
+                    LOC/EOC
+                  </span>
+                </div>
+              </NavLink>
+            )}
 
             {/* Messenger */}
             <NavLink to="/admin/messenger" style={navLinkStyle}>

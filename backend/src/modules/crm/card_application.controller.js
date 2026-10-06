@@ -76,11 +76,26 @@ const listApplications = async (req, res, next) => {
 
     const userRole = (req.user?.role || '').toUpperCase();
     if (userRole !== 'SUPER_ADMIN' && req.user?.id) {
-      const { rows: abRows } = await query(`SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`, [req.user.id]);
+      const { rows: abRows } = await query(`
+        SELECT aba.bank_id, b.short_code, b.name 
+        FROM admin_bank_assignments aba
+        LEFT JOIN banks b ON b.id = aba.bank_id
+        WHERE aba.admin_id = $1
+      `, [req.user.id]);
       if (abRows.length > 0) {
-        whereClause += ` AND (bank_name IN (SELECT name FROM banks WHERE id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $${idx}::uuid)))`;
-        values.push(req.user.id);
-        idx++;
+        const hasLocEoc = abRows.some(b => (b.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || ''));
+        const regBankRows = abRows.filter(b => (b.short_code || '').toUpperCase() !== 'LOC_EOC' && !/loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || ''));
+        if (hasLocEoc && regBankRows.length === 0) {
+          whereClause += ` AND (LOWER(COALESCE(category, '')) IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi') OR LOWER(COALESCE(card_name, '')) LIKE '%insta loan%' OR LOWER(COALESCE(card_name, '')) LIKE '%jumbo loan%' OR LOWER(COALESCE(card_name, '')) LIKE '%smartemi%')`;
+        } else if (hasLocEoc && regBankRows.length > 0) {
+          whereClause += ` AND (bank_name IN (SELECT name FROM banks WHERE id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $${idx}::uuid)) OR (LOWER(COALESCE(category, '')) IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi') OR LOWER(COALESCE(card_name, '')) LIKE '%insta loan%' OR LOWER(COALESCE(card_name, '')) LIKE '%jumbo loan%' OR LOWER(COALESCE(card_name, '')) LIKE '%smartemi%'))`;
+          values.push(req.user.id);
+          idx++;
+        } else {
+          whereClause += ` AND (bank_name IN (SELECT name FROM banks WHERE id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $${idx}::uuid)))`;
+          values.push(req.user.id);
+          idx++;
+        }
       }
     }
 

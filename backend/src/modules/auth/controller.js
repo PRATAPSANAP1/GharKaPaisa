@@ -98,19 +98,26 @@ const getMe = async (req, res, next) => {
     }
 
     if (['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'HR'].includes(user.role)) {
-      const { rows: assignedBanks } = await query(`
+      const { rows: rawAssignedBanks } = await query(`
         SELECT b.id, b.name, b.short_code, b.short_code as code
         FROM admin_bank_assignments aba
         JOIN banks b ON b.id = aba.bank_id
         WHERE aba.admin_id = $1
       `, [user.id]).catch(() => ({ rows: [] }));
+      const assignedBanks = rawAssignedBanks.map(b => ({
+        ...b,
+        is_loc_eoc: (b.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '')
+      }));
+      const hasLocEoc = assignedBanks.some(b => b.is_loc_eoc);
       const permissions = {
         banks: assignedBanks.map(b => b.id),
         bank_codes: assignedBanks.map(b => b.code || b.short_code || b.name),
-        assigned_banks: assignedBanks
+        assigned_banks: assignedBanks,
+        has_loc_eoc: hasLocEoc
       };
       user.permissions = permissions;
       user.assigned_banks = assignedBanks;
+      user.has_loc_eoc = hasLocEoc;
     }
 
     await query(`UPDATE users SET last_login = NOW() WHERE id = $1`, [req.user.id]);
@@ -517,14 +524,21 @@ const login = async (req, res, next) => {
 
     let permissions = null;
     if (['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'HR'].includes(user.role)) {
-      const { rows: assignedBanks } = await query(
+      const { rows: rawAssignedBanks } = await query(
         `SELECT b.id, b.name, b.short_code, b.short_code as code FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = $1`, [user.id]
       ).catch(() => ({ rows: [] }));
+      const assignedBanks = rawAssignedBanks.map(b => ({
+        ...b,
+        is_loc_eoc: (b.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '')
+      }));
+      const hasLocEoc = assignedBanks.some(b => b.is_loc_eoc);
       permissions = {
         banks: assignedBanks.map(b => b.id),
         bank_codes: assignedBanks.map(b => b.code || b.short_code || b.name),
-        assigned_banks: assignedBanks
+        assigned_banks: assignedBanks,
+        has_loc_eoc: hasLocEoc
       };
+      user.has_loc_eoc = hasLocEoc;
     }
 
     setRefreshTokenCookie(res, refreshToken, req.body.rememberMe !== false);
