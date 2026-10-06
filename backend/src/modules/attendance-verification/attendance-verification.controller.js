@@ -37,6 +37,8 @@ const createLivenessSession = async (req, res) => {
       message: err.message,
     });
   }
+};
+
 // POST /api/v1/attendance/verification/liveness/result
 const validateLivenessResult = async (req, res) => {
   const { session_id, provider_session_id, latitude, longitude, accuracy, lat, lng } = req.body;
