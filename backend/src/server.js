@@ -275,6 +275,13 @@ const startServer = async () => {
       logger.info('Skipping automatic startup migration in production (AUTO_MIGRATE != true).');
     }
 
+    // Always ensure has_loc_eoc column exists on users table on boot
+    try {
+      await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS has_loc_eoc BOOLEAN DEFAULT FALSE`);
+    } catch (locErr) {
+      logger.warn('LOC/EOC user column auto migration note:', locErr.message);
+    }
+
     // Always ensure messenger module tables exist on boot
     try {
       const migrateMessenger = require('./database/migrations/migrate_messenger.js');

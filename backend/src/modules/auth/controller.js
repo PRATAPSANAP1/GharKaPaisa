@@ -67,7 +67,7 @@ const getMe = async (req, res, next) => {
   try {
     const { rows: [user] } = await query(`
         SELECT u.id, u.email, u.mobile, u.role, u.status, u.last_login, u.must_change_password,
-          u.full_name, u.department, u.designation, COALESCE(u.has_loc_eoc, FALSE) as has_loc_eoc,
+          u.full_name, u.department, u.designation, COALESCE((to_jsonb(u)->>'has_loc_eoc')::boolean, FALSE) as has_loc_eoc,
           COALESCE(e.employee_id, u.employee_id) as employee_id,
           COALESCE(e.employee_id, u.employee_id) as employee_code,
           e.id as employee_uuid,

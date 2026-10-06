@@ -243,7 +243,7 @@ const listAdmins = async (req, res, next) => {
         department, 
         designation, 
         is_active as "isActive", 
-        COALESCE(has_loc_eoc, FALSE) as has_loc_eoc,
+        COALESCE((to_jsonb(users)->>'has_loc_eoc')::boolean, FALSE) as has_loc_eoc,
         created_by as "createdBy", 
         created_at as "createdAt"
       FROM users 
