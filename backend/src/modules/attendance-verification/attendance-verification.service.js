@@ -363,18 +363,31 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
   // 1. Retrieve & evaluate AWS Rekognition Face Liveness result
   const livenessResult = await faceLivenessProvider.getLivenessSessionResult(providerSessionId);
 
+  const isExpired = livenessResult.status === 'LIVENESS_EXPIRED';
+  const isProcessing = livenessResult.status === 'LIVENESS_PROCESSING';
+  const isProviderConfig = livenessResult.status === 'LIVENESS_PROVIDER_NOT_CONFIGURED';
+  const isProviderError = livenessResult.status === 'LIVENESS_PROVIDER_ERROR';
+
+  const failureReason = isProcessing
+    ? 'LIVENESS_PROCESSING'
+    : (isProviderConfig || isProviderError
+      ? 'AWS_LIVENESS_ERROR'
+      : (isExpired ? 'SESSION_EXPIRED' : (livenessResult.isLive ? null : 'LIVENESS_FAILED')));
+
+  logger.info('[LIVENESS AWS RESULT DIAGNOSTIC]', {
+    sessionId,
+    employeeId: authEmpId,
+    awsSessionId: providerSessionId,
+    awsStatus: livenessResult.statusRaw || livenessResult.status,
+    awsConfidence: livenessResult.confidence,
+    awsReferenceImageAvailable: !!livenessResult.referenceImageBuffer,
+    livenessStatus: livenessResult.status,
+    livenessConfidence: livenessResult.confidence,
+    failureReason,
+    sessionDbStatus: session?.status || 'UNKNOWN',
+  });
+
   if (!livenessResult.isLive) {
-    const isExpired = livenessResult.status === 'LIVENESS_EXPIRED';
-    const isProcessing = livenessResult.status === 'LIVENESS_PROCESSING';
-    const isProviderConfig = livenessResult.status === 'LIVENESS_PROVIDER_NOT_CONFIGURED';
-    const isProviderError = livenessResult.status === 'LIVENESS_PROVIDER_ERROR';
-
-    const failureReason = isProcessing
-      ? 'LIVENESS_PROCESSING'
-      : (isProviderConfig || isProviderError
-        ? 'AWS_LIVENESS_ERROR'
-        : (isExpired ? 'SESSION_EXPIRED' : 'LIVENESS_FAILED'));
-
     const dbLivenessStatus = isExpired ? 'EXPIRED' : (isProcessing ? 'PROCESSING' : 'FAILED');
     const dbSessionStatus = isExpired ? 'EXPIRED' : 'FAILED';
 

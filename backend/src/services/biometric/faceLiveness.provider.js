@@ -107,7 +107,7 @@ class FaceLivenessProvider {
         response = await this.rekognitionClient.send(command);
         status = response.Status; // EXPIRED, FAILED, SUCCEEDED, CREATED, IN_PROGRESS
 
-        logger.info(`[LIVENESS PROVIDER] Liveness poll attempt ${attempts}/${maxAttempts}: SessionId=${providerSessionId}, Status=${status}, Confidence=${response.Confidence}`);
+        logger.info(`[LIVENESS PROVIDER] Liveness poll attempt ${attempts}/${maxAttempts}: SessionId=${providerSessionId}, Status=${status}, Confidence=${response.Confidence}, HasRefImage=${!!response?.ReferenceImage?.Bytes}`);
 
         if (status !== 'IN_PROGRESS' && status !== 'CREATED') {
           break;
@@ -123,7 +123,11 @@ class FaceLivenessProvider {
 
       // If still IN_PROGRESS or CREATED after polling, return LIVENESS_PROCESSING without failing closed as permanent failure
       if (status === 'IN_PROGRESS' || status === 'CREATED') {
-        logger.warn(`[LIVENESS PROVIDER] Liveness session ${providerSessionId} still processing after ${attempts} poll attempts`);
+        logger.warn(`[LIVENESS PROVIDER] Liveness session ${providerSessionId} still processing after ${attempts} poll attempts`, {
+          SessionId: providerSessionId,
+          Status: status,
+          Confidence: confidence,
+        });
         return {
           status: 'LIVENESS_PROCESSING',
           isLive: false,
@@ -140,6 +144,8 @@ class FaceLivenessProvider {
       if (status === 'SUCCEEDED' && response?.ReferenceImage?.Bytes) {
         referenceImageBuffer = Buffer.from(response.ReferenceImage.Bytes);
       }
+
+      logger.info(`[LIVENESS PROVIDER] Terminal AWS evaluation: SessionId=${providerSessionId}, Status=${status}, Confidence=${confidence}, isLive=${isLive}`);
 
       return {
         status: status === 'SUCCEEDED' ? (isLive ? 'LIVENESS_PASSED' : 'LIVENESS_FAILED') : `LIVENESS_${status}`,
