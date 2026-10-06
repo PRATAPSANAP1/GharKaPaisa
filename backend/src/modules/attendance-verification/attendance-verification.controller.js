@@ -37,21 +37,27 @@ const createLivenessSession = async (req, res) => {
       message: err.message,
     });
   }
-};
-
 // POST /api/v1/attendance/verification/liveness/result
 const validateLivenessResult = async (req, res) => {
   const { session_id, provider_session_id, latitude, longitude, accuracy, lat, lng } = req.body;
   const clientLat = latitude !== undefined ? latitude : lat;
   const clientLng = longitude !== undefined ? longitude : lng;
+  const empId = req.user?.employeeId || req.user?.employee_id || req.user?.id || null;
 
   try {
     if (!session_id || !provider_session_id) {
-      logger.warn('[ATTENDANCE VALIDATION FAILURE] Missing required session parameters', {
-        sessionId: session_id,
-        providerSessionId: provider_session_id,
-        userId: req.user?.id,
-        reason: 'INVALID_REQUEST'
+      logger.warn('[ATTENDANCE DIAGNOSTIC REJECTION]', {
+        endpoint: '/api/v1/attendance/verification/liveness/result',
+        sessionId: session_id || null,
+        employeeId: empId,
+        latitude: clientLat ?? null,
+        longitude: clientLng ?? null,
+        accuracy: accuracy ?? null,
+        livenessStatus: 'NOT_STARTED',
+        faceStatus: 'NOT_STARTED',
+        environmentStatus: 'NOT_STARTED',
+        reason: 'INVALID_REQUEST',
+        message: 'session_id and provider_session_id are required'
       });
       return res.status(400).json({ success: false, reason: 'INVALID_REQUEST', message: 'session_id and provider_session_id are required' });
     }
@@ -61,7 +67,7 @@ const validateLivenessResult = async (req, res) => {
       providerSessionId: provider_session_id,
       latitude: clientLat,
       longitude: clientLng,
-      accuracy: accuracy || 0,
+      accuracy: accuracy !== undefined ? accuracy : 0,
       reqUser: req.user,
     });
 
@@ -71,17 +77,21 @@ const validateLivenessResult = async (req, res) => {
     const reason = err.reason || 'VERIFICATION_FAILED';
     const message = err.message || 'Verification process failed';
 
-    logger.warn('[ATTENDANCE VALIDATION FAILURE]', {
-      sessionId: session_id,
-      providerSessionId: provider_session_id,
-      latitude: clientLat,
-      longitude: clientLng,
-      accuracy,
-      userId: req.user?.id,
-      statusCode,
+    const diagnostic = err.diagnostic || {
+      endpoint: '/api/v1/attendance/verification/liveness/result',
+      sessionId: session_id || null,
+      employeeId: empId,
+      latitude: clientLat ?? null,
+      longitude: clientLng ?? null,
+      accuracy: accuracy ?? null,
+      livenessStatus: 'UNKNOWN',
+      faceStatus: 'UNKNOWN',
+      environmentStatus: 'UNKNOWN',
       reason,
       message,
-    });
+    };
+
+    logger.warn('[ATTENDANCE DIAGNOSTIC REJECTION]', diagnostic);
 
     return res.status(statusCode).json({
       success: false,

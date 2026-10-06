@@ -120,6 +120,20 @@ class FaceLivenessProvider {
       }
 
       const confidence = Number(response?.Confidence || 0);
+
+      // If still IN_PROGRESS or CREATED after polling, return LIVENESS_PROCESSING without failing closed as permanent failure
+      if (status === 'IN_PROGRESS' || status === 'CREATED') {
+        logger.warn(`[LIVENESS PROVIDER] Liveness session ${providerSessionId} still processing after ${attempts} poll attempts`);
+        return {
+          status: 'LIVENESS_PROCESSING',
+          isLive: false,
+          confidence,
+          statusRaw: status,
+          referenceImageBuffer: null,
+          providerName: this.providerName,
+        };
+      }
+
       const isLive = status === 'SUCCEEDED' && confidence >= 85.0;
 
       let referenceImageBuffer = null;

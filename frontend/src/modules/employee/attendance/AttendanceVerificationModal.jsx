@@ -268,6 +268,9 @@ export default function AttendanceVerificationModal({
       setCurrentState('LIVENESS_PASSED');
 
     } catch (err) {
+      console.error('[ATTENDANCE VERIFICATION] Backend status:', err?.response?.status);
+      console.error('[ATTENDANCE VERIFICATION] Backend response:', err?.response?.data);
+      console.error('[ATTENDANCE VERIFICATION] Request:', err?.config?.data);
       console.error('Liveness analysis / location verification error:', err);
       const errReason = err.response?.data?.reason || err.reason;
       const isExpired = errReason === 'LIVENESS_EXPIRED' || err.response?.status === 410;

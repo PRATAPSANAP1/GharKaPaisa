@@ -287,21 +287,51 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
   const authEmpId = await resolveEmployeeId(reqUser);
 
   if (!authEmpId) {
-    const error = new Error('User context is not associated with an employee record');
+    const errorMsg = 'User context is not associated with an employee record';
+    const error = new Error(errorMsg);
     error.statusCode = 400;
-    error.reason = 'UNAUTHORIZED';
+    error.reason = 'EMPLOYEE_NOT_FOUND';
+    error.diagnostic = {
+      endpoint: '/api/v1/attendance/verification/liveness/result',
+      sessionId: sessionId || null,
+      employeeId: null,
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
+      accuracy: accuracy ?? null,
+      livenessStatus: 'NOT_STARTED',
+      faceStatus: 'NOT_STARTED',
+      environmentStatus: 'NOT_STARTED',
+      reason: 'EMPLOYEE_NOT_FOUND',
+      message: errorMsg,
+    };
+    logger.warn('[ATTENDANCE DIAGNOSTIC REJECTION]', error.diagnostic);
     throw error;
   }
 
   const { rows: [session] } = await query(
-    `SELECT id, employee_id, status, expires_at FROM attendance_verification_sessions WHERE id = $1 LIMIT 1`,
+    `SELECT id, employee_id, status, liveness_status, face_status, environment_status, expires_at FROM attendance_verification_sessions WHERE id = $1 LIMIT 1`,
     [sessionId]
   );
 
   if (!session || session.employee_id !== authEmpId) {
-    const error = new Error('Invalid verification session');
+    const errorMsg = 'Attendance verification session not found or unauthorized';
+    const error = new Error(errorMsg);
     error.statusCode = 403;
-    error.reason = 'FORBIDDEN';
+    error.reason = 'SESSION_NOT_FOUND';
+    error.diagnostic = {
+      endpoint: '/api/v1/attendance/verification/liveness/result',
+      sessionId: sessionId || null,
+      employeeId: authEmpId,
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
+      accuracy: accuracy ?? null,
+      livenessStatus: session?.liveness_status || 'NOT_STARTED',
+      faceStatus: session?.face_status || 'NOT_STARTED',
+      environmentStatus: session?.environment_status || 'NOT_STARTED',
+      reason: 'SESSION_NOT_FOUND',
+      message: errorMsg,
+    };
+    logger.warn('[ATTENDANCE DIAGNOSTIC REJECTION]', error.diagnostic);
     throw error;
   }
 
@@ -309,9 +339,24 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
     try {
       await query(`UPDATE attendance_verification_sessions SET status = 'EXPIRED', liveness_status = 'EXPIRED' WHERE id = $1`, [sessionId]);
     } catch (e) {}
-    const error = new Error('Verification session has expired');
+    const errorMsg = 'Verification session has expired. Please retry.';
+    const error = new Error(errorMsg);
     error.statusCode = 410;
-    error.reason = 'LIVENESS_EXPIRED';
+    error.reason = 'SESSION_EXPIRED';
+    error.diagnostic = {
+      endpoint: '/api/v1/attendance/verification/liveness/result',
+      sessionId: sessionId,
+      employeeId: authEmpId,
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
+      accuracy: accuracy ?? null,
+      livenessStatus: 'EXPIRED',
+      faceStatus: session.face_status || 'NOT_STARTED',
+      environmentStatus: session.environment_status || 'NOT_STARTED',
+      reason: 'SESSION_EXPIRED',
+      message: errorMsg,
+    };
+    logger.warn('[ATTENDANCE DIAGNOSTIC REJECTION]', error.diagnostic);
     throw error;
   }
 
@@ -320,11 +365,17 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
 
   if (!livenessResult.isLive) {
     const isExpired = livenessResult.status === 'LIVENESS_EXPIRED';
-    const failureReason = livenessResult.status === 'LIVENESS_PROVIDER_NOT_CONFIGURED'
-      ? 'LIVENESS_PROVIDER_NOT_CONFIGURED'
-      : (isExpired ? 'LIVENESS_EXPIRED' : (livenessResult.status === 'LIVENESS_PROVIDER_ERROR' ? 'LIVENESS_PROVIDER_ERROR' : 'LIVENESS_FAILED'));
+    const isProcessing = livenessResult.status === 'LIVENESS_PROCESSING';
+    const isProviderConfig = livenessResult.status === 'LIVENESS_PROVIDER_NOT_CONFIGURED';
+    const isProviderError = livenessResult.status === 'LIVENESS_PROVIDER_ERROR';
 
-    const dbLivenessStatus = isExpired ? 'EXPIRED' : 'FAILED';
+    const failureReason = isProcessing
+      ? 'LIVENESS_PROCESSING'
+      : (isProviderConfig || isProviderError
+        ? 'AWS_LIVENESS_ERROR'
+        : (isExpired ? 'SESSION_EXPIRED' : 'LIVENESS_FAILED'));
+
+    const dbLivenessStatus = isExpired ? 'EXPIRED' : (isProcessing ? 'PROCESSING' : 'FAILED');
     const dbSessionStatus = isExpired ? 'EXPIRED' : 'FAILED';
 
     try {
@@ -342,26 +393,32 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
       confidence: livenessResult.confidence,
     });
 
-    const statusCode = failureReason === 'LIVENESS_PROVIDER_NOT_CONFIGURED' ? 503 : (isExpired ? 410 : 400);
-    const errorMsg = failureReason === 'LIVENESS_PROVIDER_NOT_CONFIGURED'
-      ? 'Liveness verification service is not configured in production environment'
-      : (isExpired
-        ? 'Face verification session expired. Please retry.'
-        : 'Liveness verification failed. Please align face inside the frame and retry.');
-
-    logger.warn('[ATTENDANCE VALIDATION ERROR] Face liveness check failed', {
-      sessionId,
-      providerSessionId,
-      authEmpId,
-      livenessStatus: livenessResult.status,
-      confidence: livenessResult.confidence,
-      reason: failureReason,
-      message: errorMsg
-    });
+    const statusCode = isProviderConfig || isProviderError ? 503 : (isExpired ? 410 : 400);
+    const errorMsg = isProcessing
+      ? 'Face liveness check is still being processed by AWS. Please wait a moment and try again.'
+      : (isProviderConfig || isProviderError
+        ? 'Liveness verification service encountered an AWS provider error.'
+        : (isExpired
+          ? 'Face verification session expired. Please retry.'
+          : 'Liveness verification failed. Please align face inside the frame and retry.'));
 
     const error = new Error(errorMsg);
     error.statusCode = statusCode;
     error.reason = failureReason;
+    error.diagnostic = {
+      endpoint: '/api/v1/attendance/verification/liveness/result',
+      sessionId: sessionId,
+      employeeId: authEmpId,
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
+      accuracy: accuracy ?? null,
+      livenessStatus: dbLivenessStatus,
+      faceStatus: 'NOT_STARTED',
+      environmentStatus: 'NOT_STARTED',
+      reason: failureReason,
+      message: errorMsg,
+    };
+    logger.warn('[ATTENDANCE DIAGNOSTIC REJECTION]', error.diagnostic);
     throw error;
   }
 
@@ -405,15 +462,24 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
       reason: 'BIOMETRIC_REFERENCE_NOT_FOUND',
     });
 
-    logger.warn('[ATTENDANCE VALIDATION ERROR] Biometric enrollment photo not found', {
-      sessionId,
-      authEmpId,
-      reason: 'BIOMETRIC_REFERENCE_NOT_FOUND'
-    });
-
-    const error = new Error('Attendance Biometric Enrollment is required before marking attendance. Please complete biometric enrollment in the KYC panel.');
+    const errorMsg = 'Attendance Biometric Enrollment is required before marking attendance. Please complete biometric enrollment in the KYC panel.';
+    const error = new Error(errorMsg);
     error.statusCode = 404;
     error.reason = 'BIOMETRIC_REFERENCE_NOT_FOUND';
+    error.diagnostic = {
+      endpoint: '/api/v1/attendance/verification/liveness/result',
+      sessionId: sessionId,
+      employeeId: authEmpId,
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
+      accuracy: accuracy ?? null,
+      livenessStatus: 'PASSED',
+      faceStatus: 'REFERENCE_NOT_FOUND',
+      environmentStatus: 'NOT_STARTED',
+      reason: 'BIOMETRIC_REFERENCE_NOT_FOUND',
+      message: errorMsg,
+    };
+    logger.warn('[ATTENDANCE DIAGNOSTIC REJECTION]', error.diagnostic);
     throw error;
   }
 
@@ -427,14 +493,24 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
         [sessionId]
       );
     } catch (e) {}
-    logger.warn('[ATTENDANCE VALIDATION ERROR] Missing reference image from AWS liveness session', {
-      sessionId,
-      authEmpId,
-      reason: 'LIVENESS_FAILED'
-    });
-    const error = new Error('Reference image from AWS liveness session was missing');
+    const errorMsg = 'Reference image from AWS liveness session was missing';
+    const error = new Error(errorMsg);
     error.statusCode = 400;
     error.reason = 'LIVENESS_FAILED';
+    error.diagnostic = {
+      endpoint: '/api/v1/attendance/verification/liveness/result',
+      sessionId: sessionId,
+      employeeId: authEmpId,
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
+      accuracy: accuracy ?? null,
+      livenessStatus: 'PASSED',
+      faceStatus: 'FAILED',
+      environmentStatus: 'NOT_STARTED',
+      reason: 'LIVENESS_FAILED',
+      message: errorMsg,
+    };
+    logger.warn('[ATTENDANCE DIAGNOSTIC REJECTION]', error.diagnostic);
     throw error;
   }
 
@@ -442,9 +518,9 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
   const faceRes = await faceMatchProvider.compareFace(liveImageBuffer, activeTemplate.s3_key);
 
   if (!faceRes.matched) {
-    const reason = faceRes.matchStatus === 'FACE_PROVIDER_NOT_CONFIGURED'
-      ? 'FACE_PROVIDER_ERROR'
-      : (faceRes.matchStatus === 'FACE_PROVIDER_ERROR' ? 'FACE_PROVIDER_ERROR' : 'FACE_MISMATCH');
+    const reason = faceRes.matchStatus === 'FACE_PROVIDER_NOT_CONFIGURED' || faceRes.matchStatus === 'FACE_PROVIDER_ERROR'
+      ? 'AWS_LIVENESS_ERROR'
+      : 'FACE_MISMATCH';
 
     try {
       await query(
@@ -461,18 +537,28 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
       similarity: faceRes.similarity,
     });
 
-    logger.warn('[ATTENDANCE VALIDATION ERROR] KYC face match failed against registered photo', {
-      sessionId,
-      authEmpId,
-      similarity: faceRes.similarity,
-      threshold: faceRes.threshold,
-      reason
-    });
+    const statusCode = reason === 'AWS_LIVENESS_ERROR' ? 500 : 400;
+    const errorMsg = reason === 'AWS_LIVENESS_ERROR'
+      ? 'Face comparison service encountered an error. Please try again.'
+      : 'Face matching failed with your registered KYC identity. Please try again.';
 
-    const statusCode = reason === 'FACE_PROVIDER_ERROR' ? 500 : 400;
-    const error = new Error('Face matching failed with your registered KYC identity. Please try again.');
+    const error = new Error(errorMsg);
     error.statusCode = statusCode;
     error.reason = reason;
+    error.diagnostic = {
+      endpoint: '/api/v1/attendance/verification/liveness/result',
+      sessionId: sessionId,
+      employeeId: authEmpId,
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
+      accuracy: accuracy ?? null,
+      livenessStatus: 'PASSED',
+      faceStatus: 'FAILED',
+      environmentStatus: 'NOT_STARTED',
+      reason,
+      message: errorMsg,
+    };
+    logger.warn('[ATTENDANCE DIAGNOSTIC REJECTION]', error.diagnostic);
     throw error;
   }
 
@@ -505,11 +591,11 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
         message: 'Location verified via approved bypass'
       };
     } else {
-      geoResult = await buildingGeofenceService.verifyLocationInBuilding(latitude, longitude, accuracy || 0);
+      geoResult = await buildingGeofenceService.verifyLocationInBuilding(latitude, longitude, accuracy !== undefined ? accuracy : 0);
     }
 
     if (!geoResult.matched) {
-      const failureReason = geoResult.reason || (geoResult.status === 'LOW_ACCURACY' ? 'LOW_ACCURACY' : 'LOCATION_MISMATCH');
+      const failureReason = geoResult.reason || (geoResult.status === 'LOW_ACCURACY' ? 'LOW_ACCURACY' : (geoResult.status === 'INVALID_COORDINATES' ? 'INVALID_COORDINATES' : 'OUTSIDE_BUILDING'));
       try {
         await query(
           `UPDATE attendance_verification_sessions 
@@ -529,21 +615,29 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
         distance_meters: geoResult.distanceMeters,
       });
 
-      logger.warn('[ATTENDANCE VALIDATION ERROR] Location / geofence validation failed', {
-        sessionId,
-        authEmpId,
-        latitude,
-        longitude,
-        accuracy,
-        status: geoResult.status,
-        reason: failureReason,
-        distanceMeters: geoResult.distanceMeters,
-        message: geoResult.message
-      });
+      const errorMsg = geoResult.message || (failureReason === 'LOW_ACCURACY'
+        ? 'Unable to verify your location accurately. Please enable GPS and try again.'
+        : (failureReason === 'INVALID_COORDINATES'
+          ? 'Invalid GPS latitude/longitude coordinates provided.'
+          : "Location doesn't match. You must be inside the office building."));
 
-      const error = new Error(geoResult.message || "Location doesn't match. You must be inside the office building.");
+      const error = new Error(errorMsg);
       error.statusCode = 400;
       error.reason = failureReason;
+      error.diagnostic = {
+        endpoint: '/api/v1/attendance/verification/liveness/result',
+        sessionId: sessionId,
+        employeeId: authEmpId,
+        latitude: latitude ?? null,
+        longitude: longitude ?? null,
+        accuracy: accuracy ?? null,
+        livenessStatus: 'PASSED',
+        faceStatus: 'PASSED',
+        environmentStatus: 'FAILED',
+        reason: failureReason,
+        message: errorMsg,
+      };
+      logger.warn('[ATTENDANCE DIAGNOSTIC REJECTION]', error.diagnostic);
       throw error;
     }
   }
