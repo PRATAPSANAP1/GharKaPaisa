@@ -1833,15 +1833,13 @@ const listApplications = async (req, res, next) => {
         } else if (isLocEocAdmin && regularBankAssignments.length > 0) {
           // Admin has regular bank(s) AND LOC/EOC: show both regular bank applications AND all LOC/EOC applications
           const regIdsList = regularBankAssignments.map(b => `'${b.bank_id}'`).join(',');
-          opHeadBankFilterSQL = ` AND ((combined.bank_id IN (${regIdsList}) OR combined.operation_head_id = $18::uuid) OR ${locEocAppSQL})`;
-          countOpHeadBankFilterSQL = ` AND ((combined.bank_id IN (${regIdsList}) OR combined.operation_head_id = $16::uuid) OR ${locEocAppSQL})`;
-          queryParams.push(req.user.id);
-          countQueryParams.push(req.user.id);
+          opHeadBankFilterSQL = ` AND (combined.bank_id IN (${regIdsList}) OR ${locEocAppSQL})`;
+          countOpHeadBankFilterSQL = ` AND (combined.bank_id IN (${regIdsList}) OR ${locEocAppSQL})`;
         } else {
-          opHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $18::uuid) OR combined.operation_head_id = $18::uuid)`;
-          countOpHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $16::uuid) OR combined.operation_head_id = $16::uuid)`;
-          queryParams.push(req.user.id);
-          countQueryParams.push(req.user.id);
+          // Admin has regular bank(s) only: show only applications for assigned banks
+          const regIdsList = regularBankAssignments.map(b => `'${b.bank_id}'`).join(',');
+          opHeadBankFilterSQL = ` AND combined.bank_id IN (${regIdsList})`;
+          countOpHeadBankFilterSQL = ` AND combined.bank_id IN (${regIdsList})`;
         }
       } else if (isOpHeadUser && !isPanCheckerUser && !isRemarkOperatorUser && !isSalesExecUser && !isQdOperatorUser && !isFinalStatusOperatorUser) {
         opHeadBankFilterSQL = ` AND 1=0`;
