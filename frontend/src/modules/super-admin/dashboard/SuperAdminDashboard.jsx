@@ -90,12 +90,17 @@ export default function SuperAdminDashboard() {
   const handleOpenEditAdminModal = (admin) => {
     const bankIds = admin.bank_ids || admin.assigned_banks?.map(b => b.id || b._id) || [];
     setEditingAdmin(admin);
+    const validRoles = ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'PARTNER', 'HR'];
+    let currentRole = String(admin.role || '').toUpperCase().trim();
+    if (!validRoles.includes(currentRole)) {
+      currentRole = 'ADMIN';
+    }
     setEditForm({
       id: admin._id || admin.id,
       fullName: admin.fullName || admin.full_name || '',
       email: admin.email || '',
       mobile: admin.mobile || '',
-      role: admin.role || 'ADMIN',
+      role: currentRole,
       designation: admin.designation || 'Operational Head',
       status: admin.status || 'active',
       bank_ids: bankIds,
@@ -956,7 +961,10 @@ export default function SuperAdminDashboard() {
                   required
                 >
                   <option value="ADMIN">Admin</option>
+                  <option value="SUPER_ADMIN">Super Admin</option>
                   <option value="EMPLOYEE">Employee</option>
+                  <option value="PARTNER">Partner</option>
+                  <option value="HR">HR</option>
                 </select>
               </div>
 
@@ -1242,11 +1250,8 @@ export default function SuperAdminDashboard() {
                     <option value="ADMIN">Admin</option>
                     <option value="SUPER_ADMIN">Super Admin</option>
                     <option value="EMPLOYEE">Employee</option>
-                    <option value="HR">HR</option>
                     <option value="PARTNER">Partner</option>
-                    {editForm.role && !['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'HR', 'PARTNER'].includes(editForm.role) && (
-                      <option value={editForm.role}>{editForm.role}</option>
-                    )}
+                    <option value="HR">HR</option>
                   </select>
                 </div>
 

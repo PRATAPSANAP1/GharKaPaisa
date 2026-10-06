@@ -284,7 +284,7 @@ const updateAdmin = async (req, res, next) => {
 
     const targetBankIds = Array.isArray(bank_ids) ? bank_ids : (Array.isArray(bankIds) ? bankIds : null);
 
-    const { rows: [existing] } = await query(`SELECT id, role, designation FROM users WHERE id::text = $1`, [id]);
+    const { rows: [existing] } = await query(`SELECT id, role, designation, full_name, email, mobile, employee_id FROM users WHERE id::text = $1`, [id]);
     if (!existing) {
       return notFound(res, 'Administrator user not found.');
     }
@@ -305,9 +305,16 @@ const updateAdmin = async (req, res, next) => {
       updates.push(`mobile = $${pIdx++}`);
       params.push(mobile.trim());
     }
+    let normRole = null;
     if (role !== undefined && role.trim()) {
+      normRole = role.trim().toUpperCase();
+      await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'HR'`).catch(() => {});
+      await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'EMPLOYEE'`).catch(() => {});
+      await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'SUPER_ADMIN'`).catch(() => {});
+      await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'PARTNER'`).catch(() => {});
+      await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'ADMIN'`).catch(() => {});
       updates.push(`role = $${pIdx++}::user_role`);
-      params.push(role.trim().toUpperCase());
+      params.push(normRole);
     }
     if (designation !== undefined) {
       updates.push(`designation = $${pIdx++}`);
@@ -328,6 +335,45 @@ const updateAdmin = async (req, res, next) => {
       updates.push(`updated_at = NOW()`);
       params.push(existing.id);
       await query(`UPDATE users SET ${updates.join(', ')} WHERE id = $${pIdx}`, params);
+    }
+
+    if (normRole) {
+      await query(`UPDATE users SET user_role = $1 WHERE id = $2`, [normRole, existing.id]).catch(() => {});
+      if (normRole === 'HR') {
+        const fullNameVal = fullName !== undefined ? fullName.trim() : (existing.full_name || 'HR Manager');
+        const emailVal = email !== undefined ? email.trim().toLowerCase() : existing.email;
+        const mobileVal = mobile !== undefined ? mobile.trim() : existing.mobile;
+        const designationVal = designation !== undefined ? designation.trim() : (existing.designation || 'HR Manager');
+        
+        await query(`
+          CREATE TABLE IF NOT EXISTS hr_profiles (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+            employee_id VARCHAR(50) UNIQUE NOT NULL,
+            full_name VARCHAR(150) NOT NULL,
+            email VARCHAR(150) NOT NULL,
+            mobile_number VARCHAR(20) NOT NULL,
+            designation VARCHAR(100) DEFAULT 'HR Manager',
+            department VARCHAR(100) DEFAULT 'Human Resources',
+            status VARCHAR(20) DEFAULT 'active',
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+          )
+        `).catch(() => {});
+
+        await query(`
+          INSERT INTO hr_profiles (
+            user_id, employee_id, full_name, email, mobile_number, designation, department, status
+          ) VALUES ($1, $2, $3, $4, $5, $6, 'Human Resources', 'active')
+          ON CONFLICT (employee_id) DO UPDATE SET
+            user_id = EXCLUDED.user_id,
+            full_name = EXCLUDED.full_name,
+            email = EXCLUDED.email,
+            mobile_number = EXCLUDED.mobile_number,
+            designation = EXCLUDED.designation,
+            status = 'active'
+        `, [existing.id, existing.employee_id || `HR-${Date.now()}`, fullNameVal, emailVal, mobileVal, designationVal]).catch(() => {});
+      }
     }
 
     // Handle bank assignments
