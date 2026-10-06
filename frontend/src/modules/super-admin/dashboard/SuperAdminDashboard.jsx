@@ -1054,6 +1054,7 @@ export default function SuperAdminDashboard() {
                   <div style={{ maxHeight: "180px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", paddingRight: "4px" }}>
                     {(Array.isArray(allBanks) ? allBanks : []).filter(b => b.name.toLowerCase().includes((bankSearchQuery || '').toLowerCase()) || (b.short_code || '').toLowerCase().includes((bankSearchQuery || '').toLowerCase())).map(bank => {
                       const isChecked = selectedCreateBankIds.includes(bank.id);
+                      const isLocEoc = (bank.short_code || '').toUpperCase() === 'LOC_EOC' || bank.is_loc_eoc || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(bank.name || '');
                       return (
                         <div
                           key={bank.id}
@@ -1070,21 +1071,39 @@ export default function SuperAdminDashboard() {
                             justifyContent: "space-between",
                             padding: "8px 12px",
                             borderRadius: "8px",
-                            border: `1px solid ${isChecked ? "#2563EB" : "#CBD5E1"}`,
-                            background: isChecked ? "#EFF6FF" : "#FFFFFF",
+                            border: `1px solid ${isChecked ? (isLocEoc ? "#059669" : "#2563EB") : (isLocEoc ? "#A7F3D0" : "#CBD5E1")}`,
+                            background: isChecked ? (isLocEoc ? "#ECFDF5" : "#EFF6FF") : (isLocEoc ? "#F0FDF4" : "#FFFFFF"),
                             cursor: "pointer",
                             transition: "all 0.15s"
                           }}
                         >
                           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            {bank.logo_url ? (
+                            {isLocEoc ? (
+                              <div style={{ width: "20px", height: "20px", background: "#059669", borderRadius: "4px", fontSize: "10px", fontWeight: 800, color: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                💳
+                              </div>
+                            ) : bank.logo_url ? (
                               <img src={bank.logo_url} alt={bank.name} style={{ width: "20px", height: "20px", objectFit: "contain" }} />
                             ) : (
                               <div style={{ width: "20px", height: "20px", background: "#DBEAFE", borderRadius: "4px", fontSize: "10px", fontWeight: 800, color: "#1E40AF", display: "flex", alignItems: "center", justifyContent: "center" }}>
                                 {bank.short_code?.substring(0, 2) || 'BK'}
                               </div>
                             )}
-                            <span style={{ fontSize: "13px", fontWeight: 600, color: "#1E293B" }}>{bank.name}</span>
+                            <div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <span style={{ fontSize: "13px", fontWeight: 600, color: "#1E293B" }}>{bank.name}</span>
+                                {isLocEoc && (
+                                  <span style={{ background: "#059669", color: "#FFFFFF", fontSize: "9px", fontWeight: 800, padding: "1px 5px", borderRadius: "4px" }}>
+                                    SPECIAL CATEGORY
+                                  </span>
+                                )}
+                              </div>
+                              {isLocEoc && (
+                                <div style={{ fontSize: "10px", color: "#047857", fontWeight: 500 }}>
+                                  All Loan on Credit Card & Smart EMI applications
+                                </div>
+                              )}
+                            </div>
                           </div>
                           <input
                             type="checkbox"
@@ -1294,6 +1313,7 @@ export default function SuperAdminDashboard() {
                     <div style={{ maxHeight: "180px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", paddingRight: "4px" }}>
                       {(Array.isArray(allBanks) ? allBanks : []).filter(b => b.name.toLowerCase().includes((editBankSearchQuery || '').toLowerCase()) || (b.short_code || '').toLowerCase().includes((editBankSearchQuery || '').toLowerCase())).map(bank => {
                         const isChecked = editForm.bank_ids.includes(bank.id);
+                        const isLocEoc = (bank.short_code || '').toUpperCase() === 'LOC_EOC' || bank.is_loc_eoc || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(bank.name || '');
                         return (
                           <div
                             key={bank.id}
@@ -1310,21 +1330,39 @@ export default function SuperAdminDashboard() {
                               justifyContent: "space-between",
                               padding: "8px 12px",
                               borderRadius: "8px",
-                              border: `1px solid ${isChecked ? "#2563EB" : "#CBD5E1"}`,
-                              background: isChecked ? "#EFF6FF" : "#FFFFFF",
+                              border: `1px solid ${isChecked ? (isLocEoc ? "#059669" : "#2563EB") : (isLocEoc ? "#A7F3D0" : "#CBD5E1")}`,
+                              background: isChecked ? (isLocEoc ? "#ECFDF5" : "#EFF6FF") : (isLocEoc ? "#F0FDF4" : "#FFFFFF"),
                               cursor: "pointer",
                               transition: "all 0.15s"
                             }}
                           >
                             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                              {bank.logo_url ? (
+                              {isLocEoc ? (
+                                <div style={{ width: "20px", height: "20px", background: "#059669", borderRadius: "4px", fontSize: "10px", fontWeight: 800, color: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                  💳
+                                </div>
+                              ) : bank.logo_url ? (
                                 <img src={bank.logo_url} alt={bank.name} style={{ width: "20px", height: "20px", objectFit: "contain" }} />
                               ) : (
                                 <div style={{ width: "20px", height: "20px", background: "#DBEAFE", borderRadius: "4px", fontSize: "10px", fontWeight: 800, color: "#1E40AF", display: "flex", alignItems: "center", justifyContent: "center" }}>
                                   {bank.short_code?.substring(0, 2) || 'BK'}
                                 </div>
                               )}
-                              <span style={{ fontSize: "13px", fontWeight: 600, color: "#1E293B" }}>{bank.name}</span>
+                              <div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                  <span style={{ fontSize: "13px", fontWeight: 600, color: "#1E293B" }}>{bank.name}</span>
+                                  {isLocEoc && (
+                                    <span style={{ background: "#059669", color: "#FFFFFF", fontSize: "9px", fontWeight: 800, padding: "1px 5px", borderRadius: "4px" }}>
+                                      SPECIAL CATEGORY
+                                    </span>
+                                  )}
+                                </div>
+                                {isLocEoc && (
+                                  <div style={{ fontSize: "10px", color: "#047857", fontWeight: 500 }}>
+                                    All Loan on Credit Card & Smart EMI applications
+                                  </div>
+                                )}
+                              </div>
                             </div>
                             <input
                               type="checkbox"
