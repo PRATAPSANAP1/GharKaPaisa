@@ -67,7 +67,7 @@ const getMe = async (req, res, next) => {
   try {
     const { rows: [user] } = await query(`
         SELECT u.id, u.email, u.mobile, u.role, u.status, u.last_login, u.must_change_password,
-          u.full_name, u.department, u.designation,
+          u.full_name, u.department, u.designation, COALESCE(u.has_loc_eoc, FALSE) as has_loc_eoc,
           COALESCE(e.employee_id, u.employee_id) as employee_id,
           COALESCE(e.employee_id, u.employee_id) as employee_code,
           e.id as employee_uuid,
@@ -108,7 +108,7 @@ const getMe = async (req, res, next) => {
         ...b,
         is_loc_eoc: (b.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '')
       }));
-      const hasLocEoc = assignedBanks.some(b => b.is_loc_eoc);
+      const hasLocEoc = Boolean(user.has_loc_eoc) || assignedBanks.some(b => b.is_loc_eoc);
       const permissions = {
         banks: assignedBanks.map(b => b.id),
         bank_codes: assignedBanks.map(b => b.code || b.short_code || b.name),

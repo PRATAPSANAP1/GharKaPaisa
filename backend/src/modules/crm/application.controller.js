@@ -1660,16 +1660,8 @@ const listApplications = async (req, res, next) => {
     let abRows = [];
 
     const locEocAppSQL = `(
-      LOWER(COALESCE(combined.category::text, '')) IN ('loc_eoc', 'loc', 'eoc', 'loan_on_credit_card', 'smart_emi', 'card_on_loan')
-      OR LOWER(COALESCE(combined.category::text, '')) LIKE '%loc%'
-      OR LOWER(COALESCE(combined.sub_category, '')) IN ('loc', 'eoc', 'smart_emi', 'loan_on_credit_card')
-      OR LOWER(COALESCE(combined.product_name, '')) LIKE '%insta loan%'
-      OR LOWER(COALESCE(combined.product_name, '')) LIKE '%jumbo loan%'
-      OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smartemi%'
-      OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smart emi%'
-      OR LOWER(COALESCE(combined.product_name, '')) LIKE '%loan on card%'
-      OR LOWER(COALESCE(combined.product_name, '')) LIKE '%loan on credit card%'
-      OR LOWER(COALESCE(combined.product_name, '')) LIKE '%emi on credit card%'
+      LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc'
+      OR LOWER(COALESCE(combined.sub_category, '')) IN ('loc', 'eoc')
     )`;
 
     if (!isPartnerOrTeam && req.user?.id) {
@@ -1680,7 +1672,7 @@ const listApplications = async (req, res, next) => {
         WHERE aba.admin_id = $1
       `, [req.user.id]);
       abRows = resAssignments.rows;
-      isLocEocAdmin = abRows.some(b => 
+      isLocEocAdmin = !!req.user?.has_loc_eoc || abRows.some(b => 
         (b.short_code || '').toUpperCase() === 'LOC_EOC' || 
         /loc[\s/_]*eoc|loan\s+on\s+card|smart\s*emi/i.test(b.name || '')
       );
@@ -2034,31 +2026,19 @@ const listApplications = async (req, res, next) => {
         AND (
           $14::text IS NULL OR $14::text = '' OR $14::text = 'all'
           OR ($14::text IN ('loc_eoc', 'LOC/EOC', 'loc-eoc', 'LOC_EOC') AND (
-            LOWER(COALESCE(combined.category::text, '')) IN ('loc_eoc', 'loc', 'eoc', 'loan_on_credit_card', 'smart_emi', 'card_on_loan')
-            OR LOWER(COALESCE(combined.category::text, '')) LIKE '%loc%'
+            LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc'
             OR LOWER(COALESCE(combined.sub_category, '')) IN ('loc', 'eoc')
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%insta loan%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%jumbo loan%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smartemi%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smart emi%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%loan on card%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%loan on credit card%'
           ))
           OR ($14::text IN ('loan_on_credit_card', 'loc', 'LOC') AND (
-            LOWER(COALESCE(combined.category::text, '')) IN ('loan_on_credit_card', 'loc')
-            OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND (LOWER(COALESCE(combined.sub_category, '')) = 'loc' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%insta loan%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%jumbo loan%'))
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%insta loan%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%jumbo loan%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%loan on credit card%'
+            LOWER(COALESCE(combined.sub_category, '')) = 'loc'
+            OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) = 'loc')
           ))
           OR ($14::text IN ('smart_emi', 'eoc', 'EOC') AND (
-            LOWER(COALESCE(combined.category::text, '')) IN ('smart_emi', 'eoc')
-            OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND (LOWER(COALESCE(combined.sub_category, '')) = 'eoc' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smart%emi%'))
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smartemi%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smart emi%'
+            LOWER(COALESCE(combined.sub_category, '')) = 'eoc'
+            OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) = 'eoc')
           ))
-          OR ($14::text = 'credit_card' AND (LOWER(combined.category::text) LIKE '%credit%' OR LOWER(combined.category::text) LIKE '%card%') AND LOWER(combined.category::text) NOT IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi'))
-          OR ($14::text IN ('loan', 'loans', 'personal_loan') AND (LOWER(combined.category::text) LIKE '%loan%' OR LOWER(combined.category::text) LIKE '%personal%') AND LOWER(combined.category::text) NOT IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi'))
+          OR ($14::text = 'credit_card' AND (LOWER(combined.category::text) LIKE '%credit%' OR LOWER(combined.category::text) LIKE '%card%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
+          OR ($14::text IN ('loan', 'loans', 'personal_loan') AND (LOWER(combined.category::text) LIKE '%loan%' OR LOWER(combined.category::text) LIKE '%personal%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
           OR ($14::text = 'business_loan' AND (LOWER(combined.category::text) LIKE '%business%'))
           OR ($14::text = 'insurance' AND (LOWER(combined.category::text) LIKE '%insurance%'))
           OR ($14::text = 'utility' AND (LOWER(combined.category::text) LIKE '%utilit%' OR LOWER(combined.category::text) LIKE '%recharge%'))
@@ -2144,31 +2124,19 @@ const listApplications = async (req, res, next) => {
         AND (
           $12::text IS NULL OR $12::text = '' OR $12::text = 'all'
           OR ($12::text IN ('loc_eoc', 'LOC/EOC', 'loc-eoc', 'LOC_EOC') AND (
-            LOWER(COALESCE(combined.category::text, '')) IN ('loc_eoc', 'loc', 'eoc', 'loan_on_credit_card', 'smart_emi', 'card_on_loan')
-            OR LOWER(COALESCE(combined.category::text, '')) LIKE '%loc%'
+            LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc'
             OR LOWER(COALESCE(combined.sub_category, '')) IN ('loc', 'eoc')
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%insta loan%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%jumbo loan%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smartemi%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smart emi%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%loan on card%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%loan on credit card%'
           ))
           OR ($12::text IN ('loan_on_credit_card', 'loc', 'LOC') AND (
-            LOWER(COALESCE(combined.category::text, '')) IN ('loan_on_credit_card', 'loc')
-            OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND (LOWER(COALESCE(combined.sub_category, '')) = 'loc' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%insta loan%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%jumbo loan%'))
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%insta loan%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%jumbo loan%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%loan on credit card%'
+            LOWER(COALESCE(combined.sub_category, '')) = 'loc'
+            OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) = 'loc')
           ))
           OR ($12::text IN ('smart_emi', 'eoc', 'EOC') AND (
-            LOWER(COALESCE(combined.category::text, '')) IN ('smart_emi', 'eoc')
-            OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND (LOWER(COALESCE(combined.sub_category, '')) = 'eoc' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smart%emi%'))
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smartemi%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smart emi%'
+            LOWER(COALESCE(combined.sub_category, '')) = 'eoc'
+            OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) = 'eoc')
           ))
-          OR ($12::text = 'credit_card' AND (LOWER(combined.category::text) LIKE '%credit%' OR LOWER(combined.category::text) LIKE '%card%') AND LOWER(combined.category::text) NOT IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi'))
-          OR ($12::text IN ('loan', 'loans', 'personal_loan') AND (LOWER(combined.category::text) LIKE '%loan%' OR LOWER(combined.category::text) LIKE '%personal%') AND LOWER(combined.category::text) NOT IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi'))
+          OR ($12::text = 'credit_card' AND (LOWER(combined.category::text) LIKE '%credit%' OR LOWER(combined.category::text) LIKE '%card%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
+          OR ($12::text IN ('loan', 'loans', 'personal_loan') AND (LOWER(combined.category::text) LIKE '%loan%' OR LOWER(combined.category::text) LIKE '%personal%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
           OR ($12::text = 'business_loan' AND (LOWER(combined.category::text) LIKE '%business%'))
           OR ($12::text = 'insurance' AND (LOWER(combined.category::text) LIKE '%insurance%'))
           OR ($12::text = 'utility' AND (LOWER(combined.category::text) LIKE '%utilit%' OR LOWER(combined.category::text) LIKE '%recharge%'))
@@ -2217,31 +2185,19 @@ const listApplications = async (req, res, next) => {
         AND (
           $12::text IS NULL OR $12::text = '' OR $12::text = 'all'
           OR ($12::text IN ('loc_eoc', 'LOC/EOC', 'loc-eoc', 'LOC_EOC') AND (
-            LOWER(COALESCE(combined.category::text, '')) IN ('loc_eoc', 'loc', 'eoc', 'loan_on_credit_card', 'smart_emi', 'card_on_loan')
-            OR LOWER(COALESCE(combined.category::text, '')) LIKE '%loc%'
+            LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc'
             OR LOWER(COALESCE(combined.sub_category, '')) IN ('loc', 'eoc')
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%insta loan%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%jumbo loan%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smartemi%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smart emi%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%loan on card%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%loan on credit card%'
           ))
           OR ($12::text IN ('loan_on_credit_card', 'loc', 'LOC') AND (
-            LOWER(COALESCE(combined.category::text, '')) IN ('loan_on_credit_card', 'loc')
-            OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND (LOWER(COALESCE(combined.sub_category, '')) = 'loc' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%insta loan%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%jumbo loan%'))
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%insta loan%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%jumbo loan%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%loan on credit card%'
+            LOWER(COALESCE(combined.sub_category, '')) = 'loc'
+            OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) = 'loc')
           ))
           OR ($12::text IN ('smart_emi', 'eoc', 'EOC') AND (
-            LOWER(COALESCE(combined.category::text, '')) IN ('smart_emi', 'eoc')
-            OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND (LOWER(COALESCE(combined.sub_category, '')) = 'eoc' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smart%emi%'))
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smartemi%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smart emi%'
+            LOWER(COALESCE(combined.sub_category, '')) = 'eoc'
+            OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) = 'eoc')
           ))
-          OR ($12::text = 'credit_card' AND (LOWER(combined.category::text) LIKE '%credit%' OR LOWER(combined.category::text) LIKE '%card%') AND LOWER(combined.category::text) NOT IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi'))
-          OR ($12::text IN ('loan', 'loans', 'personal_loan') AND (LOWER(combined.category::text) LIKE '%loan%' OR LOWER(combined.category::text) LIKE '%personal%') AND LOWER(combined.category::text) NOT IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi'))
+          OR ($12::text = 'credit_card' AND (LOWER(combined.category::text) LIKE '%credit%' OR LOWER(combined.category::text) LIKE '%card%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
+          OR ($12::text IN ('loan', 'loans', 'personal_loan') AND (LOWER(combined.category::text) LIKE '%loan%' OR LOWER(combined.category::text) LIKE '%personal%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
           OR ($12::text = 'business_loan' AND (LOWER(combined.category::text) LIKE '%business%'))
           OR ($12::text = 'insurance' AND (LOWER(combined.category::text) LIKE '%insurance%'))
           OR ($12::text = 'utility' AND (LOWER(combined.category::text) LIKE '%utilit%' OR LOWER(combined.category::text) LIKE '%recharge%'))

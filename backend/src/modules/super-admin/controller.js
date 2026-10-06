@@ -204,6 +204,10 @@ const createAdmin = async (req, res, next) => {
         }
       }
     }
+    const hasLocEocInput = req.body.has_loc_eoc !== undefined ? Boolean(req.body.has_loc_eoc) : (req.body.hasLocEoc !== undefined ? Boolean(req.body.hasLocEoc) : bankIds.some(id => String(id).toUpperCase() === 'LOC_EOC'));
+    if (hasLocEocInput) {
+      await query(`UPDATE users SET has_loc_eoc = TRUE WHERE id = $1`, [dbUser.id]);
+    }
     await logAction(req, 'CREATE_USER', dbUser.id, { email, role: dbUser.role, bankIds });
 
     return created(res, {
@@ -239,6 +243,7 @@ const listAdmins = async (req, res, next) => {
         department, 
         designation, 
         is_active as "isActive", 
+        COALESCE(has_loc_eoc, FALSE) as has_loc_eoc,
         created_by as "createdBy", 
         created_at as "createdAt"
       FROM users 
@@ -254,7 +259,18 @@ const listAdmins = async (req, res, next) => {
       adminBankMap[a.admin_id].push({ id: a.bank_id, name: a.bank_name, short_code: a.short_code || a.code, logo_url: a.logo_url, is_loc_eoc: isLocEoc });
       adminBankIdMap[a.admin_id].push(a.bank_id);
     });
-    const result = admins.map(a => ({ ...a, id: a._id, assigned_banks: adminBankMap[a._id] || [], bank_ids: adminBankIdMap[a._id] || [] }));
+    const result = admins.map(a => {
+      const assigned = adminBankMap[a._id] || [];
+      const hasLocEoc = Boolean(a.has_loc_eoc) || assigned.some(b => b.is_loc_eoc);
+      return {
+        ...a,
+        id: a._id,
+        has_loc_eoc: hasLocEoc,
+        hasLocEoc: hasLocEoc,
+        assigned_banks: assigned,
+        bank_ids: adminBankIdMap[a._id] || []
+      };
+    });
     return success(res, result);
   } catch (err) {
     next(err);
@@ -331,6 +347,13 @@ const updateAdmin = async (req, res, next) => {
       }
     }
 
+    if (req.body.has_loc_eoc !== undefined || req.body.hasLocEoc !== undefined) {
+      const val = req.body.has_loc_eoc !== undefined ? Boolean(req.body.has_loc_eoc) : Boolean(req.body.hasLocEoc);
+      await query(`UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [val, existing.id]);
+    } else if (targetBankIds !== null && targetBankIds.some(id => String(id).toUpperCase() === 'LOC_EOC')) {
+      await query(`UPDATE users SET has_loc_eoc = TRUE WHERE id = $1`, [existing.id]);
+    }
+
     await logAction(req, 'UPDATE_USER', existing.id, { email, designation, bankIds: targetBankIds });
 
     return success(res, { id: existing.id }, 'Administrator updated successfully.');
@@ -342,6 +365,7 @@ const updateAdmin = async (req, res, next) => {
 const getAdminBanks = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const { rows: [userRec] } = await query(`SELECT COALESCE(has_loc_eoc, FALSE) as has_loc_eoc FROM users WHERE id::text = $1`, [id]);
     const { rows } = await query(`
       SELECT aba.bank_id as id, b.name, b.short_code, b.logo_url 
       FROM admin_bank_assignments aba
@@ -366,6 +390,13 @@ const updateAdminBanks = async (req, res, next) => {
 
     const { rows: [userRec] } = await query(`SELECT id, designation FROM users WHERE id::text = $1`, [id]);
     if (!userRec) return notFound(res, 'Admin not found');
+
+    if (req.body.has_loc_eoc !== undefined || req.body.hasLocEoc !== undefined) {
+      const val = req.body.has_loc_eoc !== undefined ? Boolean(req.body.has_loc_eoc) : Boolean(req.body.hasLocEoc);
+      await query(`UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [val, userRec.id]);
+    } else if (targetBankIds.some(id => String(id).toUpperCase() === 'LOC_EOC')) {
+      await query(`UPDATE users SET has_loc_eoc = TRUE WHERE id = $1`, [userRec.id]);
+    }
 
     await query(`DELETE FROM admin_bank_assignments WHERE admin_id = $1`, [userRec.id]);
     const isRemarkOp = ['Remark Operator', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'QD Operator', 'QD_OPERATOR', 'QD OPERATOR'].includes(userRec.designation);

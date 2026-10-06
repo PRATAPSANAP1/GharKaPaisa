@@ -220,6 +220,7 @@ const migrate = async () => {
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT FALSE`);
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ`);
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS has_loc_eoc BOOLEAN DEFAULT FALSE`);
 
   // Table to track emails pre-verified via registration OTP
   await query(`
@@ -843,6 +844,7 @@ const migrate = async () => {
       link       VARCHAR(500),
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
+  `);
   await query(`CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read)`);
   await query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ NULL`);
   await query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`);
