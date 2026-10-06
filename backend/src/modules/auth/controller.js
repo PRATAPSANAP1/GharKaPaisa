@@ -1142,12 +1142,33 @@ const loginPassword = async (req, res, next) => {
     const { rows: [user] } = await query(userQuery, queryParams);
 
     if (!user) { await security.recordFailedLogin(null, req, 'unknown_account'); return error(res, 'No account found with this email or mobile', 401); }
+
+    // Enforce OTP login if failed password attempts reach 3 or more
+    if ((user.failed_login_attempts || 0) >= 3) {
+      return res.status(403).json({
+        success: false,
+        require_otp: true,
+        message: 'Maximum password attempts reached. Please log in using OTP.'
+      });
+    }
+
     if (isLocked(user)) return error(res, 'Account is temporarily locked. Try again later.', 423);
 
     if (!user.password_hash) return error(res, 'Password login not enabled for this account', 401);
 
     const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) { await security.recordFailedLogin(user, req, 'invalid_password'); return error(res, 'Invalid credentials', 401); }
+    if (!valid) {
+      const updated = await security.recordFailedLogin(user, req, 'invalid_password');
+      const attempts = updated?.failed_login_attempts || ((user.failed_login_attempts || 0) + 1);
+      if (attempts >= 3) {
+        return res.status(403).json({
+          success: false,
+          require_otp: true,
+          message: 'Maximum password attempts reached. Please log in using OTP.'
+        });
+      }
+      return error(res, 'Invalid credentials', 401);
+    }
 
 
     if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);

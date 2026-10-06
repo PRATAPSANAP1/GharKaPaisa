@@ -71,9 +71,10 @@ const savePassword = async (userId, password, currentHash, clearMustChange = fal
 const resetFailures = (userId) => query(`UPDATE users SET failed_login_attempts=0, locked_until=NULL WHERE id=$1`, [userId]);
 const recordFailedLogin = async (user, req, reason) => {
   await loginRecord(user?.id, req, 'failed', reason);
-  if (!user) return;
+  if (!user) return null;
   const { rows: [updated] } = await query(`UPDATE users SET failed_login_attempts=failed_login_attempts+1, locked_until=CASE WHEN failed_login_attempts+1 >= $1 THEN NOW()+INTERVAL '${LOCK_MINUTES} minutes' ELSE locked_until END WHERE id=$2 RETURNING failed_login_attempts,locked_until`, [MAX_FAILED_ATTEMPTS, user.id]);
   if (updated?.locked_until) await query(`INSERT INTO security_alerts (user_id,type,message) VALUES ($1,'account_locked',$2)`, [user.id, `Account locked for ${LOCK_MINUTES} minutes after repeated failed sign-in attempts.`]);
+  return updated;
 };
 
 module.exports = { clientContext, audit, loginRecord, detectSuspiciousLogin, assertPasswordPolicy, savePassword, resetFailures, recordFailedLogin };

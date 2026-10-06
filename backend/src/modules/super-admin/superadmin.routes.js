@@ -27,6 +27,7 @@ router.delete('/admins/:id', ctrl.deleteAdmin);
 router.delete('/users/:id', ctrl.deleteAdmin);
 router.delete('/partners/:id', ctrl.deleteAdmin);
 router.post('/block-user', ctrl.blockUser);
+router.post('/unlock-user', ctrl.unlockUser);
 router.post('/update-partner-status', ctrl.updatePartnerStatus);
 router.get('/audit-logs', ctrl.getAuditLogs);
 router.get('/referral-analytics', ctrl.getReferralAnalytics);

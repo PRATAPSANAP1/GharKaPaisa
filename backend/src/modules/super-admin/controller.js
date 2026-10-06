@@ -438,6 +438,41 @@ const blockUser = async (req, res, next) => {
 };
 
 /**
+ * POST /api/v1/superadmin/unlock-user
+ * Unlock a user account that was temporarily locked due to failed login attempts.
+ */
+const unlockUser = async (req, res, next) => {
+  try {
+    const { userId, identity } = req.body;
+    if (!userId && !identity) {
+      return error(res, 'userId or identity (email/mobile) parameter is required', 400);
+    }
+
+    let targetUser;
+    if (userId) {
+      const { rows: [user] } = await query(`SELECT id, email, role FROM users WHERE id::text = $1`, [userId]);
+      targetUser = user;
+    } else {
+      const clean = String(identity).trim().toLowerCase();
+      const { rows: [user] } = await query(`SELECT id, email, role FROM users WHERE LOWER(email) = $1 OR mobile = $1`, [clean]);
+      targetUser = user;
+    }
+
+    if (!targetUser) {
+      return error(res, 'User not found', 404);
+    }
+
+    await query(`UPDATE users SET failed_login_attempts = 0, locked_until = NULL, updated_at = NOW() WHERE id = $1`, [targetUser.id]);
+    await logAction(req, 'UNLOCK_USER', targetUser.id, { email: targetUser.email, role: targetUser.role });
+
+    return success(res, { userId: targetUser.id }, 'User account has been unlocked successfully.');
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+/**
  * GET /api/v1/superadmin/audit-logs
  * Fetch system audit logs with pagination and filters.
  */
@@ -1243,6 +1278,7 @@ module.exports = {
   getAdminBanks,
   updateAdminBanks,
   blockUser,
+  unlockUser,
   getAuditLogs,
   deleteAdmin,
   updatePartnerStatus,
