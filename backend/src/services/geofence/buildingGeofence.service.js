@@ -9,24 +9,24 @@ const DEFAULT_BUILDINGS = [
     code: 'MAIN_OFFICE_HQ',
     address: 'Primary Office Building Premises',
     polygon_coordinates: [
-      [18.619900, 73.875100],
-      [18.619900, 73.874300],
-      [18.619200, 73.874300],
-      [18.619200, 73.875100]
+      [18.619587, 73.874548],
+      [18.619565, 73.874942],
+      [18.619353, 73.874927],
+      [18.619375, 73.874534]
     ],
     tolerance_meters: 150,
     is_active: true
   },
   {
     id: '00000000-0000-0000-0000-000000000002',
-    name: 'Branch Office Building (Test Location)',
+    name: 'Branch Office Building (Office 2)',
     code: 'BRANCH_OFFICE_02',
     address: 'Secondary Office Building Premises',
     polygon_coordinates: [
-      [19.762000, 75.249000],
-      [19.762000, 75.245000],
-      [19.759000, 75.245000],
-      [19.759000, 75.249000]
+      [19.381461, 75.467570],
+      [19.381449, 75.467657],
+      [19.381363, 75.467646],
+      [19.381373, 75.467558]
     ],
     tolerance_meters: 150,
     is_active: true

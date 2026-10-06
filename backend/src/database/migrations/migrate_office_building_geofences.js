@@ -48,10 +48,10 @@ async function migrateOfficeBuildingGeofences() {
 
     // 5. Seed Initial Building Geofence with the user's exact 4 corner coordinates
     const defaultCoordinates = [
-      [18.619358, 73.874924],
+      [18.619587, 73.874548],
       [18.619565, 73.874942],
-      [18.619585, 73.874550],
-      [18.619377, 73.874543]
+      [18.619353, 73.874927],
+      [18.619375, 73.874534]
     ];
 
     const { rows: existing } = await query(
