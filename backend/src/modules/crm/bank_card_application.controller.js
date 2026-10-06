@@ -284,6 +284,7 @@ const listBankCardApplications = async (req, res, next) => {
     const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
     const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
     const isQdOperatorUser = ['QD OPERATOR', 'QD_OPERATOR'].includes(userDesignation) || ['QD OPERATOR', 'QD_OPERATOR'].includes(userRole);
+    const isQuerableOperatorUser = ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
 
     if (userRole !== 'SUPER_ADMIN' && req.user?.id) {
       const { rows: abRows } = await query(`
@@ -324,6 +325,17 @@ const listBankCardApplications = async (req, res, next) => {
 
     if (isRemarkOperatorUser && req.user?.id) {
       whereClause += ` AND (COALESCE(combined.dispatch_stage, '') = '' OR LOWER(COALESCE(combined.dispatch_stage, 'none')) IN ('none', 'na', 'n/a'))`;
+    }
+
+    if (isQuerableOperatorUser && req.user?.id) {
+      whereClause += ` AND (
+        LOWER(COALESCE(combined.status, '')) IN ('rejected', 'declined', 'decline')
+        OR LOWER(COALESCE(combined.status, '')) LIKE '%reject%'
+        OR LOWER(COALESCE(combined.status, '')) LIKE '%decline%'
+        OR LOWER(COALESCE(combined.final_stage, '')) IN ('rejected', 'declined', 'decline')
+        OR LOWER(COALESCE(combined.final_stage, '')) LIKE '%reject%'
+        OR LOWER(COALESCE(combined.final_stage, '')) LIKE '%decline%'
+      )`;
     }
 
     if (bank_id && bank_id !== 'all') {

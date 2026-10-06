@@ -1652,7 +1652,7 @@ const listApplications = async (req, res, next) => {
     const hasAaaTable = await ensureAssignmentsTableExists();
 
     const userDesignation = (req.user?.designation || '').toUpperCase();
-    const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userDesignation) || ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userRole);
+    const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
     const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
     const isSalesExecOnlyUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
     let isLocEocAdmin = false;
@@ -1826,8 +1826,24 @@ const listApplications = async (req, res, next) => {
       finalStatusOperatorFilterSQL = ` ${baseBankAccessFilterSQL} AND ${eligibleDispatchFilter} AND ${inProcessFinalStatusFilter}`;
     }
 
+    const isQuerableOperatorUser = ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
+    let querableOperatorFilterSQL = '';
+    if (isQuerableOperatorUser && req.user?.id) {
+      const rejectDeclineCondition = `(
+        LOWER(COALESCE(combined.status, '')) IN ('rejected', 'declined', 'decline', 'technical_error')
+        OR LOWER(COALESCE(combined.status, '')) LIKE '%reject%'
+        OR LOWER(COALESCE(combined.status, '')) LIKE '%decline%'
+        OR LOWER(COALESCE(combined.final_status, '')) IN ('rejected', 'declined', 'decline')
+        OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%'
+        OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'
+        OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%reject%'
+        OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%decline%'
+      )`;
+      querableOperatorFilterSQL = ` ${baseBankAccessFilterSQL} AND ${rejectDeclineCondition}`;
+    }
+
     if (!isPartnerOrTeam && !isSuperAdmin && req.user?.id) {
-      if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser || isQdOperatorUser || isFinalStatusOperatorUser) {
+      if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser || isQdOperatorUser || isFinalStatusOperatorUser || isQuerableOperatorUser) {
         opHeadBankFilterSQL = ``;
         countOpHeadBankFilterSQL = ``;
       } else {
@@ -1996,7 +2012,8 @@ const listApplications = async (req, res, next) => {
           OR ($2 = 'operational_verified' AND combined.status IN ('operational_verified', 'under_review', 'under review', 'verification', 'in_process', 'in_progress', 'vkyc_pending', 'vkyc_completed'))
           OR ($2 = 'approved' AND combined.status IN ('approved', 'sanctioned', 'super_admin_approved', 'disbursed'))
           OR ($2 = 'commission_received' AND combined.status IN ('commission_received', 'commission_released', 'released', 'credited', 'paid'))
-          OR ($2 = 'rejected' AND combined.status IN ('rejected', 'declined', 'decline', 'technical_error'))
+          OR ($2 = 'rejected' AND (combined.status IN ('rejected', 'declined', 'decline', 'technical_error') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%' OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'))
+          OR ($2 = 'declined' AND (combined.status IN ('declined', 'decline') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'))
           OR ($2 = 'cancelled' AND combined.status IN ('cancelled', 'cancel', 'canceled'))
         )
         AND ($3::uuid IS NULL OR combined.product_id = $3)
@@ -2024,7 +2041,7 @@ const listApplications = async (req, res, next) => {
             LOWER(COALESCE(combined.sub_category, '')) = 'eoc'
             OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) = 'eoc')
           ))
-          OR ($14::text = 'credit_card' AND (LOWER(combined.category::text) LIKE '%credit%' OR LOWER(combined.category::text) LIKE '%card%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
+          OR ($12::text = 'credit_card' AND (LOWER(combined.category::text) LIKE '%credit%' OR LOWER(combined.category::text) LIKE '%card%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
           OR ($14::text IN ('loan', 'loans', 'personal_loan') AND (LOWER(combined.category::text) LIKE '%loan%' OR LOWER(combined.category::text) LIKE '%personal%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
           OR ($14::text = 'business_loan' AND (LOWER(combined.category::text) LIKE '%business%'))
           OR ($14::text = 'insurance' AND (LOWER(combined.category::text) LIKE '%insurance%'))
@@ -2045,6 +2062,7 @@ const listApplications = async (req, res, next) => {
         ${qdOperatorFilterSQL}
         ${remarkOperatorFilterSQL}
         ${finalStatusOperatorFilterSQL}
+        ${querableOperatorFilterSQL}
       ORDER BY combined.created_at DESC
       LIMIT $6 OFFSET $7
     `, queryParams);
@@ -2094,7 +2112,8 @@ const listApplications = async (req, res, next) => {
           OR ($2 = 'operational_verified' AND combined.status IN ('operational_verified', 'under_review', 'under review', 'verification', 'in_process', 'in_progress', 'vkyc_pending', 'vkyc_completed'))
           OR ($2 = 'approved' AND combined.status IN ('approved', 'sanctioned', 'super_admin_approved', 'disbursed'))
           OR ($2 = 'commission_received' AND combined.status IN ('commission_received', 'commission_released', 'released', 'credited', 'paid'))
-          OR ($2 = 'rejected' AND combined.status IN ('rejected', 'declined', 'decline', 'technical_error'))
+          OR ($2 = 'rejected' AND (combined.status IN ('rejected', 'declined', 'decline', 'technical_error') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%' OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'))
+          OR ($2 = 'declined' AND (combined.status IN ('declined', 'decline') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'))
           OR ($2 = 'cancelled' AND combined.status IN ('cancelled', 'cancel', 'canceled'))
         )
         AND ($3::uuid IS NULL OR combined.product_id = $3)
@@ -2143,6 +2162,7 @@ const listApplications = async (req, res, next) => {
         ${qdOperatorFilterSQL}
         ${remarkOperatorFilterSQL}
         ${finalStatusOperatorFilterSQL}
+        ${querableOperatorFilterSQL}
     `, countQueryParams);
 
     // Compute real-time canonical status counts scoped to user role & bank filters
@@ -2204,6 +2224,7 @@ const listApplications = async (req, res, next) => {
         ${qdOperatorFilterSQL}
         ${remarkOperatorFilterSQL}
         ${finalStatusOperatorFilterSQL}
+        ${querableOperatorFilterSQL}
       GROUP BY combined.status
     `, countQueryParams);
     const statusCountsObj = {
@@ -2213,6 +2234,7 @@ const listApplications = async (req, res, next) => {
       approved: 0,
       commission_received: 0,
       rejected: 0,
+      declined: 0,
       cancelled: 0
     };
 
@@ -2230,7 +2252,10 @@ const listApplications = async (req, res, next) => {
         statusCountsObj.approved += cnt;
       } else if (['commission_received', 'commission_released', 'released', 'credited', 'paid'].includes(s)) {
         statusCountsObj.commission_received += cnt;
-      } else if (['rejected', 'declined', 'decline', 'technical_error'].includes(s)) {
+      } else if (['declined', 'decline'].includes(s)) {
+        statusCountsObj.declined = (statusCountsObj.declined || 0) + cnt;
+        statusCountsObj.rejected += cnt;
+      } else if (['rejected', 'technical_error'].includes(s)) {
         statusCountsObj.rejected += cnt;
       } else if (['cancelled', 'cancel', 'canceled'].includes(s)) {
         statusCountsObj.cancelled += cnt;

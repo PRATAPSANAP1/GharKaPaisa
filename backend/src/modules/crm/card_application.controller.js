@@ -102,6 +102,12 @@ const listApplications = async (req, res, next) => {
       } else {
         whereClause += ` AND 1=0`;
       }
+
+      const userDesignation = (req.user?.designation || '').toUpperCase();
+      const isQuerableOperatorUser = ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
+      if (isQuerableOperatorUser && req.user?.id) {
+        whereClause += ` AND (LOWER(COALESCE(status, '')) IN ('rejected', 'declined', 'decline') OR LOWER(COALESCE(status, '')) LIKE '%reject%' OR LOWER(COALESCE(status, '')) LIKE '%decline%')`;
+      }
     }
 
     if (category === 'loc_eoc' || category === 'LOC/EOC' || category === 'loc-eoc') {

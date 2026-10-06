@@ -15,6 +15,7 @@ const ADMIN_DESIGNATIONS = [
   { value: 'Remark Operator', label: 'Remark Operator' },
   { value: 'QD Operator', label: 'QD Operator' },
   { value: 'Final Status Operator', label: 'Final Status Operator' },
+  { value: 'Querable Operator', label: 'Querable Operator' },
   { value: 'Operational Head', label: 'Operational Head' },
   { value: 'Administrative Operator', label: 'Administrative Operator' },
   { value: 'Administrative Sales Executive', label: 'Administrative Sales Executive' },
@@ -1087,6 +1088,7 @@ export default function ManageAnnouncements() {
                             'Remark Operator': 'PRESET_ADMIN_REMARK',
                             'QD Operator': 'PRESET_ADMIN_QD',
                             'Final Status Operator': 'PRESET_ADMIN_FINAL',
+                            'Querable Operator': 'PRESET_ADMIN_QUERABLE',
                             'Operational Head': 'PRESET_ADMIN_OPS_HEAD',
                             'Administrative Operator': 'PRESET_ADMIN_ADMIN_OP',
                             'Administrative Sales Executive': 'PRESET_ADMIN_SALES_EXEC',
@@ -1105,6 +1107,7 @@ export default function ManageAnnouncements() {
                           PRESET_ADMIN_REMARK: 'Remark Operator',
                           PRESET_ADMIN_QD: 'QD Operator',
                           PRESET_ADMIN_FINAL: 'Final Status Operator',
+                          PRESET_ADMIN_QUERABLE: 'Querable Operator',
                           PRESET_ADMIN_OPS_HEAD: 'Operational Head',
                           PRESET_ADMIN_ADMIN_OP: 'Administrative Operator',
                           PRESET_ADMIN_SALES_EXEC: 'Administrative Sales Executive',
@@ -1135,6 +1138,7 @@ export default function ManageAnnouncements() {
                       <option value="PRESET_ADMIN_REMARK">Remark Operator</option>
                       <option value="PRESET_ADMIN_QD">QD Operator</option>
                       <option value="PRESET_ADMIN_FINAL">Final Status Operator</option>
+                      <option value="PRESET_ADMIN_QUERABLE">Querable Operator</option>
                       <option value="PRESET_ADMIN_OPS_HEAD">Operational Head</option>
                       <option value="PRESET_ADMIN_ADMIN_OP">Administrative Operator</option>
                       <option value="PRESET_ADMIN_SALES_EXEC">Administrative Sales Executive</option>

@@ -1317,6 +1317,7 @@ export default function SuperAdminWhatsApp() {
                   <option value="Remark Operator">Remark Operator</option>
                   <option value="QD Operator">QD Operator</option>
                   <option value="Final Status Operator">Final Status Operator</option>
+                  <option value="Querable Operator">Querable Operator</option>
                   <option value="Operational Head">Operational Head</option>
                   <option value="Administrative Operator">Administrative Operator</option>
                   <option value="Administrative Sales Executive">Administrative Sales Executive</option>
