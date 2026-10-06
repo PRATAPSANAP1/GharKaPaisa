@@ -64,7 +64,6 @@ export default function ManageApplications() {
   const [commFilter, setCommFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState(() => {
     if (categoryParam) return categoryParam;
-    if (isOnlyLocEocAssigned) return "loc_eoc";
     return "all";
   });
 
@@ -177,7 +176,7 @@ export default function ManageApplications() {
     setStatus("");
     setStatusFilter("all");
     setCommFilter("all");
-    setCategoryFilter(isOnlyLocEocAssigned ? "loc_eoc" : "all");
+    setCategoryFilter("all");
     setDateRange("all");
     setProcessTypeFilter("all");
     setSourceTypeFilter("all");
