@@ -329,9 +329,10 @@ const listBankCardApplications = async (req, res, next) => {
 
     if (isQuerableOperatorUser && req.user?.id) {
       whereClause += ` AND (
-        LOWER(COALESCE(combined.final_stage, combined.status, '')) IN ('rejected', 'declined', 'decline')
+        LOWER(COALESCE(combined.final_stage, combined.status, '')) IN ('rejected', 'declined', 'decline', 'cancelled', 'cancel', 'canceled')
         OR LOWER(COALESCE(combined.final_stage, combined.status, '')) LIKE '%reject%'
         OR LOWER(COALESCE(combined.final_stage, combined.status, '')) LIKE '%decline%'
+        OR LOWER(COALESCE(combined.final_stage, combined.status, '')) LIKE '%cancel%'
       )`;
     }
 

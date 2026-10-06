@@ -271,9 +271,10 @@ export default function ManageApplications() {
   };
 
   const STATUS_TABS = isQuerableOperatorUser ? [
-    { id: '', label: 'All Rejected & Declined', color: '#ef4444', bg: '#ef444415' },
+    { id: '', label: 'All Cases (Rejected, Declined & Cancelled)', color: '#ef4444', bg: '#ef444415' },
     { id: 'rejected', label: 'Rejected Cases', color: '#ef4444', bg: '#ef444415' },
     { id: 'declined', label: 'Declined Cases', color: '#f43f5e', bg: '#f43f5e15' },
+    { id: 'cancelled', label: 'Cancelled Cases', color: '#64748b', bg: '#64748b15' },
   ] : [
     { id: '', label: 'All Applications', color: C.primary, bg: `${C.primary}15` },
     { id: 'pending', label: 'Pending', color: '#f59e0b', bg: '#f59e0b15' },
@@ -293,6 +294,12 @@ export default function ManageApplications() {
     if (s.includes('decline') || fs.includes('decline')) {
       acc['declined'] = (acc['declined'] || 0) + 1;
     }
+    if (s.includes('reject') || fs.includes('reject')) {
+      acc['rejected'] = (acc['rejected'] || 0) + 1;
+    }
+    if (s.includes('cancel') || fs.includes('cancel')) {
+      acc['cancelled'] = (acc['cancelled'] || 0) + 1;
+    }
     acc[s] = (acc[s] || 0) + 1;
     return acc;
   }, {});
@@ -307,7 +314,11 @@ export default function ManageApplications() {
       case 'commission_released':
       case 'commission_received': return { bg: '#16a34a15', color: '#16a34a', border: '#16a34a40', label: 'Commission Received' };
       case 'rejected': return { bg: '#ef444415', color: '#ef4444', border: '#ef444440', label: 'Rejected' };
-      case 'cancelled': return { bg: '#64748b15', color: '#64748b', border: '#64748b40', label: 'Cancelled' };
+      case 'declined':
+      case 'decline': return { bg: '#f43f5e15', color: '#f43f5e', border: '#f43f5e40', label: 'Declined' };
+      case 'cancelled':
+      case 'cancel':
+      case 'canceled': return { bg: '#64748b15', color: '#64748b', border: '#64748b40', label: 'Cancelled' };
       default: return { bg: `${C.gold}15`, color: C.gold, border: `${C.gold}40`, label: st };
     }
   };
@@ -414,7 +425,7 @@ export default function ManageApplications() {
             {isQuerableOperatorUser ? 'Querable Operator Applications Queue' : isPanCheckerUser ? 'PAN Checker Review Queue' : isRemarkOperatorUser ? 'Remark Operator Queue' : isQdOperatorUser ? 'QD Operator Queue' : 'Applications Management'}
           </h2>
           <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>
-            {isQuerableOperatorUser ? 'Review and manage assigned bank rejected and declined applications.' : isPanCheckerUser ? 'Review and verify customer PAN details for assigned applications.' : isRemarkOperatorUser ? 'Review and update remarks for assigned bank applications.' : isQdOperatorUser ? 'Review assigned bank applications for QD form and remark details.' : 'Track, verify, update and manage operations for all submitted customer applications.'}
+            {isQuerableOperatorUser ? 'Review and manage assigned bank rejected, declined and cancelled applications.' : isPanCheckerUser ? 'Review and verify customer PAN details for assigned applications.' : isRemarkOperatorUser ? 'Review and update remarks for assigned bank applications.' : isQdOperatorUser ? 'Review assigned bank applications for QD form and remark details.' : 'Track, verify, update and manage operations for all submitted customer applications.'}
           </p>
         </div>
 
@@ -475,6 +486,19 @@ export default function ManageApplications() {
             </div>
             <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
               <span style={{ fontSize: '24px', fontWeight: 900, color: '#F43F5E' }}>{backendStatusCounts?.declined ?? (Array.isArray(apps) ? apps : []).filter(a => String(a.status || '').toLowerCase().includes('decline') || String(a.final_status || '').toLowerCase().includes('decline')).length}</span>
+            </div>
+          </div>
+
+          {/* Cancelled Cases */}
+          <div style={{ background: C.card, borderRadius: '14px', padding: '14px 16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Cancelled Applications</span>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(100, 116, 139, 0.1)', color: '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <MdCancel size={18} />
+              </div>
+            </div>
+            <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+              <span style={{ fontSize: '24px', fontWeight: 900, color: '#64748B' }}>{backendStatusCounts?.cancelled ?? (Array.isArray(apps) ? apps : []).filter(a => String(a.status || '').toLowerCase().includes('cancel') || String(a.final_status || '').toLowerCase().includes('cancel')).length}</span>
             </div>
           </div>
         </div>
