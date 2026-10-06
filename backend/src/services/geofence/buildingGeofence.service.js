@@ -1,34 +1,62 @@
 const { query } = require('../../config/database');
 const logger = require('../../config/logger');
 
-// Default Seed Buildings: Both Pune Main Office and Branch Office (4-Corner GPS Boundaries)
+// Default Seed Buildings: Pune Main Office, Jalna Branch Office, and Chhatrapati Sambhajinagar (Aurangabad) Office
 const DEFAULT_BUILDINGS = [
   {
     id: '00000000-0000-0000-0000-000000000001',
     name: 'Main Office Building (Pune)',
     code: 'MAIN_OFFICE_HQ',
-    address: 'Primary Office Building Premises',
+    address: 'Primary Office Building Premises, Pune',
     polygon_coordinates: [
       [18.619587, 73.874548],
       [18.619565, 73.874942],
       [18.619353, 73.874927],
       [18.619375, 73.874534]
     ],
-    tolerance_meters: 150,
+    tolerance_meters: 200,
     is_active: true
   },
   {
     id: '00000000-0000-0000-0000-000000000002',
-    name: 'Branch Office Building (Office 2)',
+    name: 'Branch Office Building (Office 2 - Jalna)',
     code: 'BRANCH_OFFICE_02',
-    address: 'Secondary Office Building Premises',
+    address: 'Secondary Office Building Premises, Jalna',
     polygon_coordinates: [
       [19.381461, 75.467570],
       [19.381449, 75.467657],
       [19.381363, 75.467646],
       [19.381373, 75.467558]
     ],
-    tolerance_meters: 150,
+    tolerance_meters: 200,
+    is_active: true
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000003',
+    name: 'Chhatrapati Sambhajinagar Office (Aurangabad)',
+    code: 'AURANGABAD_OFFICE_03',
+    address: 'Chhatrapati Sambhajinagar / Aurangabad Office Premises',
+    polygon_coordinates: [
+      [19.878500, 75.322500],
+      [19.878500, 75.326500],
+      [19.874500, 75.326500],
+      [19.874500, 75.322500]
+    ],
+    tolerance_meters: 500,
+    is_active: true
+  },
+  {
+    id: '00000000-0000-0000-0000-000000000004',
+    name: 'Maharashtra Regional & Field Office',
+    code: 'MAHARASHTRA_FIELD_HQ',
+    address: 'Statewide Operations & Regional Field Hub',
+    polygon_coordinates: [
+      [19.877000, 75.324000],
+      [19.877000, 75.325000],
+      [19.876000, 75.325000],
+      [19.876000, 75.324000]
+    ],
+    tolerance_meters: 1000,
     is_active: true
   }
 ];
@@ -63,8 +91,10 @@ async function ensureGeofenceTableExists() {
         `INSERT INTO office_building_geofences (id, name, code, address, polygon_coordinates, tolerance_meters, is_active)
          VALUES ($1, $2, $3, $4, $5, $6, TRUE)
          ON CONFLICT (code) DO UPDATE SET 
+           name = EXCLUDED.name,
            polygon_coordinates = EXCLUDED.polygon_coordinates,
            tolerance_meters = EXCLUDED.tolerance_meters,
+           is_active = TRUE,
            updated_at = NOW()`,
         [
           def.id,
@@ -78,7 +108,7 @@ async function ensureGeofenceTableExists() {
     }
 
     // Ensure all existing DB buildings have at least 150m tolerance to handle indoor GPS drift
-    await query(`UPDATE office_building_geofences SET tolerance_meters = 150 WHERE tolerance_meters < 150`);
+    await query(`UPDATE office_building_geofences SET tolerance_meters = 200 WHERE tolerance_meters < 200`);
 
     tableVerified = true;
   } catch (err) {
@@ -208,23 +238,26 @@ async function getActiveBuildings() {
  * }>}
  */
 async function verifyLocationInBuilding(latitude, longitude, accuracy = 0) {
-  const lat = parseFloat(latitude);
-  const lng = parseFloat(longitude);
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+  const acc = accuracy !== undefined && accuracy !== null && accuracy !== '' ? Number(accuracy) : NaN;
 
-  if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
     console.warn(`[BUILDING GEOFENCE] Invalid GPS coordinates provided: Latitude=${latitude}, Longitude=${longitude}`);
     return {
       matched: false,
+      allowed: false,
       building: null,
       isStrictInside: false,
       distanceMeters: null,
       status: 'INVALID_COORDINATES',
+      reason: 'INVALID_COORDINATES',
       message: 'Invalid GPS latitude/longitude coordinates provided.'
     };
   }
 
   console.log(`[BUILDING GEOFENCE] ================= GEOFENCE CHECK =================`);
-  console.log(`[BUILDING GEOFENCE] Device GPS Coordinates: Latitude = ${lat}, Longitude = ${lng}, Accuracy = ${accuracy}m`);
+  console.log(`[BUILDING GEOFENCE] Device GPS Coordinates: Latitude = ${lat}, Longitude = ${lng}, Accuracy = ${acc}m`);
 
   // Check Environment Bypass override
   if (process.env.ATTENDANCE_GEOFENCE_BYPASS === 'true' || process.env.DISABLE_GEOFENCE === 'true') {
@@ -232,6 +265,7 @@ async function verifyLocationInBuilding(latitude, longitude, accuracy = 0) {
     logger.info(`[BUILDING GEOFENCE] Geofence bypass enabled via environment variable.`);
     return {
       matched: true,
+      allowed: true,
       building: {
         id: '00000000-0000-0000-0000-000000000001',
         name: 'Main Office Building (Pune - Bypass Mode)',
@@ -245,8 +279,26 @@ async function verifyLocationInBuilding(latitude, longitude, accuracy = 0) {
     };
   }
 
+  // 1. Validate GPS Accuracy: If accuracy is too poor (e.g. > 50m or 100,000m coarse IP location)
+  const maxAllowedAccuracy = Number(process.env.ATTENDANCE_MAX_GPS_ACCURACY) || 50;
+  if (Number.isFinite(acc) && acc > maxAllowedAccuracy) {
+    console.warn(`[BUILDING GEOFENCE] ❌ LOW ACCURACY: Device GPS accuracy (${acc}m) is worse than maximum allowed (${maxAllowedAccuracy}m).`);
+    logger.warn(`[BUILDING GEOFENCE] GPS accuracy ${acc}m exceeds threshold of ${maxAllowedAccuracy}m.`);
+    return {
+      matched: false,
+      allowed: false,
+      building: null,
+      isStrictInside: false,
+      distanceMeters: null,
+      status: 'LOW_ACCURACY',
+      reason: 'LOW_ACCURACY',
+      message: 'Unable to verify your location accurately. Please enable GPS and try again.'
+    };
+  }
+
+  // 2. Fetch all active office buildings and check polygon boundaries
   const activeBuildings = await getActiveBuildings();
-  logger.info(`[BUILDING GEOFENCE] Verifying coordinates (${lat}, ${lng}, accuracy: ${accuracy}m) against ${activeBuildings.length} active buildings.`);
+  logger.info(`[BUILDING GEOFENCE] Verifying coordinates (${lat}, ${lng}, accuracy: ${acc || 0}m) against ${activeBuildings.length} active buildings.`);
 
   let closestBuilding = null;
   let minPerimeterDistance = Infinity;
@@ -256,13 +308,14 @@ async function verifyLocationInBuilding(latitude, longitude, accuracy = 0) {
     console.log(`[BUILDING GEOFENCE] Building: "${building.name}" (${building.code}) | 4 Corner Points:`, JSON.stringify(polygon));
     if (!polygon || polygon.length < 3) continue;
 
-    // 1. Strict Polygon Test (Point-in-Polygon)
+    // Strict Polygon Test (Point-in-Polygon)
     const inside = isPointInPolygon(lat, lng, polygon);
     if (inside) {
       console.log(`[BUILDING GEOFENCE] ✅ MATCH SUCCESS! Device coordinates (${lat}, ${lng}) fall INSIDE the 4 points of building: "${building.name}"`);
       logger.info(`[BUILDING GEOFENCE] Point is strictly inside building: "${building.name}" (${building.code})`);
       return {
         matched: true,
+        allowed: true,
         building: {
           id: building.id,
           name: building.name,
@@ -276,7 +329,7 @@ async function verifyLocationInBuilding(latitude, longitude, accuracy = 0) {
       };
     }
 
-    // 2. Tolerance Buffer Test (Distance to building perimeter or centroid)
+    // Tolerance Buffer Test (Distance to building perimeter or centroid)
     const distToPerimeter = distanceToPolygonPerimeter(lat, lng, polygon);
 
     let centroidLat = 0, centroidLng = 0;
@@ -291,18 +344,12 @@ async function verifyLocationInBuilding(latitude, longitude, accuracy = 0) {
     const minDist = Math.min(distToPerimeter, distToCentroid);
     const buildingTolerance = Math.max(Number(building.tolerance_meters) || 150, 150);
 
-    // Effective tolerance accounts for indoor GPS drift, hardware inaccuracy, and desktop browser IP geolocation (e.g. 50,000m)
-    const defaultMaxBuffer = (accuracy && accuracy >= 1000) ? Math.min(accuracy + 1000, 100000) : 1000;
-    const maxBuffer = parseInt(process.env.ATTENDANCE_LOCATION_TOLERANCE_METERS) || defaultMaxBuffer;
-    const effectiveTolerance = Math.max(buildingTolerance, Math.min(buildingTolerance + (accuracy || 0), maxBuffer));
-
-    console.log(`[BUILDING GEOFENCE] Building "${building.name}": Distance to perimeter/centroid = ${minDist.toFixed(1)}m (Effective Tolerance = ${effectiveTolerance}m)`);
-
-    if (minDist <= effectiveTolerance) {
-      console.log(`[BUILDING GEOFENCE] ✅ MATCH SUCCESS! Device within tolerance buffer (${minDist.toFixed(1)}m <= ${effectiveTolerance}m) for building: "${building.name}"`);
-      logger.info(`[BUILDING GEOFENCE] Point within tolerance buffer (${minDist.toFixed(1)}m <= ${effectiveTolerance}m) for "${building.name}"`);
+    if (minDist <= buildingTolerance) {
+      console.log(`[BUILDING GEOFENCE] ✅ MATCH SUCCESS! Device within tolerance buffer (${minDist.toFixed(1)}m <= ${buildingTolerance}m) for building: "${building.name}"`);
+      logger.info(`[BUILDING GEOFENCE] Point within tolerance buffer (${minDist.toFixed(1)}m <= ${buildingTolerance}m) for "${building.name}"`);
       return {
         matched: true,
+        allowed: true,
         building: {
           id: building.id,
           name: building.name,
@@ -327,11 +374,13 @@ async function verifyLocationInBuilding(latitude, longitude, accuracy = 0) {
 
   return {
     matched: false,
+    allowed: false,
     building: null,
     isStrictInside: false,
     distanceMeters: Math.round(minPerimeterDistance),
     status: 'LOCATION_MISMATCH',
-    message: `Location does not match: You are ${Math.round(minPerimeterDistance)} meters away from the nearest designated office building.`
+    reason: 'OUTSIDE_BUILDING',
+    message: "Location doesn't match. You must be inside the office building."
   };
 }
 

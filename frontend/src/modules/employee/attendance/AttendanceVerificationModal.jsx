@@ -272,13 +272,17 @@ export default function AttendanceVerificationModal({
       const errReason = err.response?.data?.reason || err.reason;
       const isExpired = errReason === 'LIVENESS_EXPIRED' || err.response?.status === 410;
       const isMismatch = errReason === 'FACE_MISMATCH' || err.response?.data?.message?.toLowerCase().includes('face mismatch');
-      const isLocMismatch = errReason === 'LOCATION_MISMATCH' || err.response?.data?.message?.toLowerCase().includes('location does not match') || err.response?.data?.message?.toLowerCase().includes('outside');
+      const isLowAccuracy = errReason === 'LOW_ACCURACY' || err.response?.data?.message?.toLowerCase().includes('accurat');
+      const isLocMismatch = errReason === 'LOCATION_MISMATCH' || errReason === 'OUTSIDE_BUILDING' || err.response?.data?.message?.toLowerCase().includes('location does not match') || err.response?.data?.message?.toLowerCase().includes('outside');
       const isLocDenied = errReason === 'LOCATION_REQUIRED' || errReason === 'LOCATION_DENIED';
       const errText = err.response?.data?.message || err.message || (isExpired ? 'Face verification session expired. Please retry.' : 'Face verification failed');
 
-      if (isLocMismatch) {
+      if (isLowAccuracy) {
         setFailureType('LOCATION_MISMATCH');
-        setErrorMessage(errText || 'Location does not match: You are outside the designated office/building premises.');
+        setErrorMessage(errText || 'Unable to verify your location accurately. Please enable GPS and try again.');
+      } else if (isLocMismatch) {
+        setFailureType('LOCATION_MISMATCH');
+        setErrorMessage(errText || "Location doesn't match. You must be inside the office building.");
       } else if (isLocDenied) {
         setFailureType('LOCATION_DENIED');
         setErrorMessage('Location access is required to verify your office building presence.');

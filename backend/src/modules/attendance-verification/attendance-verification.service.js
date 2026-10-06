@@ -480,27 +480,29 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
     }
 
     if (!geoResult.matched) {
+      const failureReason = geoResult.reason || (geoResult.status === 'LOW_ACCURACY' ? 'LOW_ACCURACY' : 'LOCATION_MISMATCH');
       try {
         await query(
           `UPDATE attendance_verification_sessions 
-           SET face_status = 'PASSED', location_status = 'FAILED', status = 'FAILED', failure_reason = 'LOCATION_MISMATCH', 
-               location_lat = $1, location_lng = $2, location_accuracy = $3, updated_at = NOW() 
-           WHERE id = $4`,
-          [latitude, longitude, accuracy || 0, sessionId]
+           SET face_status = 'PASSED', location_status = 'FAILED', status = 'FAILED', failure_reason = $1, 
+               location_lat = $2, location_lng = $3, location_accuracy = $4, updated_at = NOW() 
+           WHERE id = $5`,
+          [failureReason, latitude, longitude, accuracy || 0, sessionId]
         );
       } catch (e) {}
 
-      await logAction(reqUser, 'ATTENDANCE_LOCATION_MISMATCH', authEmpId, {
+      await logAction(reqUser, failureReason === 'LOW_ACCURACY' ? 'ATTENDANCE_LOCATION_LOW_ACCURACY' : 'ATTENDANCE_LOCATION_MISMATCH', authEmpId, {
         session_id: sessionId,
         latitude,
         longitude,
         accuracy,
+        reason: failureReason,
         distance_meters: geoResult.distanceMeters,
       });
 
-      const error = new Error(geoResult.message || 'Location does not match: You are outside the designated office/building premises.');
+      const error = new Error(geoResult.message || "Location doesn't match. You must be inside the office building.");
       error.statusCode = 400;
-      error.reason = 'LOCATION_MISMATCH';
+      error.reason = failureReason;
       throw error;
     }
   }

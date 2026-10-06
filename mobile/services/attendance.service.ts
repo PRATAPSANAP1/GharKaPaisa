@@ -191,12 +191,16 @@ export const getLivenessCredentials = async (sessionId: string): Promise<Livenes
  */
 export const validateLivenessResult = async (
   sessionId: string,
-  providerSessionId: string
+  providerSessionId: string,
+  locationData?: { latitude?: number; longitude?: number; accuracy?: number }
 ): Promise<VerificationResult> => {
   try {
     const response = await apiClient.post('/attendance/verification/liveness/result', {
       session_id: sessionId,
       provider_session_id: providerSessionId,
+      latitude: locationData?.latitude,
+      longitude: locationData?.longitude,
+      accuracy: locationData?.accuracy,
     });
     return response.data;
   } catch (error: any) {
