@@ -299,13 +299,15 @@ const listBankCardApplications = async (req, res, next) => {
         if (hasLocEoc && regBankRows.length === 0) {
           whereClause += ` AND ${locCondition}`;
         } else if (hasLocEoc && regBankRows.length > 0) {
-          whereClause += ` AND ((combined.bank_id IN (SELECT bank_id::text FROM admin_bank_assignments WHERE admin_id = $${idx}::uuid) OR combined.bank_id IN (SELECT b.id::text FROM banks b WHERE b.operation_head_id = $${idx}::uuid)) OR ${locCondition})`;
-          values.push(req.user.id);
-          idx++;
+          const regBankIds = regBankRows.map(b => String(b.bank_id));
+          whereClause += ` AND ((combined.bank_id = ANY($${idx}::text[]) OR combined.bank_id IN (SELECT b.id::text FROM banks b WHERE b.operation_head_id = $${idx + 1}::uuid AND UPPER(b.short_code) != 'LOC_EOC')) OR ${locCondition})`;
+          values.push(regBankIds, req.user.id);
+          idx += 2;
         } else {
-          whereClause += ` AND (combined.bank_id IN (SELECT bank_id::text FROM admin_bank_assignments WHERE admin_id = $${idx}::uuid) OR combined.bank_id IN (SELECT b.id::text FROM banks b WHERE b.operation_head_id = $${idx}::uuid))`;
-          values.push(req.user.id);
-          idx++;
+          const regBankIds = regBankRows.map(b => String(b.bank_id));
+          whereClause += ` AND (combined.bank_id = ANY($${idx}::text[]) OR combined.bank_id IN (SELECT b.id::text FROM banks b WHERE b.operation_head_id = $${idx + 1}::uuid AND UPPER(b.short_code) != 'LOC_EOC'))`;
+          values.push(regBankIds, req.user.id);
+          idx += 2;
         }
       }
     }
