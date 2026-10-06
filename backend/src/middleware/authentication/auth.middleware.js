@@ -14,10 +14,10 @@ const { JWT_SECRET } = require('../../config/jwt.js');
 // ── Core: verify token ───────────────────────────────────────────────────
 const authenticate = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.headers.authorization?.split(' ')[1] || req.query?.token;
 
     if (!token) {
-      return unauthorized(res, 'No token provided in Authorization header');
+      return unauthorized(res, 'No token provided in Authorization header or query parameter');
     }
 
     const decodedToken = jwt.verify(token, JWT_SECRET);
@@ -248,7 +248,7 @@ const selfOrAdmin = (paramName = 'id') => async (req, res, next) => {
 
 const optionalAuth = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.headers.authorization?.split(' ')[1] || req.query?.token;
     if (!token) return next();
 
     const decodedToken = jwt.verify(token, JWT_SECRET);
