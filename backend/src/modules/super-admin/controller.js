@@ -280,7 +280,7 @@ const listAdmins = async (req, res, next) => {
 const updateAdmin = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { fullName, email, mobile, designation, status, password, bank_ids, bankIds } = req.body;
+    const { fullName, email, mobile, designation, role, status, password, bank_ids, bankIds } = req.body;
 
     const targetBankIds = Array.isArray(bank_ids) ? bank_ids : (Array.isArray(bankIds) ? bankIds : null);
 
@@ -304,6 +304,10 @@ const updateAdmin = async (req, res, next) => {
     if (mobile !== undefined) {
       updates.push(`mobile = $${pIdx++}`);
       params.push(mobile.trim());
+    }
+    if (role !== undefined && role.trim()) {
+      updates.push(`role = $${pIdx++}::user_role`);
+      params.push(role.trim().toUpperCase());
     }
     if (designation !== undefined) {
       updates.push(`designation = $${pIdx++}`);
@@ -354,7 +358,7 @@ const updateAdmin = async (req, res, next) => {
       await query(`UPDATE users SET has_loc_eoc = TRUE WHERE id = $1`, [existing.id]);
     }
 
-    await logAction(req, 'UPDATE_USER', existing.id, { email, designation, bankIds: targetBankIds });
+    await logAction(req, 'UPDATE_USER', existing.id, { email, designation, role, bankIds: targetBankIds });
 
     return success(res, { id: existing.id }, 'Administrator updated successfully.');
   } catch (err) {

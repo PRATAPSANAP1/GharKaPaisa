@@ -3,6 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { Icons } from '../../../components/Icon/PartnerIcons';
+import { 
+  Edit, 
+  Trash2, 
+  RefreshCw, 
+  Search, 
+  CreditCard, 
+  Building2, 
+  Check, 
+  X, 
+  AlertTriangle 
+} from 'lucide-react';
 
 const MiniChart = ({ color }) => (
   <svg width="100%" height="16" viewBox="0 0 100 30" preserveAspectRatio="none" style={{ marginTop: 'auto', paddingTop: '2px' }}>
@@ -67,6 +78,7 @@ export default function SuperAdminDashboard() {
     fullName: '',
     email: '',
     mobile: '',
+    role: 'ADMIN',
     designation: '',
     status: 'active',
     bank_ids: [],
@@ -83,6 +95,7 @@ export default function SuperAdminDashboard() {
       fullName: admin.fullName || admin.full_name || '',
       email: admin.email || '',
       mobile: admin.mobile || '',
+      role: admin.role || 'ADMIN',
       designation: admin.designation || 'Operational Head',
       status: admin.status || 'active',
       bank_ids: bankIds,
@@ -112,6 +125,7 @@ export default function SuperAdminDashboard() {
         fullName: editForm.fullName,
         email: editForm.email,
         mobile: editForm.mobile,
+        role: editForm.role,
         designation: editForm.designation,
         status: editForm.status,
         bank_ids: editForm.bank_ids
@@ -477,7 +491,7 @@ export default function SuperAdminDashboard() {
                 onMouseEnter={e => e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.1)" : "#F3F4F6"}
                 onMouseLeave={e => e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.05)" : "#F9FAFB"}
               >
-                🔄 Refresh
+                <RefreshCw size={14} /> Refresh
               </button>
               <button 
                 onClick={() => setShowCreateModal(true)}
@@ -512,8 +526,8 @@ export default function SuperAdminDashboard() {
                   boxSizing: 'border-box'
                 }}
               />
-              <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight, fontSize: '15px' }}>
-                🔍
+              <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
+                <Search size={15} color={C.textLight} />
               </span>
               {adminSearch && (
                 <button
@@ -632,7 +646,7 @@ export default function SuperAdminDashboard() {
                             gap: "6px"
                           }}
                         >
-                          🏦 {admin.assigned_banks?.length ? `${admin.assigned_banks.length} Banks` : 'Assign Banks'}
+                          <Building2 size={13} /> {admin.assigned_banks?.length ? `${admin.assigned_banks.length} Banks` : 'Assign Banks'}
                         </button>
                         {admin.assigned_banks?.length > 0 && (() => {
                           const bankList = admin.assigned_banks;
@@ -739,7 +753,7 @@ export default function SuperAdminDashboard() {
                               e.currentTarget.style.borderColor = "#BFDBFE";
                             }}
                           >
-                            <span style={{ fontSize: "14px" }}>✏️</span>
+                            <Edit size={14} color="#2563EB" />
                           </button>
                           <button
                             onClick={() => handleToggleBlock(admin._id, admin.status)}
@@ -795,7 +809,7 @@ export default function SuperAdminDashboard() {
                               e.currentTarget.style.borderColor = "#FEE2E2";
                             }}
                           >
-                            <span style={{ fontSize: "14px" }}>🗑️</span>
+                            <Trash2 size={14} color="#DC2626" />
                           </button>
                         </div>
                       </td>
@@ -1079,8 +1093,8 @@ export default function SuperAdminDashboard() {
                         >
                           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                             {isLocEoc ? (
-                              <div style={{ width: "20px", height: "20px", background: "#059669", borderRadius: "4px", fontSize: "10px", fontWeight: 800, color: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                💳
+                              <div style={{ width: "20px", height: "20px", background: "#059669", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <CreditCard size={12} color="#FFFFFF" />
                               </div>
                             ) : bank.logo_url ? (
                               <img src={bank.logo_url} alt={bank.name} style={{ width: "20px", height: "20px", objectFit: "contain" }} />
@@ -1116,8 +1130,8 @@ export default function SuperAdminDashboard() {
                     })}
                   </div>
                   {selectedCreateBankIds.length === 0 && (
-                    <div style={{ fontSize: "12px", color: "#EF4444", marginTop: "6px", fontWeight: 500 }}>
-                      ⚠️ At least one bank must be selected for an Operational Head.
+                    <div style={{ fontSize: "12px", color: "#EF4444", marginTop: "6px", fontWeight: 500, display: "flex", alignItems: "center", gap: "4px" }}>
+                      <AlertTriangle size={14} /> At least one bank must be selected for an Operational Head.
                     </div>
                   )}
                 </div>
@@ -1163,12 +1177,17 @@ export default function SuperAdminDashboard() {
             boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)"
           }}>
             <div style={{ borderBottom: `1px solid #F3F4F6`, paddingBottom: "14px", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#111827", margin: 0 }}>✏️ Edit Administrator Details</h3>
-                <p style={{ fontSize: "13px", color: "#6B7280", margin: "2px 0 0 0" }}>Update admin designation, permissions, status and bank assignments</p>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#EFF6FF", color: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Edit size={18} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#111827", margin: 0 }}>Edit Administrator Details</h3>
+                  <p style={{ fontSize: "13px", color: "#6B7280", margin: "2px 0 0 0" }}>Update admin role, designation, status and bank assignments</p>
+                </div>
               </div>
               <button onClick={() => setShowEditModal(false)} style={{ background: "#F3F4F6", border: "none", color: "#4B5563", cursor: "pointer", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Icons.x size={18} />
+                <X size={18} />
               </button>
             </div>
 
@@ -1209,6 +1228,26 @@ export default function SuperAdminDashboard() {
                     style={{ width: "100%", padding: "10px 12px", border: "1px solid #D1D5DB", borderRadius: "8px", fontSize: "14px", outline: "none", boxSizing: "border-box" }}
                     required
                   />
+                </div>
+
+                {/* Role */}
+                <div>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>Role *</label>
+                  <select
+                    value={editForm.role}
+                    onChange={e => setEditForm({ ...editForm, role: e.target.value })}
+                    style={{ width: "100%", padding: "10px 12px", border: "1px solid #D1D5DB", borderRadius: "8px", fontSize: "14px", outline: "none", boxSizing: "border-box", background: "#FFFFFF" }}
+                    required
+                  >
+                    <option value="ADMIN">Admin</option>
+                    <option value="SUPER_ADMIN">Super Admin</option>
+                    <option value="EMPLOYEE">Employee</option>
+                    <option value="HR">HR</option>
+                    <option value="PARTNER">Partner</option>
+                    {editForm.role && !['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'HR', 'PARTNER'].includes(editForm.role) && (
+                      <option value={editForm.role}>{editForm.role}</option>
+                    )}
+                  </select>
                 </div>
 
                 {/* Designation */}
@@ -1265,7 +1304,7 @@ export default function SuperAdminDashboard() {
                 </div>
 
                 {/* Password (Optional reset) */}
-                <div>
+                <div style={{ gridColumn: "span 2" }}>
                   <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>New Password (Optional)</label>
                   <input
                     type="password"
@@ -1302,13 +1341,18 @@ export default function SuperAdminDashboard() {
                       </div>
                     </div>
 
-                    <input
-                      type="text"
-                      placeholder="Search Banks..."
-                      value={editBankSearchQuery}
-                      onChange={(e) => setEditBankSearchQuery(e.target.value)}
-                      style={{ width: "100%", padding: "8px 12px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "13px", marginBottom: "12px", outline: "none", boxSizing: "border-box" }}
-                    />
+                    <div style={{ position: "relative", marginBottom: "12px" }}>
+                      <input
+                        type="text"
+                        placeholder="Search Banks..."
+                        value={editBankSearchQuery}
+                        onChange={(e) => setEditBankSearchQuery(e.target.value)}
+                        style={{ width: "100%", padding: "8px 12px 8px 34px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "13px", outline: "none", boxSizing: "border-box" }}
+                      />
+                      <span style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", pointerEvents: "none" }}>
+                        <Search size={14} color="#9CA3AF" />
+                      </span>
+                    </div>
 
                     <div style={{ maxHeight: "180px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", paddingRight: "4px" }}>
                       {(Array.isArray(allBanks) ? allBanks : []).filter(b => b.name.toLowerCase().includes((editBankSearchQuery || '').toLowerCase()) || (b.short_code || '').toLowerCase().includes((editBankSearchQuery || '').toLowerCase())).map(bank => {
@@ -1338,8 +1382,8 @@ export default function SuperAdminDashboard() {
                           >
                             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                               {isLocEoc ? (
-                                <div style={{ width: "20px", height: "20px", background: "#059669", borderRadius: "4px", fontSize: "10px", fontWeight: 800, color: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                  💳
+                                <div style={{ width: "20px", height: "20px", background: "#059669", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                  <CreditCard size={12} color="#FFFFFF" />
                                 </div>
                               ) : bank.logo_url ? (
                                 <img src={bank.logo_url} alt={bank.name} style={{ width: "20px", height: "20px", objectFit: "contain" }} />
@@ -1417,7 +1461,7 @@ export default function SuperAdminDashboard() {
                 </p>
               </div>
               <button onClick={() => setBankModalOpen(false)} style={{ background: "#F3F4F6", border: "none", color: "#4B5563", cursor: "pointer", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Icons.x size={18} />
+                <X size={18} />
               </button>
             </div>
 
@@ -1460,7 +1504,9 @@ export default function SuperAdminDashboard() {
                   boxSizing: "border-box"
                 }}
               />
-              <span style={{ position: "absolute", left: "12px", top: "10px", fontSize: "12px", color: "#9CA3AF" }}>🔍</span>
+              <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", pointerEvents: "none" }}>
+                <Search size={14} color="#9CA3AF" />
+              </span>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "50vh", overflowY: "auto", paddingRight: "4px" }}>
@@ -1494,8 +1540,8 @@ export default function SuperAdminDashboard() {
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                           {isLocEoc ? (
-                            <div style={{ width: "36px", height: "36px", background: "#059669", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: "#FFFFFF", fontSize: "16px" }}>
-                              💳
+                            <div style={{ width: "36px", height: "36px", background: "#059669", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <CreditCard size={18} color="#FFFFFF" />
                             </div>
                           ) : bank.logo_url ? (
                             <img src={bank.logo_url} alt={bank.name} style={{ width: "32px", height: "32px", objectFit: "contain", borderRadius: "6px" }} />
