@@ -279,11 +279,11 @@ async function verifyLocationInBuilding(latitude, longitude, accuracy = 0) {
     };
   }
 
-  // 1. Validate GPS Accuracy: If accuracy is too poor (e.g. > 50m or 100,000m coarse IP location)
+  // 1. Validate GPS Accuracy: Accuracy must be valid finite number > 0 and <= maxAllowedAccuracy (default 50m)
   const maxAllowedAccuracy = Number(process.env.ATTENDANCE_MAX_GPS_ACCURACY) || 50;
-  if (Number.isFinite(acc) && acc > maxAllowedAccuracy) {
-    console.warn(`[BUILDING GEOFENCE] ❌ LOW ACCURACY: Device GPS accuracy (${acc}m) is worse than maximum allowed (${maxAllowedAccuracy}m).`);
-    logger.warn(`[BUILDING GEOFENCE] GPS accuracy ${acc}m exceeds threshold of ${maxAllowedAccuracy}m.`);
+  if (!Number.isFinite(acc) || acc <= 0 || acc > maxAllowedAccuracy) {
+    console.warn(`[BUILDING GEOFENCE] ❌ LOW ACCURACY: Device GPS accuracy (${acc}m) is invalid, missing, or worse than maximum allowed (${maxAllowedAccuracy}m).`);
+    logger.warn(`[BUILDING GEOFENCE] GPS accuracy ${acc}m failed threshold validation (<= ${maxAllowedAccuracy}m).`);
     return {
       matched: false,
       allowed: false,
@@ -296,23 +296,23 @@ async function verifyLocationInBuilding(latitude, longitude, accuracy = 0) {
     };
   }
 
-  // 2. Fetch all active office buildings and check polygon boundaries
+  // 2. Fetch all active office buildings and check exact polygon boundaries
   const activeBuildings = await getActiveBuildings();
-  logger.info(`[BUILDING GEOFENCE] Verifying coordinates (${lat}, ${lng}, accuracy: ${acc || 0}m) against ${activeBuildings.length} active buildings.`);
+  logger.info(`[BUILDING GEOFENCE] Verifying coordinates (${lat}, ${lng}, accuracy: ${acc}m) against ${activeBuildings.length} active buildings.`);
 
   let closestBuilding = null;
   let minPerimeterDistance = Infinity;
 
   for (const building of activeBuildings) {
     const polygon = building.polygon_coordinates;
-    console.log(`[BUILDING GEOFENCE] Building: "${building.name}" (${building.code}) | 4 Corner Points:`, JSON.stringify(polygon));
+    console.log(`[BUILDING GEOFENCE] Checking Building: "${building.name}" (${building.code}) | 4 Corner Points:`, JSON.stringify(polygon));
     if (!polygon || polygon.length < 3) continue;
 
-    // Strict Polygon Test (Point-in-Polygon)
+    // Strict EXACT Polygon Test (Point-in-Polygon)
     const inside = isPointInPolygon(lat, lng, polygon);
     if (inside) {
-      console.log(`[BUILDING GEOFENCE] ✅ MATCH SUCCESS! Device coordinates (${lat}, ${lng}) fall INSIDE the 4 points of building: "${building.name}"`);
-      logger.info(`[BUILDING GEOFENCE] Point is strictly inside building: "${building.name}" (${building.code})`);
+      console.log(`[BUILDING GEOFENCE] ✅ MATCH SUCCESS! Device coordinates (${lat}, ${lng}) fall INSIDE polygon of: "${building.name}"`);
+      logger.info(`[BUILDING GEOFENCE] Point is strictly inside building polygon: "${building.name}" (${building.code})`);
       return {
         matched: true,
         allowed: true,
@@ -329,9 +329,8 @@ async function verifyLocationInBuilding(latitude, longitude, accuracy = 0) {
       };
     }
 
-    // Tolerance Buffer Test (Distance to building perimeter or centroid)
+    // Calculate diagnostic distance only (never used to grant attendance)
     const distToPerimeter = distanceToPolygonPerimeter(lat, lng, polygon);
-
     let centroidLat = 0, centroidLng = 0;
     for (const pt of polygon) {
       centroidLat += Number(pt[0]);
@@ -342,35 +341,14 @@ async function verifyLocationInBuilding(latitude, longitude, accuracy = 0) {
     const distToCentroid = calculateHaversineDistance(lat, lng, centroidLat, centroidLng);
 
     const minDist = Math.min(distToPerimeter, distToCentroid);
-    const buildingTolerance = Math.max(Number(building.tolerance_meters) || 150, 150);
-
-    if (minDist <= buildingTolerance) {
-      console.log(`[BUILDING GEOFENCE] ✅ MATCH SUCCESS! Device within tolerance buffer (${minDist.toFixed(1)}m <= ${buildingTolerance}m) for building: "${building.name}"`);
-      logger.info(`[BUILDING GEOFENCE] Point within tolerance buffer (${minDist.toFixed(1)}m <= ${buildingTolerance}m) for "${building.name}"`);
-      return {
-        matched: true,
-        allowed: true,
-        building: {
-          id: building.id,
-          name: building.name,
-          code: building.code,
-          address: building.address
-        },
-        isStrictInside: false,
-        distanceMeters: Math.round(minDist),
-        status: 'LOCATION_VERIFIED',
-        message: `Verified within perimeter of ${building.name} (${Math.round(minDist)}m)`
-      };
-    }
-
     if (minDist < minPerimeterDistance) {
       minPerimeterDistance = minDist;
       closestBuilding = building;
     }
   }
 
-  console.warn(`[BUILDING GEOFENCE] ❌ LOCATION MISMATCH: Device (${lat}, ${lng}) is outside all buildings. Closest: "${closestBuilding?.name || 'N/A'}" (${Math.round(minPerimeterDistance)}m away).`);
-  logger.warn(`[BUILDING GEOFENCE] Location outside all buildings. Closest: "${closestBuilding?.name || 'N/A'}" (${Math.round(minPerimeterDistance)}m away).`);
+  console.warn(`[BUILDING GEOFENCE] ❌ LOCATION MISMATCH: Device (${lat}, ${lng}) is outside all building polygons. Closest: "${closestBuilding?.name || 'N/A'}" (${Math.round(minPerimeterDistance)}m away).`);
+  logger.warn(`[BUILDING GEOFENCE] Location outside all building polygons. Closest: "${closestBuilding?.name || 'N/A'}" (${Math.round(minPerimeterDistance)}m away).`);
 
   return {
     matched: false,
