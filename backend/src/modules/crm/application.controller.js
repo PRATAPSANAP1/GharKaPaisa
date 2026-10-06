@@ -2095,7 +2095,9 @@ const listApplications = async (req, res, next) => {
 
     const { rows: [{ count }] } = await query(`
       SELECT COUNT(*) FROM (
-        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, (to_jsonb(a)->>'assigned_to') as assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_application_number', ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(to_jsonb(pad)->>'dispatch_status', '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, COALESCE(NULLIF(to_jsonb(a)->>'category', ''), p.category::text) as category, COALESCE(NULLIF(to_jsonb(a)->>'sub_category', ''), p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(to_jsonb(pad)->>'pan_check', ''), 'no') as pan_check, COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(to_jsonb(pad)->>'bank_current_lead_status', ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(to_jsonb(a)->>'requery_date', ''), NULLIF(to_jsonb(pad)->>'requery_date', '')) as requery_date
+        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, (to_jsonb(a)->>'assigned_to') as assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_application_number', ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(to_jsonb(pad)->>'dispatch_status', '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, COALESCE(NULLIF(to_jsonb(a)->>'category', ''), p.category::text) as category, COALESCE(NULLIF(to_jsonb(a)->>'sub_category', ''), p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(to_jsonb(pad)->>'pan_check', ''), 'no') as pan_check, COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(to_jsonb(pad)->>'bank_current_lead_status', ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(to_jsonb(a)->>'requery_date', ''), NULLIF(to_jsonb(pad)->>'requery_date', '')) as requery_date,
+        COALESCE(NULLIF(a.final_status, ''), NULLIF(pad.final_status, ''), NULLIF(to_jsonb(pad)->>'final_status', '')) as final_status,
+        COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, ''), NULLIF(to_jsonb(pad)->>'decline_reason', '')) as decline_reason
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
@@ -2167,13 +2169,15 @@ const listApplications = async (req, res, next) => {
 
     // Compute real-time canonical status counts scoped to user role & bank filters
     const { rows: statusCountsRows } = await query(`
-      SELECT combined.status, COUNT(*)::int as count FROM (
-        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, (to_jsonb(a)->>'assigned_to') as assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, p.bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, COALESCE(NULLIF(to_jsonb(a)->>'category', ''), p.category::text) as category, COALESCE(NULLIF(to_jsonb(a)->>'sub_category', ''), p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(pad.pan_check, ''), 'no') as pan_check, COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(to_jsonb(a)->>'requery_date', ''), NULLIF(to_jsonb(pad)->>'requery_date', '')) as requery_date
+      SELECT combined.status, COALESCE(combined.final_status, '') as final_status, COUNT(*)::int as count FROM (
+        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, (to_jsonb(a)->>'assigned_to') as assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_application_number', ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(to_jsonb(pad)->>'dispatch_status', '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, COALESCE(NULLIF(to_jsonb(a)->>'category', ''), p.category::text) as category, COALESCE(NULLIF(to_jsonb(a)->>'sub_category', ''), p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(to_jsonb(pad)->>'pan_check', ''), 'no') as pan_check, COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(to_jsonb(pad)->>'bank_current_lead_status', ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(to_jsonb(a)->>'requery_date', ''), NULLIF(to_jsonb(pad)->>'requery_date', '')) as requery_date,
+        COALESCE(NULLIF(a.final_status, ''), NULLIF(pad.final_status, ''), NULLIF(to_jsonb(pad)->>'final_status', '')) as final_status,
+        COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, ''), NULLIF(to_jsonb(pad)->>'decline_reason', '')) as decline_reason
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
-        LEFT JOIN banks b ON b.id = p.bank_id
+        LEFT JOIN banks b ON b.id = COALESCE(a.bank_id, p.bank_id)
         LEFT JOIN physical_application_details pad ON pad.application_id = a.id
       ) combined
       ${countScopeSQL}
@@ -2225,7 +2229,7 @@ const listApplications = async (req, res, next) => {
         ${remarkOperatorFilterSQL}
         ${finalStatusOperatorFilterSQL}
         ${querableOperatorFilterSQL}
-      GROUP BY combined.status
+      GROUP BY combined.status, COALESCE(combined.final_status, '')
     `, countQueryParams);
     const statusCountsObj = {
       pending: 0,
@@ -2240,9 +2244,15 @@ const listApplications = async (req, res, next) => {
 
     for (const r of statusCountsRows) {
       const s = String(r.status || '').toLowerCase();
+      const fs = String(r.final_status || '').toLowerCase();
       const cnt = parseInt(r.count) || 0;
 
-      if (['pending', 'lead_created', 'new', 'draft', 'initiated', 'link_sent', 'confirmed', 'link_pending'].includes(s)) {
+      if (['declined', 'decline'].includes(s) || fs.includes('decline')) {
+        statusCountsObj.declined = (statusCountsObj.declined || 0) + cnt;
+        statusCountsObj.rejected += cnt;
+      } else if (['rejected', 'technical_error'].includes(s) || fs.includes('reject')) {
+        statusCountsObj.rejected += cnt;
+      } else if (['pending', 'lead_created', 'new', 'draft', 'initiated', 'link_sent', 'confirmed', 'link_pending'].includes(s)) {
         statusCountsObj.pending += cnt;
       } else if (['details_submitted', 'submitted', 'bank_form_submitted'].includes(s)) {
         statusCountsObj.details_submitted += cnt;
@@ -2252,11 +2262,6 @@ const listApplications = async (req, res, next) => {
         statusCountsObj.approved += cnt;
       } else if (['commission_received', 'commission_released', 'released', 'credited', 'paid'].includes(s)) {
         statusCountsObj.commission_received += cnt;
-      } else if (['declined', 'decline'].includes(s)) {
-        statusCountsObj.declined = (statusCountsObj.declined || 0) + cnt;
-        statusCountsObj.rejected += cnt;
-      } else if (['rejected', 'technical_error'].includes(s)) {
-        statusCountsObj.rejected += cnt;
       } else if (['cancelled', 'cancel', 'canceled'].includes(s)) {
         statusCountsObj.cancelled += cnt;
       } else {

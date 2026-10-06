@@ -329,12 +329,9 @@ const listBankCardApplications = async (req, res, next) => {
 
     if (isQuerableOperatorUser && req.user?.id) {
       whereClause += ` AND (
-        LOWER(COALESCE(combined.status, '')) IN ('rejected', 'declined', 'decline')
-        OR LOWER(COALESCE(combined.status, '')) LIKE '%reject%'
-        OR LOWER(COALESCE(combined.status, '')) LIKE '%decline%'
-        OR LOWER(COALESCE(combined.final_stage, '')) IN ('rejected', 'declined', 'decline')
-        OR LOWER(COALESCE(combined.final_stage, '')) LIKE '%reject%'
-        OR LOWER(COALESCE(combined.final_stage, '')) LIKE '%decline%'
+        LOWER(COALESCE(combined.final_stage, combined.status, '')) IN ('rejected', 'declined', 'decline')
+        OR LOWER(COALESCE(combined.final_stage, combined.status, '')) LIKE '%reject%'
+        OR LOWER(COALESCE(combined.final_stage, combined.status, '')) LIKE '%decline%'
       )`;
     }
 
@@ -401,6 +398,7 @@ const listBankCardApplications = async (req, res, next) => {
         bca.customer_mobile,
         bca.pan_number,
         bca.final_stage,
+        bca.final_stage as status,
         bca.qd_status,
         bca.income_status,
         bca.dispatch_stage,
@@ -430,6 +428,7 @@ const listBankCardApplications = async (req, res, next) => {
         COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile, '') as customer_mobile,
         COALESCE(c.pan_number, '') as pan_number,
         COALESCE(a.status::text, 'Submitted') as final_stage,
+        COALESCE(a.status::text, 'Submitted') as status,
         'Completed' as qd_status,
         'Verified' as income_status,
         COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, ''), 'None') as dispatch_stage,
