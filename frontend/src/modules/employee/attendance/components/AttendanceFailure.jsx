@@ -193,6 +193,77 @@ export default function AttendanceFailure({
             <RefreshCw size={18} /> Try Again
           </button>
         </>
+      ) : failureType === 'FACE_MISMATCH' || errorMessage?.toLowerCase().includes('match') && errorMessage?.toLowerCase().includes('kyc') ? (
+        /* SCREEN: FACE MISMATCH WITH REGISTERED PHOTO */
+        <>
+          <motion.div
+            animate={{ x: [0, -6, 6, -4, 4, 0] }}
+            transition={{ duration: 0.35, ease: 'easeInOut' }}
+            style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              background: '#FFF0F2',
+              color: '#FF4D5E',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '20px',
+              boxShadow: '0 8px 24px -4px rgba(255, 77, 94, 0.25)'
+            }}
+          >
+            <AlertCircle size={40} />
+          </motion.div>
+
+          <h2 style={{ margin: '0 0 6px', fontSize: '22px', fontWeight: 800, color: '#111827' }}>
+            Face Match Failed
+          </h2>
+          <p style={{ margin: '0 0 20px', fontSize: '13.5px', color: '#64748B', fontWeight: 500 }}>
+            {errorMessage || 'Your face could not be matched with your registered KYC photo.'}
+          </p>
+
+          <div style={{
+            background: '#FFF0F2',
+            border: '1px solid #FFD1D6',
+            borderRadius: '18px',
+            padding: '14px 16px',
+            marginBottom: '24px',
+            textAlign: 'left'
+          }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#991B1B', marginBottom: '8px' }}>
+              Verification Guidelines:
+            </div>
+            <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12.5px', color: '#7F1D1D', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <li>Ensure the registered employee is in front of the camera</li>
+              <li>Remove glasses, hat, or face coverings</li>
+              <li>Face the camera directly in clear lighting</li>
+              <li>Contact HR/Admin if your profile photo needs updating</li>
+            </ul>
+          </div>
+
+          <button
+            type="button"
+            onClick={onRetry}
+            style={{
+              width: '100%',
+              height: '50px',
+              borderRadius: '14px',
+              border: 'none',
+              background: '#FF4D5E',
+              color: '#FFFFFF',
+              fontSize: '15px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              boxShadow: '0 8px 20px -4px rgba(255, 77, 94, 0.35)'
+            }}
+          >
+            <RefreshCw size={18} /> Try Again
+          </button>
+        </>
       ) : (
         /* SCREEN 8: FACE NOT DETECTED / LIVENESS FAILED */
         <>
@@ -219,7 +290,7 @@ export default function AttendanceFailure({
             Face not detected
           </h2>
           <p style={{ margin: '0 0 20px', fontSize: '13.5px', color: '#64748B', fontWeight: 500 }}>
-            {errorMessage || 'Please position your face inside the frame and ensure good lighting.'}
+            {errorMessage || 'Liveness verification failed. Please align face inside the frame and retry.'}
           </p>
 
           {/* Tips Checklist */}

@@ -93,18 +93,37 @@ class FaceLivenessProvider {
     }
 
     try {
-      const command = new GetFaceLivenessSessionResultsCommand({
-        SessionId: providerSessionId,
-      });
+      let attempts = 0;
+      const maxAttempts = 10;
+      let response = null;
+      let status = null;
 
-      const response = await this.rekognitionClient.send(command);
+      while (attempts < maxAttempts) {
+        attempts++;
+        const command = new GetFaceLivenessSessionResultsCommand({
+          SessionId: providerSessionId,
+        });
 
-      const status = response.Status; // EXPIRED, FAILED, SUCCEEDED, CREATED, IN_PROGRESS
-      const confidence = Number(response.Confidence || 0);
+        response = await this.rekognitionClient.send(command);
+        status = response.Status; // EXPIRED, FAILED, SUCCEEDED, CREATED, IN_PROGRESS
+
+        logger.info(`[LIVENESS PROVIDER] Liveness poll attempt ${attempts}/${maxAttempts}: SessionId=${providerSessionId}, Status=${status}, Confidence=${response.Confidence}`);
+
+        if (status !== 'IN_PROGRESS' && status !== 'CREATED') {
+          break;
+        }
+
+        // Wait 500ms before polling again while Rekognition scores video frames
+        if (attempts < maxAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+      }
+
+      const confidence = Number(response?.Confidence || 0);
       const isLive = status === 'SUCCEEDED' && confidence >= 85.0;
 
       let referenceImageBuffer = null;
-      if (status === 'SUCCEEDED' && response.ReferenceImage?.Bytes) {
+      if (status === 'SUCCEEDED' && response?.ReferenceImage?.Bytes) {
         referenceImageBuffer = Buffer.from(response.ReferenceImage.Bytes);
       }
 
