@@ -202,29 +202,76 @@ export default function AttendanceVerificationModal({
     credentialProvider
   }), [credentialProvider]);
 
-  // Helper to fetch device coordinates with high accuracy
+  // Helper to fetch device coordinates with high accuracy (rejecting coarse / IP locations)
   const getDeviceLocation = useCallback(() => {
     return new Promise((resolve) => {
       if (!navigator?.geolocation) {
         console.warn('[ATTENDANCE GEOFENCE] Geolocation API not available on device');
-        resolve(null);
+        resolve({
+          error: 'NO_GEOLOCATION',
+          reason: 'LOCATION_DENIED',
+          message: 'Geolocation is not supported by your browser or device.'
+        });
         return;
       }
       navigator.geolocation.getCurrentPosition(
         (pos) => {
+          const lat = pos?.coords?.latitude;
+          const lng = pos?.coords?.longitude;
+          const accuracy = pos?.coords?.accuracy;
+
+          console.log('[ATTENDANCE GEOFENCE] Device Geolocation Captured:', `Latitude: ${lat}, Longitude: ${lng}, Accuracy: ${accuracy}m`);
+
+          // 1. Latitude, Longitude and Accuracy must be finite numbers
+          if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(accuracy)) {
+            console.warn('[ATTENDANCE GEOFENCE] ❌ INVALID COORDINATES: Non-finite GPS coordinates received.');
+            resolve({
+              error: 'INVALID_COORDINATES',
+              reason: 'LOW_ACCURACY',
+              message: 'Invalid GPS coordinates received from device. Please ensure device location is enabled.'
+            });
+            return;
+          }
+
+          // 2. Real device GPS check: Accuracy must be > 0 and <= 50 meters
+          if (accuracy <= 0 || accuracy > 50) {
+            console.warn(`[ATTENDANCE GEOFENCE] ❌ LOW ACCURACY: Device GPS accuracy (${accuracy}m) exceeds 50m threshold. Rejecting coarse/IP location before backend verification.`);
+            resolve({
+              error: 'LOW_ACCURACY',
+              reason: 'LOW_ACCURACY',
+              accuracy,
+              latitude: lat,
+              longitude: lng,
+              message: 'Unable to verify your location accurately. Please enable high-accuracy GPS and try again.'
+            });
+            return;
+          }
+
           const loc = {
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-            accuracy: pos.coords.accuracy,
+            latitude: lat,
+            longitude: lng,
+            accuracy: accuracy,
           };
-          console.log('[ATTENDANCE GEOFENCE] Device GPS Captured:', `Latitude: ${loc.latitude}, Longitude: ${loc.longitude}, Accuracy: ${loc.accuracy}m`);
+          console.log('[ATTENDANCE GEOFENCE] ✅ High-Accuracy GPS Accepted (<= 50m):', `Latitude: ${loc.latitude}, Longitude: ${loc.longitude}, Accuracy: ${loc.accuracy}m`);
           resolve(loc);
         },
         (err) => {
           console.warn('[ATTENDANCE GEOFENCE] Geolocation retrieval error:', err);
-          resolve(null);
+          let reason = 'LOCATION_DENIED';
+          let message = 'Location access is required to verify your office building presence. Please allow location permissions in your browser.';
+          if (err?.code === 1 /* PERMISSION_DENIED */) {
+            reason = 'LOCATION_DENIED';
+            message = 'Location permission was denied. Please allow location access to verify attendance.';
+          } else if (err?.code === 2 /* POSITION_UNAVAILABLE */) {
+            reason = 'LOW_ACCURACY';
+            message = 'Unable to get precise GPS fix from your device. Please enable High Accuracy / Precise Location and retry.';
+          } else if (err?.code === 3 /* TIMEOUT */) {
+            reason = 'LOW_ACCURACY';
+            message = 'GPS location request timed out. Please ensure high accuracy GPS is enabled and try again.';
+          }
+          resolve({ error: 'GEO_ERROR', reason, message, code: err?.code });
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
       );
     });
   }, []);
@@ -247,13 +294,39 @@ export default function AttendanceVerificationModal({
 
       // 2. Fetch current GPS location for office building geofence verification
       const locationData = await getDeviceLocation();
-      console.log('[ATTENDANCE GEOFENCE] Verifying location against office/test building 4-corner polygon coordinates:', locationData);
+      console.log('[ATTENDANCE GEOFENCE] Evaluated GPS result before backend call:', locationData);
 
-      // 3. Validate AWS Rekognition Liveness & Building Geofence on Backend
+      // Pre-validation guard: Do NOT call /liveness/result if GPS is unusable, denied, or accuracy > 50m
+      if (!locationData || locationData.error) {
+        const failureReason = locationData?.reason || 'LOW_ACCURACY';
+        const failureMsg = locationData?.message || 'Unable to verify your location accurately. Please enable high-accuracy GPS and try again.';
+        
+        console.warn(`[ATTENDANCE GEOFENCE] ⛔ Aborting /liveness/result call due to client-side GPS check: ${failureReason}`);
+        
+        if (failureReason === 'LOCATION_DENIED') {
+          setFailureType('LOCATION_DENIED');
+        } else {
+          setFailureType('LOW_ACCURACY');
+        }
+        setErrorMessage(failureMsg);
+        setCurrentState('FAILURE');
+        return;
+      }
+
+      // Strict sanity check on location numbers
+      if (!Number.isFinite(locationData.latitude) || !Number.isFinite(locationData.longitude) || !Number.isFinite(locationData.accuracy) || locationData.accuracy <= 0 || locationData.accuracy > 50) {
+        console.warn(`[ATTENDANCE GEOFENCE] ⛔ Aborting /liveness/result call: accuracy (${locationData?.accuracy}m) is invalid or > 50m.`);
+        setFailureType('LOW_ACCURACY');
+        setErrorMessage('Unable to verify your location accurately. Please enable high-accuracy GPS and try again.');
+        setCurrentState('FAILURE');
+        return;
+      }
+
+      // 3. Validate AWS Rekognition Liveness & Building Geofence on Backend (ONLY with real GPS <= 50m)
       const validateRes = await attendanceService.validateLivenessResult(
         activeSessionId,
         activeProviderSessionId,
-        locationData || {}
+        locationData
       );
 
       // Save matched building info if returned
