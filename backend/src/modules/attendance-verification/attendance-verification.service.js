@@ -343,13 +343,23 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
     });
 
     const statusCode = failureReason === 'LIVENESS_PROVIDER_NOT_CONFIGURED' ? 503 : (isExpired ? 410 : 400);
-    const error = new Error(
-      failureReason === 'LIVENESS_PROVIDER_NOT_CONFIGURED'
-        ? 'Liveness verification service is not configured in production environment'
-        : (isExpired
-          ? 'Face verification session expired. Please retry.'
-          : 'Liveness verification failed. Please align face inside the frame and retry.')
-    );
+    const errorMsg = failureReason === 'LIVENESS_PROVIDER_NOT_CONFIGURED'
+      ? 'Liveness verification service is not configured in production environment'
+      : (isExpired
+        ? 'Face verification session expired. Please retry.'
+        : 'Liveness verification failed. Please align face inside the frame and retry.');
+
+    logger.warn('[ATTENDANCE VALIDATION ERROR] Face liveness check failed', {
+      sessionId,
+      providerSessionId,
+      authEmpId,
+      livenessStatus: livenessResult.status,
+      confidence: livenessResult.confidence,
+      reason: failureReason,
+      message: errorMsg
+    });
+
+    const error = new Error(errorMsg);
     error.statusCode = statusCode;
     error.reason = failureReason;
     throw error;
@@ -395,6 +405,12 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
       reason: 'BIOMETRIC_REFERENCE_NOT_FOUND',
     });
 
+    logger.warn('[ATTENDANCE VALIDATION ERROR] Biometric enrollment photo not found', {
+      sessionId,
+      authEmpId,
+      reason: 'BIOMETRIC_REFERENCE_NOT_FOUND'
+    });
+
     const error = new Error('Attendance Biometric Enrollment is required before marking attendance. Please complete biometric enrollment in the KYC panel.');
     error.statusCode = 404;
     error.reason = 'BIOMETRIC_REFERENCE_NOT_FOUND';
@@ -411,6 +427,11 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
         [sessionId]
       );
     } catch (e) {}
+    logger.warn('[ATTENDANCE VALIDATION ERROR] Missing reference image from AWS liveness session', {
+      sessionId,
+      authEmpId,
+      reason: 'LIVENESS_FAILED'
+    });
     const error = new Error('Reference image from AWS liveness session was missing');
     error.statusCode = 400;
     error.reason = 'LIVENESS_FAILED';
@@ -438,6 +459,14 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
       session_id: sessionId,
       reason,
       similarity: faceRes.similarity,
+    });
+
+    logger.warn('[ATTENDANCE VALIDATION ERROR] KYC face match failed against registered photo', {
+      sessionId,
+      authEmpId,
+      similarity: faceRes.similarity,
+      threshold: faceRes.threshold,
+      reason
     });
 
     const statusCode = reason === 'FACE_PROVIDER_ERROR' ? 500 : 400;
@@ -498,6 +527,18 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
         accuracy,
         reason: failureReason,
         distance_meters: geoResult.distanceMeters,
+      });
+
+      logger.warn('[ATTENDANCE VALIDATION ERROR] Location / geofence validation failed', {
+        sessionId,
+        authEmpId,
+        latitude,
+        longitude,
+        accuracy,
+        status: geoResult.status,
+        reason: failureReason,
+        distanceMeters: geoResult.distanceMeters,
+        message: geoResult.message
       });
 
       const error = new Error(geoResult.message || "Location doesn't match. You must be inside the office building.");

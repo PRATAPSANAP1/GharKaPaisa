@@ -9,8 +9,14 @@ export default function AttendanceFailure({
   onClose
 }) {
   const isCameraError = failureType === 'CAMERA_DENIED' || errorMessage?.toLowerCase().includes('camera');
+  const isLowAccuracy = failureType === 'LOW_ACCURACY' || 
+    errorMessage?.toLowerCase().includes('accuracy') || 
+    errorMessage?.toLowerCase().includes('accurat');
   const isLocationMismatch = failureType === 'LOCATION_MISMATCH' || 
+    failureType === 'OUTSIDE_BUILDING' ||
+    failureType === 'INVALID_COORDINATES' ||
     errorMessage?.toLowerCase().includes('location does not match') || 
+    errorMessage?.toLowerCase().includes("location doesn't match") || 
     errorMessage?.toLowerCase().includes('outside') || 
     errorMessage?.toLowerCase().includes('geofence');
 
@@ -108,6 +114,77 @@ export default function AttendanceFailure({
             <ArrowLeft size={16} /> Go Back
           </button>
         </>
+      ) : isLowAccuracy ? (
+        /* SCREEN: GPS ACCURACY TOO LOW */
+        <>
+          <motion.div
+            animate={{ x: [0, -6, 6, -4, 4, 0] }}
+            transition={{ duration: 0.35, ease: 'easeInOut' }}
+            style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              background: '#FFF0F2',
+              color: '#FF4D5E',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '20px',
+              boxShadow: '0 8px 24px -4px rgba(255, 77, 94, 0.25)'
+            }}
+          >
+            <MapPin size={40} />
+          </motion.div>
+
+          <h2 style={{ margin: '0 0 6px', fontSize: '22px', fontWeight: 800, color: '#111827' }}>
+            GPS Accuracy Too Low
+          </h2>
+          <p style={{ margin: '0 0 20px', fontSize: '13.5px', color: '#64748B', fontWeight: 500 }}>
+            {errorMessage || 'Unable to verify your location accurately. Please enable high-accuracy GPS and try again.'}
+          </p>
+
+          <div style={{
+            background: '#FFF0F2',
+            border: '1px solid #FFD1D6',
+            borderRadius: '18px',
+            padding: '14px 16px',
+            marginBottom: '24px',
+            textAlign: 'left'
+          }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#991B1B', marginBottom: '8px' }}>
+              Tips for improving GPS accuracy:
+            </div>
+            <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12.5px', color: '#7F1D1D', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <li>Enable "High Accuracy" or "Precise Location" on your device</li>
+              <li>Move near a window or open area if indoors</li>
+              <li>Turn on Wi-Fi (helps device GPS calculate exact position)</li>
+              <li>Disable VPN, Mock Location, or Battery Saver modes</li>
+            </ul>
+          </div>
+
+          <button
+            type="button"
+            onClick={onRetry}
+            style={{
+              width: '100%',
+              height: '50px',
+              borderRadius: '14px',
+              border: 'none',
+              background: '#FF4D5E',
+              color: '#FFFFFF',
+              fontSize: '15px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              boxShadow: '0 8px 20px -4px rgba(255, 77, 94, 0.35)'
+            }}
+          >
+            <RefreshCw size={18} /> Try Again
+          </button>
+        </>
       ) : isLocationMismatch ? (
         /* SCREEN 9: LOCATION DOESN'T MATCH */
         <>
@@ -134,7 +211,7 @@ export default function AttendanceFailure({
             Location doesn't match
           </h2>
           <p style={{ margin: '0 0 20px', fontSize: '13.5px', color: '#64748B', fontWeight: 500 }}>
-            You must be inside the GharKaPaisa office to mark attendance.
+            {errorMessage || 'You must be inside the GharKaPaisa office to mark attendance.'}
           </p>
 
           {/* Current vs Required Location Box */}

@@ -41,14 +41,20 @@ const createLivenessSession = async (req, res) => {
 
 // POST /api/v1/attendance/verification/liveness/result
 const validateLivenessResult = async (req, res) => {
+  const { session_id, provider_session_id, latitude, longitude, accuracy, lat, lng } = req.body;
+  const clientLat = latitude !== undefined ? latitude : lat;
+  const clientLng = longitude !== undefined ? longitude : lng;
+
   try {
-    const { session_id, provider_session_id, latitude, longitude, accuracy, lat, lng } = req.body;
     if (!session_id || !provider_session_id) {
+      logger.warn('[ATTENDANCE VALIDATION FAILURE] Missing required session parameters', {
+        sessionId: session_id,
+        providerSessionId: provider_session_id,
+        userId: req.user?.id,
+        reason: 'INVALID_REQUEST'
+      });
       return res.status(400).json({ success: false, reason: 'INVALID_REQUEST', message: 'session_id and provider_session_id are required' });
     }
-
-    const clientLat = latitude !== undefined ? latitude : lat;
-    const clientLng = longitude !== undefined ? longitude : lng;
 
     const result = await service.validateLivenessResult({
       sessionId: session_id,
@@ -61,12 +67,26 @@ const validateLivenessResult = async (req, res) => {
 
     return success(res, result, 'Attendance verification passed');
   } catch (err) {
-    logger.error('Error validating liveness result:', err.message);
     const statusCode = err.statusCode || 500;
+    const reason = err.reason || 'VERIFICATION_FAILED';
+    const message = err.message || 'Verification process failed';
+
+    logger.warn('[ATTENDANCE VALIDATION FAILURE]', {
+      sessionId: session_id,
+      providerSessionId: provider_session_id,
+      latitude: clientLat,
+      longitude: clientLng,
+      accuracy,
+      userId: req.user?.id,
+      statusCode,
+      reason,
+      message,
+    });
+
     return res.status(statusCode).json({
       success: false,
-      reason: err.reason || 'VERIFICATION_FAILED',
-      message: err.message || 'Verification process failed',
+      reason,
+      message,
     });
   }
 };

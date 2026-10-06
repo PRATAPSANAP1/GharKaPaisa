@@ -278,7 +278,7 @@ export default function AttendanceVerificationModal({
       const errText = err.response?.data?.message || err.message || (isExpired ? 'Face verification session expired. Please retry.' : 'Face verification failed');
 
       if (isLowAccuracy) {
-        setFailureType('LOCATION_MISMATCH');
+        setFailureType('LOW_ACCURACY');
         setErrorMessage(errText || 'Unable to verify your location accurately. Please enable GPS and try again.');
       } else if (isLocMismatch) {
         setFailureType('LOCATION_MISMATCH');
