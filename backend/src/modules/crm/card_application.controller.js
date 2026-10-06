@@ -83,8 +83,8 @@ const listApplications = async (req, res, next) => {
         WHERE aba.admin_id = $1
       `, [req.user.id]);
       if (abRows.length > 0) {
-        const hasLocEoc = abRows.some(b => (b.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || ''));
-        const regBankRows = abRows.filter(b => (b.short_code || '').toUpperCase() !== 'LOC_EOC' && !/loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || ''));
+        const hasLocEoc = abRows.some(b => (b.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card|smart\s*emi/i.test(b.name || ''));
+        const regBankRows = abRows.filter(b => (b.short_code || '').toUpperCase() !== 'LOC_EOC' && !/loc[\s/_]*eoc|loan\s+on\s+card|smart\s*emi/i.test(b.name || ''));
         const locCondition = `(LOWER(COALESCE(category, '')) IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi') OR LOWER(COALESCE(card_name, '')) LIKE '%insta loan%' OR LOWER(COALESCE(card_name, '')) LIKE '%jumbo loan%' OR LOWER(COALESCE(card_name, '')) LIKE '%smartemi%')`;
         if (hasLocEoc && regBankRows.length === 0) {
           whereClause += ` AND ${locCondition}`;
@@ -99,6 +99,8 @@ const listApplications = async (req, res, next) => {
           values.push(regIds);
           idx++;
         }
+      } else {
+        whereClause += ` AND 1=0`;
       }
     }
 

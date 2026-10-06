@@ -1659,17 +1659,22 @@ const listApplications = async (req, res, next) => {
     let regularBankAssignments = [];
     let abRows = [];
 
+    const isSuperAdmin = userRole === 'SUPER_ADMIN';
+    let baseBankAccessFilterSQL = '';
+
     const locEocAppSQL = `(
       LOWER(COALESCE(combined.category::text, '')) IN ('loc_eoc', 'loc', 'eoc', 'loan_on_credit_card', 'smart_emi')
       OR LOWER(COALESCE(combined.sub_category, '')) IN ('loc', 'eoc', 'loc_eoc', 'loan_on_credit_card', 'smart_emi')
       OR LOWER(COALESCE(combined.product_name, '')) LIKE '%encash%'
       OR LOWER(COALESCE(combined.product_name, '')) LIKE '%loan on card%'
       OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smart emi%'
+      OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smartemi%'
       OR LOWER(COALESCE(combined.product_name, '')) LIKE '%dial a draft%'
       OR LOWER(COALESCE(combined.product_name, '')) LIKE '%jumbo loan%'
+      OR LOWER(COALESCE(combined.product_name, '')) LIKE '%insta loan%'
     )`;
 
-    if (!isPartnerOrTeam && req.user?.id) {
+    if (!isPartnerOrTeam && !isSuperAdmin && req.user?.id) {
       const { rows: [uRec] } = await query(`SELECT COALESCE(has_loc_eoc, FALSE) as has_loc_eoc FROM users WHERE id = $1`, [req.user.id]).catch(() => ({ rows: [] }));
       const resAssignments = await query(`
         SELECT aba.bank_id, b.short_code, b.name 
@@ -1678,38 +1683,78 @@ const listApplications = async (req, res, next) => {
         WHERE aba.admin_id = $1
       `, [req.user.id]);
       abRows = resAssignments.rows;
-      isLocEocAdmin = !!req.user?.has_loc_eoc || !!uRec?.has_loc_eoc || abRows.some(b => 
-        (b.short_code || '').toUpperCase() === 'LOC_EOC' || 
-        /loc[\s/_]*eoc|loan\s+on\s+card|smart\s*emi/i.test(b.name || '')
-      );
-      regularBankAssignments = abRows.filter(b => 
-        (b.short_code || '').toUpperCase() !== 'LOC_EOC' && 
-        !/loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '')
-      );
+      
+      const isBankLocEoc = (b) => {
+        const sc = (b.short_code || '').toUpperCase();
+        const nm = (b.name || '').toLowerCase();
+        return sc === 'LOC_EOC' || sc === 'LOC' || sc === 'EOC' ||
+               nm.includes('loc') || nm.includes('eoc') ||
+               nm.includes('loan on card') || nm.includes('smart emi') || nm.includes('smartemi');
+      };
+
+      isLocEocAdmin = !!req.user?.has_loc_eoc || !!uRec?.has_loc_eoc || abRows.some(b => isBankLocEoc(b));
+      regularBankAssignments = abRows.filter(b => !isBankLocEoc(b));
+
+      if (isLocEocAdmin && regularBankAssignments.length === 0) {
+        // Assigned exclusively LOC/EOC: STRICTLY see only LOC/EOC applications, NO regular bank/credit card applications
+        baseBankAccessFilterSQL = ` AND ${locEocAppSQL}`;
+      } else if (isLocEocAdmin && regularBankAssignments.length > 0) {
+        // Assigned regular bank(s) + LOC/EOC: see applications for assigned regular banks PLUS all LOC/EOC applications
+        const regIdsList = regularBankAssignments.map(b => `'${b.bank_id}'`).join(',');
+        baseBankAccessFilterSQL = ` AND (
+          combined.bank_id IN (${regIdsList})
+          OR EXISTS (
+            SELECT 1 FROM admin_bank_assignments aba 
+            JOIN banks b ON b.id = aba.bank_id 
+            WHERE aba.admin_id = '${req.user.id}' 
+            AND UPPER(COALESCE(b.short_code, '')) NOT IN ('LOC_EOC', 'LOC', 'EOC')
+            AND NOT (b.name ~* 'loc|loan on card|smart emi|smartemi')
+            AND (
+              (LOWER(combined.bank_code) = LOWER(b.short_code))
+              OR (LOWER(combined.bank_name) = LOWER(b.name))
+              OR (
+                LOWER(b.name) LIKE '%sbi%' 
+                AND LOWER(b.name) NOT LIKE '%tata%' 
+                AND LOWER(combined.bank_name) LIKE '%sbi%' 
+                AND LOWER(combined.bank_name) NOT LIKE '%tata%' 
+                AND LOWER(combined.bank_code) NOT LIKE '%tata%'
+              )
+            )
+          )
+          OR ${locEocAppSQL}
+        )`;
+      } else if (regularBankAssignments.length > 0) {
+        // Assigned regular bank(s) only: see ONLY applications for assigned banks (and no LOC/EOC unless belonging to that bank's credit cards)
+        const regIdsList = regularBankAssignments.map(b => `'${b.bank_id}'`).join(',');
+        baseBankAccessFilterSQL = ` AND (
+          combined.bank_id IN (${regIdsList})
+          OR EXISTS (
+            SELECT 1 FROM admin_bank_assignments aba 
+            JOIN banks b ON b.id = aba.bank_id 
+            WHERE aba.admin_id = '${req.user.id}' 
+            AND UPPER(COALESCE(b.short_code, '')) NOT IN ('LOC_EOC', 'LOC', 'EOC')
+            AND NOT (b.name ~* 'loc|loan on card|smart emi|smartemi')
+            AND (
+              (LOWER(combined.bank_code) = LOWER(b.short_code))
+              OR (LOWER(combined.bank_name) = LOWER(b.name))
+              OR (
+                LOWER(b.name) LIKE '%sbi%' 
+                AND LOWER(b.name) NOT LIKE '%tata%' 
+                AND LOWER(combined.bank_name) LIKE '%sbi%' 
+                AND LOWER(combined.bank_name) NOT LIKE '%tata%' 
+                AND LOWER(combined.bank_code) NOT LIKE '%tata%'
+              )
+            )
+          )
+        )`;
+      } else {
+        // Non-super-admin with NO banks assigned: block all applications
+        baseBankAccessFilterSQL = ` AND 1=0`;
+      }
     }
 
     let salesExecFilterSQL = '';
     if (isSalesExecUser && req.user?.id) {
-      const bankAssignmentFilter = `(
-        combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}')
-        OR EXISTS (
-          SELECT 1 FROM admin_bank_assignments aba 
-          JOIN banks b ON b.id = aba.bank_id 
-          WHERE aba.admin_id = '${req.user.id}' 
-          AND (
-            (LOWER(combined.bank_code) = LOWER(b.short_code))
-            OR (LOWER(combined.bank_name) = LOWER(b.name))
-            OR (
-              LOWER(b.name) LIKE '%sbi%' 
-              AND LOWER(b.name) NOT LIKE '%tata%' 
-              AND LOWER(combined.bank_name) LIKE '%sbi%' 
-              AND LOWER(combined.bank_name) NOT LIKE '%tata%' 
-              AND LOWER(combined.bank_code) NOT LIKE '%tata%'
-            )
-          )
-        )
-        ${isLocEocAdmin ? `OR ${locEocAppSQL}` : ''}
-      )`;
       const tataExclusionFilter = `NOT (
         (LOWER(COALESCE(combined.bank_name, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%tata%')
         AND NOT EXISTS (
@@ -1721,88 +1766,42 @@ const listApplications = async (req, res, next) => {
       )`;
       const processFilter = ` AND (LOWER(COALESCE(combined.process_type, combined.process_by, 'lead_punching')) IN ('lead_punching', 'partner_punch', 'punching', 'punch_only', 'digital_punching') OR LOWER(COALESCE(combined.process_type, combined.process_by, '')) LIKE '%punch%')`;
       const dispatchFilter = ` AND (COALESCE(combined.dispatch_status, '') = '' OR LOWER(COALESCE(combined.dispatch_status, 'none')) IN ('none', 'na', 'n/a'))`;
-      salesExecFilterSQL = ` AND ${bankAssignmentFilter} AND ${tataExclusionFilter}${processFilter}${dispatchFilter}`;
+      salesExecFilterSQL = ` ${baseBankAccessFilterSQL} AND ${tataExclusionFilter}${processFilter}${dispatchFilter}`;
     }
 
     const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
     let panCheckerFilterSQL = '';
     if (isPanCheckerUser && req.user?.id) {
-      const bankAssignmentFilter = `(combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}') OR EXISTS (SELECT 1 FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = '${req.user.id}' AND (LOWER(b.name) LIKE '%sbi%' OR LOWER(b.short_code) = 'sbi')) OR combined.bank_id IN (SELECT id FROM banks WHERE (LOWER(short_code) = 'sbi' OR LOWER(name) LIKE '%sbi%') AND LOWER(name) NOT LIKE '%tata%') ${isLocEocAdmin ? `OR ${locEocAppSQL}` : ''})`;
-      panCheckerFilterSQL = ` AND ${bankAssignmentFilter} AND ((LOWER(COALESCE(combined.bank_code, '')) = 'sbi' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%sbi%') AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%tata%' AND LOWER(COALESCE(combined.bank_code, '')) NOT LIKE '%tata%') AND combined.status NOT IN ('approved', 'disbursed', 'sanctioned') AND LOWER(COALESCE(combined.pan_check, 'no')) = 'no'`;
+      panCheckerFilterSQL = ` ${baseBankAccessFilterSQL} AND ((LOWER(COALESCE(combined.bank_code, '')) = 'sbi' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%sbi%') AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%tata%' AND LOWER(COALESCE(combined.bank_code, '')) NOT LIKE '%tata%') AND combined.status NOT IN ('approved', 'disbursed', 'sanctioned') AND LOWER(COALESCE(combined.pan_check, 'no')) = 'no'`;
     }
 
     const isQdOperatorUser = ['QD OPERATOR', 'QD_OPERATOR'].includes(userDesignation) || ['QD OPERATOR', 'QD_OPERATOR'].includes(userRole);
     let qdOperatorFilterSQL = '';
     if (isQdOperatorUser && req.user?.id) {
-      const bankAssignmentFilter = `(
-        (
-          combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}')
-          OR EXISTS (
-            SELECT 1 FROM admin_bank_assignments aba 
-            JOIN banks b ON b.id = aba.bank_id 
-            WHERE aba.admin_id = '${req.user.id}' 
-            AND (
-              (LOWER(combined.bank_code) = LOWER(b.short_code))
-              OR (LOWER(combined.bank_name) = LOWER(b.name))
-            )
-          )
-        )
-        ${isLocEocAdmin ? `OR ${locEocAppSQL}` : ''}
-        AND NOT (
-          (LOWER(COALESCE(combined.bank_name, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%tata%')
-          AND NOT EXISTS (
-            SELECT 1 FROM admin_bank_assignments aba 
-            JOIN banks b ON b.id = aba.bank_id 
-            WHERE aba.admin_id = '${req.user.id}' 
-            AND (LOWER(b.name) LIKE '%tata%' OR LOWER(b.short_code) LIKE '%tata%')
-          )
-        )
-        AND NOT (
-          (LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%tata%' AND LOWER(COALESCE(combined.bank_code, '')) NOT LIKE '%tata%')
-          AND NOT EXISTS (
-            SELECT 1 FROM admin_bank_assignments aba 
-            JOIN banks b ON b.id = aba.bank_id 
-            WHERE aba.admin_id = '${req.user.id}' 
-            AND (LOWER(b.name) NOT LIKE '%tata%' AND LOWER(b.short_code) NOT LIKE '%tata%')
-            AND (
-              (LOWER(combined.bank_name) LIKE '%sbi%' AND LOWER(b.name) LIKE '%sbi%')
-              OR (LOWER(combined.bank_name) LIKE '%hdfc%' AND LOWER(b.name) LIKE '%hdfc%')
-              OR (LOWER(combined.bank_code) LIKE '%sbi%' AND LOWER(b.short_code) LIKE '%sbi%')
-              OR (LOWER(combined.bank_code) LIKE '%hdfc%' AND LOWER(b.short_code) LIKE '%hdfc%')
-            )
-          )
+      const tataExclusionFilter = `NOT (
+        (LOWER(COALESCE(combined.bank_name, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%tata%')
+        AND NOT EXISTS (
+          SELECT 1 FROM admin_bank_assignments aba 
+          JOIN banks b ON b.id = aba.bank_id 
+          WHERE aba.admin_id = '${req.user.id}' 
+          AND (LOWER(b.name) LIKE '%tata%' OR LOWER(b.short_code) LIKE '%tata%')
         )
       )`;
       const physicalProcessFilter = ` AND (LOWER(COALESCE(combined.process_type, combined.process_by, '')) LIKE '%physical%' OR LOWER(COALESCE(combined.process_type, '')) = 'physical' OR LOWER(COALESCE(combined.process_type, '')) = 'physical_process')`;
       const dispatchFilter = ` AND (COALESCE(combined.dispatch_status, '') = '' OR LOWER(COALESCE(combined.dispatch_status, 'none')) IN ('none', 'na', 'n/a'))`;
-      qdOperatorFilterSQL = ` AND ${bankAssignmentFilter}${physicalProcessFilter}${dispatchFilter}`;
+      qdOperatorFilterSQL = ` ${baseBankAccessFilterSQL} AND ${tataExclusionFilter}${physicalProcessFilter}${dispatchFilter}`;
     }
 
     const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
     let remarkOperatorFilterSQL = '';
     if (isRemarkOperatorUser && req.user?.id) {
-      const bankAssignmentFilter = `(combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}') ${isLocEocAdmin ? `OR ${locEocAppSQL}` : ''})`;
       const panCheckCondition = `(((LOWER(COALESCE(combined.bank_code, '')) <> 'sbi' AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%sbi%') OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%tata%') OR LOWER(COALESCE(combined.pan_check, 'no')) = 'yes')`;
-      remarkOperatorFilterSQL = ` AND ${bankAssignmentFilter} AND ${panCheckCondition} AND (COALESCE(combined.dispatch_status, '') = '' OR LOWER(COALESCE(combined.dispatch_status, 'none')) IN ('none', 'na', 'n/a')) AND combined.status NOT IN ('rejected', 'declined', 'cancelled') AND LOWER(COALESCE(combined.bank_remark, '')) NOT LIKE '%pan%reject%'`;
+      remarkOperatorFilterSQL = ` ${baseBankAccessFilterSQL} AND ${panCheckCondition} AND (COALESCE(combined.dispatch_status, '') = '' OR LOWER(COALESCE(combined.dispatch_status, 'none')) IN ('none', 'na', 'n/a')) AND combined.status NOT IN ('rejected', 'declined', 'cancelled') AND LOWER(COALESCE(combined.bank_remark, '')) NOT LIKE '%pan%reject%'`;
     }
 
     const isFinalStatusOperatorUser = ['FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userDesignation) || ['FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userRole);
     let finalStatusOperatorFilterSQL = '';
     if (isFinalStatusOperatorUser && req.user?.id) {
-      const bankAssignmentFilter = `(
-        combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}')
-        OR EXISTS (
-          SELECT 1 FROM admin_bank_assignments aba 
-          JOIN banks b ON b.id = aba.bank_id 
-          WHERE aba.admin_id = '${req.user.id}' 
-          AND (
-            (LOWER(combined.bank_code) = LOWER(b.short_code))
-            OR (LOWER(combined.bank_name) = LOWER(b.name))
-          )
-        )
-        ${isLocEocAdmin ? `OR ${locEocAppSQL}` : ''}
-      )`;
-
       const eligibleDispatchFilter = `(
         LOWER(COALESCE(combined.dispatch_status, '')) IN (
           'dispatch complete', 'physical dispatch', 'digital dispatch',
@@ -1824,30 +1823,16 @@ const listApplications = async (req, res, next) => {
         )
       )`;
 
-      finalStatusOperatorFilterSQL = ` AND ${bankAssignmentFilter} AND ${eligibleDispatchFilter} AND ${inProcessFinalStatusFilter}`;
+      finalStatusOperatorFilterSQL = ` ${baseBankAccessFilterSQL} AND ${eligibleDispatchFilter} AND ${inProcessFinalStatusFilter}`;
     }
 
-    if (!isPartnerOrTeam && req.user?.id) {
+    if (!isPartnerOrTeam && !isSuperAdmin && req.user?.id) {
       if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser || isQdOperatorUser || isFinalStatusOperatorUser) {
         opHeadBankFilterSQL = ``;
         countOpHeadBankFilterSQL = ``;
-      } else if (isLocEocAdmin && regularBankAssignments.length === 0) {
-        // Admin is exclusively assigned LOC/EOC: show all applications matching LOC & EOC category/subcategory/product
-        opHeadBankFilterSQL = ` AND ${locEocAppSQL}`;
-        countOpHeadBankFilterSQL = ` AND ${locEocAppSQL}`;
-      } else if (isLocEocAdmin && regularBankAssignments.length > 0) {
-        // Admin has regular bank(s) AND LOC/EOC: show both regular bank applications AND all LOC/EOC applications
-        const regIdsList = regularBankAssignments.map(b => `'${b.bank_id}'`).join(',');
-        opHeadBankFilterSQL = ` AND (combined.bank_id IN (${regIdsList}) OR ${locEocAppSQL})`;
-        countOpHeadBankFilterSQL = ` AND (combined.bank_id IN (${regIdsList}) OR ${locEocAppSQL})`;
-      } else if (regularBankAssignments.length > 0) {
-        // Admin has regular bank(s) only: show only applications for assigned banks
-        const regIdsList = regularBankAssignments.map(b => `'${b.bank_id}'`).join(',');
-        opHeadBankFilterSQL = ` AND combined.bank_id IN (${regIdsList})`;
-        countOpHeadBankFilterSQL = ` AND combined.bank_id IN (${regIdsList})`;
-      } else if (isOpHeadUser) {
-        opHeadBankFilterSQL = ` AND 1=0`;
-        countOpHeadBankFilterSQL = ` AND 1=0`;
+      } else {
+        opHeadBankFilterSQL = baseBankAccessFilterSQL;
+        countOpHeadBankFilterSQL = baseBankAccessFilterSQL;
       }
     }
 
@@ -1961,7 +1946,7 @@ const listApplications = async (req, res, next) => {
           su.role as submitter_role,
           a.partner_id,
           a.product_id,
-          p.bank_id,
+          COALESCE(a.bank_id, p.bank_id) as bank_id,
           COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id,
           oh.full_name as operation_head_name,
           COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(to_jsonb(pad)->>'pan_check', ''), 'no') as pan_check,
@@ -1980,7 +1965,7 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
-        LEFT JOIN banks b ON b.id = p.bank_id
+        LEFT JOIN banks b ON b.id = COALESCE(a.bank_id, p.bank_id)
         LEFT JOIN partner_profiles ap ON ap.id = a.partner_id
         LEFT JOIN employees emp ON (emp.id = a.employee_id OR emp.user_id = a.submitted_by)
         LEFT JOIN users su ON su.id = a.submitted_by
@@ -2092,12 +2077,12 @@ const listApplications = async (req, res, next) => {
 
     const { rows: [{ count }] } = await query(`
       SELECT COUNT(*) FROM (
-        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, (to_jsonb(a)->>'assigned_to') as assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, p.bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_application_number', ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(to_jsonb(pad)->>'dispatch_status', '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, COALESCE(NULLIF(to_jsonb(a)->>'category', ''), p.category::text) as category, COALESCE(NULLIF(to_jsonb(a)->>'sub_category', ''), p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(to_jsonb(pad)->>'pan_check', ''), 'no') as pan_check, COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(to_jsonb(pad)->>'bank_current_lead_status', ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(to_jsonb(a)->>'requery_date', ''), NULLIF(to_jsonb(pad)->>'requery_date', '')) as requery_date
+        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, (to_jsonb(a)->>'assigned_to') as assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_application_number', ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(to_jsonb(pad)->>'dispatch_status', '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, COALESCE(NULLIF(to_jsonb(a)->>'category', ''), p.category::text) as category, COALESCE(NULLIF(to_jsonb(a)->>'sub_category', ''), p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(to_jsonb(pad)->>'pan_check', ''), 'no') as pan_check, COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(to_jsonb(pad)->>'bank_current_lead_status', ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(to_jsonb(a)->>'requery_date', ''), NULLIF(to_jsonb(pad)->>'requery_date', '')) as requery_date
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
-        LEFT JOIN banks b ON b.id = p.bank_id
+        LEFT JOIN banks b ON b.id = COALESCE(a.bank_id, p.bank_id)
         LEFT JOIN physical_application_details pad ON pad.application_id = a.id
       ) combined
       ${countScopeSQL}

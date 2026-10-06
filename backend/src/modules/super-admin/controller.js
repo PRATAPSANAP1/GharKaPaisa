@@ -379,6 +379,9 @@ const updateAdmin = async (req, res, next) => {
     // Handle bank assignments
     if (targetBankIds !== null) {
       await query(`DELETE FROM admin_bank_assignments WHERE admin_id = $1`, [existing.id]);
+      await query(`UPDATE banks SET operation_head_id = NULL WHERE operation_head_id = $1`, [existing.id]);
+      await query(`UPDATE products SET operation_head_id = NULL WHERE operation_head_id = $1`, [existing.id]);
+
       const currentDesig = designation !== undefined ? designation.trim() : existing.designation;
       const isRemarkOp = ['Remark Operator', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'QD Operator', 'QD_OPERATOR', 'QD OPERATOR'].includes(currentDesig);
 
@@ -395,19 +398,18 @@ const updateAdmin = async (req, res, next) => {
           }
         }
       }
-    }
 
-    if (req.body.has_loc_eoc !== undefined || req.body.hasLocEoc !== undefined) {
-      const val = req.body.has_loc_eoc !== undefined ? Boolean(req.body.has_loc_eoc) : Boolean(req.body.hasLocEoc);
-      await query(`UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [val, existing.id]);
-    } else if (targetBankIds !== null) {
-      const { rows: locCheckRows } = await query(`
-        SELECT 1 FROM admin_bank_assignments aba
-        JOIN banks b ON b.id = aba.bank_id
-        WHERE aba.admin_id = $1 AND ((b.short_code || '').toUpperCase() = 'LOC_EOC' OR b.name ~* 'loc|loan on card|smart emi')
-      `, [existing.id]);
-      if (locCheckRows.length > 0) {
-        await query(`UPDATE users SET has_loc_eoc = TRUE WHERE id = $1`, [existing.id]);
+      if (req.body.has_loc_eoc !== undefined || req.body.hasLocEoc !== undefined) {
+        const val = req.body.has_loc_eoc !== undefined ? Boolean(req.body.has_loc_eoc) : Boolean(req.body.hasLocEoc);
+        await query(`UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [val, existing.id]);
+      } else {
+        const { rows: locCheckRows } = await query(`
+          SELECT 1 FROM admin_bank_assignments aba
+          JOIN banks b ON b.id = aba.bank_id
+          WHERE aba.admin_id = $1 AND ((b.short_code || '').toUpperCase() = 'LOC_EOC' OR b.name ~* 'loc|loan on card|smart emi')
+        `, [existing.id]);
+        const hasLoc = locCheckRows.length > 0;
+        await query(`UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [hasLoc, existing.id]);
       }
     }
 
@@ -449,6 +451,9 @@ const updateAdminBanks = async (req, res, next) => {
     if (!userRec) return notFound(res, 'Admin not found');
 
     await query(`DELETE FROM admin_bank_assignments WHERE admin_id = $1`, [userRec.id]);
+    await query(`UPDATE banks SET operation_head_id = NULL WHERE operation_head_id = $1`, [userRec.id]);
+    await query(`UPDATE products SET operation_head_id = NULL WHERE operation_head_id = $1`, [userRec.id]);
+
     const isRemarkOp = ['Remark Operator', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'QD Operator', 'QD_OPERATOR', 'QD OPERATOR'].includes(userRec.designation);
 
     for (const rawBId of targetBankIds) {
@@ -474,9 +479,8 @@ const updateAdminBanks = async (req, res, next) => {
         JOIN banks b ON b.id = aba.bank_id
         WHERE aba.admin_id = $1 AND ((b.short_code || '').toUpperCase() = 'LOC_EOC' OR b.name ~* 'loc|loan on card|smart emi')
       `, [userRec.id]);
-      if (locCheckRows.length > 0) {
-        await query(`UPDATE users SET has_loc_eoc = TRUE WHERE id = $1`, [userRec.id]);
-      }
+      const hasLoc = locCheckRows.length > 0;
+      await query(`UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [hasLoc, userRec.id]);
     }
 
     return success(res, { adminId: userRec.id, assignedBanks: targetBankIds }, 'Bank assignments updated successfully');
