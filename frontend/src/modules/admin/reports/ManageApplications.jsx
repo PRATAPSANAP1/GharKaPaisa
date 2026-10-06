@@ -46,7 +46,7 @@ export default function ManageApplications() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(25);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(isQuerableOperatorUser ? "rejected" : "");
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -120,7 +120,7 @@ export default function ManageApplications() {
           page,
           limit,
           search: search.trim() || undefined,
-          status: status || undefined,
+          status: (isQuerableOperatorUser && !status) ? 'rejected' : (status || undefined),
           process_by: processTypeFilter !== 'all' ? processTypeFilter : undefined,
           category: categoryFilter !== 'all' ? categoryFilter : undefined,
         },
@@ -271,7 +271,6 @@ export default function ManageApplications() {
   };
 
   const STATUS_TABS = isQuerableOperatorUser ? [
-    { id: '', label: 'All Cases (Rejected, Declined & Cancelled)', color: '#ef4444', bg: '#ef444415' },
     { id: 'rejected', label: 'Rejected Cases', color: '#ef4444', bg: '#ef444415' },
     { id: 'declined', label: 'Declined Cases', color: '#f43f5e', bg: '#f43f5e15' },
     { id: 'cancelled', label: 'Cancelled Cases', color: '#64748b', bg: '#64748b15' },
@@ -450,19 +449,6 @@ export default function ManageApplications() {
       {/* ── 2. TOP KPI SUMMARY CARDS ── */}
       {isQuerableOperatorUser ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-          {/* Total Cases */}
-          <div style={{ background: C.card, borderRadius: '14px', padding: '14px 16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Total Query Applications</span>
-              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <FaFileAlt size={16} />
-              </div>
-            </div>
-            <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-              <span style={{ fontSize: '24px', fontWeight: 900, color: C.text }}>{(total || apps.length).toLocaleString()}</span>
-            </div>
-          </div>
-
           {/* Rejected Cases */}
           <div style={{ background: C.card, borderRadius: '14px', padding: '14px 16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

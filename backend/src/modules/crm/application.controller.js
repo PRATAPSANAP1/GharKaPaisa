@@ -1634,7 +1634,13 @@ const listApplications = async (req, res, next) => {
     const validPartnerId = isUuid(partnerId) ? partnerId : null;
     const validProductId = isUuid(product_id) ? product_id : null;
     const validBankId = isUuid(bank_id) ? bank_id : null;
-    const validStatus = status && status.trim() ? status.trim() : null;
+    const userDesignation = (req.user?.designation || '').toUpperCase();
+    const isQuerableOperatorUser = ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
+    let rawStatus = status && status.trim() ? status.trim() : null;
+    if (isQuerableOperatorUser && (!rawStatus || rawStatus === 'all')) {
+      rawStatus = 'rejected';
+    }
+    const validStatus = rawStatus;
     const validSearch = search && search.trim() ? `%${search.trim()}%` : null;
     const validProcessBy = process_by && process_by.trim() ? process_by.trim() : null;
     const validOpHeadId = targetOpHeadId;
@@ -1650,8 +1656,6 @@ const listApplications = async (req, res, next) => {
     const countQueryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, validProcessBy, validOpHeadId, validUserId, isPartnerOrTeam, validScope, validMemberId, validCategory, validCommissionStatus, validFromDate, validToDate];
 
     const hasAaaTable = await ensureAssignmentsTableExists();
-
-    const userDesignation = (req.user?.designation || '').toUpperCase();
     const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
     const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
     const isSalesExecOnlyUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
@@ -1826,7 +1830,6 @@ const listApplications = async (req, res, next) => {
       finalStatusOperatorFilterSQL = ` ${baseBankAccessFilterSQL} AND ${eligibleDispatchFilter} AND ${inProcessFinalStatusFilter}`;
     }
 
-    const isQuerableOperatorUser = ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
     let querableOperatorFilterSQL = '';
     if (isQuerableOperatorUser && req.user?.id) {
       const rejectDeclineCondition = `(
@@ -2274,14 +2277,22 @@ const listApplications = async (req, res, next) => {
       }
     }
 
-    statusCountsObj.all = (statusCountsObj.pending || 0) +
-      (statusCountsObj.details_submitted || 0) +
-      (statusCountsObj.operational_verified || 0) +
-      (statusCountsObj.approved || 0) +
-      (statusCountsObj.commission_received || 0) +
-      (statusCountsObj.rejected || 0) +
-      (isQuerableOperatorUser ? (statusCountsObj.declined || 0) : 0) +
-      (statusCountsObj.cancelled || 0);
+    if (isQuerableOperatorUser) {
+      statusCountsObj.all = statusCountsObj.rejected;
+      statusCountsObj.pending = 0;
+      statusCountsObj.details_submitted = 0;
+      statusCountsObj.operational_verified = 0;
+      statusCountsObj.approved = 0;
+      statusCountsObj.commission_received = 0;
+    } else {
+      statusCountsObj.all = (statusCountsObj.pending || 0) +
+        (statusCountsObj.details_submitted || 0) +
+        (statusCountsObj.operational_verified || 0) +
+        (statusCountsObj.approved || 0) +
+        (statusCountsObj.commission_received || 0) +
+        (statusCountsObj.rejected || 0) +
+        (statusCountsObj.cancelled || 0);
+    }
 
     return res.status(200).json({
       success: true,
