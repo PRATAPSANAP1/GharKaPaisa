@@ -104,14 +104,14 @@ export default function EmployeeLoanOnCreditCard() {
             });
             setDbOffers(mapped);
           } else {
-            setDbOffers([]);
+            setDbOffers([defaultHdfcOffer]);
           }
         } else {
-          setDbOffers([]);
+          setDbOffers([defaultHdfcOffer]);
         }
       } catch (err) {
         console.error('Failed to load dynamic Card Loan offers:', err);
-        setDbOffers([]);
+        setDbOffers([defaultHdfcOffer]);
       } finally {
         setLoadingProds(false);
       }

@@ -1,5 +1,6 @@
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+require('dotenv').config({ path: path.resolve(__dirname, '../../../backend/.env') });
 const { query } = require('../../config/database');
 const logger = require('../../config/logger');
 
@@ -94,20 +95,37 @@ async function seedSmartEmiAndLoccProducts() {
     logger.warn("Could not alter enum product_category for 'loc_eoc':", err.message);
   }
 
-  // Clean up legacy products (delete non-HDFC card loan/smart EMI products or deactivate if referenced in applications)
+  // Rename any legacy product variants to the two exact canonical names
+  try {
+    await query(`
+      UPDATE products 
+      SET name = 'HDFC Bank Instant & Jumbo Loan', category = 'loc_eoc'::product_category, sub_category = 'LOC', slug = 'hdfc-bank-instant-jumbo-loan'
+      WHERE name IN ('HDFC Bank Insta Loan & Jumbo Loan', 'Insta Loan & Jumbo Loan')
+    `);
+    await query(`
+      UPDATE products 
+      SET name = 'HDFC Bank EMI on Credit Card', category = 'loc_eoc'::product_category, sub_category = 'EOC', slug = 'hdfc-bank-emi-on-credit-card'
+      WHERE name IN ('HDFC Bank SmartEMI on Credit Card', 'HDFC Bank SmartEMI', 'SmartEMI on Credit Card')
+    `);
+  } catch (rErr) {
+    logger.warn('Product rename note:', rErr.message);
+  }
+
+  // Clean up legacy products (delete all other LOC/EOC, loan_on_credit_card, and smart_emi products)
   try {
     await query(`
       DELETE FROM products 
       WHERE (category::text IN ('loan_on_credit_card', 'smart_emi') OR category::text = 'loc_eoc')
-        AND name NOT IN ('HDFC Bank Instant & Jumbo Loan', 'HDFC Bank Insta Loan & Jumbo Loan', 'HDFC Bank EMI on Credit Card', 'HDFC Bank SmartEMI on Credit Card')
+        AND name NOT IN ('HDFC Bank Instant & Jumbo Loan', 'HDFC Bank EMI on Credit Card')
         AND id NOT IN (SELECT product_id FROM applications WHERE product_id IS NOT NULL)
     `);
     await query(`
       UPDATE products 
       SET is_active = false, status = 'Inactive'
       WHERE (category::text IN ('loan_on_credit_card', 'smart_emi') OR category::text = 'loc_eoc')
-        AND name NOT IN ('HDFC Bank Instant & Jumbo Loan', 'HDFC Bank Insta Loan & Jumbo Loan', 'HDFC Bank EMI on Credit Card', 'HDFC Bank SmartEMI on Credit Card')
+        AND name NOT IN ('HDFC Bank Instant & Jumbo Loan', 'HDFC Bank EMI on Credit Card')
     `);
+    logger.info('Cleaned up legacy LOC/EOC products from database.');
   } catch (cleanErr) {
     logger.warn('Error cleaning legacy card loan / smart EMI products:', cleanErr.message);
   }

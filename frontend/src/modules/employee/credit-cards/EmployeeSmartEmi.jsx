@@ -104,14 +104,14 @@ export default function EmployeeSmartEmi() {
             });
             setDbSchemes(mapped);
           } else {
-            setDbSchemes([]);
+            setDbSchemes([defaultHdfcScheme]);
           }
         } else {
-          setDbSchemes([]);
+          setDbSchemes([defaultHdfcScheme]);
         }
       } catch (err) {
         console.error('Failed to load dynamic Smart EMI schemes:', err);
-        setDbSchemes([]);
+        setDbSchemes([defaultHdfcScheme]);
       } finally {
         setLoadingProds(false);
       }
