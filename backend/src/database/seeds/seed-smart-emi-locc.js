@@ -95,17 +95,56 @@ async function seedSmartEmiAndLoccProducts() {
     logger.warn("Could not alter enum product_category for 'loc_eoc':", err.message);
   }
 
-  // Rename any legacy product variants to the two exact canonical names
+  // Rename any legacy product variants to the two exact canonical names safely
   try {
     await query(`
-      UPDATE products 
-      SET name = 'HDFC Bank Instant & Jumbo Loan', category = 'loc_eoc'::product_category, sub_category = 'LOC', slug = 'hdfc-bank-instant-jumbo-loan'
-      WHERE name IN ('HDFC Bank Insta Loan & Jumbo Loan', 'Insta Loan & Jumbo Loan')
-    `);
+      UPDATE applications a
+      SET product_id = canonical.id
+      FROM products legacy
+      JOIN products canonical ON canonical.bank_id = legacy.bank_id AND canonical.name = 'HDFC Bank Instant & Jumbo Loan'
+      WHERE a.product_id = legacy.id
+        AND legacy.name IN ('HDFC Bank Insta Loan & Jumbo Loan', 'Insta Loan & Jumbo Loan')
+        AND legacy.id != canonical.id
+    `).catch(() => {});
+
     await query(`
       UPDATE products 
-      SET name = 'HDFC Bank EMI on Credit Card', category = 'loc_eoc'::product_category, sub_category = 'EOC', slug = 'hdfc-bank-emi-on-credit-card'
+      SET category = 'loc_eoc'::product_category, sub_category = 'LOC'
+      WHERE name IN ('HDFC Bank Instant & Jumbo Loan', 'HDFC Bank Insta Loan & Jumbo Loan', 'Insta Loan & Jumbo Loan')
+    `);
+
+    await query(`
+      UPDATE products 
+      SET name = 'HDFC Bank Instant & Jumbo Loan', slug = 'hdfc-bank-instant-jumbo-loan'
+      WHERE name IN ('HDFC Bank Insta Loan & Jumbo Loan', 'Insta Loan & Jumbo Loan')
+        AND NOT EXISTS (
+          SELECT 1 FROM products p2 WHERE p2.bank_id = products.bank_id AND p2.name = 'HDFC Bank Instant & Jumbo Loan'
+        )
+    `);
+
+    await query(`
+      UPDATE applications a
+      SET product_id = canonical.id
+      FROM products legacy
+      JOIN products canonical ON canonical.bank_id = legacy.bank_id AND canonical.name = 'HDFC Bank EMI on Credit Card'
+      WHERE a.product_id = legacy.id
+        AND legacy.name IN ('HDFC Bank SmartEMI on Credit Card', 'HDFC Bank SmartEMI', 'SmartEMI on Credit Card')
+        AND legacy.id != canonical.id
+    `).catch(() => {});
+
+    await query(`
+      UPDATE products 
+      SET category = 'loc_eoc'::product_category, sub_category = 'EOC'
+      WHERE name IN ('HDFC Bank EMI on Credit Card', 'HDFC Bank SmartEMI on Credit Card', 'HDFC Bank SmartEMI', 'SmartEMI on Credit Card')
+    `);
+
+    await query(`
+      UPDATE products 
+      SET name = 'HDFC Bank EMI on Credit Card', slug = 'hdfc-bank-emi-on-credit-card'
       WHERE name IN ('HDFC Bank SmartEMI on Credit Card', 'HDFC Bank SmartEMI', 'SmartEMI on Credit Card')
+        AND NOT EXISTS (
+          SELECT 1 FROM products p2 WHERE p2.bank_id = products.bank_id AND p2.name = 'HDFC Bank EMI on Credit Card'
+        )
     `);
   } catch (rErr) {
     logger.warn('Product rename note:', rErr.message);
