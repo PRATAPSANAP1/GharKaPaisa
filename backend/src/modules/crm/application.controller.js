@@ -76,6 +76,87 @@ const parseDobToIso = (raw) => {
   return null;
 };
 
+/**
+ * Checks if the request user has Querable Operator designation or role.
+ */
+const checkQuerableUserRole = (req) => {
+  if (!req?.user) return false;
+  const designation = String(req.user.designation || '').toUpperCase();
+  const role = String(req.user.role || '').toUpperCase();
+  const isQuerable = [
+    'QUERABLE OPERATOR',
+    'QUERABLE_OPERATOR',
+    'QUERYABLE OPERATOR',
+    'QUERYABLE_OPERATOR'
+  ].includes(designation) || [
+    'QUERABLE OPERATOR',
+    'QUERABLE_OPERATOR',
+    'QUERYABLE OPERATOR',
+    'QUERYABLE_OPERATOR'
+  ].includes(role);
+  return isQuerable && role !== 'SUPER_ADMIN';
+};
+
+/**
+ * Asserts Querable Operator access for a specific application record.
+ * Throws a 403 error if the user is a Querable Operator and either:
+ *  1. The application is NOT in a rejected/declined state (or IS cancelled).
+ *  2. The application's bank ID is NOT assigned to this admin in admin_bank_assignments.
+ */
+const assertQuerableOperatorApplicationAccess = async (req, app) => {
+  if (!req?.user || !app) return;
+  if (!checkQuerableUserRole(req)) return;
+
+  const status = String(app.status || '').toLowerCase();
+  const finalStatus = String(app.final_status || '').toLowerCase();
+  const bankStatus = String(app.bank_current_lead_status || '').toLowerCase();
+
+  const rejected = (
+    ['rejected', 'declined', 'decline', 'technical_error'].includes(status) ||
+    status.includes('reject') || status.includes('decline') ||
+    ['rejected', 'declined', 'decline', 'technical_error'].includes(finalStatus) ||
+    finalStatus.includes('reject') || finalStatus.includes('decline') ||
+    bankStatus.includes('reject') || bankStatus.includes('decline')
+  );
+
+  const cancelled = (
+    ['cancelled', 'cancel', 'canceled'].includes(status) ||
+    status.includes('cancel') ||
+    ['cancelled', 'cancel', 'canceled'].includes(finalStatus) ||
+    finalStatus.includes('cancel') ||
+    bankStatus.includes('cancel')
+  );
+
+  if (!rejected || cancelled) {
+    const err = new Error('QUERABLE_OPERATOR_STATUS_ACCESS_DENIED: Access denied. Querable Operators are only authorized to access rejected applications.');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  let appBankId = app.bank_id;
+  if (!appBankId && app.product_id) {
+    const { rows: [pRec] } = await query(`SELECT bank_id FROM products WHERE id = $1`, [app.product_id]).catch(() => ({ rows: [] }));
+    appBankId = pRec?.bank_id;
+  }
+
+  if (!appBankId) {
+    const err = new Error('QUERABLE_OPERATOR_BANK_ACCESS_DENIED: Application bank identity cannot be verified.');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  const { rows } = await query(
+    `SELECT 1 FROM admin_bank_assignments WHERE admin_id = $1 AND bank_id = $2 LIMIT 1`,
+    [req.user.id, appBankId]
+  );
+
+  if (!rows.length) {
+    const err = new Error('QUERABLE_OPERATOR_BANK_ACCESS_DENIED: You are not authorized to access applications for this bank.');
+    err.statusCode = 403;
+    throw err;
+  }
+};
+
 // Helper to log timeline actions with full audit metadata and timestamp
 const logTimeline = async (client, applicationId, status, activity, remarks, performedBy) => {
   try {
@@ -840,6 +921,13 @@ const updateStatus = async (req, res, next) => {
     if (!app) {
       await client.query('ROLLBACK');
       return notFound(res, 'Application or Lead record not found');
+    }
+
+    try {
+      await assertQuerableOperatorApplicationAccess(req, app);
+    } catch (authErr) {
+      await client.query('ROLLBACK');
+      return forbidden(res, authErr.message);
     }
 
     const userRole = (req.user?.role || '').toUpperCase();
@@ -2540,39 +2628,10 @@ const getApplication = async (req, res, next) => {
       }
     }
 
-    const reqUserDesignation = (req.user?.designation || '').toUpperCase();
-    const reqUserRole = (req.user?.role || '').toUpperCase();
-    const isQuerableUser = ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(reqUserDesignation) || ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(reqUserRole);
-
-    if (isQuerableUser && reqUserRole !== 'SUPER_ADMIN' && req.user?.id) {
-      const s = String(app.status || '').toLowerCase();
-      const fs = String(app.final_status || '').toLowerCase();
-      const bs = String(app.bank_current_lead_status || '').toLowerCase();
-      const isRejected = (
-        ['rejected', 'declined', 'decline', 'technical_error'].includes(s) ||
-        s.includes('reject') || s.includes('decline') ||
-        fs.includes('reject') || fs.includes('decline') ||
-        bs.includes('reject') || bs.includes('decline')
-      ) && !(['cancelled', 'cancel', 'canceled'].includes(s) || s.includes('cancel') || fs.includes('cancel') || bs.includes('cancel'));
-
-      if (!isRejected) {
-        return forbidden(res, 'Access denied: Querable Operators are only authorized to access rejected/declined applications.');
-      }
-
-      let appBankId = app.bank_id;
-      if (!appBankId && app.product_id) {
-        const { rows: [prodRec] } = await query(`SELECT bank_id FROM products WHERE id = $1`, [app.product_id]).catch(() => ({ rows: [] }));
-        appBankId = prodRec?.bank_id;
-      }
-
-      const { rows: userAssignments } = await query(
-        `SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`,
-        [req.user.id]
-      );
-      const assignedBankIds = userAssignments.map(b => String(b.bank_id));
-      if (!appBankId || !assignedBankIds.includes(String(appBankId))) {
-        return forbidden(res, 'Access denied: You are not authorized to view applications for this bank.');
-      }
+    try {
+      await assertQuerableOperatorApplicationAccess(req, app);
+    } catch (authErr) {
+      return forbidden(res, authErr.message);
     }
 
 
