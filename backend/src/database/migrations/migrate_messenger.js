@@ -58,6 +58,7 @@ const migrateMessenger = async () => {
 
     await query(`CREATE INDEX IF NOT EXISTS idx_conv_participants_conv_id ON conversation_participants(conversation_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_conv_participants_user_id ON conversation_participants(user_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_conv_participants_user_left ON conversation_participants(user_id, left_at)`);
 
     // 3. Messages table
     await query(`
@@ -78,6 +79,7 @@ const migrateMessenger = async () => {
     await query(`CREATE INDEX IF NOT EXISTS idx_messages_conv_id ON messages(conversation_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON messages(sender_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at DESC)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_messages_conv_created ON messages(conversation_id, created_at DESC)`);
 
     // 4. Message Attachments table
     await query(`
@@ -110,6 +112,7 @@ const migrateMessenger = async () => {
     `);
 
     await query(`CREATE INDEX IF NOT EXISTS idx_message_reads_user ON message_reads(user_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_message_reads_msg_user ON message_reads(message_id, user_id)`);
 
     // 6. Blocked Users table
     await query(`

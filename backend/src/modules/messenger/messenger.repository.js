@@ -19,11 +19,12 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
   } else if (filter === 'PINNED') {
     whereClause += ` AND cp.is_pinned = TRUE`;
   } else if (filter === 'UNREAD') {
-    whereClause += ` AND (
-      SELECT COUNT(*) FROM messages m
+    whereClause += ` AND EXISTS (
+      SELECT 1 FROM messages m
       LEFT JOIN message_reads mr ON mr.message_id = m.id AND mr.user_id = $1
       WHERE m.conversation_id = c.id AND m.sender_id != $1 AND mr.id IS NULL
-    ) > 0`;
+        AND (cp.cleared_at IS NULL OR m.created_at > cp.cleared_at)
+    )`;
   }
 
   if (search && search.trim()) {
@@ -42,7 +43,7 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
       CASE WHEN (cp.cleared_at IS NULL OR c.last_message_at > cp.cleared_at) THEN c.last_message_id ELSE NULL END AS last_message_id,
       CASE WHEN (cp.cleared_at IS NULL OR c.last_message_at > cp.cleared_at) THEN c.last_message_text ELSE NULL END AS last_message_text,
       COALESCE(
-        (SELECT MAX(m_max.created_at) FROM messages m_max WHERE m_max.conversation_id = c.id AND m_max.deleted_at IS NULL AND (cp.cleared_at IS NULL OR m_max.created_at > cp.cleared_at)),
+        CASE WHEN (cp.cleared_at IS NULL OR c.last_message_at > cp.cleared_at) THEN c.last_message_at ELSE cp.cleared_at END,
         c.last_message_at,
         c.updated_at,
         c.created_at
@@ -89,7 +90,13 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
     JOIN conversations c ON c.id = cp.conversation_id
     LEFT JOIN applications a ON a.id = c.application_id
     WHERE ${whereClause}
-    ORDER BY cp.is_pinned DESC, COALESCE((SELECT MAX(m_max.created_at) FROM messages m_max WHERE m_max.conversation_id = c.id AND m_max.deleted_at IS NULL AND (cp.cleared_at IS NULL OR m_max.created_at > cp.cleared_at)), c.last_message_at, c.updated_at, c.created_at) DESC
+    ORDER BY cp.is_pinned DESC,
+             COALESCE(
+               CASE WHEN (cp.cleared_at IS NULL OR c.last_message_at > cp.cleared_at) THEN c.last_message_at ELSE cp.cleared_at END,
+               c.last_message_at,
+               c.updated_at,
+               c.created_at
+             ) DESC
   `;
 
   const { rows } = await query(sql, params);
