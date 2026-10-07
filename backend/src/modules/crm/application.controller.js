@@ -1705,6 +1705,78 @@ const listApplications = async (req, res, next) => {
       } else if (isLocEocAdmin && regularBankAssignments.length > 0) {
         // Assigned regular bank(s) + LOC/EOC: see applications for assigned regular banks PLUS all LOC/EOC applications
         const regIdsList = regularBankAssignments.map(b => `'${b.bank_id}'`).join(',');
+        const bankMatchCondition = `(
+          (LOWER(combined.bank_code) = LOWER(b.short_code))
+          OR (LOWER(combined.bank_name) = LOWER(b.name))
+          OR (b.short_code IS NOT NULL AND b.short_code != '' AND (
+            LOWER(COALESCE(combined.bank_name, '')) LIKE '%' || LOWER(b.short_code) || '%'
+            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%' || LOWER(b.short_code) || '%'
+          ))
+          OR (combined.bank_code IS NOT NULL AND combined.bank_code != '' AND (
+            LOWER(b.name) LIKE '%' || LOWER(combined.bank_code) || '%'
+          ))
+          OR (
+            TRIM(REGEXP_REPLACE(LOWER(b.name), '\\s*(bank|ltd|limited|small finance bank)\\s*', ' ', 'g')) != ''
+            AND (
+              LOWER(COALESCE(combined.bank_name, '')) LIKE '%' || TRIM(REGEXP_REPLACE(LOWER(b.name), '\\s*(bank|ltd|limited|small finance bank)\\s*', '', 'g')) || '%'
+              OR LOWER(COALESCE(combined.product_name, '')) LIKE '%' || TRIM(REGEXP_REPLACE(LOWER(b.name), '\\s*(bank|ltd|limited|small finance bank)\\s*', '', 'g')) || '%'
+            )
+          )
+          OR (
+            (LOWER(b.name) LIKE '%hdfc%' OR LOWER(b.short_code) = 'hdfc') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%hdfc%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%hdfc%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%hdfc%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%icici%' OR LOWER(b.short_code) = 'icici') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%icici%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%icici%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%icici%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%axis%' OR LOWER(b.short_code) = 'axis') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%axis%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%axis%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%axis%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%kotak%' OR LOWER(b.short_code) = 'kotak') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%kotak%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%kotak%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%kotak%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%idfc%' OR LOWER(b.short_code) = 'idfc') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%idfc%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%idfc%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%idfc%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%baroda%' OR LOWER(b.short_code) = 'bob') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%baroda%' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%bob%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%baroda%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%bob%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%rbl%' OR LOWER(b.short_code) = 'rbl') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%rbl%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%rbl%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%rbl%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%au %' OR LOWER(b.name) LIKE '%au small%' OR LOWER(b.short_code) = 'au') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%au%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%au%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%au%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%indusind%' OR LOWER(b.short_code) = 'indusind') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%indusind%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%indusind%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%indusind%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%yes %' OR LOWER(b.name) LIKE '%yes bank%' OR LOWER(b.short_code) = 'yes') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%yes%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%yes%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%yes%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%federal%' OR LOWER(b.short_code) = 'federal') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%federal%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%federal%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%federal%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%sbi%' OR LOWER(b.short_code) = 'sbi' OR LOWER(b.name) LIKE '%state bank%')
+            AND LOWER(b.name) NOT LIKE '%tata%'
+            AND (
+              (LOWER(COALESCE(combined.bank_name, '')) LIKE '%sbi%' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%state bank%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%sbi%')
+              AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%tata%'
+              AND LOWER(COALESCE(combined.bank_code, '')) NOT LIKE '%tata%'
+              AND LOWER(COALESCE(combined.product_name, '')) NOT LIKE '%tata%'
+            )
+          )
+        )`;
         baseBankAccessFilterSQL = ` AND (
           combined.bank_id IN (${regIdsList})
           OR EXISTS (
@@ -1713,23 +1785,85 @@ const listApplications = async (req, res, next) => {
             WHERE aba.admin_id = '${req.user.id}' 
             AND UPPER(COALESCE(b.short_code, '')) NOT IN ('LOC_EOC', 'LOC', 'EOC')
             AND NOT (b.name ~* 'loc|loan on card|smart emi|smartemi')
-            AND (
-              (LOWER(combined.bank_code) = LOWER(b.short_code))
-              OR (LOWER(combined.bank_name) = LOWER(b.name))
-              OR (
-                LOWER(b.name) LIKE '%sbi%' 
-                AND LOWER(b.name) NOT LIKE '%tata%' 
-                AND LOWER(combined.bank_name) LIKE '%sbi%' 
-                AND LOWER(combined.bank_name) NOT LIKE '%tata%' 
-                AND LOWER(combined.bank_code) NOT LIKE '%tata%'
-              )
-            )
+            AND ${bankMatchCondition}
           )
           OR ${locEocAppSQL}
         )`;
       } else if (regularBankAssignments.length > 0) {
         // Assigned regular bank(s) only: see ONLY applications for assigned banks (and no LOC/EOC unless belonging to that bank's credit cards)
         const regIdsList = regularBankAssignments.map(b => `'${b.bank_id}'`).join(',');
+        const bankMatchCondition = `(
+          (LOWER(combined.bank_code) = LOWER(b.short_code))
+          OR (LOWER(combined.bank_name) = LOWER(b.name))
+          OR (b.short_code IS NOT NULL AND b.short_code != '' AND (
+            LOWER(COALESCE(combined.bank_name, '')) LIKE '%' || LOWER(b.short_code) || '%'
+            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%' || LOWER(b.short_code) || '%'
+          ))
+          OR (combined.bank_code IS NOT NULL AND combined.bank_code != '' AND (
+            LOWER(b.name) LIKE '%' || LOWER(combined.bank_code) || '%'
+          ))
+          OR (
+            TRIM(REGEXP_REPLACE(LOWER(b.name), '\\s*(bank|ltd|limited|small finance bank)\\s*', ' ', 'g')) != ''
+            AND (
+              LOWER(COALESCE(combined.bank_name, '')) LIKE '%' || TRIM(REGEXP_REPLACE(LOWER(b.name), '\\s*(bank|ltd|limited|small finance bank)\\s*', '', 'g')) || '%'
+              OR LOWER(COALESCE(combined.product_name, '')) LIKE '%' || TRIM(REGEXP_REPLACE(LOWER(b.name), '\\s*(bank|ltd|limited|small finance bank)\\s*', '', 'g')) || '%'
+            )
+          )
+          OR (
+            (LOWER(b.name) LIKE '%hdfc%' OR LOWER(b.short_code) = 'hdfc') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%hdfc%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%hdfc%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%hdfc%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%icici%' OR LOWER(b.short_code) = 'icici') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%icici%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%icici%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%icici%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%axis%' OR LOWER(b.short_code) = 'axis') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%axis%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%axis%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%axis%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%kotak%' OR LOWER(b.short_code) = 'kotak') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%kotak%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%kotak%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%kotak%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%idfc%' OR LOWER(b.short_code) = 'idfc') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%idfc%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%idfc%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%idfc%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%baroda%' OR LOWER(b.short_code) = 'bob') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%baroda%' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%bob%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%baroda%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%bob%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%rbl%' OR LOWER(b.short_code) = 'rbl') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%rbl%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%rbl%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%rbl%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%au %' OR LOWER(b.name) LIKE '%au small%' OR LOWER(b.short_code) = 'au') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%au%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%au%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%au%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%indusind%' OR LOWER(b.short_code) = 'indusind') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%indusind%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%indusind%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%indusind%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%yes %' OR LOWER(b.name) LIKE '%yes bank%' OR LOWER(b.short_code) = 'yes') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%yes%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%yes%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%yes%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%federal%' OR LOWER(b.short_code) = 'federal') AND
+            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%federal%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%federal%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%federal%')
+          )
+          OR (
+            (LOWER(b.name) LIKE '%sbi%' OR LOWER(b.short_code) = 'sbi' OR LOWER(b.name) LIKE '%state bank%')
+            AND LOWER(b.name) NOT LIKE '%tata%'
+            AND (
+              (LOWER(COALESCE(combined.bank_name, '')) LIKE '%sbi%' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%state bank%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%sbi%')
+              AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%tata%'
+              AND LOWER(COALESCE(combined.bank_code, '')) NOT LIKE '%tata%'
+              AND LOWER(COALESCE(combined.product_name, '')) NOT LIKE '%tata%'
+            )
+          )
+        )`;
         baseBankAccessFilterSQL = ` AND (
           combined.bank_id IN (${regIdsList})
           OR EXISTS (
@@ -1738,17 +1872,7 @@ const listApplications = async (req, res, next) => {
             WHERE aba.admin_id = '${req.user.id}' 
             AND UPPER(COALESCE(b.short_code, '')) NOT IN ('LOC_EOC', 'LOC', 'EOC')
             AND NOT (b.name ~* 'loc|loan on card|smart emi|smartemi')
-            AND (
-              (LOWER(combined.bank_code) = LOWER(b.short_code))
-              OR (LOWER(combined.bank_name) = LOWER(b.name))
-              OR (
-                LOWER(b.name) LIKE '%sbi%' 
-                AND LOWER(b.name) NOT LIKE '%tata%' 
-                AND LOWER(combined.bank_name) LIKE '%sbi%' 
-                AND LOWER(combined.bank_name) NOT LIKE '%tata%' 
-                AND LOWER(combined.bank_code) NOT LIKE '%tata%'
-              )
-            )
+            AND ${bankMatchCondition}
           )
         )`;
       } else {
@@ -1832,26 +1956,26 @@ const listApplications = async (req, res, next) => {
 
     let querableOperatorFilterSQL = '';
     if (isQuerableOperatorUser && req.user?.id) {
-      const rejectOnlyCondition = `(
+      const rejectDeclineCondition = `(
         (
-          LOWER(COALESCE(combined.status, '')) IN ('rejected', 'technical_error')
+          LOWER(COALESCE(combined.status, '')) IN ('rejected', 'declined', 'decline', 'technical_error')
           OR LOWER(COALESCE(combined.status, '')) LIKE '%reject%'
-          OR LOWER(COALESCE(combined.final_status, '')) IN ('rejected')
+          OR LOWER(COALESCE(combined.status, '')) LIKE '%decline%'
+          OR LOWER(COALESCE(combined.final_status, '')) IN ('rejected', 'declined', 'decline', 'technical_error')
           OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%'
+          OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'
           OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%reject%'
+          OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%decline%'
         )
         AND NOT (
-          LOWER(COALESCE(combined.status, '')) IN ('declined', 'decline', 'cancelled', 'cancel', 'canceled')
-          OR LOWER(COALESCE(combined.status, '')) LIKE '%decline%'
+          LOWER(COALESCE(combined.status, '')) IN ('cancelled', 'cancel', 'canceled')
           OR LOWER(COALESCE(combined.status, '')) LIKE '%cancel%'
-          OR LOWER(COALESCE(combined.final_status, '')) IN ('declined', 'decline', 'cancelled', 'cancel', 'canceled')
-          OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'
+          OR LOWER(COALESCE(combined.final_status, '')) IN ('cancelled', 'cancel', 'canceled')
           OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'
-          OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%decline%'
           OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%cancel%'
         )
       )`;
-      querableOperatorFilterSQL = ` ${baseBankAccessFilterSQL} AND ${rejectOnlyCondition}`;
+      querableOperatorFilterSQL = ` ${baseBankAccessFilterSQL} AND ${rejectDeclineCondition}`;
     }
 
     if (!isPartnerOrTeam && !isSuperAdmin && req.user?.id) {
@@ -2024,7 +2148,10 @@ const listApplications = async (req, res, next) => {
           OR ($2 = 'operational_verified' AND combined.status IN ('operational_verified', 'under_review', 'under review', 'verification', 'in_process', 'in_progress', 'vkyc_pending', 'vkyc_completed'))
           OR ($2 = 'approved' AND combined.status IN ('approved', 'sanctioned', 'super_admin_approved', 'disbursed'))
           OR ($2 = 'commission_received' AND combined.status IN ('commission_received', 'commission_released', 'released', 'credited', 'paid'))
-          OR ($2 = 'rejected' AND (${isQuerableOperatorUser ? "(combined.status IN ('rejected', 'technical_error') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%') AND NOT (combined.status IN ('declined', 'decline', 'cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%' OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%')" : "(combined.status IN ('rejected', 'declined', 'decline', 'technical_error') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%' OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%')"}))
+          OR ($2 = 'rejected' AND (
+            (combined.status IN ('rejected', 'declined', 'decline', 'technical_error') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%' OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%')
+            AND NOT (combined.status IN ('cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%')
+          ))
           OR ($2 = 'declined' AND (combined.status IN ('declined', 'decline') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'))
           OR ($2 = 'cancelled' AND (combined.status IN ('cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'))
         )
@@ -2126,7 +2253,10 @@ const listApplications = async (req, res, next) => {
           OR ($2 = 'operational_verified' AND combined.status IN ('operational_verified', 'under_review', 'under review', 'verification', 'in_process', 'in_progress', 'vkyc_pending', 'vkyc_completed'))
           OR ($2 = 'approved' AND combined.status IN ('approved', 'sanctioned', 'super_admin_approved', 'disbursed'))
           OR ($2 = 'commission_received' AND combined.status IN ('commission_received', 'commission_released', 'released', 'credited', 'paid'))
-          OR ($2 = 'rejected' AND (${isQuerableOperatorUser ? "(combined.status IN ('rejected', 'technical_error') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%') AND NOT (combined.status IN ('declined', 'decline', 'cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%' OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%')" : "(combined.status IN ('rejected', 'declined', 'decline', 'technical_error') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%' OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%')"}))
+          OR ($2 = 'rejected' AND (
+            (combined.status IN ('rejected', 'declined', 'decline', 'technical_error') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%' OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%')
+            AND NOT (combined.status IN ('cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%')
+          ))
           OR ($2 = 'declined' AND (combined.status IN ('declined', 'decline') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'))
           OR ($2 = 'cancelled' AND (combined.status IN ('cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'))
         )
@@ -2261,9 +2391,7 @@ const listApplications = async (req, res, next) => {
 
       if (['declined', 'decline'].includes(s) || fs.includes('decline')) {
         statusCountsObj.declined = (statusCountsObj.declined || 0) + cnt;
-        if (!isQuerableOperatorUser) {
-          statusCountsObj.rejected += cnt;
-        }
+        statusCountsObj.rejected += cnt;
       } else if (['rejected', 'technical_error'].includes(s) || fs.includes('reject')) {
         statusCountsObj.rejected += cnt;
       } else if (['cancelled', 'cancel', 'canceled'].includes(s) || fs.includes('cancel')) {

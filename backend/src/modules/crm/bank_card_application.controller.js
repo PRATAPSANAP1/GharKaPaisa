@@ -301,12 +301,38 @@ const listBankCardApplications = async (req, res, next) => {
           whereClause += ` AND ${locCondition}`;
         } else if (hasLocEoc && regBankRows.length > 0) {
           const regBankIds = regBankRows.map(b => String(b.bank_id));
-          whereClause += ` AND ((combined.bank_id = ANY($${idx}::text[]) OR combined.bank_id IN (SELECT b.id::text FROM banks b WHERE b.operation_head_id = $${idx + 1}::uuid AND UPPER(b.short_code) != 'LOC_EOC')) OR ${locCondition})`;
+          whereClause += ` AND ((combined.bank_id = ANY($${idx}::text[]) OR combined.bank_id IN (SELECT b.id::text FROM banks b WHERE b.operation_head_id = $${idx + 1}::uuid AND UPPER(b.short_code) != 'LOC_EOC') OR EXISTS (
+            SELECT 1 FROM admin_bank_assignments aba
+            JOIN banks b ON b.id = aba.bank_id
+            WHERE aba.admin_id = $${idx + 1}::uuid
+            AND (
+              LOWER(combined.bank_short_code) = LOWER(b.short_code)
+              OR LOWER(combined.bank_name) = LOWER(b.name)
+              OR (b.short_code IS NOT NULL AND b.short_code != '' AND (
+                LOWER(COALESCE(combined.bank_name, '')) LIKE '%' || LOWER(b.short_code) || '%'
+                OR LOWER(COALESCE(combined.credit_card_category, '')) LIKE '%' || LOWER(b.short_code) || '%'
+              ))
+              OR (combined.bank_short_code IS NOT NULL AND combined.bank_short_code != '' AND LOWER(b.name) LIKE '%' || LOWER(combined.bank_short_code) || '%')
+            )
+          )) OR ${locCondition})`;
           values.push(regBankIds, req.user.id);
           idx += 2;
         } else {
           const regBankIds = regBankRows.map(b => String(b.bank_id));
-          whereClause += ` AND (combined.bank_id = ANY($${idx}::text[]) OR combined.bank_id IN (SELECT b.id::text FROM banks b WHERE b.operation_head_id = $${idx + 1}::uuid AND UPPER(b.short_code) != 'LOC_EOC'))`;
+          whereClause += ` AND (combined.bank_id = ANY($${idx}::text[]) OR combined.bank_id IN (SELECT b.id::text FROM banks b WHERE b.operation_head_id = $${idx + 1}::uuid AND UPPER(b.short_code) != 'LOC_EOC') OR EXISTS (
+            SELECT 1 FROM admin_bank_assignments aba
+            JOIN banks b ON b.id = aba.bank_id
+            WHERE aba.admin_id = $${idx + 1}::uuid
+            AND (
+              LOWER(combined.bank_short_code) = LOWER(b.short_code)
+              OR LOWER(combined.bank_name) = LOWER(b.name)
+              OR (b.short_code IS NOT NULL AND b.short_code != '' AND (
+                LOWER(COALESCE(combined.bank_name, '')) LIKE '%' || LOWER(b.short_code) || '%'
+                OR LOWER(COALESCE(combined.credit_card_category, '')) LIKE '%' || LOWER(b.short_code) || '%'
+              ))
+              OR (combined.bank_short_code IS NOT NULL AND combined.bank_short_code != '' AND LOWER(b.name) LIKE '%' || LOWER(combined.bank_short_code) || '%')
+            )
+          ))`;
           values.push(regBankIds, req.user.id);
           idx += 2;
         }
@@ -330,12 +356,12 @@ const listBankCardApplications = async (req, res, next) => {
     if (isQuerableOperatorUser && req.user?.id) {
       whereClause += ` AND (
         (
-          LOWER(COALESCE(combined.final_stage, combined.status, '')) IN ('rejected', 'technical_error')
+          LOWER(COALESCE(combined.final_stage, combined.status, '')) IN ('rejected', 'declined', 'decline', 'technical_error')
           OR LOWER(COALESCE(combined.final_stage, combined.status, '')) LIKE '%reject%'
+          OR LOWER(COALESCE(combined.final_stage, combined.status, '')) LIKE '%decline%'
         )
         AND NOT (
-          LOWER(COALESCE(combined.final_stage, combined.status, '')) IN ('declined', 'decline', 'cancelled', 'cancel', 'canceled')
-          OR LOWER(COALESCE(combined.final_stage, combined.status, '')) LIKE '%decline%'
+          LOWER(COALESCE(combined.final_stage, combined.status, '')) IN ('cancelled', 'cancel', 'canceled')
           OR LOWER(COALESCE(combined.final_stage, combined.status, '')) LIKE '%cancel%'
         )
       )`;
@@ -428,7 +454,7 @@ const listBankCardApplications = async (req, res, next) => {
         a.id::text as id,
         COALESCE(a.app_number, 'APP' || SUBSTRING(a.id::text, 1, 8)) as application_no,
         COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number,
-        a.bank_id::text as bank_id,
+        COALESCE(a.bank_id, p.bank_id)::text as bank_id,
         COALESCE(p.name, 'Credit Card') as credit_card_category,
         COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
         COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile, '') as customer_mobile,
@@ -449,8 +475,8 @@ const listBankCardApplications = async (req, res, next) => {
         b.logo_url as bank_logo,
         'applications' as source_table
       FROM applications a
-      JOIN banks b ON a.bank_id = b.id
       LEFT JOIN products p ON a.product_id = p.id
+      LEFT JOIN banks b ON b.id = COALESCE(a.bank_id, p.bank_id)
       LEFT JOIN leads l ON a.lead_id = l.id
       LEFT JOIN customers c ON a.customer_id = c.id
       LEFT JOIN users u ON a.partner_id = u.id

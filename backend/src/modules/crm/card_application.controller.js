@@ -90,12 +90,14 @@ const listApplications = async (req, res, next) => {
           whereClause += ` AND ${locCondition}`;
         } else if (hasLocEoc && regBankRows.length > 0) {
           const regIds = regBankRows.map(b => b.bank_id);
-          whereClause += ` AND (bank_name IN (SELECT name FROM banks WHERE id = ANY($${idx}::uuid[])) OR ${locCondition})`;
+          const bankMatchSql = `(bank_name IN (SELECT name FROM banks WHERE id = ANY($${idx}::uuid[])) OR bank_name IN (SELECT short_code FROM banks WHERE id = ANY($${idx}::uuid[])) OR EXISTS (SELECT 1 FROM banks b WHERE b.id = ANY($${idx}::uuid[]) AND (LOWER(bank_name) LIKE '%' || LOWER(b.short_code) || '%' OR LOWER(b.name) LIKE '%' || LOWER(bank_name) || '%')))`;
+          whereClause += ` AND (${bankMatchSql} OR ${locCondition})`;
           values.push(regIds);
           idx++;
         } else {
           const regIds = regBankRows.map(b => b.bank_id);
-          whereClause += ` AND (bank_name IN (SELECT name FROM banks WHERE id = ANY($${idx}::uuid[])))`;
+          const bankMatchSql = `(bank_name IN (SELECT name FROM banks WHERE id = ANY($${idx}::uuid[])) OR bank_name IN (SELECT short_code FROM banks WHERE id = ANY($${idx}::uuid[])) OR EXISTS (SELECT 1 FROM banks b WHERE b.id = ANY($${idx}::uuid[]) AND (LOWER(bank_name) LIKE '%' || LOWER(b.short_code) || '%' OR LOWER(b.name) LIKE '%' || LOWER(bank_name) || '%')))`;
+          whereClause += ` AND ${bankMatchSql}`;
           values.push(regIds);
           idx++;
         }
@@ -106,7 +108,7 @@ const listApplications = async (req, res, next) => {
       const userDesignation = (req.user?.designation || '').toUpperCase();
       const isQuerableOperatorUser = ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
       if (isQuerableOperatorUser && req.user?.id) {
-        whereClause += ` AND ((LOWER(COALESCE(status, '')) IN ('rejected', 'technical_error') OR LOWER(COALESCE(status, '')) LIKE '%reject%') AND NOT (LOWER(COALESCE(status, '')) IN ('declined', 'decline', 'cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(status, '')) LIKE '%decline%' OR LOWER(COALESCE(status, '')) LIKE '%cancel%'))`;
+        whereClause += ` AND ((LOWER(COALESCE(status, '')) IN ('rejected', 'declined', 'decline', 'technical_error') OR LOWER(COALESCE(status, '')) LIKE '%reject%' OR LOWER(COALESCE(status, '')) LIKE '%decline%') AND NOT (LOWER(COALESCE(status, '')) IN ('cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(status, '')) LIKE '%cancel%'))`;
       }
     }
 

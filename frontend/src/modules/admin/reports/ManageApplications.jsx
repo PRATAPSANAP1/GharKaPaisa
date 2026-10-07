@@ -288,11 +288,11 @@ export default function ManageApplications() {
     let s = String(app?.status || '').toLowerCase();
     let fs = String(app?.final_status || '').toLowerCase();
     if (s === 'commission_released') s = 'commission_received';
+    if (s.includes('reject') || fs.includes('reject') || s.includes('decline') || fs.includes('decline')) {
+      acc['rejected'] = (acc['rejected'] || 0) + 1;
+    }
     if (s.includes('decline') || fs.includes('decline')) {
       acc['declined'] = (acc['declined'] || 0) + 1;
-    }
-    if (s.includes('reject') || fs.includes('reject')) {
-      acc['rejected'] = (acc['rejected'] || 0) + 1;
     }
     if (s.includes('cancel') || fs.includes('cancel')) {
       acc['cancelled'] = (acc['cancelled'] || 0) + 1;
@@ -407,7 +407,7 @@ export default function ManageApplications() {
     pending: backendStatusCounts?.pending ?? (Array.isArray(apps) ? apps : []).filter(a => ['submitted', 'pending', 'lead_created', 'created'].includes((a.status || '').toLowerCase())).length,
     operationalVerified: backendStatusCounts?.operational_verified ?? backendStatusCounts?.under_review ?? (Array.isArray(apps) ? apps : []).filter(a => ['operational_verified', 'under_review', 'verification', 'in_progress', 'details_submitted'].includes((a.status || '').toLowerCase())).length,
     approved: backendStatusCounts?.approved ?? (Array.isArray(apps) ? apps : []).filter(a => ['approved', 'super_admin_approved'].includes((a.status || '').toLowerCase())).length,
-    rejected: backendStatusCounts?.rejected ?? (Array.isArray(apps) ? apps : []).filter(a => ['rejected', 'declined', 'cancelled'].includes((a.status || '').toLowerCase())).length
+    rejected: backendStatusCounts?.rejected ?? (Array.isArray(apps) ? apps : []).filter(a => ['rejected', 'declined', 'decline', 'technical_error'].includes((a.status || '').toLowerCase()) || String(a.final_status || '').toLowerCase().includes('reject') || String(a.final_status || '').toLowerCase().includes('decline')).length
   };
 
   const totalPages = Math.ceil((total || 1) / limit);
@@ -477,7 +477,7 @@ export default function ManageApplications() {
             </div>
             <div style={{ marginTop: '12px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
               <span style={{ fontSize: '28px', fontWeight: 900, color: '#EF4444' }}>
-                {backendStatusCounts?.rejected ?? (Array.isArray(apps) ? apps : []).filter(a => String(a.status || '').toLowerCase().includes('reject') || String(a.final_status || '').toLowerCase().includes('reject')).length}
+                {backendStatusCounts?.rejected ?? (Array.isArray(apps) ? apps : []).filter(a => String(a.status || '').toLowerCase().includes('reject') || String(a.final_status || '').toLowerCase().includes('reject') || String(a.status || '').toLowerCase().includes('decline') || String(a.final_status || '').toLowerCase().includes('decline')).length}
               </span>
               <span style={{ fontSize: '11.5px', fontWeight: 700, color: C.textLight }}>Cases Requiring Resolution</span>
             </div>
