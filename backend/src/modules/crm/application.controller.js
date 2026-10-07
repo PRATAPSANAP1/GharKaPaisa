@@ -1808,10 +1808,25 @@ const listApplications = async (req, res, next) => {
               LOWER(COALESCE(combined.bank_name, '')) LIKE '%' || TRIM(REGEXP_REPLACE(LOWER(b.name), '\\s*(bank|ltd|limited|small finance bank)\\s*', '', 'g')) || '%'
               OR LOWER(COALESCE(combined.product_name, '')) LIKE '%' || TRIM(REGEXP_REPLACE(LOWER(b.name), '\\s*(bank|ltd|limited|small finance bank)\\s*', '', 'g')) || '%'
             )
+            AND (
+              (LOWER(b.name) LIKE '%tata%' AND (LOWER(COALESCE(combined.bank_name, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%tata%'))
+              OR
+              (LOWER(b.name) NOT LIKE '%tata%' AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%tata%' AND LOWER(COALESCE(combined.bank_code, '')) NOT LIKE '%tata%' AND LOWER(COALESCE(combined.product_name, '')) NOT LIKE '%tata%')
+            )
           )
           OR (
-            (LOWER(b.name) LIKE '%hdfc%' OR LOWER(b.short_code) = 'hdfc') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%hdfc%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%hdfc%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%hdfc%')
+            (LOWER(b.name) LIKE '%hdfc%' OR LOWER(b.short_code) = 'hdfc') AND LOWER(b.name) NOT LIKE '%tata%' AND (
+              (LOWER(COALESCE(combined.bank_name, '')) LIKE '%hdfc%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%hdfc%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%hdfc%')
+              AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%tata%'
+              AND LOWER(COALESCE(combined.bank_code, '')) NOT LIKE '%tata%'
+              AND LOWER(COALESCE(combined.product_name, '')) NOT LIKE '%tata%'
+            )
+          )
+          OR (
+            (LOWER(b.name) LIKE '%hdfc%' OR LOWER(b.short_code) = 'hdfc') AND LOWER(b.name) LIKE '%tata%' AND (
+              (LOWER(COALESCE(combined.bank_name, '')) LIKE '%hdfc%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%hdfc%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%hdfc%')
+              AND (LOWER(COALESCE(combined.bank_name, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%tata%')
+            )
           )
           OR (
             (LOWER(b.name) LIKE '%icici%' OR LOWER(b.short_code) = 'icici') AND
@@ -1861,6 +1876,14 @@ const listApplications = async (req, res, next) => {
               AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%tata%'
               AND LOWER(COALESCE(combined.bank_code, '')) NOT LIKE '%tata%'
               AND LOWER(COALESCE(combined.product_name, '')) NOT LIKE '%tata%'
+            )
+          )
+          OR (
+            (LOWER(b.name) LIKE '%sbi%' OR LOWER(b.short_code) = 'sbi' OR LOWER(b.name) LIKE '%state bank%')
+            AND LOWER(b.name) LIKE '%tata%'
+            AND (
+              (LOWER(COALESCE(combined.bank_name, '')) LIKE '%sbi%' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%state bank%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%sbi%')
+              AND (LOWER(COALESCE(combined.bank_name, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%tata%')
             )
           )
         )`;
@@ -1956,6 +1979,12 @@ const listApplications = async (req, res, next) => {
 
     let querableOperatorFilterSQL = '';
     if (isQuerableOperatorUser && req.user?.id) {
+      // Debug logging for Querable Operator
+      console.log('[Querable Operator Debug] User ID:', req.user.id);
+      console.log('[Querable Operator Debug] Assigned Banks:', abRows);
+      console.log('[Querable Operator Debug] Regular Bank Assignments:', regularBankAssignments);
+      console.log('[Querable Operator Debug] baseBankAccessFilterSQL:', baseBankAccessFilterSQL);
+
       const rejectDeclineCondition = `(
         (
           LOWER(COALESCE(combined.status, '')) IN ('rejected', 'declined', 'decline', 'technical_error')
@@ -1976,14 +2005,15 @@ const listApplications = async (req, res, next) => {
         )
       )`;
       querableOperatorFilterSQL = ` ${baseBankAccessFilterSQL} AND ${rejectDeclineCondition}`;
+      console.log('[Querable Operator Debug] Final Filter SQL:', querableOperatorFilterSQL);
     }
 
     if (!isPartnerOrTeam && !isSuperAdmin && req.user?.id) {
-      if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser || isQdOperatorUser || isFinalStatusOperatorUser || isQuerableOperatorUser) {
+      if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser || isQdOperatorUser || isFinalStatusOperatorUser) {
         opHeadBankFilterSQL = ``;
         countOpHeadBankFilterSQL = ``;
       } else {
-        // Regular Ops Heads should use bank filtering
+        // Querable Operator and regular Ops Heads should use bank filtering
         opHeadBankFilterSQL = baseBankAccessFilterSQL;
         countOpHeadBankFilterSQL = baseBankAccessFilterSQL;
       }
@@ -2013,6 +2043,23 @@ const listApplications = async (req, res, next) => {
         ))
       )
     `;
+
+    // Debug: Check total applications for Querable Operator before filtering
+    if (isQuerableOperatorUser && req.user?.id) {
+      const debugQuery = `
+        SELECT COUNT(*) as total,
+               COUNT(CASE WHEN combined.status IN ('rejected', 'declined', 'decline', 'technical_error') OR LOWER(combined.final_status) LIKE '%reject%' OR LOWER(combined.final_status) LIKE '%decline%' THEN 1 END) as rejected_count,
+               COUNT(CASE WHEN combined.bank_name ILIKE '%hdfc%' OR combined.bank_code ILIKE '%hdfc%' THEN 1 END) as hdfc_count
+        FROM (
+          SELECT a.status, a.final_status, b.name as bank_name, b.short_code as bank_code
+          FROM applications a
+          LEFT JOIN products p ON p.id = a.product_id
+          LEFT JOIN banks b ON b.id = COALESCE(a.bank_id, p.bank_id)
+        ) combined
+      `;
+      const debugResult = await query(debugQuery);
+      console.log('[Querable Operator Debug] Total apps check:', debugResult.rows[0]);
+    }
 
     const { rows } = await query(`
       SELECT * FROM (
