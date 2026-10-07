@@ -1687,7 +1687,7 @@ const listApplications = async (req, res, next) => {
         WHERE aba.admin_id = $1
       `, [req.user.id]);
       abRows = resAssignments.rows;
-      
+
       const isBankLocEoc = (b) => {
         const sc = (b.short_code || '').toUpperCase();
         const nm = (b.name || '').toLowerCase();
@@ -1699,208 +1699,63 @@ const listApplications = async (req, res, next) => {
       isLocEocAdmin = !!req.user?.has_loc_eoc || !!uRec?.has_loc_eoc || abRows.some(b => isBankLocEoc(b));
       regularBankAssignments = abRows.filter(b => !isBankLocEoc(b));
 
-      if (isLocEocAdmin && regularBankAssignments.length === 0) {
-        // Assigned exclusively LOC/EOC: STRICTLY see only LOC/EOC applications, NO regular bank/credit card applications
-        baseBankAccessFilterSQL = ` AND ${locEocAppSQL}`;
+      // Extract assigned bank IDs for authorization
+      const assignedBankIds = regularBankAssignments.map(b => b.bank_id);
+      const locEocBankIds = abRows.filter(b => isBankLocEoc(b)).map(b => b.bank_id);
+
+      // DEBUG LOGGING for Querable Operator
+      if (isQuerableOperatorUser) {
+        console.log('[QUERABLE_OPERATOR_AUTH] User ID:', req.user.id);
+        console.log('[QUERABLE_OPERATOR_AUTH] Designation:', userDesignation);
+        console.log('[QUERABLE_OPERATOR_AUTH] Assigned Bank IDs:', assignedBankIds);
+        console.log('[QUERABLE_OPERATOR_AUTH] LOC/EOC Bank IDs:', locEocBankIds);
+        console.log('[QUERABLE_OPERATOR_AUTH] Total Assignments:', abRows);
+      }
+
+      if (assignedBankIds.length === 0 && locEocBankIds.length === 0) {
+        // No banks assigned: block all applications
+        baseBankAccessFilterSQL = ` AND 1=0`;
+        if (isQuerableOperatorUser) {
+          console.log('[QUERABLE_OPERATOR_AUTH] Authorization: DENIED - No banks assigned');
+        }
+      } else if (isLocEocAdmin && regularBankAssignments.length === 0) {
+        // Assigned exclusively LOC/EOC: STRICTLY see only LOC/EOC applications by bank_id
+        const locEocIdsList = locEocBankIds.map(id => `'${id}'`).join(',');
+        baseBankAccessFilterSQL = ` AND (
+          combined.bank_id IN (${locEocIdsList})
+          AND ${locEocAppSQL}
+        )`;
+        if (isQuerableOperatorUser) {
+          console.log('[QUERABLE_OPERATOR_AUTH] Authorization: LOC/EOC only mode');
+          console.log('[QUERABLE_OPERATOR_AUTH] Filter SQL:', baseBankAccessFilterSQL);
+        }
       } else if (isLocEocAdmin && regularBankAssignments.length > 0) {
-        // Assigned regular bank(s) + LOC/EOC: see applications for assigned regular banks PLUS all LOC/EOC applications
-        const regIdsList = regularBankAssignments.map(b => `'${b.bank_id}'`).join(',');
-        const bankMatchCondition = `(
-          (LOWER(combined.bank_code) = LOWER(b.short_code))
-          OR (LOWER(combined.bank_name) = LOWER(b.name))
-          OR (b.short_code IS NOT NULL AND b.short_code != '' AND (
-            LOWER(COALESCE(combined.bank_name, '')) LIKE '%' || LOWER(b.short_code) || '%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%' || LOWER(b.short_code) || '%'
-          ))
-          OR (combined.bank_code IS NOT NULL AND combined.bank_code != '' AND (
-            LOWER(b.name) LIKE '%' || LOWER(combined.bank_code) || '%'
-          ))
-          OR (
-            TRIM(REGEXP_REPLACE(LOWER(b.name), '\\s*(bank|ltd|limited|small finance bank)\\s*', ' ', 'g')) != ''
-            AND (
-              LOWER(COALESCE(combined.bank_name, '')) LIKE '%' || TRIM(REGEXP_REPLACE(LOWER(b.name), '\\s*(bank|ltd|limited|small finance bank)\\s*', '', 'g')) || '%'
-              OR LOWER(COALESCE(combined.product_name, '')) LIKE '%' || TRIM(REGEXP_REPLACE(LOWER(b.name), '\\s*(bank|ltd|limited|small finance bank)\\s*', '', 'g')) || '%'
-            )
-          )
-          OR (
-            (LOWER(b.name) LIKE '%hdfc%' OR LOWER(b.short_code) = 'hdfc') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%hdfc%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%hdfc%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%hdfc%')
-          )
-          OR (
-            (LOWER(b.name) LIKE '%icici%' OR LOWER(b.short_code) = 'icici') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%icici%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%icici%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%icici%')
-          )
-          OR (
-            (LOWER(b.name) LIKE '%axis%' OR LOWER(b.short_code) = 'axis') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%axis%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%axis%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%axis%')
-          )
-          OR (
-            (LOWER(b.name) LIKE '%kotak%' OR LOWER(b.short_code) = 'kotak') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%kotak%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%kotak%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%kotak%')
-          )
-          OR (
-            (LOWER(b.name) LIKE '%idfc%' OR LOWER(b.short_code) = 'idfc') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%idfc%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%idfc%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%idfc%')
-          )
-          OR (
-            (LOWER(b.name) LIKE '%baroda%' OR LOWER(b.short_code) = 'bob') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%baroda%' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%bob%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%baroda%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%bob%')
-          )
-          OR (
-            (LOWER(b.name) LIKE '%rbl%' OR LOWER(b.short_code) = 'rbl') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%rbl%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%rbl%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%rbl%')
-          )
-          OR (
-            (LOWER(b.name) LIKE '%au %' OR LOWER(b.name) LIKE '%au small%' OR LOWER(b.short_code) = 'au') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%au%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%au%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%au%')
-          )
-          OR (
-            (LOWER(b.name) LIKE '%indusind%' OR LOWER(b.short_code) = 'indusind') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%indusind%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%indusind%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%indusind%')
-          )
-          OR (
-            (LOWER(b.name) LIKE '%yes %' OR LOWER(b.name) LIKE '%yes bank%' OR LOWER(b.short_code) = 'yes') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%yes%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%yes%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%yes%')
-          )
-          OR (
-            (LOWER(b.name) LIKE '%federal%' OR LOWER(b.short_code) = 'federal') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%federal%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%federal%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%federal%')
-          )
-          OR (
-            (LOWER(b.name) LIKE '%sbi%' OR LOWER(b.short_code) = 'sbi' OR LOWER(b.name) LIKE '%state bank%')
-            AND LOWER(b.name) NOT LIKE '%tata%'
-            AND (
-              (LOWER(COALESCE(combined.bank_name, '')) LIKE '%sbi%' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%state bank%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%sbi%')
-              AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%tata%'
-              AND LOWER(COALESCE(combined.bank_code, '')) NOT LIKE '%tata%'
-              AND LOWER(COALESCE(combined.product_name, '')) NOT LIKE '%tata%'
-            )
-          )
-        )`;
+        // Assigned regular bank(s) + LOC/EOC: see applications for assigned regular banks by bank_id PLUS all LOC/EOC applications
+        const regIdsList = assignedBankIds.map(id => `'${id}'`).join(',');
         baseBankAccessFilterSQL = ` AND (
           combined.bank_id IN (${regIdsList})
-          OR EXISTS (
-            SELECT 1 FROM admin_bank_assignments aba 
-            JOIN banks b ON b.id = aba.bank_id 
-            WHERE aba.admin_id = '${req.user.id}' 
-            AND UPPER(COALESCE(b.short_code, '')) NOT IN ('LOC_EOC', 'LOC', 'EOC')
-            AND NOT (b.name ~* 'loc|loan on card|smart emi|smartemi')
-            AND ${bankMatchCondition}
-          )
-          OR ${locEocAppSQL}
+          OR (${locEocAppSQL})
         )`;
+        if (isQuerableOperatorUser) {
+          console.log('[QUERABLE_OPERATOR_AUTH] Authorization: Regular + LOC/EOC mode');
+          console.log('[QUERABLE_OPERATOR_AUTH] Regular Bank IDs:', regIdsList);
+          console.log('[QUERABLE_OPERATOR_AUTH] Filter SQL:', baseBankAccessFilterSQL);
+        }
       } else if (regularBankAssignments.length > 0) {
-        // Assigned regular bank(s) only: see ONLY applications for assigned banks (and no LOC/EOC unless belonging to that bank's credit cards)
-        const regIdsList = regularBankAssignments.map(b => `'${b.bank_id}'`).join(',');
-        const bankMatchCondition = `(
-          (LOWER(combined.bank_code) = LOWER(b.short_code))
-          OR (LOWER(combined.bank_name) = LOWER(b.name))
-          OR (b.short_code IS NOT NULL AND b.short_code != '' AND (
-            LOWER(COALESCE(combined.bank_name, '')) LIKE '%' || LOWER(b.short_code) || '%'
-            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%' || LOWER(b.short_code) || '%'
-          ))
-          OR (combined.bank_code IS NOT NULL AND combined.bank_code != '' AND (
-            LOWER(b.name) LIKE '%' || LOWER(combined.bank_code) || '%'
-          ))
-          OR (
-            TRIM(REGEXP_REPLACE(LOWER(b.name), '\\s*(bank|ltd|limited|small finance bank)\\s*', ' ', 'g')) != ''
-            AND (
-              LOWER(COALESCE(combined.bank_name, '')) LIKE '%' || TRIM(REGEXP_REPLACE(LOWER(b.name), '\\s*(bank|ltd|limited|small finance bank)\\s*', '', 'g')) || '%'
-              OR LOWER(COALESCE(combined.product_name, '')) LIKE '%' || TRIM(REGEXP_REPLACE(LOWER(b.name), '\\s*(bank|ltd|limited|small finance bank)\\s*', '', 'g')) || '%'
-            )
-            AND (
-              (LOWER(b.name) LIKE '%tata%' AND (LOWER(COALESCE(combined.bank_name, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%tata%'))
-              OR
-              (LOWER(b.name) NOT LIKE '%tata%' AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%tata%' AND LOWER(COALESCE(combined.bank_code, '')) NOT LIKE '%tata%' AND LOWER(COALESCE(combined.product_name, '')) NOT LIKE '%tata%')
-            )
-          )
-          OR (
-            (LOWER(b.name) LIKE '%hdfc%' OR LOWER(b.short_code) = 'hdfc') AND LOWER(b.name) NOT LIKE '%tata%' AND (
-              (LOWER(COALESCE(combined.bank_name, '')) LIKE '%hdfc%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%hdfc%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%hdfc%')
-              AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%tata%'
-              AND LOWER(COALESCE(combined.bank_code, '')) NOT LIKE '%tata%'
-              AND LOWER(COALESCE(combined.product_name, '')) NOT LIKE '%tata%'
-            )
-          )
-          OR (
-            (LOWER(b.name) LIKE '%hdfc%' OR LOWER(b.short_code) = 'hdfc') AND LOWER(b.name) LIKE '%tata%' AND (
-              (LOWER(COALESCE(combined.bank_name, '')) LIKE '%hdfc%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%hdfc%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%hdfc%')
-              AND (LOWER(COALESCE(combined.bank_name, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%tata%')
-            )
-          )
-          OR (
-            (LOWER(b.name) LIKE '%icici%' OR LOWER(b.short_code) = 'icici') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%icici%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%icici%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%icici%')
-          )
-          OR (
-            (LOWER(b.name) LIKE '%axis%' OR LOWER(b.short_code) = 'axis') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%axis%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%axis%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%axis%')
-          )
-          OR (
-            (LOWER(b.name) LIKE '%kotak%' OR LOWER(b.short_code) = 'kotak') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%kotak%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%kotak%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%kotak%')
-          )
-          OR (
-            (LOWER(b.name) LIKE '%idfc%' OR LOWER(b.short_code) = 'idfc') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%idfc%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%idfc%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%idfc%')
-          )
-          OR (
-            (LOWER(b.name) LIKE '%baroda%' OR LOWER(b.short_code) = 'bob') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%baroda%' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%bob%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%baroda%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%bob%')
-          )
-          OR (
-            (LOWER(b.name) LIKE '%rbl%' OR LOWER(b.short_code) = 'rbl') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%rbl%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%rbl%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%rbl%')
-          )
-          OR (
-            (LOWER(b.name) LIKE '%au %' OR LOWER(b.name) LIKE '%au small%' OR LOWER(b.short_code) = 'au') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%au%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%au%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%au%')
-          )
-          OR (
-            (LOWER(b.name) LIKE '%indusind%' OR LOWER(b.short_code) = 'indusind') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%indusind%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%indusind%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%indusind%')
-          )
-          OR (
-            (LOWER(b.name) LIKE '%yes %' OR LOWER(b.name) LIKE '%yes bank%' OR LOWER(b.short_code) = 'yes') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%yes%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%yes%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%yes%')
-          )
-          OR (
-            (LOWER(b.name) LIKE '%federal%' OR LOWER(b.short_code) = 'federal') AND
-            (LOWER(COALESCE(combined.bank_name, '')) LIKE '%federal%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%federal%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%federal%')
-          )
-          OR (
-            (LOWER(b.name) LIKE '%sbi%' OR LOWER(b.short_code) = 'sbi' OR LOWER(b.name) LIKE '%state bank%')
-            AND LOWER(b.name) NOT LIKE '%tata%'
-            AND (
-              (LOWER(COALESCE(combined.bank_name, '')) LIKE '%sbi%' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%state bank%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%sbi%')
-              AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%tata%'
-              AND LOWER(COALESCE(combined.bank_code, '')) NOT LIKE '%tata%'
-              AND LOWER(COALESCE(combined.product_name, '')) NOT LIKE '%tata%'
-            )
-          )
-          OR (
-            (LOWER(b.name) LIKE '%sbi%' OR LOWER(b.short_code) = 'sbi' OR LOWER(b.name) LIKE '%state bank%')
-            AND LOWER(b.name) LIKE '%tata%'
-            AND (
-              (LOWER(COALESCE(combined.bank_name, '')) LIKE '%sbi%' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%state bank%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%sbi%')
-              AND (LOWER(COALESCE(combined.bank_name, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%tata%')
-            )
-          )
-        )`;
-        baseBankAccessFilterSQL = ` AND (
-          combined.bank_id IN (${regIdsList})
-          OR EXISTS (
-            SELECT 1 FROM admin_bank_assignments aba 
-            JOIN banks b ON b.id = aba.bank_id 
-            WHERE aba.admin_id = '${req.user.id}' 
-            AND UPPER(COALESCE(b.short_code, '')) NOT IN ('LOC_EOC', 'LOC', 'EOC')
-            AND NOT (b.name ~* 'loc|loan on card|smart emi|smartemi')
-            AND ${bankMatchCondition}
-          )
-        )`;
+        // Assigned regular bank(s) only: see ONLY applications for assigned banks by bank_id
+        const regIdsList = assignedBankIds.map(id => `'${id}'`).join(',');
+        baseBankAccessFilterSQL = ` AND combined.bank_id IN (${regIdsList})`;
+        if (isQuerableOperatorUser) {
+          console.log('[QUERABLE_OPERATOR_AUTH] Authorization: Regular banks only mode');
+          console.log('[QUERABLE_OPERATOR_AUTH] Bank IDs:', regIdsList);
+          console.log('[QUERABLE_OPERATOR_AUTH] Filter SQL:', baseBankAccessFilterSQL);
+        }
       } else {
         // Non-super-admin with NO banks assigned: block all applications
         baseBankAccessFilterSQL = ` AND 1=0`;
+        if (isQuerableOperatorUser) {
+          console.log('[QUERABLE_OPERATOR_AUTH] Authorization: DENIED - No banks assigned');
+        }
       }
     }
 
@@ -1979,12 +1834,6 @@ const listApplications = async (req, res, next) => {
 
     let querableOperatorFilterSQL = '';
     if (isQuerableOperatorUser && req.user?.id) {
-      // Debug logging for Querable Operator
-      console.log('[Querable Operator Debug] User ID:', req.user.id);
-      console.log('[Querable Operator Debug] Assigned Banks:', abRows);
-      console.log('[Querable Operator Debug] Regular Bank Assignments:', regularBankAssignments);
-      console.log('[Querable Operator Debug] baseBankAccessFilterSQL:', baseBankAccessFilterSQL);
-
       const rejectDeclineCondition = `(
         (
           LOWER(COALESCE(combined.status, '')) IN ('rejected', 'declined', 'decline', 'technical_error')
@@ -2005,7 +1854,7 @@ const listApplications = async (req, res, next) => {
         )
       )`;
       querableOperatorFilterSQL = ` ${baseBankAccessFilterSQL} AND ${rejectDeclineCondition}`;
-      console.log('[Querable Operator Debug] Final Filter SQL:', querableOperatorFilterSQL);
+      console.log('[QUERABLE_OPERATOR_AUTH] Final Filter SQL:', querableOperatorFilterSQL);
     }
 
     if (!isPartnerOrTeam && !isSuperAdmin && req.user?.id) {
@@ -2043,23 +1892,6 @@ const listApplications = async (req, res, next) => {
         ))
       )
     `;
-
-    // Debug: Check total applications for Querable Operator before filtering
-    if (isQuerableOperatorUser && req.user?.id) {
-      const debugQuery = `
-        SELECT COUNT(*) as total,
-               COUNT(CASE WHEN combined.status IN ('rejected', 'declined', 'decline', 'technical_error') OR LOWER(combined.final_status) LIKE '%reject%' OR LOWER(combined.final_status) LIKE '%decline%' THEN 1 END) as rejected_count,
-               COUNT(CASE WHEN combined.bank_name ILIKE '%hdfc%' OR combined.bank_code ILIKE '%hdfc%' THEN 1 END) as hdfc_count
-        FROM (
-          SELECT a.status, a.final_status, b.name as bank_name, b.short_code as bank_code
-          FROM applications a
-          LEFT JOIN products p ON p.id = a.product_id
-          LEFT JOIN banks b ON b.id = COALESCE(a.bank_id, p.bank_id)
-        ) combined
-      `;
-      const debugResult = await query(debugQuery);
-      console.log('[Querable Operator Debug] Total apps check:', debugResult.rows[0]);
-    }
 
     const { rows } = await query(`
       SELECT * FROM (
@@ -2268,6 +2100,21 @@ const listApplications = async (req, res, next) => {
       ORDER BY combined.created_at DESC
       LIMIT $6 OFFSET $7
     `, queryParams);
+
+    // Debug: Log returned applications for Querable Operator
+    if (isQuerableOperatorUser && req.user?.id) {
+      console.log('[QUERABLE_OPERATOR_AUTH] Returned applications count:', rows.length);
+      rows.forEach(row => {
+        console.log('[QUERABLE_OPERATOR_AUTH] Application:', {
+          id: row.id,
+          app_number: row.app_number,
+          bank_id: row.bank_id,
+          bank_name: row.bank_name,
+          status: row.status,
+          final_status: row.final_status
+        });
+      });
+    }
 
     // Count query with synchronized status filter
     const countScopeSQL = `
@@ -2690,6 +2537,41 @@ const getApplication = async (req, res, next) => {
       const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       if (!partner || app.partner_id !== partner.id) {
         return forbidden(res, 'Access denied. You do not own this application.');
+      }
+    }
+
+    const reqUserDesignation = (req.user?.designation || '').toUpperCase();
+    const reqUserRole = (req.user?.role || '').toUpperCase();
+    const isQuerableUser = ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(reqUserDesignation) || ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(reqUserRole);
+
+    if (isQuerableUser && reqUserRole !== 'SUPER_ADMIN' && req.user?.id) {
+      const s = String(app.status || '').toLowerCase();
+      const fs = String(app.final_status || '').toLowerCase();
+      const bs = String(app.bank_current_lead_status || '').toLowerCase();
+      const isRejected = (
+        ['rejected', 'declined', 'decline', 'technical_error'].includes(s) ||
+        s.includes('reject') || s.includes('decline') ||
+        fs.includes('reject') || fs.includes('decline') ||
+        bs.includes('reject') || bs.includes('decline')
+      ) && !(['cancelled', 'cancel', 'canceled'].includes(s) || s.includes('cancel') || fs.includes('cancel') || bs.includes('cancel'));
+
+      if (!isRejected) {
+        return forbidden(res, 'Access denied: Querable Operators are only authorized to access rejected/declined applications.');
+      }
+
+      let appBankId = app.bank_id;
+      if (!appBankId && app.product_id) {
+        const { rows: [prodRec] } = await query(`SELECT bank_id FROM products WHERE id = $1`, [app.product_id]).catch(() => ({ rows: [] }));
+        appBankId = prodRec?.bank_id;
+      }
+
+      const { rows: userAssignments } = await query(
+        `SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`,
+        [req.user.id]
+      );
+      const assignedBankIds = userAssignments.map(b => String(b.bank_id));
+      if (!appBankId || !assignedBankIds.includes(String(appBankId))) {
+        return forbidden(res, 'Access denied: You are not authorized to view applications for this bank.');
       }
     }
 
