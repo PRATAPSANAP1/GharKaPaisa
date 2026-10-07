@@ -218,7 +218,7 @@ export default function ManageLoanApplications() {
     setSelectedLead(lead);
     const cat = (lead.category || '').toLowerCase();
     const cName = (lead.card_name || '').toLowerCase();
-    const isEmi = cat === 'smart_emi' || cat === 'eoc' || cName.includes('emi') || cName.includes('smartemi');
+    const isEmi = cat === 'smart_emi' || cat === 'eoc' || cat === 'smartemi' || cat === 'emi' || cName.includes('emi') || cName.includes('smartemi');
     const isLocEoc = cat === 'loc_eoc';
     setLoanForm({
       id: lead.id,
@@ -313,21 +313,21 @@ export default function ManageLoanApplications() {
   const locEocCount = (Array.isArray(leads) ? leads : []).filter(l => {
     const cat = (l.category || '').toLowerCase();
     const cName = (l.card_name || '').toLowerCase();
-    return ['loc_eoc', 'loc', 'eoc', 'loan_on_credit_card', 'smart_emi'].includes(cat) ||
-      cName.includes('loan') || cName.includes('emi') || cName.includes('insta') || cName.includes('jumbo');
+    return ['loc_eoc', 'loc', 'eoc', 'loan_on_credit_card', 'smart_emi', 'loan', 'loans'].includes(cat) ||
+      cName.includes('loan') || cName.includes('emi') || cName.includes('insta') || cName.includes('instant') || cName.includes('jumbo') || cName.includes('encash');
   }).length;
 
   const loanOnCardCount = (Array.isArray(leads) ? leads : []).filter(l => {
     const cat = (l.category || '').toLowerCase();
     const cName = (l.card_name || '').toLowerCase();
-    return cat === 'loan_on_credit_card' || cat === 'loc' ||
-      ((cName.includes('loan') || cName.includes('insta') || cName.includes('jumbo')) && !cName.includes('emi'));
+    const isEmi = cat === 'smart_emi' || cat === 'eoc' || cat === 'smartemi' || cat === 'emi' || cName.includes('emi') || cName.includes('smartemi');
+    return !isEmi && (cat === 'loan_on_credit_card' || cat === 'loc' || cat === 'loan_on_card' || cName.includes('loan') || cName.includes('insta') || cName.includes('instant') || cName.includes('jumbo') || cName.includes('encash'));
   }).length;
 
   const smartEmiCount = (Array.isArray(leads) ? leads : []).filter(l => {
     const cat = (l.category || '').toLowerCase();
     const cName = (l.card_name || '').toLowerCase();
-    return cat === 'smart_emi' || cat === 'eoc' || cName.includes('emi') || cName.includes('smartemi');
+    return cat === 'smart_emi' || cat === 'eoc' || cat === 'smartemi' || cat === 'emi' || cName.includes('emi') || cName.includes('smartemi');
   }).length;
 
   const verifiedCount = (Array.isArray(leads) ? leads : []).filter(l => 
@@ -524,9 +524,9 @@ export default function ManageLoanApplications() {
                 {leads.map((lead) => {
                   const cat = (lead.category || '').toLowerCase();
                   const cName = (lead.card_name || '').toLowerCase();
-                  const isEmi = cat === 'smart_emi' || cat === 'eoc' || cName.includes('emi') || cName.includes('smartemi');
-                  const isLoc = cat === 'loan_on_credit_card' || cat === 'loc' || cName.includes('insta loan') || cName.includes('jumbo loan') || cName.includes('loan on card') || cName.includes('loan on credit card');
-                  const isGeneralLocEoc = cat === 'loc_eoc';
+                  const isEmi = cat === 'smart_emi' || cat === 'eoc' || cat === 'smartemi' || cat === 'emi' || cName.includes('emi') || cName.includes('smartemi');
+                  const isLoc = cat === 'loan_on_credit_card' || cat === 'loc' || cat === 'loan_on_card' || (!isEmi && (cName.includes('loan') || cName.includes('insta') || cName.includes('instant') || cName.includes('jumbo') || cName.includes('encash')));
+                  const isGeneralLocEoc = cat === 'loc_eoc' && !isEmi && !isLoc;
 
                   let catLabel = 'Loan on Card (LOC)';
                   let badgeBg = `${C.primary}15`;
