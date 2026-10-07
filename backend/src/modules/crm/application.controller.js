@@ -107,13 +107,8 @@ const assertQuerableOperatorApplicationAccess = async (req, app) => {
   if (!req?.user || !app) return;
   if (!checkQuerableUserRole(req)) return;
 
-  const status = String(app.status || '').toLowerCase();
-  const rejected = (
-    ['rejected', 'declined', 'decline', 'technical_error'].includes(status) ||
-    status.includes('reject') || status.includes('decline')
-  );
-
-  if (!rejected) {
+  const status = String(app.status || '').toLowerCase().trim();
+  if (status !== 'rejected') {
     const err = new Error('QUERABLE_OPERATOR_STATUS_ACCESS_DENIED: Access denied. Querable Operators are only authorized to access rejected applications.');
     err.statusCode = 403;
     throw err;
@@ -1712,9 +1707,6 @@ const listApplications = async (req, res, next) => {
     const userDesignation = (req.user?.designation || '').toUpperCase();
     const isQuerableOperatorUser = ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
     let rawStatus = status && status.trim() ? status.trim() : null;
-    if (isQuerableOperatorUser) {
-      rawStatus = 'rejected';
-    }
     const validStatus = rawStatus;
     const validSearch = search && search.trim() ? `%${search.trim()}%` : null;
     const validProcessBy = process_by && process_by.trim() ? process_by.trim() : null;
@@ -1905,12 +1897,7 @@ const listApplications = async (req, res, next) => {
         querableOperatorFilterSQL = ` AND 1=0`;
       } else {
         const assignedIds = abRows.map(b => `'${b.bank_id}'`).join(',');
-        const rejectDeclineCondition = `(
-          LOWER(COALESCE(combined.status, '')) IN ('rejected', 'declined', 'decline', 'technical_error')
-          OR LOWER(COALESCE(combined.status, '')) LIKE '%reject%'
-          OR LOWER(COALESCE(combined.status, '')) LIKE '%decline%'
-        )`;
-        querableOperatorFilterSQL = ` AND combined.bank_id IN (${assignedIds}) AND ${rejectDeclineCondition}`;
+        querableOperatorFilterSQL = ` AND combined.bank_id IN (${assignedIds}) AND LOWER(COALESCE(combined.status, '')) = 'rejected'`;
       }
     }
 

@@ -18,11 +18,8 @@ async function runQuerableOperatorTests() {
       const bankMatched = assignedBankIds.includes(candidateApp.bank_id);
       if (!bankMatched) return false;
 
-      const s = String(candidateApp.status || '').toLowerCase();
-      const isRejected = (
-        ['rejected', 'declined', 'decline', 'technical_error'].includes(s) ||
-        s.includes('reject') || s.includes('decline')
-      );
+      const s = String(candidateApp.status || '').toLowerCase().trim();
+      const isRejected = s === 'rejected';
 
       return isRejected;
     }
