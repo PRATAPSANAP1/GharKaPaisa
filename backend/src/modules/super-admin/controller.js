@@ -229,10 +229,10 @@ const createAdmin = async (req, res, next) => {
 const listAdmins = async (req, res, next) => {
   try {
     const roleFilter = req.query.role ? String(req.query.role).trim().toUpperCase() : null;
-    let whereClause = `WHERE role IN ('ADMIN', 'SUPER_ADMIN', 'KYC_OPERATOR', 'HR', 'QUERABLE_OPERATOR', 'QUERYABLE_OPERATOR') OR designation IN ('Operational Head', 'Administrative Operator', 'Administrative Sales Executive', 'PAN Checker', 'Remark Operator', 'QD Operator', 'KYC Operator', 'Final Status Operator', 'Querable Operator', 'Queryable Operator', 'Backend', 'Super Admin')`;
+    let whereClause = `WHERE role::text IN ('ADMIN', 'SUPER_ADMIN', 'KYC_OPERATOR', 'HR', 'QUERABLE_OPERATOR', 'QUERYABLE_OPERATOR') OR designation IN ('Operational Head', 'Administrative Operator', 'Administrative Sales Executive', 'PAN Checker', 'Remark Operator', 'QD Operator', 'KYC Operator', 'Final Status Operator', 'Querable Operator', 'Queryable Operator', 'Backend', 'Super Admin')`;
     const params = [];
     if (roleFilter && roleFilter !== 'ALL' && roleFilter !== 'ADMIN') {
-      whereClause = `WHERE role = $1`;
+      whereClause = `WHERE role::text = $1`;
       params.push(roleFilter);
     }
 
