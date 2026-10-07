@@ -133,24 +133,45 @@ const assertQuerableOperatorApplicationAccess = async (req, app) => {
     throw err;
   }
 
+  const { rows } = await query(
+    `SELECT aba.bank_id, b.name as bank_name, b.short_code as bank_code
+     FROM admin_bank_assignments aba
+     LEFT JOIN banks b ON b.id = aba.bank_id
+     WHERE aba.admin_id = $1`,
+    [req.user.id]
+  );
+
+  if (!rows.length) {
+    const err = new Error('QUERABLE_OPERATOR_BANK_ACCESS_DENIED: You have no assigned banks.');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  const assignedBankIds = rows.map(r => String(r.bank_id));
   let appBankId = app.bank_id;
   if (!appBankId && app.product_id) {
     const { rows: [pRec] } = await query(`SELECT bank_id FROM products WHERE id = $1`, [app.product_id]).catch(() => ({ rows: [] }));
     appBankId = pRec?.bank_id;
   }
 
-  if (!appBankId) {
-    const err = new Error('QUERABLE_OPERATOR_BANK_ACCESS_DENIED: Application bank identity cannot be verified.');
-    err.statusCode = 403;
-    throw err;
+  let isAuthorized = false;
+  if (appBankId && assignedBankIds.includes(String(appBankId))) {
+    isAuthorized = true;
+  } else {
+    const appBankName = String(app.bank_name || '').toLowerCase();
+    const appBankCode = String(app.bank_code || '').toLowerCase();
+    isAuthorized = rows.some(b => {
+      const bName = String(b.bank_name || '').toLowerCase();
+      const bCode = String(b.bank_code || '').toLowerCase();
+      if (!bName && !bCode) return false;
+      return (
+        (bCode && (appBankCode.includes(bCode) || appBankName.includes(bCode))) ||
+        (bName && (appBankName.includes(bName) || bName.includes(appBankName)))
+      );
+    });
   }
 
-  const { rows } = await query(
-    `SELECT 1 FROM admin_bank_assignments WHERE admin_id = $1 AND bank_id = $2 LIMIT 1`,
-    [req.user.id, appBankId]
-  );
-
-  if (!rows.length) {
+  if (!isAuthorized) {
     const err = new Error('QUERABLE_OPERATOR_BANK_ACCESS_DENIED: You are not authorized to access applications for this bank.');
     err.statusCode = 403;
     throw err;
@@ -1796,54 +1817,46 @@ const listApplications = async (req, res, next) => {
         console.log('[QUERABLE_OPERATOR_AUTH] User ID:', req.user.id);
         console.log('[QUERABLE_OPERATOR_AUTH] Designation:', userDesignation);
         console.log('[QUERABLE_OPERATOR_AUTH] Assigned Bank IDs:', assignedBankIds);
-        console.log('[QUERABLE_OPERATOR_AUTH] LOC/EOC Bank IDs:', locEocBankIds);
-        console.log('[QUERABLE_OPERATOR_AUTH] Total Assignments:', abRows);
       }
 
-      if (assignedBankIds.length === 0 && locEocBankIds.length === 0) {
+      const buildBankMatchSQL = (bankRows) => {
+        if (!bankRows || bankRows.length === 0) return '1=0';
+        const idsList = bankRows.map(b => `'${b.bank_id}'`).join(',');
+        const hasTata = bankRows.some(b => (b.name || '').toLowerCase().includes('tata') || (b.short_code || '').toLowerCase().includes('tata'));
+        const tataClause = hasTata ? '' : ` AND NOT (LOWER(COALESCE(combined.bank_name, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%tata%')`;
+        return `(
+          (
+            combined.bank_id IN (${idsList})
+            OR combined.product_id IN (SELECT id FROM products WHERE bank_id IN (${idsList}))
+            OR EXISTS (
+              SELECT 1 FROM banks b
+              WHERE b.id IN (${idsList})
+              AND (
+                (LOWER(b.short_code) IS NOT NULL AND LOWER(b.short_code) != '' AND (LOWER(COALESCE(combined.bank_code, '')) LIKE '%' || LOWER(b.short_code) || '%' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%' || LOWER(b.short_code) || '%'))
+                OR (LOWER(b.name) IS NOT NULL AND (LOWER(COALESCE(combined.bank_name, '')) LIKE '%' || LOWER(b.name) || '%' OR LOWER(b.name) LIKE '%' || LOWER(COALESCE(combined.bank_name, '')) || '%'))
+              )
+            )
+          )${tataClause}
+        )`;
+      };
+
+      if (abRows.length === 0) {
         // No banks assigned: block all applications
         baseBankAccessFilterSQL = ` AND 1=0`;
-        if (isQuerableOperatorUser) {
-          console.log('[QUERABLE_OPERATOR_AUTH] Authorization: DENIED - No banks assigned');
-        }
       } else if (isLocEocAdmin && regularBankAssignments.length === 0) {
-        // Assigned exclusively LOC/EOC: STRICTLY see only LOC/EOC applications by bank_id
-        const locEocIdsList = locEocBankIds.map(id => `'${id}'`).join(',');
         baseBankAccessFilterSQL = ` AND (
-          combined.bank_id IN (${locEocIdsList})
+          ${buildBankMatchSQL(abRows)}
           AND ${locEocAppSQL}
         )`;
-        if (isQuerableOperatorUser) {
-          console.log('[QUERABLE_OPERATOR_AUTH] Authorization: LOC/EOC only mode');
-          console.log('[QUERABLE_OPERATOR_AUTH] Filter SQL:', baseBankAccessFilterSQL);
-        }
       } else if (isLocEocAdmin && regularBankAssignments.length > 0) {
-        // Assigned regular bank(s) + LOC/EOC: see applications for assigned regular banks by bank_id PLUS all LOC/EOC applications
-        const regIdsList = assignedBankIds.map(id => `'${id}'`).join(',');
         baseBankAccessFilterSQL = ` AND (
-          combined.bank_id IN (${regIdsList})
+          ${buildBankMatchSQL(regularBankAssignments)}
           OR (${locEocAppSQL})
         )`;
-        if (isQuerableOperatorUser) {
-          console.log('[QUERABLE_OPERATOR_AUTH] Authorization: Regular + LOC/EOC mode');
-          console.log('[QUERABLE_OPERATOR_AUTH] Regular Bank IDs:', regIdsList);
-          console.log('[QUERABLE_OPERATOR_AUTH] Filter SQL:', baseBankAccessFilterSQL);
-        }
       } else if (regularBankAssignments.length > 0) {
-        // Assigned regular bank(s) only: see ONLY applications for assigned banks by bank_id
-        const regIdsList = assignedBankIds.map(id => `'${id}'`).join(',');
-        baseBankAccessFilterSQL = ` AND combined.bank_id IN (${regIdsList})`;
-        if (isQuerableOperatorUser) {
-          console.log('[QUERABLE_OPERATOR_AUTH] Authorization: Regular banks only mode');
-          console.log('[QUERABLE_OPERATOR_AUTH] Bank IDs:', regIdsList);
-          console.log('[QUERABLE_OPERATOR_AUTH] Filter SQL:', baseBankAccessFilterSQL);
-        }
+        baseBankAccessFilterSQL = ` AND ${buildBankMatchSQL(regularBankAssignments)}`;
       } else {
-        // Non-super-admin with NO banks assigned: block all applications
-        baseBankAccessFilterSQL = ` AND 1=0`;
-        if (isQuerableOperatorUser) {
-          console.log('[QUERABLE_OPERATOR_AUTH] Authorization: DENIED - No banks assigned');
-        }
+        baseBankAccessFilterSQL = ` AND ${buildBankMatchSQL(abRows)}`;
       }
     }
 
@@ -1922,27 +1935,32 @@ const listApplications = async (req, res, next) => {
 
     let querableOperatorFilterSQL = '';
     if (isQuerableOperatorUser && req.user?.id) {
-      const rejectDeclineCondition = `(
-        (
-          LOWER(COALESCE(combined.status, '')) IN ('rejected', 'declined', 'decline', 'technical_error')
-          OR LOWER(COALESCE(combined.status, '')) LIKE '%reject%'
-          OR LOWER(COALESCE(combined.status, '')) LIKE '%decline%'
-          OR LOWER(COALESCE(combined.final_status, '')) IN ('rejected', 'declined', 'decline', 'technical_error')
-          OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%'
-          OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'
-          OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%reject%'
-          OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%decline%'
-        )
-        AND NOT (
-          LOWER(COALESCE(combined.status, '')) IN ('cancelled', 'cancel', 'canceled')
-          OR LOWER(COALESCE(combined.status, '')) LIKE '%cancel%'
-          OR LOWER(COALESCE(combined.final_status, '')) IN ('cancelled', 'cancel', 'canceled')
-          OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'
-          OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%cancel%'
-        )
-      )`;
-      querableOperatorFilterSQL = ` ${baseBankAccessFilterSQL} AND ${rejectDeclineCondition}`;
-      console.log('[QUERABLE_OPERATOR_AUTH] Final Filter SQL:', querableOperatorFilterSQL);
+      if (abRows.length === 0) {
+        querableOperatorFilterSQL = ` AND 1=0`;
+      } else {
+        const rejectDeclineCondition = `(
+          (
+            LOWER(COALESCE(combined.status, '')) IN ('rejected', 'declined', 'decline', 'technical_error')
+            OR LOWER(COALESCE(combined.status, '')) LIKE '%reject%'
+            OR LOWER(COALESCE(combined.status, '')) LIKE '%decline%'
+            OR LOWER(COALESCE(combined.final_status, '')) IN ('rejected', 'declined', 'decline', 'technical_error')
+            OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%'
+            OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'
+            OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%reject%'
+            OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%decline%'
+          )
+          AND NOT (
+            LOWER(COALESCE(combined.status, '')) IN ('cancelled', 'cancel', 'canceled')
+            OR LOWER(COALESCE(combined.status, '')) LIKE '%cancel%'
+            OR LOWER(COALESCE(combined.final_status, '')) IN ('cancelled', 'cancel', 'canceled')
+            OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'
+            OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%cancel%'
+          )
+        )`;
+        const querableBankMatch = buildBankMatchSQL(abRows);
+        querableOperatorFilterSQL = ` AND ${querableBankMatch} AND ${rejectDeclineCondition}`;
+        console.log('[QUERABLE_OPERATOR_AUTH] Final Filter SQL:', querableOperatorFilterSQL);
+      }
     }
 
     if (!isPartnerOrTeam && !isSuperAdmin && req.user?.id) {
