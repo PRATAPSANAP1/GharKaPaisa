@@ -97,7 +97,12 @@ const getMe = async (req, res, next) => {
       user.account_number = 'XXXX' + decrypted.slice(-4);
     }
 
-    if (['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'HR'].includes(user.role)) {
+    const userRole = (user.role || '').toUpperCase();
+    const userDesignation = (user.designation || '').toUpperCase();
+    const isStaffOrOperator = ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'HR', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'ADMINISTRATIVE_OPERATOR', 'PAN_CHECKER', 'QD_OPERATOR', 'REMARK_OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole)
+      || ['OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'PAN CHECKER', 'QD OPERATOR', 'REMARK OPERATOR', 'FINAL STATUS OPERATOR', 'QUERABLE OPERATOR', 'QUERYABLE OPERATOR', 'BACKEND', 'BACKEND OPERATION'].includes(userDesignation);
+
+    if (isStaffOrOperator) {
       const { rows: rawAssignedBanks } = await query(`
         SELECT b.id, b.name, b.short_code, b.short_code as code
         FROM admin_bank_assignments aba
@@ -522,8 +527,14 @@ const login = async (req, res, next) => {
           user.role === 'EMPLOYEE' ? '/employee/dashboard' :
             '/partner/dashboard';
 
+    const loginUserRole = (user.role || '').toUpperCase();
+    const loginUserDesignation = (user.designation || '').toUpperCase();
+    const isStaffOrOperatorLogin = ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'HR', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'ADMINISTRATIVE_OPERATOR', 'PAN_CHECKER', 'QD_OPERATOR', 'REMARK_OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE_OPERATOR'].includes(loginUserRole)
+      || ['OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'PAN CHECKER', 'QD OPERATOR', 'REMARK OPERATOR', 'FINAL STATUS OPERATOR', 'QUERABLE OPERATOR', 'QUERYABLE OPERATOR', 'BACKEND', 'BACKEND OPERATION'].includes(loginUserDesignation);
+
     let permissions = null;
-    if (['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'HR'].includes(user.role)) {
+    let assignedBanks = [];
+    if (isStaffOrOperatorLogin) {
       const { rows: rawAssignedBanks } = await query(
         `SELECT b.id, b.name, b.short_code, b.short_code as code FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = $1`, [user.id]
       ).catch(() => ({ rows: [] }));
@@ -531,7 +542,7 @@ const login = async (req, res, next) => {
         ...b,
         is_loc_eoc: (b.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '')
       }));
-      const hasLocEoc = assignedBanks.some(b => b.is_loc_eoc);
+      const hasLocEoc = Boolean(user.has_loc_eoc) || assignedBanks.some(b => b.is_loc_eoc);
       permissions = {
         banks: assignedBanks.map(b => b.id),
         bank_codes: assignedBanks.map(b => b.code || b.short_code || b.name),
@@ -539,6 +550,8 @@ const login = async (req, res, next) => {
         has_loc_eoc: hasLocEoc
       };
       user.has_loc_eoc = hasLocEoc;
+      user.assigned_banks = assignedBanks;
+      user.permissions = permissions;
     }
 
     setRefreshTokenCookie(res, refreshToken, req.body.rememberMe !== false);
@@ -556,9 +569,14 @@ const login = async (req, res, next) => {
         role: user.role,
         department: user.department,
         designation: user.designation,
-        status: user.status
+        status: user.status,
+        assigned_banks: assignedBanks,
+        has_loc_eoc: permissions?.has_loc_eoc || false,
+        permissions: permissions
       },
       permissions,
+      assigned_banks: assignedBanks,
+      has_loc_eoc: permissions?.has_loc_eoc || false,
       kyc_status: kycStatus,
       rejection_reason: rejectionReason,
       redirect: redirectUrl

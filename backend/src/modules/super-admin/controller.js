@@ -191,16 +191,21 @@ const createAdmin = async (req, res, next) => {
       await query(`DELETE FROM employees WHERE user_id = $1 OR mobile_number = $2`, [dbUser.id, formattedMobile]).catch(() => {});
     }
 
+    const isNewUserOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'OPERATIONS_HEAD'].includes(dbUser.designation)
+      || ['OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS_HEAD', 'OPERATIONS HEAD'].includes(dbUser.role);
+
     if (bankIds.length > 0) {
       for (const rawBId of bankIds) {
         const bId = await resolveBankId(rawBId);
         if (!bId) continue;
         await query(`INSERT INTO admin_bank_assignments (admin_id, bank_id, created_by) VALUES ($1, $2, $3) ON CONFLICT (admin_id, bank_id) DO NOTHING`, [dbUser.id, bId, req.user.id]);
-        await query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [dbUser.id, bId]);
-        await query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [dbUser.id, bId]);
-        const { rows: bRows } = await query(`SELECT short_code, name FROM banks WHERE id = $1`, [bId]);
-        if (bRows.length > 0 && ((bRows[0].short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(bRows[0].name || ''))) {
-          await query(`UPDATE products SET operation_head_id = $1 WHERE category = 'loc_eoc' OR category::text IN ('loan_on_credit_card', 'smart_emi')`, [dbUser.id]);
+        if (isNewUserOpHead) {
+          await query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [dbUser.id, bId]);
+          await query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [dbUser.id, bId]);
+          const { rows: bRows } = await query(`SELECT short_code, name FROM banks WHERE id = $1`, [bId]);
+          if (bRows.length > 0 && ((bRows[0].short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(bRows[0].name || ''))) {
+            await query(`UPDATE products SET operation_head_id = $1 WHERE category = 'loc_eoc' OR category::text IN ('loan_on_credit_card', 'smart_emi')`, [dbUser.id]);
+          }
         }
       }
     }
@@ -224,7 +229,7 @@ const createAdmin = async (req, res, next) => {
 const listAdmins = async (req, res, next) => {
   try {
     const roleFilter = req.query.role ? String(req.query.role).trim().toUpperCase() : null;
-    let whereClause = `WHERE role IN ('ADMIN', 'SUPER_ADMIN', 'KYC_OPERATOR', 'HR') OR designation IN ('Operational Head', 'Administrative Operator', 'Administrative Sales Executive', 'PAN Checker', 'Remark Operator', 'QD Operator', 'KYC Operator', 'Final Status Operator', 'Querable Operator', 'Queryable Operator', 'Backend', 'Super Admin')`;
+    let whereClause = `WHERE role IN ('ADMIN', 'SUPER_ADMIN', 'KYC_OPERATOR', 'HR', 'QUERABLE_OPERATOR', 'QUERYABLE_OPERATOR') OR designation IN ('Operational Head', 'Administrative Operator', 'Administrative Sales Executive', 'PAN Checker', 'Remark Operator', 'QD Operator', 'KYC Operator', 'Final Status Operator', 'Querable Operator', 'Queryable Operator', 'Backend', 'Super Admin')`;
     const params = [];
     if (roleFilter && roleFilter !== 'ALL' && roleFilter !== 'ADMIN') {
       whereClause = `WHERE role = $1`;
@@ -383,13 +388,15 @@ const updateAdmin = async (req, res, next) => {
       await query(`UPDATE products SET operation_head_id = NULL WHERE operation_head_id = $1`, [existing.id]);
 
       const currentDesig = designation !== undefined ? designation.trim() : existing.designation;
-      const isRemarkOp = ['Remark Operator', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'QD Operator', 'QD_OPERATOR', 'QD OPERATOR'].includes(currentDesig);
+      const currentRole = role !== undefined ? role.trim() : existing.role;
+      const isTargetOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'OPERATIONS_HEAD'].includes(currentDesig)
+        || ['OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS_HEAD', 'OPERATIONS HEAD'].includes(currentRole);
 
       for (const rawBId of targetBankIds) {
         const bId = await resolveBankId(rawBId);
         if (!bId) continue;
         await query(`INSERT INTO admin_bank_assignments (admin_id, bank_id, created_by) VALUES ($1, $2, $3) ON CONFLICT (admin_id, bank_id) DO NOTHING`, [existing.id, bId, req.user.id]);
-        if (!isRemarkOp) {
+        if (isTargetOpHead) {
           await query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [existing.id, bId]);
           await query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [existing.id, bId]);
           const { rows: bRows } = await query(`SELECT short_code, name FROM banks WHERE id = $1`, [bId]);
@@ -406,7 +413,7 @@ const updateAdmin = async (req, res, next) => {
         const { rows: locCheckRows } = await query(`
           SELECT 1 FROM admin_bank_assignments aba
           JOIN banks b ON b.id = aba.bank_id
-          WHERE aba.admin_id = $1 AND ((b.short_code || '').toUpperCase() = 'LOC_EOC' OR b.name ~* 'loc|loan on card|smart emi')
+          WHERE aba.admin_id = $1 AND (UPPER(COALESCE(b.short_code, '')) = 'LOC_EOC' OR b.name ~* 'loc|loan on card|smart emi')
         `, [existing.id]);
         const hasLoc = locCheckRows.length > 0;
         await query(`UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [hasLoc, existing.id]);
@@ -447,20 +454,21 @@ const updateAdminBanks = async (req, res, next) => {
     const { bankIds, bank_ids } = req.body;
     const targetBankIds = Array.isArray(bank_ids) ? bank_ids : (Array.isArray(bankIds) ? bankIds : []);
 
-    const { rows: [userRec] } = await query(`SELECT id, designation FROM users WHERE id::text = $1`, [id]);
+    const { rows: [userRec] } = await query(`SELECT id, role, designation FROM users WHERE id::text = $1`, [id]);
     if (!userRec) return notFound(res, 'Admin not found');
 
     await query(`DELETE FROM admin_bank_assignments WHERE admin_id = $1`, [userRec.id]);
     await query(`UPDATE banks SET operation_head_id = NULL WHERE operation_head_id = $1`, [userRec.id]);
     await query(`UPDATE products SET operation_head_id = NULL WHERE operation_head_id = $1`, [userRec.id]);
 
-    const isRemarkOp = ['Remark Operator', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'QD Operator', 'QD_OPERATOR', 'QD OPERATOR'].includes(userRec.designation);
+    const isTargetOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'OPERATIONS_HEAD'].includes(userRec.designation)
+      || ['OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS_HEAD', 'OPERATIONS HEAD'].includes(userRec.role);
 
     for (const rawBId of targetBankIds) {
       const bId = await resolveBankId(rawBId);
       if (!bId) continue;
       await query(`INSERT INTO admin_bank_assignments (admin_id, bank_id, created_by) VALUES ($1, $2, $3) ON CONFLICT (admin_id, bank_id) DO NOTHING`, [userRec.id, bId, req.user.id]);
-      if (!isRemarkOp) {
+      if (isTargetOpHead) {
         await query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [userRec.id, bId]);
         await query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [userRec.id, bId]);
         const { rows: bRows } = await query(`SELECT short_code, name FROM banks WHERE id = $1`, [bId]);
@@ -477,7 +485,7 @@ const updateAdminBanks = async (req, res, next) => {
       const { rows: locCheckRows } = await query(`
         SELECT 1 FROM admin_bank_assignments aba
         JOIN banks b ON b.id = aba.bank_id
-        WHERE aba.admin_id = $1 AND ((b.short_code || '').toUpperCase() = 'LOC_EOC' OR b.name ~* 'loc|loan on card|smart emi')
+        WHERE aba.admin_id = $1 AND (UPPER(COALESCE(b.short_code, '')) = 'LOC_EOC' OR b.name ~* 'loc|loan on card|smart emi')
       `, [userRec.id]);
       const hasLoc = locCheckRows.length > 0;
       await query(`UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [hasLoc, userRec.id]);

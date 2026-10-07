@@ -76,7 +76,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const isDigitalProcess = isLinkedShare || isDirectBank;
   const isPhysical = processTypeStr.includes('physical');
 
-  const initialTabKey = initialTab ? getTabKey(initialTab) : (isDigitalProcess ? 'remark' : 'qd');
+  const initialTabKey = isQuerableOperator ? 'remark' : (initialTab ? getTabKey(initialTab) : (isDigitalProcess ? 'remark' : 'qd'));
   const [activeTab, setActiveTab] = useState(initialTabKey);
   const [timeline, setTimeline] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -109,11 +109,13 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
       const targetKey = getTabKey(initialTab);
       if (isSalesExecUser && targetKey === 'final') {
         setActiveTab('remark');
+      } else if (isQuerableOperator && targetKey !== 'timeline') {
+        setActiveTab('remark');
       } else {
         setActiveTab(targetKey);
       }
     }
-  }, [application?.id, initialTab, isSalesExecUser]);
+  }, [application?.id, initialTab, isSalesExecUser, isQuerableOperator]);
 
   const isPunchLead = processTypeStr.includes('punch') || processTypeStr.includes('lead_punching') || processTypeStr.includes('punching');
   const isDigital = isLinkedShare || isDirectBank;
@@ -124,8 +126,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
 
   // Role & Status Access Rules:
   const canEditQd = !isLockedStatus;
-  const canEditRemark = !isLockedStatus;
-  const canEditFinal = !isSalesExecUser && !isQdOperator && (isSuperAdminOrAdmin || isFinalStatusOperator || (!isPartner && !isLockedStatus));
+  const canEditRemark = !isLockedStatus || isQuerableOperator;
+  const canEditFinal = !isSalesExecUser && !isQdOperator && (isSuperAdminOrAdmin || isFinalStatusOperator || isQuerableOperator || (!isPartner && !isLockedStatus));
 
   const sanitizeVal = (val) => {
     if (!val || val === 'null' || val === 'undefined') return '';

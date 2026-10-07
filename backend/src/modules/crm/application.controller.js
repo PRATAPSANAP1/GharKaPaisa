@@ -1637,7 +1637,7 @@ const listApplications = async (req, res, next) => {
     const userDesignation = (req.user?.designation || '').toUpperCase();
     const isQuerableOperatorUser = ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
     let rawStatus = status && status.trim() ? status.trim() : null;
-    if (isQuerableOperatorUser && (!rawStatus || rawStatus === 'all')) {
+    if (isQuerableOperatorUser) {
       rawStatus = 'rejected';
     }
     const validStatus = rawStatus;
@@ -1832,20 +1832,26 @@ const listApplications = async (req, res, next) => {
 
     let querableOperatorFilterSQL = '';
     if (isQuerableOperatorUser && req.user?.id) {
-      const rejectDeclineCondition = `(
-        LOWER(COALESCE(combined.status, '')) IN ('rejected', 'declined', 'decline', 'technical_error', 'cancelled', 'cancel', 'canceled')
-        OR LOWER(COALESCE(combined.status, '')) LIKE '%reject%'
-        OR LOWER(COALESCE(combined.status, '')) LIKE '%decline%'
-        OR LOWER(COALESCE(combined.status, '')) LIKE '%cancel%'
-        OR LOWER(COALESCE(combined.final_status, '')) IN ('rejected', 'declined', 'decline', 'cancelled', 'cancel', 'canceled')
-        OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%'
-        OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'
-        OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'
-        OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%reject%'
-        OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%decline%'
-        OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%cancel%'
+      const rejectOnlyCondition = `(
+        (
+          LOWER(COALESCE(combined.status, '')) IN ('rejected', 'technical_error')
+          OR LOWER(COALESCE(combined.status, '')) LIKE '%reject%'
+          OR LOWER(COALESCE(combined.final_status, '')) IN ('rejected')
+          OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%'
+          OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%reject%'
+        )
+        AND NOT (
+          LOWER(COALESCE(combined.status, '')) IN ('declined', 'decline', 'cancelled', 'cancel', 'canceled')
+          OR LOWER(COALESCE(combined.status, '')) LIKE '%decline%'
+          OR LOWER(COALESCE(combined.status, '')) LIKE '%cancel%'
+          OR LOWER(COALESCE(combined.final_status, '')) IN ('declined', 'decline', 'cancelled', 'cancel', 'canceled')
+          OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'
+          OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'
+          OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%decline%'
+          OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%cancel%'
+        )
       )`;
-      querableOperatorFilterSQL = ` ${baseBankAccessFilterSQL} AND ${rejectDeclineCondition}`;
+      querableOperatorFilterSQL = ` ${baseBankAccessFilterSQL} AND ${rejectOnlyCondition}`;
     }
 
     if (!isPartnerOrTeam && !isSuperAdmin && req.user?.id) {
@@ -2018,7 +2024,7 @@ const listApplications = async (req, res, next) => {
           OR ($2 = 'operational_verified' AND combined.status IN ('operational_verified', 'under_review', 'under review', 'verification', 'in_process', 'in_progress', 'vkyc_pending', 'vkyc_completed'))
           OR ($2 = 'approved' AND combined.status IN ('approved', 'sanctioned', 'super_admin_approved', 'disbursed'))
           OR ($2 = 'commission_received' AND combined.status IN ('commission_received', 'commission_released', 'released', 'credited', 'paid'))
-          OR ($2 = 'rejected' AND (${isQuerableOperatorUser ? "(combined.status IN ('rejected', 'technical_error') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%') AND NOT (combined.status IN ('declined', 'decline') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%')" : "(combined.status IN ('rejected', 'declined', 'decline', 'technical_error') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%' OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%')"}))
+          OR ($2 = 'rejected' AND (${isQuerableOperatorUser ? "(combined.status IN ('rejected', 'technical_error') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%') AND NOT (combined.status IN ('declined', 'decline', 'cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%' OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%')" : "(combined.status IN ('rejected', 'declined', 'decline', 'technical_error') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%' OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%')"}))
           OR ($2 = 'declined' AND (combined.status IN ('declined', 'decline') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'))
           OR ($2 = 'cancelled' AND (combined.status IN ('cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'))
         )
@@ -2120,7 +2126,7 @@ const listApplications = async (req, res, next) => {
           OR ($2 = 'operational_verified' AND combined.status IN ('operational_verified', 'under_review', 'under review', 'verification', 'in_process', 'in_progress', 'vkyc_pending', 'vkyc_completed'))
           OR ($2 = 'approved' AND combined.status IN ('approved', 'sanctioned', 'super_admin_approved', 'disbursed'))
           OR ($2 = 'commission_received' AND combined.status IN ('commission_received', 'commission_released', 'released', 'credited', 'paid'))
-          OR ($2 = 'rejected' AND (${isQuerableOperatorUser ? "(combined.status IN ('rejected', 'technical_error') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%') AND NOT (combined.status IN ('declined', 'decline') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%')" : "(combined.status IN ('rejected', 'declined', 'decline', 'technical_error') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%' OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%')"}))
+          OR ($2 = 'rejected' AND (${isQuerableOperatorUser ? "(combined.status IN ('rejected', 'technical_error') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%') AND NOT (combined.status IN ('declined', 'decline', 'cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%' OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%')" : "(combined.status IN ('rejected', 'declined', 'decline', 'technical_error') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%' OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%')"}))
           OR ($2 = 'declined' AND (combined.status IN ('declined', 'decline') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'))
           OR ($2 = 'cancelled' AND (combined.status IN ('cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'))
         )
@@ -2284,6 +2290,8 @@ const listApplications = async (req, res, next) => {
       statusCountsObj.operational_verified = 0;
       statusCountsObj.approved = 0;
       statusCountsObj.commission_received = 0;
+      statusCountsObj.declined = 0;
+      statusCountsObj.cancelled = 0;
     } else {
       statusCountsObj.all = (statusCountsObj.pending || 0) +
         (statusCountsObj.details_submitted || 0) +
