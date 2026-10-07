@@ -342,7 +342,7 @@ export default function ManageLoanApplications() {
   ];
 
   return (
-    <div style={{ padding: "20px 0", fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ padding: "20px 0", fontFamily: "'Inter', sans-serif", position: "relative", zIndex: 1 }}>
       {/* Title & Top Action Bar */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px", marginBottom: "24px" }}>
         <div>
@@ -437,7 +437,7 @@ export default function ManageLoanApplications() {
       </div>
 
       {/* Category Tabs */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "20px", overflowX: "auto", paddingBottom: "4px" }}>
+      <div style={{ display: "flex", gap: "10px", marginBottom: "20px", overflowX: "auto", paddingBottom: "4px", flexWrap: "wrap" }}>
         {categories.map(cat => {
           const isActive = activeCategory === cat.id;
           return (
@@ -447,11 +447,12 @@ export default function ManageLoanApplications() {
               style={{
                 padding: "10px 20px", borderRadius: "12px",
                 border: `1.5px solid ${isActive ? C.primary : C.border}`,
-                background: isActive ? `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)` : C.card,
+                background: isActive ? `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)` : (isDark ? "#1E293B" : "#FFFFFF"),
                 color: isActive ? "#FFFFFF" : C.text,
                 fontWeight: 800, fontSize: "13.5px", cursor: "pointer",
                 display: "flex", alignItems: "center", gap: "8px", transition: "all 0.2s",
-                whiteSpace: "nowrap", flexShrink: 0
+                whiteSpace: "nowrap", flexShrink: 0,
+                boxShadow: isActive ? `0 4px 12px ${C.primary}40` : `0 2px 8px rgba(0,0,0,0.08)`
               }}
             >
               {cat.icon}
