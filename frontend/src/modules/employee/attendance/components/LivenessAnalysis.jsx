@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MapPin, RefreshCw } from 'lucide-react';
 
-export default function LivenessAnalysis() {
+export default function LivenessAnalysis({ gpsProgress }) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.96, y: 10 }}
@@ -78,17 +78,50 @@ export default function LivenessAnalysis() {
           fontWeight: 700,
           color: '#111827'
         }}>
-          Analyzing...
+          {gpsProgress ? 'Getting your precise location...' : 'Analyzing...'}
         </h3>
 
         <p style={{
-          margin: 0,
+          margin: '0',
           fontSize: '14px',
           color: '#6B7280',
           lineHeight: 1.45
         }}>
-          Verifying that you are a real person...
+          {gpsProgress 
+            ? (
+              <span>
+                {gpsProgress.accuracy 
+                  ? `Improving GPS accuracy... ${gpsProgress.accuracy}m (reading ${gpsProgress.readingCount || 1})` 
+                  : 'Getting your precise location...'
+                }
+              </span>
+            ) 
+            : 'Verifying that you are a real person...'
+          }
         </p>
+
+        {gpsProgress && gpsProgress.accuracy && (
+          <div style={{
+            marginTop: '12px',
+            padding: '8px 16px',
+            background: gpsProgress.accuracy <= 50 ? '#D1FAE5' : '#FEF3C7',
+            borderRadius: '8px',
+            fontSize: '12px',
+            color: gpsProgress.accuracy <= 50 ? '#065F46' : '#92400E',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}>
+            <MapPin size={14} />
+            <span>
+              {gpsProgress.accuracy <= 50 
+                ? `GPS accuracy: ${gpsProgress.accuracy}m ✓` 
+                : `Working on accuracy... (${gpsProgress.accuracy}m > 50m threshold)`
+              }
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Animated subtle progress bar */}
