@@ -163,9 +163,15 @@ export default function ManageLoanApplications() {
 
   const openNewLoanForm = () => {
     setSelectedLead(null);
+    const initialCategory = activeCategory === 'smart_emi' 
+      ? 'smart_emi' 
+      : activeCategory === 'loc_eoc' 
+        ? 'loc_eoc' 
+        : 'loan_on_credit_card';
+
     setLoanForm({
       id: null,
-      category: 'loan_on_credit_card',
+      category: initialCategory,
       bank_name: 'HDFC Bank',
       card_name: 'Jumbo Loan on Credit Card',
       customer_name: '',
@@ -210,10 +216,13 @@ export default function ManageLoanApplications() {
 
   const openEditLoanForm = (lead) => {
     setSelectedLead(lead);
-    const isEmi = lead.category === 'smart_emi' || lead.card_name?.toLowerCase().includes('emi');
+    const cat = (lead.category || '').toLowerCase();
+    const cName = (lead.card_name || '').toLowerCase();
+    const isEmi = cat === 'smart_emi' || cat === 'eoc' || cName.includes('emi') || cName.includes('smartemi');
+    const isLocEoc = cat === 'loc_eoc';
     setLoanForm({
       id: lead.id,
-      category: isEmi ? 'smart_emi' : 'loan_on_credit_card',
+      category: isEmi ? 'smart_emi' : (isLocEoc ? 'loc_eoc' : 'loan_on_credit_card'),
       bank_name: lead.bank_name || 'Partner Bank',
       card_name: lead.card_name || 'Loan on Credit Card',
       customer_name: lead.customer_name || '',
@@ -301,14 +310,35 @@ export default function ManageLoanApplications() {
   }, [loanForm.sanctioned_loan_amount, loanForm.requested_loan_amount, loanForm.interest_rate, loanForm.tenure_months, loanForm.processing_fee]);
 
   // Helper stats
-  const loanOnCardCount = (Array.isArray(leads) ? leads : []).filter(l => l.category === 'loan_on_credit_card' || l.card_name?.toLowerCase().includes('loan')).length;
-  const smartEmiCount = (Array.isArray(leads) ? leads : []).filter(l => l.category === 'smart_emi' || l.card_name?.toLowerCase().includes('emi')).length;
-  const verifiedCount = (Array.isArray(leads) ? leads : []).filter(l => l.status === 'verified' || l.status === 'operational_verified' || l.status === 'approved' || l.status === 'disbursed').length;
+  const locEocCount = (Array.isArray(leads) ? leads : []).filter(l => {
+    const cat = (l.category || '').toLowerCase();
+    const cName = (l.card_name || '').toLowerCase();
+    return ['loc_eoc', 'loc', 'eoc', 'loan_on_credit_card', 'smart_emi'].includes(cat) ||
+      cName.includes('loan') || cName.includes('emi') || cName.includes('insta') || cName.includes('jumbo');
+  }).length;
+
+  const loanOnCardCount = (Array.isArray(leads) ? leads : []).filter(l => {
+    const cat = (l.category || '').toLowerCase();
+    const cName = (l.card_name || '').toLowerCase();
+    return cat === 'loan_on_credit_card' || cat === 'loc' ||
+      ((cName.includes('loan') || cName.includes('insta') || cName.includes('jumbo')) && !cName.includes('emi'));
+  }).length;
+
+  const smartEmiCount = (Array.isArray(leads) ? leads : []).filter(l => {
+    const cat = (l.category || '').toLowerCase();
+    const cName = (l.card_name || '').toLowerCase();
+    return cat === 'smart_emi' || cat === 'eoc' || cName.includes('emi') || cName.includes('smartemi');
+  }).length;
+
+  const verifiedCount = (Array.isArray(leads) ? leads : []).filter(l => 
+    ['verified', 'operational_verified', 'approved', 'disbursed'].includes(l.status)
+  ).length;
 
   const categories = [
-    { id: "all", label: "All Loan Applications", icon: <FaCoins size={14} /> },
-    { id: "loan_on_credit_card", label: "Loan on Credit Card", icon: <FaBolt size={14} /> },
-    { id: "smart_emi", label: "Smart EMI on Credit Card", icon: <FaShoppingBag size={14} /> },
+    { id: "all", label: "All Loan & LOC/EOC Apps", icon: <FaCoins size={14} /> },
+    { id: "loc_eoc", label: "LOC / EOC (All)", icon: <FaCreditCard size={14} /> },
+    { id: "loan_on_credit_card", label: "Loan on Credit Card (LOC)", icon: <FaBolt size={14} /> },
+    { id: "smart_emi", label: "Smart EMI on Credit Card (EOC)", icon: <FaShoppingBag size={14} /> },
   ];
 
   return (
@@ -320,7 +350,7 @@ export default function ManageLoanApplications() {
             Loan Applications Management
           </h2>
           <p style={{ fontSize: "13.5px", color: C.textLight, margin: "6px 0 0 0", lineHeight: 1.4 }}>
-            Manage Loan on Credit Card and Smart EMI conversions with custom Loan QD, Assist, and Disbursal workflow forms.
+            Manage LOC/EOC (Loan on Credit Card & Smart EMI) applications with dedicated workflow forms for Loan QD, Assist, and Disbursal.
           </p>
         </div>
 
@@ -354,24 +384,34 @@ export default function ManageLoanApplications() {
       </div>
 
       {/* Stats Cards Section */}
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(220px, 1fr))", gap: isMobile ? "10px" : "16px", marginBottom: "24px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(200px, 1fr))", gap: isMobile ? "10px" : "16px", marginBottom: "24px" }}>
         <div style={{ ...S.card, display: "flex", alignItems: "center", gap: "14px", padding: isMobile ? "12px" : "18px" }}>
           <div style={{ width: "42px", height: "42px", background: `${C.primary}15`, borderRadius: "14px", display: "flex", alignItems: "center", justifyContent: "center", color: C.primary, fontSize: "18px", flexShrink: 0 }}>
             <FaBriefcase size={20} />
           </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: isMobile ? "18px" : "22px", fontWeight: 800, color: C.text }}>{total}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", marginTop: "2px" }}>Total Loan Apps</div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", marginTop: "2px" }}>Total Apps</div>
           </div>
         </div>
 
         <div style={{ ...S.card, display: "flex", alignItems: "center", gap: "14px", padding: isMobile ? "12px" : "18px" }}>
           <div style={{ width: "42px", height: "42px", background: `${C.teal}15`, borderRadius: "14px", display: "flex", alignItems: "center", justifyContent: "center", color: C.teal, fontSize: "18px", flexShrink: 0 }}>
+            <FaCreditCard size={20} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: isMobile ? "18px" : "22px", fontWeight: 800, color: C.text }}>{locEocCount}</div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", marginTop: "2px" }}>Total LOC / EOC</div>
+          </div>
+        </div>
+
+        <div style={{ ...S.card, display: "flex", alignItems: "center", gap: "14px", padding: isMobile ? "12px" : "18px" }}>
+          <div style={{ width: "42px", height: "42px", background: `${C.primary}15`, borderRadius: "14px", display: "flex", alignItems: "center", justifyContent: "center", color: C.primary, fontSize: "18px", flexShrink: 0 }}>
             <FaBolt size={20} />
           </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: isMobile ? "18px" : "22px", fontWeight: 800, color: C.text }}>{loanOnCardCount}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", marginTop: "2px" }}>Loan on Card</div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", marginTop: "2px" }}>Loan on Card (LOC)</div>
           </div>
         </div>
 
@@ -381,7 +421,7 @@ export default function ManageLoanApplications() {
           </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: isMobile ? "18px" : "22px", fontWeight: 800, color: C.text }}>{smartEmiCount}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", marginTop: "2px" }}>Smart EMI</div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", marginTop: "2px" }}>Smart EMI (EOC)</div>
           </div>
         </div>
 
@@ -483,10 +523,33 @@ export default function ManageLoanApplications() {
               </thead>
               <tbody style={{ fontSize: "13.5px", color: C.text }}>
                 {leads.map((lead) => {
-                  const isEmi = lead.category === 'smart_emi' || lead.card_name?.toLowerCase().includes('emi');
-                  const catLabel = isEmi ? 'Smart EMI' : 'Loan on Credit Card';
-                  const badgeBg = isEmi ? `${C.gold}15` : `${C.primary}15`;
-                  const badgeColor = isEmi ? C.gold : C.primary;
+                  const cat = (lead.category || '').toLowerCase();
+                  const cName = (lead.card_name || '').toLowerCase();
+                  const isEmi = cat === 'smart_emi' || cat === 'eoc' || cName.includes('emi') || cName.includes('smartemi');
+                  const isLoc = cat === 'loan_on_credit_card' || cat === 'loc' || cName.includes('insta loan') || cName.includes('jumbo loan') || cName.includes('loan on card') || cName.includes('loan on credit card');
+                  const isGeneralLocEoc = cat === 'loc_eoc';
+
+                  let catLabel = 'Loan on Card (LOC)';
+                  let badgeBg = `${C.primary}15`;
+                  let badgeColor = C.primary;
+
+                  if (isEmi) {
+                    catLabel = 'Smart EMI (EOC)';
+                    badgeBg = `${C.gold}15`;
+                    badgeColor = C.gold;
+                  } else if (isLoc) {
+                    catLabel = 'Loan on Card (LOC)';
+                    badgeBg = `${C.primary}15`;
+                    badgeColor = C.primary;
+                  } else if (isGeneralLocEoc) {
+                    catLabel = 'LOC / EOC';
+                    badgeBg = `${C.teal}15`;
+                    badgeColor = C.teal;
+                  } else {
+                    catLabel = lead.category ? String(lead.category).replace(/_/g, ' ').toUpperCase() : 'Loan Application';
+                    badgeBg = `${C.teal}15`;
+                    badgeColor = C.teal;
+                  }
 
                   return (
                     <tr key={lead.id} style={{ borderBottom: `1px solid ${C.border}50` }}>
@@ -634,8 +697,9 @@ export default function ManageLoanApplications() {
                       onChange={(e) => setLoanForm({ ...loanForm, category: e.target.value })}
                       style={{ ...S.input, margin: 0, height: '42px', fontWeight: 700 }}
                     >
-                      <option value="loan_on_credit_card">Loan on Credit Card</option>
-                      <option value="smart_emi">Smart EMI on Credit Card</option>
+                      <option value="loc_eoc">LOC / EOC (General)</option>
+                      <option value="loan_on_credit_card">Loan on Credit Card (LOC)</option>
+                      <option value="smart_emi">Smart EMI on Credit Card (EOC)</option>
                     </select>
                   </div>
 

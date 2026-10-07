@@ -3865,6 +3865,18 @@ const exportApplicationsCSV = async (req, res, next) => {
       `;
     }
 
+    const { type } = req.query;
+    if (type === 'loan_applications' || type === 'loc_eoc') {
+      const typeFilter = `(
+        LOWER(COALESCE(combined.category::text, '')) IN ('loc_eoc', 'loc', 'eoc', 'loan_on_credit_card', 'smart_emi', 'loan', 'personal_loan', 'home_loan', 'business_loan')
+        OR LOWER(COALESCE(combined.product_name, '')) LIKE '%loan%'
+        OR LOWER(COALESCE(combined.product_name, '')) LIKE '%emi%'
+        OR LOWER(COALESCE(combined.product_name, '')) LIKE '%insta%'
+        OR LOWER(COALESCE(combined.product_name, '')) LIKE '%jumbo%'
+      )`;
+      whereClause = whereClause ? `${whereClause} AND ${typeFilter}` : `WHERE ${typeFilter}`;
+    }
+
     const { rows } = await query(`
       SELECT * FROM (
         SELECT 

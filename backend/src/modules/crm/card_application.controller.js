@@ -112,17 +112,66 @@ const listApplications = async (req, res, next) => {
       }
     }
 
-    if (category === 'loc_eoc' || category === 'LOC/EOC' || category === 'loc-eoc') {
-      whereClause += ` AND (LOWER(category) IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi') OR LOWER(card_name) LIKE '%insta loan%' OR LOWER(card_name) LIKE '%jumbo loan%' OR LOWER(card_name) LIKE '%smartemi%')`;
-    } else if (category === 'loan_applications' || category === 'loan' || category === 'loans') {
-      whereClause += ` AND (LOWER(category) IN ('loan', 'personal_loan', 'home_loan', 'business_loan', 'instant_loan', 'used_car_loan', 'education_loan') OR (LOWER(card_name) LIKE '%loan%' AND LOWER(card_name) NOT LIKE '%credit card%' AND LOWER(card_name) NOT LIKE '%insta loan%' AND LOWER(card_name) NOT LIKE '%jumbo loan%')) AND LOWER(COALESCE(category,'')) NOT IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi')`;
+    const catLower = (category || '').trim().toLowerCase();
+
+    if (['loc_eoc', 'loc-eoc', 'loc/eoc', 'loc_eoc_all'].includes(catLower)) {
+      whereClause += ` AND (
+        LOWER(COALESCE(category, '')) IN ('loc_eoc', 'loc', 'eoc', 'loan_on_credit_card', 'smart_emi')
+        OR LOWER(COALESCE(card_name, '')) LIKE '%insta loan%'
+        OR LOWER(COALESCE(card_name, '')) LIKE '%jumbo loan%'
+        OR LOWER(COALESCE(card_name, '')) LIKE '%smartemi%'
+        OR LOWER(COALESCE(card_name, '')) LIKE '%smart emi%'
+        OR LOWER(COALESCE(card_name, '')) LIKE '%loan on card%'
+        OR LOWER(COALESCE(card_name, '')) LIKE '%loan on credit card%'
+      )`;
+    } else if (catLower === 'loan_on_credit_card' || catLower === 'loc') {
+      whereClause += ` AND (
+        LOWER(COALESCE(category, '')) IN ('loan_on_credit_card', 'loc')
+        OR (LOWER(COALESCE(category, '')) = 'loc_eoc' AND (LOWER(COALESCE(card_name, '')) NOT LIKE '%emi%' AND LOWER(COALESCE(card_name, '')) NOT LIKE '%smartemi%'))
+        OR LOWER(COALESCE(card_name, '')) LIKE '%insta loan%'
+        OR LOWER(COALESCE(card_name, '')) LIKE '%jumbo loan%'
+        OR LOWER(COALESCE(card_name, '')) LIKE '%loan on card%'
+        OR LOWER(COALESCE(card_name, '')) LIKE '%loan on credit card%'
+      )`;
+    } else if (catLower === 'smart_emi' || catLower === 'eoc') {
+      whereClause += ` AND (
+        LOWER(COALESCE(category, '')) IN ('smart_emi', 'eoc')
+        OR (LOWER(COALESCE(category, '')) = 'loc_eoc' AND (LOWER(COALESCE(card_name, '')) LIKE '%emi%' OR LOWER(COALESCE(card_name, '')) LIKE '%smartemi%'))
+        OR LOWER(COALESCE(card_name, '')) LIKE '%smartemi%'
+        OR LOWER(COALESCE(card_name, '')) LIKE '%smart emi%'
+      )`;
+    } else if (['loan_applications', 'loan', 'loans', 'all_loans', 'all_loan_applications'].includes(catLower)) {
+      whereClause += ` AND (
+        LOWER(COALESCE(category, '')) IN ('loc_eoc', 'loc', 'eoc', 'loan_on_credit_card', 'smart_emi', 'loan', 'loans', 'personal_loan', 'home_loan', 'business_loan', 'instant_loan', 'used_car_loan', 'education_loan')
+        OR LOWER(COALESCE(card_name, '')) LIKE '%loan%'
+        OR LOWER(COALESCE(card_name, '')) LIKE '%emi%'
+        OR LOWER(COALESCE(card_name, '')) LIKE '%smartemi%'
+        OR LOWER(COALESCE(card_name, '')) LIKE '%insta%'
+        OR LOWER(COALESCE(card_name, '')) LIKE '%jumbo%'
+      )`;
+    } else if (catLower === 'credit_card') {
+      whereClause += ` AND (
+        (LOWER(COALESCE(category, '')) = 'credit_card' OR category IS NULL OR category = '')
+        AND LOWER(COALESCE(category, '')) NOT IN ('loc_eoc', 'loc', 'eoc', 'loan_on_credit_card', 'smart_emi')
+        AND LOWER(COALESCE(card_name, '')) NOT LIKE '%loan on credit card%'
+        AND LOWER(COALESCE(card_name, '')) NOT LIKE '%loan on card%'
+        AND LOWER(COALESCE(card_name, '')) NOT LIKE '%smart emi%'
+        AND LOWER(COALESCE(card_name, '')) NOT LIKE '%smartemi%'
+        AND LOWER(COALESCE(card_name, '')) NOT LIKE '%insta loan%'
+        AND LOWER(COALESCE(card_name, '')) NOT LIKE '%jumbo loan%'
+      )`;
+    } else if (catLower && catLower !== 'all') {
+      whereClause += ` AND LOWER(category) = $${idx}`;
+      values.push(catLower);
+      idx++;
     } else {
-      whereClause += ` AND COALESCE(LOWER(category), '') NOT IN ('loan_on_credit_card', 'smart_emi', 'loc_eoc') AND LOWER(COALESCE(card_name, '')) NOT LIKE '%loan on credit card%' AND LOWER(COALESCE(card_name, '')) NOT LIKE '%smart emi%'`;
-      if (category && category !== 'all') {
-        whereClause += ` AND (LOWER(category) = $${idx} OR ($${idx} = 'credit_card' AND (category IS NULL OR category = '')))`;
-        values.push(category.trim().toLowerCase());
-        idx++;
-      }
+      whereClause += ` AND COALESCE(LOWER(category), '') NOT IN ('loan_on_credit_card', 'smart_emi', 'loc_eoc', 'loc', 'eoc')
+        AND LOWER(COALESCE(card_name, '')) NOT LIKE '%loan on credit card%'
+        AND LOWER(COALESCE(card_name, '')) NOT LIKE '%loan on card%'
+        AND LOWER(COALESCE(card_name, '')) NOT LIKE '%smart emi%'
+        AND LOWER(COALESCE(card_name, '')) NOT LIKE '%smartemi%'
+        AND LOWER(COALESCE(card_name, '')) NOT LIKE '%insta loan%'
+        AND LOWER(COALESCE(card_name, '')) NOT LIKE '%jumbo loan%'`;
     }
 
     if (search) {
@@ -131,15 +180,61 @@ const listApplications = async (req, res, next) => {
       idx++;
     }
 
+    const baseTableSql = `(
+      SELECT 
+        id::text as id,
+        customer_name,
+        mobile,
+        bank_name,
+        card_name,
+        COALESCE(category, 'credit_card') as category,
+        status,
+        created_at
+      FROM direct_card_applications
+      UNION ALL
+      SELECT 
+        a.id::text as id,
+        COALESCE(NULLIF(a.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
+        COALESCE(NULLIF(a.customer_mobile, ''), NULLIF(c.mobile, ''), '') as mobile,
+        COALESCE(b.name, 'Partner Bank') as bank_name,
+        COALESCE(p.name, 'LOC/EOC Loan') as card_name,
+        COALESCE(p.category::text, to_jsonb(a)->>'category', 'loc_eoc') as category,
+        a.status::text as status,
+        a.created_at
+      FROM applications a
+      LEFT JOIN products p ON p.id = a.product_id
+      LEFT JOIN banks b ON b.id = COALESCE(a.bank_id, p.bank_id)
+      LEFT JOIN customers c ON c.id = a.customer_id
+      WHERE (
+        p.category::text IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi')
+        OR p.sub_category IN ('loc', 'eoc', 'LOC', 'EOC')
+        OR to_jsonb(a)->>'category' IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi')
+        OR a.product_category IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi')
+        OR LOWER(COALESCE(p.name, '')) LIKE '%insta loan%'
+        OR LOWER(COALESCE(p.name, '')) LIKE '%jumbo loan%'
+        OR LOWER(COALESCE(p.name, '')) LIKE '%smartemi%'
+        OR LOWER(COALESCE(p.name, '')) LIKE '%smart emi%'
+        OR LOWER(COALESCE(p.name, '')) LIKE '%loan on card%'
+        OR LOWER(COALESCE(p.name, '')) LIKE '%loan on credit card%'
+      )
+      AND COALESCE(a.source, '') != 'direct_card_applications'
+      AND NOT EXISTS (
+        SELECT 1 FROM direct_card_applications d2 
+        WHERE d2.mobile = COALESCE(NULLIF(a.customer_mobile, ''), c.mobile) 
+        AND d2.created_at >= a.created_at - INTERVAL '1 hour'
+        AND d2.created_at <= a.created_at + INTERVAL '1 hour'
+      )
+    ) direct_card_applications`;
+
     const countQuery = `
       SELECT COUNT(*) 
-      FROM direct_card_applications
+      FROM ${baseTableSql}
       ${whereClause}
     `;
 
     const dataQuery = `
       SELECT * 
-      FROM direct_card_applications
+      FROM ${baseTableSql}
       ${whereClause}
       ORDER BY created_at DESC
       LIMIT $${idx} OFFSET $${idx + 1}
@@ -166,13 +261,30 @@ const updateApplicationStatus = async (req, res, next) => {
     if (!status) return error(res, 'Status is required', 400);
 
     const { rows: [application] } = await query(
-      `UPDATE direct_card_applications SET status = $1 WHERE id = $2 RETURNING *`,
+      `UPDATE direct_card_applications SET status = $1 WHERE id::text = $2 RETURNING *`,
       [status.trim(), id]
     );
 
-    if (!application) return error(res, 'Direct lead not found', 404);
+    if (!application) {
+      const { rows: [mainApp] } = await query(
+        `UPDATE applications SET status = $1, updated_at = NOW() WHERE id::text = $2 RETURNING *`,
+        [status.trim(), id]
+      );
+      if (mainApp) {
+        return success(res, mainApp, 'Application status updated successfully');
+      }
+      return error(res, 'Application lead not found', 404);
+    }
 
-    return success(res, application, 'Direct lead status updated successfully');
+    try {
+      await query(
+        `UPDATE applications SET status = $1, updated_at = NOW() 
+         WHERE (customer_name = $2 AND customer_mobile = $3) OR id::text = $4`,
+        [status.trim(), application.customer_name, application.mobile, id]
+      );
+    } catch (_) {}
+
+    return success(res, application, 'Application status updated successfully');
   } catch (err) {
     next(err);
   }
