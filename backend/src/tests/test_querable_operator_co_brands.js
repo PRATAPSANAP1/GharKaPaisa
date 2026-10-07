@@ -3,34 +3,14 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 const { query } = require('../config/database');
 
 async function runQuerableOperatorTests() {
-  console.log('--- Starting Querable Operator Co-Brand & Relational Authorization Tests ---');
+  console.log('--- Starting Querable Operator Simplified Rules Test Suite ---');
   let passed = 0;
   let failed = 0;
 
   try {
-    let banks = [];
-    try {
-      const dbRes = await query(`SELECT id, name, short_code FROM banks`);
-      banks = dbRes.rows;
-      console.log(`Found ${banks.length} banks in database.`);
-    } catch (dbErr) {
-      console.log('Database query notice:', dbErr.message);
-    }
-
-    const findBank = (nameKey) => banks.find(b => 
-      b.name.toLowerCase().includes(nameKey.toLowerCase()) || 
-      (b.short_code && b.short_code.toLowerCase().includes(nameKey.toLowerCase()))
-    );
-
-    let hdfcBank = findBank('hdfc');
-    let sbiBank = findBank('sbi');
-    let iciciBank = findBank('icici');
-
-    const hdfcId = hdfcBank?.id || '11111111-1111-1111-1111-111111111111';
-    const tataHdfcId = '22222222-2222-2222-2222-222222222222';
-    const sbiId = sbiBank?.id || '33333333-3333-3333-3333-333333333333';
-    const tataSbiId = '44444444-4444-4444-4444-444444444444';
-    const iciciId = iciciBank?.id || '55555555-5555-5555-5555-555555555555';
+    const hdfcId = '11111111-1111-1111-1111-111111111111';
+    const sbiId = '22222222-2222-2222-2222-222222222222';
+    const axisId = '33333333-3333-3333-3333-333333333333';
 
     function evaluateQuerableAccess(assignedBankIds, candidateApp) {
       if (!assignedBankIds || assignedBankIds.length === 0) return false;
@@ -39,17 +19,9 @@ async function runQuerableOperatorTests() {
       if (!bankMatched) return false;
 
       const s = String(candidateApp.status || '').toLowerCase();
-      const fs = String(candidateApp.final_status || '').toLowerCase();
-      const bs = String(candidateApp.bank_current_lead_status || '').toLowerCase();
-
       const isRejected = (
         ['rejected', 'declined', 'decline', 'technical_error'].includes(s) ||
-        s.includes('reject') || s.includes('decline') ||
-        fs.includes('reject') || fs.includes('decline') ||
-        bs.includes('reject') || bs.includes('decline')
-      ) && !(
-        ['cancelled', 'cancel', 'canceled'].includes(s) ||
-        s.includes('cancel') || fs.includes('cancel') || bs.includes('cancel')
+        s.includes('reject') || s.includes('decline')
       );
 
       return isRejected;
@@ -66,34 +38,65 @@ async function runQuerableOperatorTests() {
       }
     }
 
-    // TEST 1: Assigned bank = SBI, Application: bank_id = SBI, status = rejected => VISIBLE
-    assertTest(1, 'Assigned bank = SBI, Application = SBI Rejected', [sbiId], { bank_id: sbiId, status: 'rejected' }, true);
+    // TEST 1: Querable assigned HDFC, HDFC rejected -> visible
+    assertTest(1, 'Querable assigned HDFC | HDFC rejected -> VISIBLE', [hdfcId], { bank_id: hdfcId, status: 'rejected' }, true);
 
-    // TEST 2: Assigned bank = SBI, Application: bank_id = Tata Co-brand SBI, status = rejected => NOT VISIBLE
-    assertTest(2, 'Assigned bank = SBI, Application = Tata Co-brand SBI Rejected', [sbiId], { bank_id: tataSbiId, status: 'rejected' }, false);
+    // TEST 2: Querable assigned HDFC, HDFC approved -> hidden
+    assertTest(2, 'Querable assigned HDFC | HDFC approved -> HIDDEN', [hdfcId], { bank_id: hdfcId, status: 'approved' }, false);
 
-    // TEST 3: Assigned bank = HDFC, Application: bank_id = HDFC, status = rejected => VISIBLE
-    assertTest(3, 'Assigned bank = HDFC, Application = HDFC Rejected', [hdfcId], { bank_id: hdfcId, status: 'rejected' }, true);
+    // TEST 3: Querable assigned HDFC, SBI rejected -> hidden
+    assertTest(3, 'Querable assigned HDFC | SBI rejected -> HIDDEN', [hdfcId], { bank_id: sbiId, status: 'rejected' }, false);
 
-    // TEST 4: Assigned bank = HDFC, Application: bank_id = Tata Co-brand HDFC, status = rejected => NOT VISIBLE
-    assertTest(4, 'Assigned bank = HDFC, Application = Tata Co-brand HDFC Rejected', [hdfcId], { bank_id: tataHdfcId, status: 'rejected' }, false);
+    // TEST 4: Querable assigned HDFC + SBI, HDFC rejected -> visible
+    assertTest(4, 'Querable assigned HDFC + SBI | HDFC rejected -> VISIBLE', [hdfcId, sbiId], { bank_id: hdfcId, status: 'rejected' }, true);
 
-    // TEST 5: Assigned bank = HDFC, Application: bank_id = SBI, status = rejected => NOT VISIBLE
-    assertTest(5, 'Assigned bank = HDFC, Application = SBI Rejected', [hdfcId], { bank_id: sbiId, status: 'rejected' }, false);
+    // TEST 5: Querable assigned HDFC + SBI, SBI rejected -> visible
+    assertTest(5, 'Querable assigned HDFC + SBI | SBI rejected -> VISIBLE', [hdfcId, sbiId], { bank_id: sbiId, status: 'rejected' }, true);
 
-    // TEST 6: Assigned bank = SBI, Application: bank_id = SBI, status = approved => NOT VISIBLE
-    assertTest(6, 'Assigned bank = SBI, Application = SBI Approved', [sbiId], { bank_id: sbiId, status: 'approved' }, false);
+    // TEST 6: Querable assigned HDFC + SBI, Axis rejected -> hidden
+    assertTest(6, 'Querable assigned HDFC + SBI | Axis rejected -> HIDDEN', [hdfcId, sbiId], { bank_id: axisId, status: 'rejected' }, false);
 
-    // TEST 7: Assigned bank = SBI, Application: bank_id = SBI, status = pending => NOT VISIBLE
-    assertTest(7, 'Assigned bank = SBI, Application = SBI Pending', [sbiId], { bank_id: sbiId, status: 'pending' }, false);
+    // TEST 7: Querable has no bank assignments, Any rejected application -> hidden
+    assertTest(7, 'Querable has no bank assignments | HDFC rejected -> HIDDEN', [], { bank_id: hdfcId, status: 'rejected' }, false);
 
-    // TEST 8: Assigned banks = HDFC + SBI
-    const multiAssigned = [hdfcId, sbiId];
-    assertTest('8a', 'Assigned HDFC+SBI, App = HDFC Rejected', multiAssigned, { bank_id: hdfcId, status: 'rejected' }, true);
-    assertTest('8b', 'Assigned HDFC+SBI, App = SBI Rejected', multiAssigned, { bank_id: sbiId, status: 'rejected' }, true);
-    assertTest('8c', 'Assigned HDFC+SBI, App = Tata HDFC Rejected', multiAssigned, { bank_id: tataHdfcId, status: 'rejected' }, false);
-    assertTest('8d', 'Assigned HDFC+SBI, App = Tata SBI Rejected', multiAssigned, { bank_id: tataSbiId, status: 'rejected' }, false);
-    assertTest('8e', 'Assigned HDFC+SBI, App = ICICI Rejected', multiAssigned, { bank_id: iciciId, status: 'rejected' }, false);
+    // TEST 8: Search for an unauthorized bank's rejected application -> no result
+    assertTest(8, 'Search for unauthorized bank (Axis) rejected application -> HIDDEN', [hdfcId], { bank_id: axisId, status: 'rejected' }, false);
+
+    // TEST 9: Counters -> count only assigned-bank rejected applications
+    const mockDb = [
+      { id: 1, bank_id: hdfcId, status: 'rejected' },
+      { id: 2, bank_id: hdfcId, status: 'rejected' },
+      { id: 3, bank_id: hdfcId, status: 'rejected' },
+      { id: 4, bank_id: hdfcId, status: 'rejected' },
+      { id: 5, bank_id: hdfcId, status: 'rejected' },
+      { id: 6, bank_id: hdfcId, status: 'approved' },
+      { id: 7, bank_id: sbiId, status: 'rejected' },
+      { id: 8, bank_id: sbiId, status: 'rejected' },
+      { id: 9, bank_id: sbiId, status: 'rejected' },
+      { id: 10, bank_id: sbiId, status: 'pending' },
+      { id: 11, bank_id: axisId, status: 'rejected' }
+    ];
+    const assignedHdfcSbi = [hdfcId, sbiId];
+    const filteredApps = mockDb.filter(app => evaluateQuerableAccess(assignedHdfcSbi, app));
+    const counterValue = filteredApps.length;
+    if (counterValue === 8) {
+      console.log(`✅ TEST 9: Counters (Expected: 8, Got: ${counterValue}) -> PASSED`);
+      passed++;
+    } else {
+      console.error(`❌ TEST 9: Counters (Expected: 8, Got: ${counterValue}) -> FAILED`);
+      failed++;
+    }
+
+    // TEST 10: Pagination -> only assigned-bank rejected applications
+    const page1 = filteredApps.slice(0, 5);
+    const page2 = filteredApps.slice(5, 10);
+    if (page1.length === 5 && page2.length === 3) {
+      console.log(`✅ TEST 10: Pagination (Page 1: ${page1.length}, Page 2: ${page2.length}) -> PASSED`);
+      passed++;
+    } else {
+      console.error(`❌ TEST 10: Pagination -> FAILED`);
+      failed++;
+    }
 
     console.log('\n================ TEST SUMMARY ================');
     console.log(`Total Tests Run: ${passed + failed}`);
@@ -103,7 +106,7 @@ async function runQuerableOperatorTests() {
     if (failed > 0) {
       process.exit(1);
     } else {
-      console.log('🎉 ALL QUERABLE OPERATOR TESTS PASSED SUCCESSFULLY!');
+      console.log('🎉 ALL 10 QUERABLE OPERATOR TESTS PASSED SUCCESSFULLY!');
       process.exit(0);
     }
   } catch (err) {

@@ -108,7 +108,7 @@ const listApplications = async (req, res, next) => {
       const userDesignation = (req.user?.designation || '').toUpperCase();
       const isQuerableOperatorUser = ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
       if (isQuerableOperatorUser && req.user?.id) {
-        whereClause += ` AND ((LOWER(COALESCE(status, '')) IN ('rejected', 'declined', 'decline', 'technical_error') OR LOWER(COALESCE(status, '')) LIKE '%reject%' OR LOWER(COALESCE(status, '')) LIKE '%decline%') AND NOT (LOWER(COALESCE(status, '')) IN ('cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(status, '')) LIKE '%cancel%'))`;
+        whereClause += ` AND (LOWER(COALESCE(status, '')) IN ('rejected', 'declined', 'decline', 'technical_error') OR LOWER(COALESCE(status, '')) LIKE '%reject%' OR LOWER(COALESCE(status, '')) LIKE '%decline%')`;
       }
     }
 

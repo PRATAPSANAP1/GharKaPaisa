@@ -108,36 +108,19 @@ const assertQuerableOperatorApplicationAccess = async (req, app) => {
   if (!checkQuerableUserRole(req)) return;
 
   const status = String(app.status || '').toLowerCase();
-  const finalStatus = String(app.final_status || '').toLowerCase();
-  const bankStatus = String(app.bank_current_lead_status || '').toLowerCase();
-
   const rejected = (
     ['rejected', 'declined', 'decline', 'technical_error'].includes(status) ||
-    status.includes('reject') || status.includes('decline') ||
-    ['rejected', 'declined', 'decline', 'technical_error'].includes(finalStatus) ||
-    finalStatus.includes('reject') || finalStatus.includes('decline') ||
-    bankStatus.includes('reject') || bankStatus.includes('decline')
+    status.includes('reject') || status.includes('decline')
   );
 
-  const cancelled = (
-    ['cancelled', 'cancel', 'canceled'].includes(status) ||
-    status.includes('cancel') ||
-    ['cancelled', 'cancel', 'canceled'].includes(finalStatus) ||
-    finalStatus.includes('cancel') ||
-    bankStatus.includes('cancel')
-  );
-
-  if (!rejected || cancelled) {
+  if (!rejected) {
     const err = new Error('QUERABLE_OPERATOR_STATUS_ACCESS_DENIED: Access denied. Querable Operators are only authorized to access rejected applications.');
     err.statusCode = 403;
     throw err;
   }
 
   const { rows } = await query(
-    `SELECT aba.bank_id, b.name as bank_name, b.short_code as bank_code
-     FROM admin_bank_assignments aba
-     LEFT JOIN banks b ON b.id = aba.bank_id
-     WHERE aba.admin_id = $1`,
+    `SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`,
     [req.user.id]
   );
 
@@ -154,24 +137,7 @@ const assertQuerableOperatorApplicationAccess = async (req, app) => {
     appBankId = pRec?.bank_id;
   }
 
-  let isAuthorized = false;
-  if (appBankId && assignedBankIds.includes(String(appBankId))) {
-    isAuthorized = true;
-  } else {
-    const appBankName = String(app.bank_name || '').toLowerCase();
-    const appBankCode = String(app.bank_code || '').toLowerCase();
-    isAuthorized = rows.some(b => {
-      const bName = String(b.bank_name || '').toLowerCase();
-      const bCode = String(b.bank_code || '').toLowerCase();
-      if (!bName && !bCode) return false;
-      return (
-        (bCode && (appBankCode.includes(bCode) || appBankName.includes(bCode))) ||
-        (bName && (appBankName.includes(bName) || bName.includes(appBankName)))
-      );
-    });
-  }
-
-  if (!isAuthorized) {
+  if (!appBankId || !assignedBankIds.includes(String(appBankId))) {
     const err = new Error('QUERABLE_OPERATOR_BANK_ACCESS_DENIED: You are not authorized to access applications for this bank.');
     err.statusCode = 403;
     throw err;
@@ -1938,37 +1904,21 @@ const listApplications = async (req, res, next) => {
       if (abRows.length === 0) {
         querableOperatorFilterSQL = ` AND 1=0`;
       } else {
+        const assignedIds = abRows.map(b => `'${b.bank_id}'`).join(',');
         const rejectDeclineCondition = `(
-          (
-            LOWER(COALESCE(combined.status, '')) IN ('rejected', 'declined', 'decline', 'technical_error')
-            OR LOWER(COALESCE(combined.status, '')) LIKE '%reject%'
-            OR LOWER(COALESCE(combined.status, '')) LIKE '%decline%'
-            OR LOWER(COALESCE(combined.final_status, '')) IN ('rejected', 'declined', 'decline', 'technical_error')
-            OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%'
-            OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'
-            OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%reject%'
-            OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%decline%'
-          )
-          AND NOT (
-            LOWER(COALESCE(combined.status, '')) IN ('cancelled', 'cancel', 'canceled')
-            OR LOWER(COALESCE(combined.status, '')) LIKE '%cancel%'
-            OR LOWER(COALESCE(combined.final_status, '')) IN ('cancelled', 'cancel', 'canceled')
-            OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'
-            OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%cancel%'
-          )
+          LOWER(COALESCE(combined.status, '')) IN ('rejected', 'declined', 'decline', 'technical_error')
+          OR LOWER(COALESCE(combined.status, '')) LIKE '%reject%'
+          OR LOWER(COALESCE(combined.status, '')) LIKE '%decline%'
         )`;
-        const querableBankMatch = buildBankMatchSQL(abRows);
-        querableOperatorFilterSQL = ` AND ${querableBankMatch} AND ${rejectDeclineCondition}`;
-        console.log('[QUERABLE_OPERATOR_AUTH] Final Filter SQL:', querableOperatorFilterSQL);
+        querableOperatorFilterSQL = ` AND combined.bank_id IN (${assignedIds}) AND ${rejectDeclineCondition}`;
       }
     }
 
     if (!isPartnerOrTeam && !isSuperAdmin && req.user?.id) {
-      if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser || isQdOperatorUser || isFinalStatusOperatorUser) {
+      if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser || isQdOperatorUser || isFinalStatusOperatorUser || isQuerableOperatorUser) {
         opHeadBankFilterSQL = ``;
         countOpHeadBankFilterSQL = ``;
       } else {
-        // Querable Operator and regular Ops Heads should use bank filtering
         opHeadBankFilterSQL = baseBankAccessFilterSQL;
         countOpHeadBankFilterSQL = baseBankAccessFilterSQL;
       }
