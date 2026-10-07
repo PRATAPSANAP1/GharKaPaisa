@@ -1943,6 +1943,39 @@ const listApplications = async (req, res, next) => {
       )
     `;
 
+    const effectivePartnerTeamScopeSQL = isQuerableOperatorUser ? `WHERE 1=1` : partnerTeamScopeSQL;
+
+    const statusFilterBlockSQL = isQuerableOperatorUser ? `(1=1)` : `(
+      $2::text IS NULL
+      OR combined.status = $2
+      OR ($2 = 'pending' AND combined.status IN ('pending', 'lead_created', 'new', 'draft', 'initiated', 'link_sent', 'confirmed', 'link_pending'))
+      OR ($2 = 'details_submitted' AND combined.status IN ('details_submitted', 'submitted', 'bank_form_submitted'))
+      OR ($2 = 'operational_verified' AND combined.status IN ('operational_verified', 'under_review', 'under review', 'verification', 'in_process', 'in_progress', 'vkyc_pending', 'vkyc_completed'))
+      OR ($2 = 'approved' AND combined.status IN ('approved', 'sanctioned', 'super_admin_approved', 'disbursed'))
+      OR ($2 = 'commission_received' AND combined.status IN ('commission_received', 'commission_released', 'released', 'credited', 'paid'))
+      OR ($2 = 'rejected' AND (
+        (
+          combined.status IN ('rejected', 'declined', 'decline', 'technical_error')
+          OR LOWER(COALESCE(combined.status, '')) LIKE '%reject%'
+          OR LOWER(COALESCE(combined.status, '')) LIKE '%decline%'
+          OR LOWER(COALESCE(combined.final_status, '')) IN ('rejected', 'declined', 'decline', 'technical_error')
+          OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%'
+          OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'
+          OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%reject%'
+          OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%decline%'
+        )
+        AND NOT (
+          combined.status IN ('cancelled', 'cancel', 'canceled')
+          OR LOWER(COALESCE(combined.status, '')) LIKE '%cancel%'
+          OR LOWER(COALESCE(combined.final_status, '')) IN ('cancelled', 'cancel', 'canceled')
+          OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'
+          OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%cancel%'
+        )
+      ))
+      OR ($2 = 'declined' AND (combined.status IN ('declined', 'decline') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'))
+      OR ($2 = 'cancelled' AND (combined.status IN ('cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'))
+    )`;
+
     const { rows } = await query(`
       SELECT * FROM (
         SELECT 
@@ -2069,37 +2102,8 @@ const listApplications = async (req, res, next) => {
         )
         LEFT JOIN employees appemp ON (appemp.user_id = appu.id OR appemp.id = appu.id)
       ) combined
-      ${partnerTeamScopeSQL}
-        AND (
-          $2::text IS NULL
-          OR combined.status = $2
-          OR ($2 = 'pending' AND combined.status IN ('pending', 'lead_created', 'new', 'draft', 'initiated', 'link_sent', 'confirmed', 'link_pending'))
-          OR ($2 = 'details_submitted' AND combined.status IN ('details_submitted', 'submitted', 'bank_form_submitted'))
-          OR ($2 = 'operational_verified' AND combined.status IN ('operational_verified', 'under_review', 'under review', 'verification', 'in_process', 'in_progress', 'vkyc_pending', 'vkyc_completed'))
-          OR ($2 = 'approved' AND combined.status IN ('approved', 'sanctioned', 'super_admin_approved', 'disbursed'))
-          OR ($2 = 'commission_received' AND combined.status IN ('commission_received', 'commission_released', 'released', 'credited', 'paid'))
-          OR ($2 = 'rejected' AND (
-            (
-              combined.status IN ('rejected', 'declined', 'decline', 'technical_error')
-              OR LOWER(COALESCE(combined.status, '')) LIKE '%reject%'
-              OR LOWER(COALESCE(combined.status, '')) LIKE '%decline%'
-              OR LOWER(COALESCE(combined.final_status, '')) IN ('rejected', 'declined', 'decline', 'technical_error')
-              OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%'
-              OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'
-              OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%reject%'
-              OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%decline%'
-            )
-            AND NOT (
-              combined.status IN ('cancelled', 'cancel', 'canceled')
-              OR LOWER(COALESCE(combined.status, '')) LIKE '%cancel%'
-              OR LOWER(COALESCE(combined.final_status, '')) IN ('cancelled', 'cancel', 'canceled')
-              OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'
-              OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%cancel%'
-            )
-          ))
-          OR ($2 = 'declined' AND (combined.status IN ('declined', 'decline') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'))
-          OR ($2 = 'cancelled' AND (combined.status IN ('cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'))
-        )
+      ${effectivePartnerTeamScopeSQL}
+        AND ${statusFilterBlockSQL}
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
         AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5 OR combined.bank_application_number ILIKE $5 OR combined.bank_ref_number ILIKE $5 OR combined.pan_number ILIKE $5))
@@ -2192,6 +2196,8 @@ const listApplications = async (req, res, next) => {
       )
     `;
 
+    const effectiveCountScopeSQL = isQuerableOperatorUser ? `WHERE 1=1` : countScopeSQL;
+
     const { rows: [{ count }] } = await query(`
       SELECT COUNT(*) FROM (
         SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, (to_jsonb(a)->>'assigned_to') as assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_application_number', ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(to_jsonb(pad)->>'dispatch_status', '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, COALESCE(NULLIF(to_jsonb(a)->>'category', ''), p.category::text) as category, COALESCE(NULLIF(to_jsonb(a)->>'sub_category', ''), p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(to_jsonb(pad)->>'pan_check', ''), 'no') as pan_check, COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(to_jsonb(pad)->>'bank_current_lead_status', ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(to_jsonb(a)->>'requery_date', ''), NULLIF(to_jsonb(pad)->>'requery_date', '')) as requery_date,
@@ -2204,37 +2210,8 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN banks b ON b.id = COALESCE(a.bank_id, p.bank_id)
         LEFT JOIN physical_application_details pad ON pad.application_id = a.id
       ) combined
-      ${countScopeSQL}
-         AND (
-          $2::text IS NULL
-          OR combined.status = $2
-          OR ($2 = 'pending' AND combined.status IN ('pending', 'lead_created', 'new', 'draft', 'initiated', 'link_sent', 'confirmed', 'link_pending'))
-          OR ($2 = 'details_submitted' AND combined.status IN ('details_submitted', 'submitted', 'bank_form_submitted'))
-          OR ($2 = 'operational_verified' AND combined.status IN ('operational_verified', 'under_review', 'under review', 'verification', 'in_process', 'in_progress', 'vkyc_pending', 'vkyc_completed'))
-          OR ($2 = 'approved' AND combined.status IN ('approved', 'sanctioned', 'super_admin_approved', 'disbursed'))
-          OR ($2 = 'commission_received' AND combined.status IN ('commission_received', 'commission_released', 'released', 'credited', 'paid'))
-          OR ($2 = 'rejected' AND (
-            (
-              combined.status IN ('rejected', 'declined', 'decline', 'technical_error')
-              OR LOWER(COALESCE(combined.status, '')) LIKE '%reject%'
-              OR LOWER(COALESCE(combined.status, '')) LIKE '%decline%'
-              OR LOWER(COALESCE(combined.final_status, '')) IN ('rejected', 'declined', 'decline', 'technical_error')
-              OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%'
-              OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'
-              OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%reject%'
-              OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%decline%'
-            )
-            AND NOT (
-              combined.status IN ('cancelled', 'cancel', 'canceled')
-              OR LOWER(COALESCE(combined.status, '')) LIKE '%cancel%'
-              OR LOWER(COALESCE(combined.final_status, '')) IN ('cancelled', 'cancel', 'canceled')
-              OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'
-              OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%cancel%'
-            )
-          ))
-          OR ($2 = 'declined' AND (combined.status IN ('declined', 'decline') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'))
-          OR ($2 = 'cancelled' AND (combined.status IN ('cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'))
-        )
+      ${effectiveCountScopeSQL}
+         AND ${statusFilterBlockSQL}
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
         AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5 OR combined.bank_application_number ILIKE $5 OR combined.bank_ref_number ILIKE $5 OR combined.pan_number ILIKE $5))
@@ -2270,8 +2247,8 @@ const listApplications = async (req, res, next) => {
         AND (
           $13::text IS NULL OR $13::text = '' OR $13::text = 'all'
           OR combined.commission_status = $13::text
-          OR ($13::text = 'released' AND combined.commission_status IN ('released', 'credited', 'paid', 'approved', 'commission_released'))
-          OR ($13::text = 'pending' AND combined.commission_status IN ('pending', 'unpaid', 'due', 'initiated'))
+          OR ($15::text = 'released' AND combined.commission_status IN ('released', 'credited', 'paid', 'approved', 'commission_released'))
+          OR ($15::text = 'pending' AND combined.commission_status IN ('pending', 'unpaid', 'due', 'initiated'))
         )
         AND ($14::timestamp IS NULL OR combined.created_at >= $14::timestamp)
         AND ($15::timestamp IS NULL OR combined.created_at <= $15::timestamp)
@@ -2297,8 +2274,8 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN banks b ON b.id = COALESCE(a.bank_id, p.bank_id)
         LEFT JOIN physical_application_details pad ON pad.application_id = a.id
       ) combined
-      ${countScopeSQL}
-        AND ($2::text IS NULL OR 1=1)
+      ${effectiveCountScopeSQL}
+        AND ${statusFilterBlockSQL}
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
         AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5 OR combined.bank_application_number ILIKE $5 OR combined.bank_ref_number ILIKE $5 OR combined.pan_number ILIKE $5))
