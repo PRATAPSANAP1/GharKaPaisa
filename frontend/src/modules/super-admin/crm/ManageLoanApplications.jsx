@@ -512,13 +512,12 @@ export default function ManageLoanApplications() {
             <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
               <thead>
                 <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                  <th style={{ padding: "16px 20px" }}>Date</th>
-                  <th style={{ padding: "16px 20px" }}>Category</th>
-                  <th style={{ padding: "16px 20px" }}>Customer Details</th>
-                  <th style={{ padding: "16px 20px" }}>Bank / Provider</th>
-                  <th style={{ padding: "16px 20px" }}>Product / Scheme</th>
-                  <th style={{ padding: "16px 20px" }}>Status</th>
-                  <th style={{ padding: "16px 20px", textAlign: "center" }}>Loan Action</th>
+                  <th style={{ padding: "16px 20px" }}>App ID & Date</th>
+                  <th style={{ padding: "16px 20px" }}>Customer</th>
+                  <th style={{ padding: "16px 20px" }}>Source & Process</th>
+                  <th style={{ padding: "16px 20px" }}>Product & Bank</th>
+                  <th style={{ padding: "16px 20px" }}>Status & Commission</th>
+                  <th style={{ padding: "16px 20px", textAlign: "right" }}>Actions</th>
                 </tr>
               </thead>
               <tbody style={{ fontSize: "13.5px", color: C.text }}>
@@ -551,18 +550,40 @@ export default function ManageLoanApplications() {
                     badgeColor = C.teal;
                   }
 
+                  const getStatusBadge = (status) => {
+                    const s = String(status || '').toLowerCase();
+                    switch(s) {
+                      case 'verified':
+                        return { bg: '#dbeafe', color: '#2563eb', label: 'Verified' };
+                      case 'operational_verified':
+                        return { bg: '#f3e8ff', color: '#7c3aed', label: 'Operational Verified' };
+                      case 'approved':
+                        return { bg: '#dcfce7', color: '#16a34a', label: 'Approved' };
+                      case 'disbursed':
+                        return { bg: '#dcfce7', color: '#059669', label: 'Disbursed' };
+                      case 'rejected':
+                        return { bg: '#fee2e2', color: '#dc2626', label: 'Rejected' };
+                      default:
+                        return { bg: '#f1f5f9', color: '#64748b', label: status || 'Pending' };
+                    }
+                  };
+
+                  const statusBadge = getStatusBadge(lead.status);
+                  const formattedDate = lead.created_at ? new Date(lead.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+
                   return (
                     <tr key={lead.id} style={{ borderBottom: `1px solid ${C.border}50` }}>
-                      <td style={{ padding: "16px 20px", color: C.textLight }}>
-                        {new Date(lead.created_at).toLocaleString("en-IN", {
-                          day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
-                        })}
-                      </td>
+                      {/* App ID & Date */}
                       <td style={{ padding: "16px 20px" }}>
-                        <span style={{ fontSize: "11px", fontWeight: 800, background: badgeBg, color: badgeColor, padding: "4px 10px", borderRadius: "8px", textTransform: "uppercase" }}>
-                          {catLabel}
-                        </span>
+                        <div style={{ fontWeight: 800, color: C.teal, fontFamily: 'monospace', fontSize: "12.5px" }}>
+                          {lead.app_number || `LOAN${lead.id}`}
+                        </div>
+                        <div style={{ fontSize: "11px", color: C.textLight, marginTop: "2px" }}>
+                          {formattedDate}
+                        </div>
                       </td>
+
+                      {/* Customer */}
                       <td style={{ padding: "16px 20px" }}>
                         <div style={{ fontWeight: 700, fontSize: "14.5px" }}>{lead.customer_name}</div>
                         <div style={{ color: C.textLight, fontSize: "12px", marginTop: "2px", fontWeight: 500, display: "flex", alignItems: "center", gap: "4px" }}>
@@ -570,41 +591,75 @@ export default function ManageLoanApplications() {
                           <span>{lead.mobile}</span>
                         </div>
                       </td>
+
+                      {/* Source & Process */}
                       <td style={{ padding: "16px 20px" }}>
-                        <span style={{ fontSize: "12px", fontWeight: 800, background: `${C.teal}12`, color: C.teal, padding: "4px 10px", borderRadius: "8px", textTransform: "uppercase" }}>
-                          {lead.bank_name || 'Partner Bank'}
-                        </span>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                          <span style={{ fontSize: "11px", fontWeight: 800, padding: "2px 6px", borderRadius: "4px", background: "#F3E8FF", color: "#7E22CE", width: "fit-content" }}>
+                            {lead.processed_by || 'Direct Link'}
+                          </span>
+                          <span style={{ fontSize: "11px", fontWeight: 700, color: C.textLight }}>
+                            {lead.qd_executive_name || 'Not Assigned'}
+                          </span>
+                        </div>
                       </td>
-                      <td style={{ padding: "16px 20px", fontWeight: 600 }}>{lead.card_name}</td>
+
+                      {/* Product & Bank */}
                       <td style={{ padding: "16px 20px" }}>
-                        <select
-                          value={lead.status || 'verified'}
-                          onChange={(e) => handleStatusUpdate(lead.id, e.target.value)}
-                          style={{
-                            padding: "6px 10px", borderRadius: "8px",
-                            border: `1px solid ${C.border}`, background: C.inputBg,
-                            color: C.text, fontSize: "12px", fontWeight: 700, cursor: "pointer"
-                          }}
-                        >
-                          <option value="verified">Verified</option>
-                          <option value="operational_verified">Operational Verified</option>
-                          <option value="approved">Approved</option>
-                          <option value="disbursed">Disbursed</option>
-                          <option value="rejected">Rejected</option>
-                        </select>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                          <span style={{ fontWeight: 800, color: C.text }}>{lead.bank_name || 'Partner Bank'}</span>
+                          <span style={{ fontSize: "10px", fontWeight: 800, background: badgeBg, color: badgeColor, padding: "1px 6px", borderRadius: "4px", whiteSpace: "nowrap" }}>
+                            {catLabel}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: "11px", color: C.textLight }}>{lead.card_name || 'Loan Product'}</div>
                       </td>
-                      <td style={{ padding: "16px 20px", textAlign: "center" }}>
-                        <button
-                          onClick={() => openEditLoanForm(lead)}
-                          style={{
-                            padding: "8px 14px", borderRadius: "8px",
-                            border: `1px solid ${C.teal}`, background: `${C.teal}15`,
-                            color: C.teal, fontWeight: 800, fontSize: "12px",
-                            cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px"
-                          }}
-                        >
-                          <FaEdit size={12} /> Process Loan
-                        </button>
+
+                      {/* Status & Commission */}
+                      <td style={{ padding: "16px 20px" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                          <span style={{
+                            display: "inline-block", padding: "3px 8px", borderRadius: "6px", fontSize: "10.5px", fontWeight: 800, textTransform: "uppercase", width: "fit-content",
+                            background: statusBadge.bg, color: statusBadge.color
+                          }}>
+                            {statusBadge.label}
+                          </span>
+                          <div style={{ fontSize: "11px", color: C.textLight, fontWeight: 700 }}>
+                            Loan: <span style={{ color: C.text }}>₹{parseFloat(lead.requested_loan_amount || 0).toLocaleString('en-IN')}</span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Actions */}
+                      <td style={{ padding: "16px 20px", textAlign: "right" }}>
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px", alignItems: "center" }}>
+                          <button
+                            onClick={() => openEditLoanForm(lead)}
+                            style={{
+                              padding: "6px 12px", borderRadius: "8px",
+                              border: `1px solid ${C.teal}`, background: `${C.teal}15`,
+                              color: C.teal, fontWeight: 800, fontSize: "11.5px",
+                              cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px"
+                            }}
+                          >
+                            <FaEdit size={12} /> Process
+                          </button>
+                          <select
+                            value={lead.status || 'verified'}
+                            onChange={(e) => handleStatusUpdate(lead.id, e.target.value)}
+                            style={{
+                              padding: "4px 8px", borderRadius: "6px",
+                              border: `1px solid ${C.border}`, background: C.inputBg,
+                              color: C.text, fontSize: "11px", fontWeight: 700, cursor: "pointer"
+                            }}
+                          >
+                            <option value="verified">Verified</option>
+                            <option value="operational_verified">Op Verified</option>
+                            <option value="approved">Approved</option>
+                            <option value="disbursed">Disbursed</option>
+                            <option value="rejected">Rejected</option>
+                          </select>
+                        </div>
                       </td>
                     </tr>
                   );

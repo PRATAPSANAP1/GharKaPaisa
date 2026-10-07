@@ -1979,10 +1979,11 @@ const listApplications = async (req, res, next) => {
     }
 
     if (!isPartnerOrTeam && !isSuperAdmin && req.user?.id) {
-      if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser || isQdOperatorUser || isFinalStatusOperatorUser || isQuerableOperatorUser) {
+      if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser || isQdOperatorUser || isFinalStatusOperatorUser) {
         opHeadBankFilterSQL = ``;
         countOpHeadBankFilterSQL = ``;
       } else {
+        // Querable Operator and regular Ops Heads should use bank filtering
         opHeadBankFilterSQL = baseBankAccessFilterSQL;
         countOpHeadBankFilterSQL = baseBankAccessFilterSQL;
       }
