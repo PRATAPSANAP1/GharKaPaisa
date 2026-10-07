@@ -1979,11 +1979,11 @@ const listApplications = async (req, res, next) => {
     }
 
     if (!isPartnerOrTeam && !isSuperAdmin && req.user?.id) {
-      if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser || isQdOperatorUser || isFinalStatusOperatorUser) {
+      if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser || isQdOperatorUser || isFinalStatusOperatorUser || isQuerableOperatorUser) {
         opHeadBankFilterSQL = ``;
         countOpHeadBankFilterSQL = ``;
       } else {
-        // Querable Operator and regular Ops Heads should use bank filtering
+        // Regular Ops Heads should use bank filtering
         opHeadBankFilterSQL = baseBankAccessFilterSQL;
         countOpHeadBankFilterSQL = baseBankAccessFilterSQL;
       }
@@ -2150,8 +2150,23 @@ const listApplications = async (req, res, next) => {
           OR ($2 = 'approved' AND combined.status IN ('approved', 'sanctioned', 'super_admin_approved', 'disbursed'))
           OR ($2 = 'commission_received' AND combined.status IN ('commission_received', 'commission_released', 'released', 'credited', 'paid'))
           OR ($2 = 'rejected' AND (
-            (combined.status IN ('rejected', 'declined', 'decline', 'technical_error') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%' OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%')
-            AND NOT (combined.status IN ('cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%')
+            (
+              combined.status IN ('rejected', 'declined', 'decline', 'technical_error')
+              OR LOWER(COALESCE(combined.status, '')) LIKE '%reject%'
+              OR LOWER(COALESCE(combined.status, '')) LIKE '%decline%'
+              OR LOWER(COALESCE(combined.final_status, '')) IN ('rejected', 'declined', 'decline', 'technical_error')
+              OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%'
+              OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'
+              OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%reject%'
+              OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%decline%'
+            )
+            AND NOT (
+              combined.status IN ('cancelled', 'cancel', 'canceled')
+              OR LOWER(COALESCE(combined.status, '')) LIKE '%cancel%'
+              OR LOWER(COALESCE(combined.final_status, '')) IN ('cancelled', 'cancel', 'canceled')
+              OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'
+              OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%cancel%'
+            )
           ))
           OR ($2 = 'declined' AND (combined.status IN ('declined', 'decline') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'))
           OR ($2 = 'cancelled' AND (combined.status IN ('cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'))
@@ -2255,8 +2270,23 @@ const listApplications = async (req, res, next) => {
           OR ($2 = 'approved' AND combined.status IN ('approved', 'sanctioned', 'super_admin_approved', 'disbursed'))
           OR ($2 = 'commission_received' AND combined.status IN ('commission_received', 'commission_released', 'released', 'credited', 'paid'))
           OR ($2 = 'rejected' AND (
-            (combined.status IN ('rejected', 'declined', 'decline', 'technical_error') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%' OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%')
-            AND NOT (combined.status IN ('cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%')
+            (
+              combined.status IN ('rejected', 'declined', 'decline', 'technical_error')
+              OR LOWER(COALESCE(combined.status, '')) LIKE '%reject%'
+              OR LOWER(COALESCE(combined.status, '')) LIKE '%decline%'
+              OR LOWER(COALESCE(combined.final_status, '')) IN ('rejected', 'declined', 'decline', 'technical_error')
+              OR LOWER(COALESCE(combined.final_status, '')) LIKE '%reject%'
+              OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'
+              OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%reject%'
+              OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%decline%'
+            )
+            AND NOT (
+              combined.status IN ('cancelled', 'cancel', 'canceled')
+              OR LOWER(COALESCE(combined.status, '')) LIKE '%cancel%'
+              OR LOWER(COALESCE(combined.final_status, '')) IN ('cancelled', 'cancel', 'canceled')
+              OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'
+              OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%cancel%'
+            )
           ))
           OR ($2 = 'declined' AND (combined.status IN ('declined', 'decline') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'))
           OR ($2 = 'cancelled' AND (combined.status IN ('cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'))
@@ -2372,7 +2402,7 @@ const listApplications = async (req, res, next) => {
         ${remarkOperatorFilterSQL}
         ${finalStatusOperatorFilterSQL}
         ${querableOperatorFilterSQL}
-      GROUP BY combined.status, COALESCE(combined.final_status, '')
+      GROUP BY combined.status, COALESCE(combined.final_status, ''), COALESCE(combined.bank_current_lead_status, '')
     `, countQueryParams);
     const statusCountsObj = {
       pending: 0,
@@ -2388,12 +2418,13 @@ const listApplications = async (req, res, next) => {
     for (const r of statusCountsRows) {
       const s = String(r.status || '').toLowerCase();
       const fs = String(r.final_status || '').toLowerCase();
+      const bs = String(r.bank_current_lead_status || '').toLowerCase();
       const cnt = parseInt(r.count) || 0;
 
-      if (['declined', 'decline'].includes(s) || fs.includes('decline')) {
+      if (['declined', 'decline'].includes(s) || s.includes('decline') || fs.includes('decline') || bs.includes('decline')) {
         statusCountsObj.declined = (statusCountsObj.declined || 0) + cnt;
         statusCountsObj.rejected += cnt;
-      } else if (['rejected', 'technical_error'].includes(s) || fs.includes('reject')) {
+      } else if (['rejected', 'technical_error'].includes(s) || s.includes('reject') || fs.includes('reject') || bs.includes('reject')) {
         statusCountsObj.rejected += cnt;
       } else if (['cancelled', 'cancel', 'canceled'].includes(s) || fs.includes('cancel')) {
         statusCountsObj.cancelled += cnt;
