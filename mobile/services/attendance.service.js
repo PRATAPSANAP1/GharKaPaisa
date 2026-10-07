@@ -53,12 +53,15 @@ export const getLivenessCredentials = async (sessionId) => {
 };
 
 /**
- * Validate AWS Rekognition Liveness Result + Execute KYC Face Matching
+ * Validate AWS Rekognition Liveness Result + Execute KYC Face Matching + Geofence Verification
  */
-export const validateLivenessResult = async (sessionId, providerSessionId) => {
+export const validateLivenessResult = async (sessionId, providerSessionId, locationData = {}) => {
   const response = await apiClient.post('/attendance/verification/liveness/result', {
     session_id: sessionId,
     provider_session_id: providerSessionId,
+    latitude: locationData.latitude ?? locationData.lat,
+    longitude: locationData.longitude ?? locationData.lng,
+    accuracy: locationData.accuracy,
   });
   return response.data;
 };

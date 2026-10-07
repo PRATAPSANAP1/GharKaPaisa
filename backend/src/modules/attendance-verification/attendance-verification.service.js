@@ -576,83 +576,120 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
   }
 
   // 3. Authoritative Building Geofence & Location Verification
-  let geoResult = { matched: true, building: { name: 'Main Office Building (Pune)' } };
   const hasClientCoordinates = latitude !== undefined && longitude !== undefined && latitude !== null && longitude !== null;
 
-  if (hasClientCoordinates) {
-    // Check if employee has an active DB bypass approval
-    let hasDbBypass = false;
+  // Reject if coordinates are missing - geofence verification is mandatory
+  if (!hasClientCoordinates) {
+    const failureReason = 'LOCATION_REQUIRED';
     try {
-      const { rows: bypassRows } = await query(
-        `SELECT id FROM environment_bypass_approvals 
-         WHERE employee_id = $1 AND is_active = TRUE AND start_date <= CURRENT_DATE AND end_date >= CURRENT_DATE LIMIT 1`,
-        [authEmpId]
+      await query(
+        `UPDATE attendance_verification_sessions 
+         SET face_status = 'PASSED', location_status = 'FAILED', status = 'FAILED', failure_reason = $1, 
+             updated_at = NOW() 
+         WHERE id = $2`,
+        [failureReason, sessionId]
       );
-      if (bypassRows && bypassRows.length > 0) {
-        hasDbBypass = true;
-      }
     } catch (e) {}
 
-    if (hasDbBypass || process.env.ATTENDANCE_GEOFENCE_BYPASS === 'true' || process.env.DISABLE_GEOFENCE === 'true') {
-      logger.info(`[ATTENDANCE GEOFENCE] Location verification bypassed for employee ${authEmpId} (Active DB Bypass / ENV Override)`);
-      geoResult = {
-        matched: true,
-        building: { id: '00000000-0000-0000-0000-000000000001', name: 'Main Office Building (Pune - Approved Bypass)' },
-        isStrictInside: true,
-        distanceMeters: 0,
-        status: 'LOCATION_VERIFIED',
-        message: 'Location verified via approved bypass'
-      };
-    } else {
-      geoResult = await buildingGeofenceService.verifyLocationInBuilding(latitude, longitude, accuracy !== undefined ? accuracy : 0);
+    await logAction(reqUser, 'ATTENDANCE_LOCATION_REQUIRED', authEmpId, {
+      session_id: sessionId,
+      reason: failureReason,
+    });
+
+    const errorMsg = 'Location access is required to verify your office presence.';
+    const error = new Error(errorMsg);
+    error.statusCode = 400;
+    error.reason = failureReason;
+    error.diagnostic = {
+      endpoint: '/api/v1/attendance/verification/liveness/result',
+      sessionId: sessionId,
+      employeeId: authEmpId,
+      latitude: null,
+      longitude: null,
+      accuracy: null,
+      livenessStatus: 'PASSED',
+      faceStatus: 'PASSED',
+      environmentStatus: 'FAILED',
+      reason: failureReason,
+      message: errorMsg,
+    };
+    logger.warn('[ATTENDANCE DIAGNOSTIC REJECTION]', error.diagnostic);
+    throw error;
+  }
+
+  // Check if employee has an active DB bypass approval
+  let hasDbBypass = false;
+  try {
+    const { rows: bypassRows } = await query(
+      `SELECT id FROM environment_bypass_approvals 
+       WHERE employee_id = $1 AND is_active = TRUE AND start_date <= CURRENT_DATE AND end_date >= CURRENT_DATE LIMIT 1`,
+      [authEmpId]
+    );
+    if (bypassRows && bypassRows.length > 0) {
+      hasDbBypass = true;
     }
+  } catch (e) {}
 
-    if (!geoResult.matched) {
-      const failureReason = geoResult.reason || (geoResult.status === 'LOW_ACCURACY' ? 'LOW_ACCURACY' : (geoResult.status === 'INVALID_COORDINATES' ? 'INVALID_COORDINATES' : 'OUTSIDE_BUILDING'));
-      try {
-        await query(
-          `UPDATE attendance_verification_sessions 
-           SET face_status = 'PASSED', location_status = 'FAILED', status = 'FAILED', failure_reason = $1, 
-               location_lat = $2, location_lng = $3, location_accuracy = $4, updated_at = NOW() 
-           WHERE id = $5`,
-          [failureReason, latitude, longitude, accuracy || 0, sessionId]
-        );
-      } catch (e) {}
+  let geoResult;
+  if (hasDbBypass || process.env.ATTENDANCE_GEOFENCE_BYPASS === 'true' || process.env.DISABLE_GEOFENCE === 'true') {
+    logger.info(`[ATTENDANCE GEOFENCE] Location verification bypassed for employee ${authEmpId} (Active DB Bypass / ENV Override)`);
+    geoResult = {
+      matched: true,
+      building: { id: '00000000-0000-0000-0000-000000000001', name: 'Main Office Building (Pune - Approved Bypass)' },
+      isStrictInside: true,
+      distanceMeters: 0,
+      status: 'LOCATION_VERIFIED',
+      message: 'Location verified via approved bypass'
+    };
+  } else {
+    geoResult = await buildingGeofenceService.verifyLocationInBuilding(latitude, longitude, accuracy !== undefined ? accuracy : 0);
+  }
 
-      await logAction(reqUser, failureReason === 'LOW_ACCURACY' ? 'ATTENDANCE_LOCATION_LOW_ACCURACY' : 'ATTENDANCE_LOCATION_MISMATCH', authEmpId, {
-        session_id: sessionId,
-        latitude,
-        longitude,
-        accuracy,
-        reason: failureReason,
-        distance_meters: geoResult.distanceMeters,
-      });
+  if (!geoResult.matched) {
+    const failureReason = geoResult.reason || (geoResult.status === 'LOW_ACCURACY' ? 'LOW_ACCURACY' : (geoResult.status === 'INVALID_COORDINATES' ? 'INVALID_COORDINATES' : 'OUTSIDE_BUILDING'));
+    try {
+      await query(
+        `UPDATE attendance_verification_sessions 
+         SET face_status = 'PASSED', location_status = 'FAILED', status = 'FAILED', failure_reason = $1, 
+             location_lat = $2, location_lng = $3, location_accuracy = $4, updated_at = NOW() 
+         WHERE id = $5`,
+        [failureReason, latitude, longitude, accuracy || 0, sessionId]
+      );
+    } catch (e) {}
 
-      const errorMsg = geoResult.message || (failureReason === 'LOW_ACCURACY'
-        ? 'Unable to verify your location accurately. Please enable GPS and try again.'
-        : (failureReason === 'INVALID_COORDINATES'
-          ? 'Invalid GPS latitude/longitude coordinates provided.'
-          : "Location doesn't match. You must be inside the office building."));
+    await logAction(reqUser, failureReason === 'LOW_ACCURACY' ? 'ATTENDANCE_LOCATION_LOW_ACCURACY' : 'ATTENDANCE_LOCATION_MISMATCH', authEmpId, {
+      session_id: sessionId,
+      latitude,
+      longitude,
+      accuracy,
+      reason: failureReason,
+      distance_meters: geoResult.distanceMeters,
+    });
 
-      const error = new Error(errorMsg);
-      error.statusCode = 400;
-      error.reason = failureReason;
-      error.diagnostic = {
-        endpoint: '/api/v1/attendance/verification/liveness/result',
-        sessionId: sessionId,
-        employeeId: authEmpId,
-        latitude: latitude ?? null,
-        longitude: longitude ?? null,
-        accuracy: accuracy ?? null,
-        livenessStatus: 'PASSED',
-        faceStatus: 'PASSED',
-        environmentStatus: 'FAILED',
-        reason: failureReason,
-        message: errorMsg,
-      };
-      logger.warn('[ATTENDANCE DIAGNOSTIC REJECTION]', error.diagnostic);
-      throw error;
-    }
+    const errorMsg = geoResult.message || (failureReason === 'LOW_ACCURACY'
+      ? 'Unable to verify your location accurately. Please enable GPS and try again.'
+      : (failureReason === 'INVALID_COORDINATES'
+        ? 'Invalid GPS latitude/longitude coordinates provided.'
+        : "Location doesn't match. You must be inside the office building."));
+
+    const error = new Error(errorMsg);
+    error.statusCode = 400;
+    error.reason = failureReason;
+    error.diagnostic = {
+      endpoint: '/api/v1/attendance/verification/liveness/result',
+      sessionId: sessionId,
+      employeeId: authEmpId,
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
+      accuracy: accuracy ?? null,
+      livenessStatus: 'PASSED',
+      faceStatus: 'PASSED',
+      environmentStatus: 'FAILED',
+      reason: failureReason,
+      message: errorMsg,
+    };
+    logger.warn('[ATTENDANCE DIAGNOSTIC REJECTION]', error.diagnostic);
+    throw error;
   }
 
   // ALL VERIFICATIONS PASSED (Liveness, Face Match, Building Geofence Location)!

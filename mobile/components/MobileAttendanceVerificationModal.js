@@ -7,9 +7,11 @@ import {
   Modal,
   ActivityIndicator,
   SafeAreaView,
-  Platform
+  Platform,
+  Alert
 } from 'react-native';
 import { WebView } from 'react-native-webview';
+import * as Location from 'expo-location';
 
 import {
   createVerificationSession,
@@ -47,6 +49,67 @@ export default function MobileAttendanceVerificationModal({
     setAwsCredentials(null);
     setLivenessStatus('PENDING');
     setFaceStatus('PENDING');
+  }, []);
+
+  // Helper to fetch device GPS coordinates with high accuracy
+  const getDeviceLocation = useCallback(async () => {
+    try {
+      // Request foreground location permission
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        throw new Error('Location permission is required for attendance. Please allow location access in your device settings and try again.');
+      }
+
+      // Request high-accuracy current location
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+        maximumAge: 0, // Do not use cached location
+      });
+
+      const lat = location.coords.latitude;
+      const lng = location.coords.longitude;
+      const accuracy = location.coords.accuracy;
+
+      // Validate coordinates
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(accuracy)) {
+        throw new Error('Invalid GPS coordinates received from device.');
+      }
+
+      if (accuracy <= 0) {
+        throw new Error('Invalid GPS accuracy received from device.');
+      }
+
+      // Check accuracy threshold (50 meters)
+      const MAX_ACCURACY_THRESHOLD = 50;
+      if (accuracy > MAX_ACCURACY_THRESHOLD) {
+        // Retry once with bounded timeout
+        console.log('[MOBILE GPS] Initial accuracy too high:', accuracy, 'm. Retrying...');
+        const retryLocation = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+          maximumAge: 0,
+        });
+
+        const retryAccuracy = retryLocation.coords.accuracy;
+        if (retryAccuracy > MAX_ACCURACY_THRESHOLD) {
+          throw new Error(`GPS location is not accurate enough for attendance verification (${Math.round(retryAccuracy)}m > ${MAX_ACCURACY_THRESHOLD}m threshold). Please enable High Accuracy location mode and try again outdoors or near a window.`);
+        }
+
+        return {
+          latitude: retryLocation.coords.latitude,
+          longitude: retryLocation.coords.longitude,
+          accuracy: retryAccuracy,
+        };
+      }
+
+      return {
+        latitude: lat,
+        longitude: lng,
+        accuracy: accuracy,
+      };
+    } catch (err) {
+      console.error('[MOBILE GPS ERROR]:', err);
+      throw err;
+    }
   }, []);
 
   useEffect(() => {
@@ -115,8 +178,11 @@ export default function MobileAttendanceVerificationModal({
 
       const targetProviderSessionId = pSessionId || providerSessionId;
 
-      // Validate Liveness Result & Execute Server-Side KYC CompareFaces
-      await validateLivenessResult(sessionId, targetProviderSessionId);
+      // Get device GPS location for geofence verification
+      const locationData = await getDeviceLocation();
+
+      // Validate Liveness Result + Execute Server-Side KYC CompareFaces + Geofence Verification
+      await validateLivenessResult(sessionId, targetProviderSessionId, locationData);
 
       setFaceStatus('PASSED');
       setStep('SUCCESS');
