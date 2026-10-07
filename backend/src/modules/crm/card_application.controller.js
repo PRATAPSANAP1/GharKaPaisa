@@ -209,7 +209,7 @@ const listApplications = async (req, res, next) => {
         p.category::text IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi')
         OR p.sub_category IN ('loc', 'eoc', 'LOC', 'EOC')
         OR to_jsonb(a)->>'category' IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi')
-        OR a.product_category IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi')
+        OR to_jsonb(a)->>'product_category' IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi')
         OR LOWER(COALESCE(p.name, '')) LIKE '%insta loan%'
         OR LOWER(COALESCE(p.name, '')) LIKE '%jumbo loan%'
         OR LOWER(COALESCE(p.name, '')) LIKE '%smartemi%'
