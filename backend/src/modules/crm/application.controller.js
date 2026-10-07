@@ -108,7 +108,10 @@ const assertQuerableOperatorApplicationAccess = async (req, app) => {
   if (!checkQuerableUserRole(req)) return;
 
   const status = String(app.status || '').toLowerCase().trim();
-  if (status !== 'rejected') {
+  const finalStatus = String(app.final_status || '').toLowerCase().trim();
+  const isRejected = ['rejected', 'declined', 'decline', 'technical_error'].includes(status) || finalStatus === 'rejected';
+
+  if (!isRejected) {
     const err = new Error('QUERABLE_OPERATOR_STATUS_ACCESS_DENIED: Access denied. Querable Operators are only authorized to access rejected applications.');
     err.statusCode = 403;
     throw err;
@@ -1897,7 +1900,11 @@ const listApplications = async (req, res, next) => {
         querableOperatorFilterSQL = ` AND 1=0`;
       } else {
         const assignedIds = abRows.map(b => `'${b.bank_id}'`).join(',');
-        querableOperatorFilterSQL = ` AND combined.bank_id IN (${assignedIds}) AND LOWER(COALESCE(combined.status, '')) = 'rejected'`;
+        const rejectCondition = `(
+          LOWER(TRIM(COALESCE(combined.status, ''))) IN ('rejected', 'declined', 'decline', 'technical_error')
+          OR LOWER(TRIM(COALESCE(combined.final_status, ''))) = 'rejected'
+        )`;
+        querableOperatorFilterSQL = ` AND combined.bank_id IN (${assignedIds}) AND ${rejectCondition}`;
       }
     }
 

@@ -19,7 +19,8 @@ async function runQuerableOperatorTests() {
       if (!bankMatched) return false;
 
       const s = String(candidateApp.status || '').toLowerCase().trim();
-      const isRejected = s === 'rejected';
+      const fs = String(candidateApp.final_status || '').toLowerCase().trim();
+      const isRejected = ['rejected', 'declined', 'decline', 'technical_error'].includes(s) || fs === 'rejected';
 
       return isRejected;
     }
