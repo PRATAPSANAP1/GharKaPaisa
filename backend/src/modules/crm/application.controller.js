@@ -1817,8 +1817,24 @@ const listApplications = async (req, res, next) => {
       finalStatusOperatorFilterSQL = ` ${baseBankAccessFilterSQL} AND ${eligibleDispatchFilter} AND ${inProcessFinalStatusFilter}`;
     }
 
+    const isQuerableOperatorUser = ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
+    let querableOperatorFilterSQL = '';
+    if (isQuerableOperatorUser && req.user?.id) {
+      const rejectedCondition = `(
+        LOWER(TRIM(COALESCE(combined.status, ''))) IN ('rejected', 'declined', 'decline', 'technical_error')
+        OR LOWER(TRIM(COALESCE(combined.status, ''))) LIKE '%reject%'
+        OR LOWER(TRIM(COALESCE(combined.status, ''))) LIKE '%decline%'
+        OR LOWER(TRIM(COALESCE(combined.final_status, ''))) IN ('rejected', 'declined', 'decline', 'technical_error')
+        OR LOWER(TRIM(COALESCE(combined.final_status, ''))) LIKE '%reject%'
+        OR LOWER(TRIM(COALESCE(combined.final_status, ''))) LIKE '%decline%'
+        OR LOWER(TRIM(COALESCE(combined.bank_current_lead_status, ''))) LIKE '%reject%'
+        OR LOWER(TRIM(COALESCE(combined.bank_current_lead_status, ''))) LIKE '%decline%'
+      )`;
+      querableOperatorFilterSQL = ` ${baseBankAccessFilterSQL} AND ${rejectedCondition}`;
+    }
+
     if (!isPartnerOrTeam && !isSuperAdmin && req.user?.id) {
-      if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser || isQdOperatorUser || isFinalStatusOperatorUser) {
+      if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser || isQdOperatorUser || isFinalStatusOperatorUser || isQuerableOperatorUser) {
         opHeadBankFilterSQL = ``;
         countOpHeadBankFilterSQL = ``;
       } else {
@@ -2059,6 +2075,7 @@ const listApplications = async (req, res, next) => {
         ${qdOperatorFilterSQL}
         ${remarkOperatorFilterSQL}
         ${finalStatusOperatorFilterSQL}
+        ${querableOperatorFilterSQL}
       ORDER BY combined.created_at DESC
       LIMIT $6 OFFSET $7
     `, queryParams);
@@ -2151,6 +2168,7 @@ const listApplications = async (req, res, next) => {
         ${qdOperatorFilterSQL}
         ${remarkOperatorFilterSQL}
         ${finalStatusOperatorFilterSQL}
+        ${querableOperatorFilterSQL}
     `, countQueryParams);
 
     // Compute real-time canonical status counts scoped to user role & bank filters
@@ -2214,6 +2232,7 @@ const listApplications = async (req, res, next) => {
         ${qdOperatorFilterSQL}
         ${remarkOperatorFilterSQL}
         ${finalStatusOperatorFilterSQL}
+        ${querableOperatorFilterSQL}
       GROUP BY combined.status, COALESCE(combined.final_status, ''), COALESCE(combined.bank_current_lead_status, '')
     `, countQueryParams);
     const statusCountsObj = {

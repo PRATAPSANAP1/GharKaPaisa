@@ -29,7 +29,8 @@ export default function ManageApplications() {
   const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
   const isQdOperatorUser = ['QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER'].includes(userDesignation) || ['QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER'].includes(userRole);
   const isFinalStatusOperatorUser = ['FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userDesignation) || ['FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userRole);
-  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR', 'FINAL_STATUS_OPERATOR', 'FINAL STATUS OPERATOR'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL STATUS OPERATOR'].includes(userDesignation);
+  const isQuerableOperatorUser = ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
+  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR', 'FINAL_STATUS_OPERATOR', 'FINAL STATUS OPERATOR', 'QUERABLE_OPERATOR', 'QUERABLE OPERATOR', 'QUERYABLE_OPERATOR', 'QUERYABLE OPERATOR'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE_OPERATOR', 'QUERABLE OPERATOR', 'QUERYABLE_OPERATOR', 'QUERYABLE OPERATOR'].includes(userDesignation);
   const isOpsHead = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD'].includes(userRole) && !isOpsOperator;
   const isOpsHeadOrSuperAdmin = isOpsHead || isOpsOperator;
 
@@ -269,7 +270,9 @@ export default function ManageApplications() {
     }
   };
 
-  const STATUS_TABS = [
+  const STATUS_TABS = isQuerableOperatorUser ? [
+    { id: 'rejected', label: 'Assigned Bank Rejected Cases', color: '#ef4444', bg: '#ef444415' }
+  ] : [
     { id: '', label: 'All Applications', color: C.primary, bg: `${C.primary}15` },
     { id: 'pending', label: 'Pending', color: '#f59e0b', bg: '#f59e0b15' },
     { id: 'details_submitted', label: 'Details Submitted', color: '#3b82f6', bg: '#3b82f615' },
@@ -416,11 +419,25 @@ export default function ManageApplications() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: 900, color: C.text, margin: 0, letterSpacing: '-0.02em' }}>
-            {isPanCheckerUser ? 'PAN Checker Review Queue' : isRemarkOperatorUser ? 'Remark Operator Queue' : isQdOperatorUser ? 'QD Operator Queue' : 'Applications Management'}
+            {isQuerableOperatorUser ? 'Querable Operator Applications Queue' : isPanCheckerUser ? 'PAN Checker Review Queue' : isRemarkOperatorUser ? 'Remark Operator Queue' : isQdOperatorUser ? 'QD Operator Queue' : 'Applications Management'}
           </h2>
           <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>
-            {isPanCheckerUser ? 'Review and verify customer PAN details for assigned applications.' : isRemarkOperatorUser ? 'Review and update remarks for assigned bank applications.' : isQdOperatorUser ? 'Review assigned bank applications for QD form and remark details.' : 'Track, verify, update and manage operations for all submitted customer applications.'}
+            {isQuerableOperatorUser ? 'Review and manage assigned bank rejected applications.' : isPanCheckerUser ? 'Review and verify customer PAN details for assigned applications.' : isRemarkOperatorUser ? 'Review and update remarks for assigned bank applications.' : isQdOperatorUser ? 'Review assigned bank applications for QD form and remark details.' : 'Track, verify, update and manage operations for all submitted customer applications.'}
           </p>
+          {isQuerableOperatorUser && (
+            <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight }}>Assigned Banks:</span>
+              {assignedList.length > 0 ? (
+                assignedList.map((b, i) => (
+                  <span key={b.id || i} style={{ padding: '3px 8px', borderRadius: '6px', background: '#F1F5F9', color: '#1E293B', fontSize: '11px', fontWeight: 700, border: '1px solid #CBD5E1' }}>
+                    🏦 {b.name || b.short_code || b.code || 'Bank'}
+                  </span>
+                ))
+              ) : (
+                <span style={{ fontSize: '11.5px', color: '#EF4444', fontWeight: 700 }}>No banks assigned</span>
+              )}
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -442,7 +459,24 @@ export default function ManageApplications() {
 
 
       {/* ── 2. TOP KPI SUMMARY CARDS ── */}
-      {!isPanCheckerUser && !isRemarkOperatorUser && (
+      {isQuerableOperatorUser ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+          <div style={{ background: C.card, borderRadius: '14px', padding: '16px 18px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Assigned Bank Rejected Cases</span>
+              <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <MdCancel size={20} />
+              </div>
+            </div>
+            <div style={{ marginTop: '12px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+              <span style={{ fontSize: '28px', fontWeight: 900, color: '#EF4444' }}>
+                {total || 0}
+              </span>
+              <span style={{ fontSize: '11.5px', fontWeight: 700, color: C.textLight }}>Rejected Cases</span>
+            </div>
+          </div>
+        </div>
+      ) : !isPanCheckerUser && !isRemarkOperatorUser && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
 
           {/* Total Applications */}
@@ -955,7 +989,15 @@ export default function ManageApplications() {
                       {/* Actions */}
                       <td style={{ padding: '14px 16px', textAlign: 'right' }}>
                         <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px", alignItems: "center" }}>
-                          {isPanCheckerUser ? (
+                          {isQuerableOperatorUser ? (
+                            <button
+                              onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }}
+                              style={{ background: "#ef444415", border: "1px solid #ef444440", color: "#ef4444", padding: "6px 12px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                              title="View Reject / Decline Details"
+                            >
+                              <Eye size={13} /> View Query
+                            </button>
+                          ) : isPanCheckerUser ? (
                             <button
                               onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }}
                               style={{ background: "#2563eb15", border: "1px solid #2563eb40", color: "#2563eb", padding: "6px 12px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}

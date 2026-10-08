@@ -1,15 +1,3 @@
-/**
- * Comprehensive Unit Test Suite for Attendance GPS & Building Geofence Logic
- * 
- * Verifies:
- * 1. Building 1 (Pune HQ) strict polygon matching
- * 2. Building 2 (Jalna Branch) strict polygon matching
- * 3. 50m GPS accuracy threshold enforcement (<=50m allowed, >50m rejected as LOW_ACCURACY)
- * 4. Outside-building location rejection (LOCATION_MISMATCH)
- * 5. Invalid / negative / missing accuracy handling
- */
-
-// Mock database config before loading buildingGeofence.service
 const Module = require('module');
 const originalRequire = Module.prototype.require;
 Module.prototype.require = function (request) {
