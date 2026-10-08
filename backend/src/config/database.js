@@ -86,15 +86,16 @@ const query = async (text, params, retries = 2) => {
       err.message.includes('ECONNREFUSED')
     );
     const isReservedSlots = err.message && err.message.includes('remaining connection slots are reserved');
+    const isDeadlock = err.code === '40P01' || (err.message && err.message.includes('deadlock detected'));
 
-    if (isPoolExhausted || isTransientNetwork || isReservedSlots) {
-      logger.warn(`DB Connection status on error: Total=${currentPool.totalCount}, Idle=${currentPool.idleCount}, Waiting=${currentPool.waitingCount}`, { error: err.message });
+    if (isPoolExhausted || isTransientNetwork || isReservedSlots || isDeadlock) {
+      logger.warn(`DB Connection status on error (${isDeadlock ? 'Deadlock' : 'Network/Pool'}): Total=${currentPool.totalCount}, Idle=${currentPool.idleCount}, Waiting=${currentPool.waitingCount}`, { error: err.message });
 
       if (retries > 0) {
-        const baseDelay = isPoolExhausted ? 800 : 400;
+        const baseDelay = isDeadlock ? 50 : (isPoolExhausted ? 800 : 400);
         const attempt = 2 - retries; // 0, 1
         const backoff = baseDelay * Math.pow(2, attempt);
-        const jitter = Math.random() * 300;
+        const jitter = Math.random() * (isDeadlock ? 100 : 300);
         const delay = backoff + jitter;
 
         if (isPoolExhausted && currentPool.waitingCount > currentPool.options.max) {
@@ -102,7 +103,7 @@ const query = async (text, params, retries = 2) => {
           throw err;
         }
 
-        logger.warn(`Transient DB error. Retrying in ${Math.round(delay)}ms (${retries} left)...`, { error: err.message });
+        logger.warn(`Transient DB error / Deadlock detected. Retrying in ${Math.round(delay)}ms (${retries} left)...`, { error: err.message });
         await new Promise((resolve) => setTimeout(resolve, delay));
         return query(text, params, retries - 1);
       }
