@@ -8,9 +8,10 @@ const logger = require('../../config/logger');
 
 const resolveBankId = async (bId) => {
   if (!bId) return null;
-  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(bId).trim());
-  if (isUuid) return String(bId).trim();
   const str = String(bId).trim();
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+  if (isUuid) return str;
+
   if (str.toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(str)) {
     const { rows } = await query(`
       SELECT id FROM banks 
@@ -31,7 +32,47 @@ const resolveBankId = async (bId) => {
     `);
     return created[0]?.id || null;
   }
+
+  // Look up bank by id, short_code, or name if not a direct UUID
+  const { rows } = await query(`
+    SELECT id FROM banks 
+    WHERE id::text = $1 
+       OR UPPER(short_code) = UPPER($1) 
+       OR LOWER(name) = LOWER($1) 
+    LIMIT 1
+  `, [str]).catch(() => ({ rows: [] }));
+  if (rows.length > 0) return rows[0].id;
+
   return null;
+};
+
+const insertBankAssignment = async (adminId, bankId, category, createdById) => {
+  const cat = (category || 'credit_card').toLowerCase() === 'loc_eoc' ? 'loc_eoc' : 'credit_card';
+  try {
+    await query(
+      `INSERT INTO admin_bank_assignments (admin_id, bank_id, category, created_by) VALUES ($1, $2, $3, $4) ON CONFLICT (admin_id, bank_id, category) DO NOTHING`,
+      [adminId, bankId, cat, createdById]
+    );
+  } catch (err1) {
+    try {
+      await query(
+        `INSERT INTO admin_bank_assignments (admin_id, bank_id, category, created_by) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
+        [adminId, bankId, cat, createdById]
+      );
+    } catch (err2) {
+      try {
+        await query(
+          `INSERT INTO admin_bank_assignments (admin_id, bank_id, created_by) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+          [adminId, bankId, createdById]
+        );
+      } catch (err3) {
+        await query(
+          `INSERT INTO admin_bank_assignments (admin_id, bank_id) VALUES ($1, $2)`,
+          [adminId, bankId]
+        ).catch(() => {});
+      }
+    }
+  }
 };
 
 const parseAssignmentPairsFromBody = (body) => {
