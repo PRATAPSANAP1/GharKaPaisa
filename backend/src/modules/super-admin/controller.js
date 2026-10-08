@@ -323,11 +323,22 @@ const listAdmins = async (req, res, next) => {
       ${whereClause}
       ORDER BY created_at DESC
     `, params);
-    const { rows: assignments } = await query(`
-      SELECT aba.admin_id, COALESCE(aba.category, 'credit_card') as category, b.id as bank_id, b.name as bank_name, b.short_code, b.short_code as code, b.logo_url 
-      FROM admin_bank_assignments aba 
-      JOIN banks b ON b.id = aba.bank_id
-    `);
+    let assignments = [];
+    try {
+      const { rows } = await query(`
+        SELECT aba.admin_id, COALESCE(aba.category, 'credit_card') as category, b.id as bank_id, b.name as bank_name, b.short_code, b.short_code as code, b.logo_url 
+        FROM admin_bank_assignments aba 
+        JOIN banks b ON b.id = aba.bank_id
+      `);
+      assignments = rows;
+    } catch (abaErr) {
+      const { rows } = await query(`
+        SELECT aba.admin_id, 'credit_card' as category, b.id as bank_id, b.name as bank_name, b.short_code, b.short_code as code, b.logo_url 
+        FROM admin_bank_assignments aba 
+        JOIN banks b ON b.id = aba.bank_id
+      `);
+      assignments = rows;
+    }
     const adminBankMap = {};
     const adminBankIdMap = {};
     const adminCategoryMap = {};
@@ -494,11 +505,22 @@ const updateAdmin = async (req, res, next) => {
         const val = req.body.has_loc_eoc !== undefined ? Boolean(req.body.has_loc_eoc) : Boolean(req.body.hasLocEoc);
         await query(`UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [val, existing.id]);
       } else {
-        const { rows: locCheckRows } = await query(`
-          SELECT 1 FROM admin_bank_assignments aba
-          JOIN banks b ON b.id = aba.bank_id
-          WHERE aba.admin_id = $1 AND (aba.category = 'loc_eoc' OR UPPER(COALESCE(b.short_code, '')) = 'LOC_EOC' OR b.name ~* 'loc|loan on card|smart emi')
-        `, [existing.id]);
+        let locCheckRows = [];
+        try {
+          const resLoc = await query(`
+            SELECT 1 FROM admin_bank_assignments aba
+            JOIN banks b ON b.id = aba.bank_id
+            WHERE aba.admin_id = $1 AND (aba.category = 'loc_eoc' OR UPPER(COALESCE(b.short_code, '')) = 'LOC_EOC' OR b.name ~* 'loc|loan on card|smart emi')
+          `, [existing.id]);
+          locCheckRows = resLoc.rows;
+        } catch (abaErr) {
+          const resLoc = await query(`
+            SELECT 1 FROM admin_bank_assignments aba
+            JOIN banks b ON b.id = aba.bank_id
+            WHERE aba.admin_id = $1 AND (UPPER(COALESCE(b.short_code, '')) = 'LOC_EOC' OR b.name ~* 'loc|loan on card|smart emi')
+          `, [existing.id]);
+          locCheckRows = resLoc.rows;
+        }
         const hasLoc = locCheckRows.length > 0;
         await query(`UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [hasLoc, existing.id]);
       }
@@ -516,12 +538,24 @@ const getAdminBanks = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { rows: [userRec] } = await query(`SELECT COALESCE(has_loc_eoc, FALSE) as has_loc_eoc FROM users WHERE id::text = $1`, [id]);
-    const { rows } = await query(`
-      SELECT aba.bank_id as id, aba.bank_id, COALESCE(aba.category, 'credit_card') as category, b.name, b.short_code, b.logo_url 
-      FROM admin_bank_assignments aba
-      JOIN banks b ON b.id = aba.bank_id
-      WHERE aba.admin_id::text = $1
-    `, [id]);
+    let rows = [];
+    try {
+      const resBanks = await query(`
+        SELECT aba.bank_id as id, aba.bank_id, COALESCE(aba.category, 'credit_card') as category, b.name, b.short_code, b.logo_url 
+        FROM admin_bank_assignments aba
+        JOIN banks b ON b.id = aba.bank_id
+        WHERE aba.admin_id::text = $1
+      `, [id]);
+      rows = resBanks.rows;
+    } catch (abaErr) {
+      const resBanks = await query(`
+        SELECT aba.bank_id as id, aba.bank_id, 'credit_card' as category, b.name, b.short_code, b.logo_url 
+        FROM admin_bank_assignments aba
+        JOIN banks b ON b.id = aba.bank_id
+        WHERE aba.admin_id::text = $1
+      `, [id]);
+      rows = resBanks.rows;
+    }
     const mapped = rows.map(b => ({
       ...b,
       category: b.category || 'credit_card',
@@ -568,11 +602,22 @@ const updateAdminBanks = async (req, res, next) => {
       const val = req.body.has_loc_eoc !== undefined ? Boolean(req.body.has_loc_eoc) : Boolean(req.body.hasLocEoc);
       await query(`UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [val, userRec.id]);
     } else {
-      const { rows: locCheckRows } = await query(`
-        SELECT 1 FROM admin_bank_assignments aba
-        JOIN banks b ON b.id = aba.bank_id
-        WHERE aba.admin_id = $1 AND (aba.category = 'loc_eoc' OR UPPER(COALESCE(b.short_code, '')) = 'LOC_EOC' OR b.name ~* 'loc|loan on card|smart emi')
-      `, [userRec.id]);
+      let locCheckRows = [];
+      try {
+        const resLoc = await query(`
+          SELECT 1 FROM admin_bank_assignments aba
+          JOIN banks b ON b.id = aba.bank_id
+          WHERE aba.admin_id = $1 AND (aba.category = 'loc_eoc' OR UPPER(COALESCE(b.short_code, '')) = 'LOC_EOC' OR b.name ~* 'loc|loan on card|smart emi')
+        `, [userRec.id]);
+        locCheckRows = resLoc.rows;
+      } catch (abaErr) {
+        const resLoc = await query(`
+          SELECT 1 FROM admin_bank_assignments aba
+          JOIN banks b ON b.id = aba.bank_id
+          WHERE aba.admin_id = $1 AND (UPPER(COALESCE(b.short_code, '')) = 'LOC_EOC' OR b.name ~* 'loc|loan on card|smart emi')
+        `, [userRec.id]);
+        locCheckRows = resLoc.rows;
+      }
       const hasLoc = locCheckRows.length > 0;
       await query(`UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [hasLoc, userRec.id]);
     }

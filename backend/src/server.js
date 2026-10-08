@@ -282,6 +282,24 @@ const startServer = async () => {
       logger.warn('LOC/EOC user column auto migration note:', locErr.message);
     }
 
+    // Always ensure category column & constraint exist on admin_bank_assignments on boot
+    try {
+      await db.query(`ALTER TABLE admin_bank_assignments ADD COLUMN IF NOT EXISTS category VARCHAR(50) NOT NULL DEFAULT 'credit_card'`);
+      await db.query(`
+        DO $$
+        BEGIN
+          IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'admin_bank_assignments_admin_id_bank_id_key') THEN
+            ALTER TABLE admin_bank_assignments DROP CONSTRAINT admin_bank_assignments_admin_id_bank_id_key;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'admin_bank_assignments_admin_bank_category_key') THEN
+            ALTER TABLE admin_bank_assignments ADD CONSTRAINT admin_bank_assignments_admin_bank_category_key UNIQUE (admin_id, bank_id, category);
+          END IF;
+        END $$;
+      `);
+    } catch (abaErr) {
+      logger.warn('admin_bank_assignments category auto migration note:', abaErr.message);
+    }
+
     // Always ensure messenger module tables exist on boot
     try {
       const migrateMessenger = require('./database/migrations/migrate_messenger.js');

@@ -1698,12 +1698,22 @@ const listApplications = async (req, res, next) => {
     )`;
 
     if (!isPartnerOrTeam && !isSuperAdmin && req.user?.id) {
-      const resAssignments = await query(`
-        SELECT aba.bank_id, COALESCE(aba.category, 'credit_card') as category, b.short_code, b.name 
-        FROM admin_bank_assignments aba
-        LEFT JOIN banks b ON b.id = aba.bank_id
-        WHERE aba.admin_id = $1
-      `, [req.user.id]);
+      let resAssignments;
+      try {
+        resAssignments = await query(`
+          SELECT aba.bank_id, COALESCE(aba.category, 'credit_card') as category, b.short_code, b.name 
+          FROM admin_bank_assignments aba
+          LEFT JOIN banks b ON b.id = aba.bank_id
+          WHERE aba.admin_id = $1
+        `, [req.user.id]);
+      } catch (abaErr) {
+        resAssignments = await query(`
+          SELECT aba.bank_id, 'credit_card' as category, b.short_code, b.name 
+          FROM admin_bank_assignments aba
+          LEFT JOIN banks b ON b.id = aba.bank_id
+          WHERE aba.admin_id = $1
+        `, [req.user.id]);
+      }
       abRows = resAssignments.rows;
 
       const buildSingleBankMatchSQL = (b) => {
@@ -5810,13 +5820,26 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
     const userDesignation = (req.user?.designation || '').toUpperCase();
     const isQuerableOperator = ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
     if (userRole !== 'SUPER_ADMIN') {
-      const { rows: userAssignments } = await client.query(
-        `SELECT aba.bank_id, COALESCE(aba.category, 'credit_card') as category, b.short_code, b.name 
-         FROM admin_bank_assignments aba
-         LEFT JOIN banks b ON b.id = aba.bank_id
-         WHERE aba.admin_id = $1`,
-        [userId]
-      );
+      let userAssignments = [];
+      try {
+        const res = await client.query(
+          `SELECT aba.bank_id, COALESCE(aba.category, 'credit_card') as category, b.short_code, b.name 
+           FROM admin_bank_assignments aba
+           LEFT JOIN banks b ON b.id = aba.bank_id
+           WHERE aba.admin_id = $1`,
+          [userId]
+        );
+        userAssignments = res.rows;
+      } catch (abaErr) {
+        const res = await client.query(
+          `SELECT aba.bank_id, 'credit_card' as category, b.short_code, b.name 
+           FROM admin_bank_assignments aba
+           LEFT JOIN banks b ON b.id = aba.bank_id
+           WHERE aba.admin_id = $1`,
+          [userId]
+        );
+        userAssignments = res.rows;
+      }
       
       const { rows: [pRow] } = await client.query(`SELECT category, sub_category, name, bank_id FROM products WHERE id = $1`, [app.product_id]).catch(() => ({ rows: [] }));
       const isAppLocEoc = ['loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loc', 'eoc'].includes(String(pRow?.category || app.category || '').toLowerCase()) ||
