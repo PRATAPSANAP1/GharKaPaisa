@@ -47,13 +47,12 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const role = (user?.role || '').toUpperCase();
   const userDesignation = (user?.designation || '').toUpperCase();
   const isFinalStatusOperator = ['FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userDesignation) || ['FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(role);
-  const isQuerableOperator = ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(role);
   const isPanChecker = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(role);
   const isRemarkOperator = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(role);
   const isQdOperator = ['QD OPERATOR', 'QD_OPERATOR'].includes(userDesignation) || ['QD OPERATOR', 'QD_OPERATOR'].includes(role);
   const isAdministrativeOperator = ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(role);
   const isSalesExecUser = (['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(role)) && !isAdministrativeOperator;
-  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR', 'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(role) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation);
+  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR', 'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(role) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userDesignation);
   const isSuperAdminRole = ['SUPER_ADMIN', 'SUPER ADMIN'].includes(role) || ['SUPER_ADMIN', 'SUPER ADMIN'].includes(userDesignation);
   const isOpsHead = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONAL HEAD'].includes(role) && !isOpsOperator;
   const isOpsOrAdmin = isOpsHead || isOpsOperator || isSuperAdminRole;
@@ -76,7 +75,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const isDigitalProcess = isLinkedShare || isDirectBank;
   const isPhysical = processTypeStr.includes('physical');
 
-  const initialTabKey = isQuerableOperator ? 'remark' : (initialTab ? getTabKey(initialTab) : (isDigitalProcess ? 'remark' : 'qd'));
+  const initialTabKey = initialTab ? getTabKey(initialTab) : (isDigitalProcess ? 'remark' : 'qd');
   const [activeTab, setActiveTab] = useState(initialTabKey);
   const [timeline, setTimeline] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -109,13 +108,11 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
       const targetKey = getTabKey(initialTab);
       if (isSalesExecUser && targetKey === 'final') {
         setActiveTab('remark');
-      } else if (isQuerableOperator && targetKey !== 'timeline') {
-        setActiveTab('remark');
       } else {
         setActiveTab(targetKey);
       }
     }
-  }, [application?.id, initialTab, isSalesExecUser, isQuerableOperator]);
+  }, [application?.id, initialTab, isSalesExecUser]);
 
   const isPunchLead = processTypeStr.includes('punch') || processTypeStr.includes('lead_punching') || processTypeStr.includes('punching');
   const isDigital = isLinkedShare || isDirectBank;
@@ -126,8 +123,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
 
   // Role & Status Access Rules:
   const canEditQd = !isLockedStatus;
-  const canEditRemark = !isLockedStatus || isQuerableOperator;
-  const canEditFinal = !isSalesExecUser && !isQdOperator && (isSuperAdminOrAdmin || isFinalStatusOperator || isQuerableOperator || (!isPartner && !isLockedStatus));
+  const canEditRemark = !isLockedStatus;
+  const canEditFinal = !isSalesExecUser && !isQdOperator && (isSuperAdminOrAdmin || isFinalStatusOperator || (!isPartner && !isLockedStatus));
 
   const sanitizeVal = (val) => {
     if (!val || val === 'null' || val === 'undefined') return '';

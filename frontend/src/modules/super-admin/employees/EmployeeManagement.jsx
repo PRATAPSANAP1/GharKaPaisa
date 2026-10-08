@@ -1540,7 +1540,6 @@ export default function EmployeeManagement() {
                       <option value="QD Operator">QD Operator</option>
                       <option value="Remark Operator">Remark Operator</option>
                       <option value="Final Status Operator">Final Status Operator</option>
-                      <option value="Querable Operator">Querable Operator</option>
                       <option value="PAN Checker">PAN Checker</option>
                       <option value="Administrative Operator">Administrative Operator</option>
                       <option value="Administrative Sales Executive">Administrative Sales Executive</option>
@@ -4577,7 +4576,6 @@ export default function EmployeeManagement() {
                               <option value="QD Operator">QD Operator</option>
                               <option value="Remark Operator">Remark Operator</option>
                               <option value="Final Status Operator">Final Status Operator</option>
-                              <option value="Querable Operator">Querable Operator</option>
                               <option value="PAN Checker">PAN Checker</option>
                               <option value="Administrative Operator">Administrative Operator</option>
                             </select>

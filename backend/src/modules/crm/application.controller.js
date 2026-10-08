@@ -76,71 +76,7 @@ const parseDobToIso = (raw) => {
   return null;
 };
 
-/**
- * Checks if the request user has Querable Operator designation or role.
- */
-const checkQuerableUserRole = (req) => {
-  if (!req?.user) return false;
-  const designation = String(req.user.designation || '').toUpperCase();
-  const role = String(req.user.role || '').toUpperCase();
-  const isQuerable = [
-    'QUERABLE OPERATOR',
-    'QUERABLE_OPERATOR',
-    'QUERYABLE OPERATOR',
-    'QUERYABLE_OPERATOR'
-  ].includes(designation) || [
-    'QUERABLE OPERATOR',
-    'QUERABLE_OPERATOR',
-    'QUERYABLE OPERATOR',
-    'QUERYABLE_OPERATOR'
-  ].includes(role);
-  return isQuerable && role !== 'SUPER_ADMIN';
-};
 
-/**
- * Asserts Querable Operator access for a specific application record.
- * Throws a 403 error if the user is a Querable Operator and either:
- *  1. The application is NOT in a rejected/declined state (or IS cancelled).
- *  2. The application's bank ID is NOT assigned to this admin in admin_bank_assignments.
- */
-const assertQuerableOperatorApplicationAccess = async (req, app) => {
-  if (!req?.user || !app) return;
-  if (!checkQuerableUserRole(req)) return;
-
-  const status = String(app.status || '').toLowerCase().trim();
-  const finalStatus = String(app.final_status || '').toLowerCase().trim();
-  const isRejected = ['rejected', 'declined', 'decline', 'technical_error'].includes(status) || finalStatus === 'rejected';
-
-  if (!isRejected) {
-    const err = new Error('QUERABLE_OPERATOR_STATUS_ACCESS_DENIED: Access denied. Querable Operators are only authorized to access rejected applications.');
-    err.statusCode = 403;
-    throw err;
-  }
-
-  const { rows } = await query(
-    `SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`,
-    [req.user.id]
-  );
-
-  if (!rows.length) {
-    const err = new Error('QUERABLE_OPERATOR_BANK_ACCESS_DENIED: You have no assigned banks.');
-    err.statusCode = 403;
-    throw err;
-  }
-
-  const assignedBankIds = rows.map(r => String(r.bank_id));
-  let appBankId = app.bank_id;
-  if (!appBankId && app.product_id) {
-    const { rows: [pRec] } = await query(`SELECT bank_id FROM products WHERE id = $1`, [app.product_id]).catch(() => ({ rows: [] }));
-    appBankId = pRec?.bank_id;
-  }
-
-  if (!appBankId || !assignedBankIds.includes(String(appBankId))) {
-    const err = new Error('QUERABLE_OPERATOR_BANK_ACCESS_DENIED: You are not authorized to access applications for this bank.');
-    err.statusCode = 403;
-    throw err;
-  }
-};
 
 // Helper to log timeline actions with full audit metadata and timestamp
 const logTimeline = async (client, applicationId, status, activity, remarks, performedBy) => {
@@ -908,12 +844,7 @@ const updateStatus = async (req, res, next) => {
       return notFound(res, 'Application or Lead record not found');
     }
 
-    try {
-      await assertQuerableOperatorApplicationAccess(req, app);
-    } catch (authErr) {
-      await client.query('ROLLBACK');
-      return forbidden(res, authErr.message);
-    }
+
 
     const userRole = (req.user?.role || '').toUpperCase();
     const restrictedForPartner = ['operational_verified', 'super_admin_approved', 'commission_processing', 'commission_released'];
@@ -1708,7 +1639,6 @@ const listApplications = async (req, res, next) => {
     const validProductId = isUuid(product_id) ? product_id : null;
     const validBankId = isUuid(bank_id) ? bank_id : null;
     const userDesignation = (req.user?.designation || '').toUpperCase();
-    const isQuerableOperatorUser = ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
     let rawStatus = status && status.trim() ? status.trim() : null;
     const validStatus = rawStatus;
     const validSearch = search && search.trim() ? `%${search.trim()}%` : null;
@@ -1726,7 +1656,7 @@ const listApplications = async (req, res, next) => {
     const countQueryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, validProcessBy, validOpHeadId, validUserId, isPartnerOrTeam, validScope, validMemberId, validCategory, validCommissionStatus, validFromDate, validToDate];
 
     const hasAaaTable = await ensureAssignmentsTableExists();
-    const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
+    const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userDesignation) || ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userRole);
     const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
     const isSalesExecOnlyUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
     let isLocEocAdmin = false;
@@ -1772,13 +1702,6 @@ const listApplications = async (req, res, next) => {
       // Extract assigned bank IDs for authorization
       const assignedBankIds = regularBankAssignments.map(b => b.bank_id);
       const locEocBankIds = abRows.filter(b => isBankLocEoc(b)).map(b => b.bank_id);
-
-      // DEBUG LOGGING for Querable Operator
-      if (isQuerableOperatorUser) {
-        console.log('[QUERABLE_OPERATOR_AUTH] User ID:', req.user.id);
-        console.log('[QUERABLE_OPERATOR_AUTH] Designation:', userDesignation);
-        console.log('[QUERABLE_OPERATOR_AUTH] Assigned Bank IDs:', assignedBankIds);
-      }
 
       const buildBankMatchSQL = (bankRows) => {
         if (!bankRows || bankRows.length === 0) return '1=0';
@@ -1894,22 +1817,8 @@ const listApplications = async (req, res, next) => {
       finalStatusOperatorFilterSQL = ` ${baseBankAccessFilterSQL} AND ${eligibleDispatchFilter} AND ${inProcessFinalStatusFilter}`;
     }
 
-    let querableOperatorFilterSQL = '';
-    if (isQuerableOperatorUser && req.user?.id) {
-      if (abRows.length === 0) {
-        querableOperatorFilterSQL = ` AND 1=0`;
-      } else {
-        const assignedIds = abRows.map(b => `'${b.bank_id}'`).join(',');
-        const rejectCondition = `(
-          LOWER(TRIM(COALESCE(combined.status, ''))) IN ('rejected', 'declined', 'decline', 'technical_error')
-          OR LOWER(TRIM(COALESCE(combined.final_status, ''))) = 'rejected'
-        )`;
-        querableOperatorFilterSQL = ` AND combined.bank_id IN (${assignedIds}) AND ${rejectCondition}`;
-      }
-    }
-
     if (!isPartnerOrTeam && !isSuperAdmin && req.user?.id) {
-      if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser || isQdOperatorUser || isFinalStatusOperatorUser || isQuerableOperatorUser) {
+      if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser || isQdOperatorUser || isFinalStatusOperatorUser) {
         opHeadBankFilterSQL = ``;
         countOpHeadBankFilterSQL = ``;
       } else {
@@ -1943,9 +1852,9 @@ const listApplications = async (req, res, next) => {
       )
     `;
 
-    const effectivePartnerTeamScopeSQL = isQuerableOperatorUser ? `WHERE 1=1` : partnerTeamScopeSQL;
+    const effectivePartnerTeamScopeSQL = partnerTeamScopeSQL;
 
-    const statusFilterBlockSQL = isQuerableOperatorUser ? `(1=1)` : `(
+    const statusFilterBlockSQL = `(
       $2::text IS NULL
       OR combined.status = $2
       OR ($2 = 'pending' AND combined.status IN ('pending', 'lead_created', 'new', 'draft', 'initiated', 'link_sent', 'confirmed', 'link_pending'))
@@ -2150,25 +2059,9 @@ const listApplications = async (req, res, next) => {
         ${qdOperatorFilterSQL}
         ${remarkOperatorFilterSQL}
         ${finalStatusOperatorFilterSQL}
-        ${querableOperatorFilterSQL}
       ORDER BY combined.created_at DESC
       LIMIT $6 OFFSET $7
     `, queryParams);
-
-    // Debug: Log returned applications for Querable Operator
-    if (isQuerableOperatorUser && req.user?.id) {
-      console.log('[QUERABLE_OPERATOR_AUTH] Returned applications count:', rows.length);
-      rows.forEach(row => {
-        console.log('[QUERABLE_OPERATOR_AUTH] Application:', {
-          id: row.id,
-          app_number: row.app_number,
-          bank_id: row.bank_id,
-          bank_name: row.bank_name,
-          status: row.status,
-          final_status: row.final_status
-        });
-      });
-    }
 
     // Count query with synchronized status filter
     const countScopeSQL = `
@@ -2196,7 +2089,7 @@ const listApplications = async (req, res, next) => {
       )
     `;
 
-    const effectiveCountScopeSQL = isQuerableOperatorUser ? `WHERE 1=1` : countScopeSQL;
+    const effectiveCountScopeSQL = countScopeSQL;
 
     const { rows: [{ count }] } = await query(`
       SELECT COUNT(*) FROM (
@@ -2258,7 +2151,6 @@ const listApplications = async (req, res, next) => {
         ${qdOperatorFilterSQL}
         ${remarkOperatorFilterSQL}
         ${finalStatusOperatorFilterSQL}
-        ${querableOperatorFilterSQL}
     `, countQueryParams);
 
     // Compute real-time canonical status counts scoped to user role & bank filters
@@ -2322,7 +2214,6 @@ const listApplications = async (req, res, next) => {
         ${qdOperatorFilterSQL}
         ${remarkOperatorFilterSQL}
         ${finalStatusOperatorFilterSQL}
-        ${querableOperatorFilterSQL}
       GROUP BY combined.status, COALESCE(combined.final_status, ''), COALESCE(combined.bank_current_lead_status, '')
     `, countQueryParams);
     const statusCountsObj = {
@@ -2364,24 +2255,13 @@ const listApplications = async (req, res, next) => {
       }
     }
 
-    if (isQuerableOperatorUser) {
-      statusCountsObj.all = statusCountsObj.rejected;
-      statusCountsObj.pending = 0;
-      statusCountsObj.details_submitted = 0;
-      statusCountsObj.operational_verified = 0;
-      statusCountsObj.approved = 0;
-      statusCountsObj.commission_received = 0;
-      statusCountsObj.declined = 0;
-      statusCountsObj.cancelled = 0;
-    } else {
-      statusCountsObj.all = (statusCountsObj.pending || 0) +
-        (statusCountsObj.details_submitted || 0) +
-        (statusCountsObj.operational_verified || 0) +
-        (statusCountsObj.approved || 0) +
-        (statusCountsObj.commission_received || 0) +
-        (statusCountsObj.rejected || 0) +
-        (statusCountsObj.cancelled || 0);
-    }
+    statusCountsObj.all = (statusCountsObj.pending || 0) +
+      (statusCountsObj.details_submitted || 0) +
+      (statusCountsObj.operational_verified || 0) +
+      (statusCountsObj.approved || 0) +
+      (statusCountsObj.commission_received || 0) +
+      (statusCountsObj.rejected || 0) +
+      (statusCountsObj.cancelled || 0);
 
     return res.status(200).json({
       success: true,
@@ -2567,11 +2447,7 @@ const getApplication = async (req, res, next) => {
       }
     }
 
-    try {
-      await assertQuerableOperatorApplicationAccess(req, app);
-    } catch (authErr) {
-      return forbidden(res, authErr.message);
-    }
+
 
 
     const notes = await getFilteredNotes(app.id, req.user.role);

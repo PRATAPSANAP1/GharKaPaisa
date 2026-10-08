@@ -29,8 +29,7 @@ export default function ManageApplications() {
   const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
   const isQdOperatorUser = ['QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER'].includes(userDesignation) || ['QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER'].includes(userRole);
   const isFinalStatusOperatorUser = ['FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userDesignation) || ['FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userRole);
-  const isQuerableOperatorUser = ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
-  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR', 'FINAL_STATUS_OPERATOR', 'FINAL STATUS OPERATOR', 'QUERABLE_OPERATOR', 'QUERABLE OPERATOR', 'QUERYABLE_OPERATOR', 'QUERYABLE OPERATOR'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'FINAL_STATUS_OPERATOR', 'FINAL STATUS OPERATOR', 'QUERABLE_OPERATOR', 'QUERABLE OPERATOR', 'QUERYABLE_OPERATOR', 'QUERYABLE OPERATOR'].includes(userDesignation);
+  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR', 'FINAL_STATUS_OPERATOR', 'FINAL STATUS OPERATOR'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL STATUS OPERATOR'].includes(userDesignation);
   const isOpsHead = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD'].includes(userRole) && !isOpsOperator;
   const isOpsHeadOrSuperAdmin = isOpsHead || isOpsOperator;
 
@@ -46,7 +45,7 @@ export default function ManageApplications() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(25);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState(isQuerableOperatorUser ? "rejected" : "");
+  const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -120,7 +119,7 @@ export default function ManageApplications() {
           page,
           limit,
           search: search.trim() || undefined,
-          status: isQuerableOperatorUser ? 'rejected' : (status || undefined),
+          status: status || undefined,
           process_by: processTypeFilter !== 'all' ? processTypeFilter : undefined,
           category: categoryFilter !== 'all' ? categoryFilter : undefined,
         },
@@ -270,9 +269,7 @@ export default function ManageApplications() {
     }
   };
 
-  const STATUS_TABS = isQuerableOperatorUser ? [
-    { id: 'rejected', label: 'Rejected Cases', color: '#ef4444', bg: '#ef444415' },
-  ] : [
+  const STATUS_TABS = [
     { id: '', label: 'All Applications', color: C.primary, bg: `${C.primary}15` },
     { id: 'pending', label: 'Pending', color: '#f59e0b', bg: '#f59e0b15' },
     { id: 'details_submitted', label: 'Details Submitted', color: '#3b82f6', bg: '#3b82f615' },
@@ -419,31 +416,11 @@ export default function ManageApplications() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: 900, color: C.text, margin: 0, letterSpacing: '-0.02em' }}>
-            {isQuerableOperatorUser ? 'Querable Operator Applications Queue' : isPanCheckerUser ? 'PAN Checker Review Queue' : isRemarkOperatorUser ? 'Remark Operator Queue' : isQdOperatorUser ? 'QD Operator Queue' : 'Applications Management'}
+            {isPanCheckerUser ? 'PAN Checker Review Queue' : isRemarkOperatorUser ? 'Remark Operator Queue' : isQdOperatorUser ? 'QD Operator Queue' : 'Applications Management'}
           </h2>
           <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>
-            {isQuerableOperatorUser ? 'Review and manage assigned bank rejected applications.' : isPanCheckerUser ? 'Review and verify customer PAN details for assigned applications.' : isRemarkOperatorUser ? 'Review and update remarks for assigned bank applications.' : isQdOperatorUser ? 'Review assigned bank applications for QD form and remark details.' : 'Track, verify, update and manage operations for all submitted customer applications.'}
+            {isPanCheckerUser ? 'Review and verify customer PAN details for assigned applications.' : isRemarkOperatorUser ? 'Review and update remarks for assigned bank applications.' : isQdOperatorUser ? 'Review assigned bank applications for QD form and remark details.' : 'Track, verify, update and manage operations for all submitted customer applications.'}
           </p>
-          {isQuerableOperatorUser && (
-            <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight }}>Assigned Bank(s):</span>
-              {assignedList.length > 0 ? (
-                assignedList.map((b, i) => (
-                  <span key={b.id || i} style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '5px',
-                    padding: '3px 10px', borderRadius: '16px',
-                    background: 'rgba(99, 102, 241, 0.1)', color: '#4F46E5',
-                    border: '1px solid rgba(99, 102, 241, 0.25)',
-                    fontSize: '11.5px', fontWeight: 800
-                  }}>
-                    🏦 {b.name || b.short_code || b.code || 'Assigned Bank'}
-                  </span>
-                ))
-              ) : (
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#EF4444' }}>No banks assigned to this admin account</span>
-              )}
-            </div>
-          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -465,51 +442,7 @@ export default function ManageApplications() {
 
 
       {/* ── 2. TOP KPI SUMMARY CARDS ── */}
-      {isQuerableOperatorUser ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-          {/* Assigned Bank Rejected Cases */}
-          <div style={{ background: C.card, borderRadius: '14px', padding: '16px 18px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Assigned Bank Rejected Cases</span>
-              <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <MdCancel size={20} />
-              </div>
-            </div>
-            <div style={{ marginTop: '12px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-              <span style={{ fontSize: '28px', fontWeight: 900, color: '#EF4444' }}>
-                {backendStatusCounts?.rejected ?? (Array.isArray(apps) ? apps : []).filter(a => String(a.status || '').toLowerCase().includes('reject') || String(a.final_status || '').toLowerCase().includes('reject') || String(a.status || '').toLowerCase().includes('decline') || String(a.final_status || '').toLowerCase().includes('decline')).length}
-              </span>
-              <span style={{ fontSize: '11.5px', fontWeight: 700, color: C.textLight }}>Cases Requiring Resolution</span>
-            </div>
-          </div>
-
-          {/* Assigned Banks Card */}
-          <div style={{ background: C.card, borderRadius: '14px', padding: '16px 18px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Your Assigned Banks</span>
-              <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: 'rgba(99, 102, 241, 0.1)', color: '#6366F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <FaFileAlt size={16} />
-              </div>
-            </div>
-            <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {assignedList.length > 0 ? (
-                assignedList.map((b, i) => (
-                  <span key={b.id || i} style={{
-                    display: 'inline-flex', alignItems: 'center',
-                    padding: '4px 10px', borderRadius: '8px',
-                    background: '#F1F5F9', color: '#1E293B',
-                    fontSize: '11.5px', fontWeight: 800, border: '1px solid #CBD5E1'
-                  }}>
-                    🏦 {b.name || b.short_code || b.code || 'Bank'}
-                  </span>
-                ))
-              ) : (
-                <span style={{ fontSize: '12px', color: '#EF4444', fontWeight: 700 }}>No banks assigned to this admin account</span>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : !isPanCheckerUser && !isRemarkOperatorUser && (
+      {!isPanCheckerUser && !isRemarkOperatorUser && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
 
           {/* Total Applications */}
@@ -868,19 +801,13 @@ export default function ManageApplications() {
 
               <div>
                 <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>Application Status</label>
-                <select style={{ ...S.input, height: '36px', fontSize: '12.5px' }} value={isQuerableOperatorUser ? 'rejected' : statusFilter} onChange={e => { if (!isQuerableOperatorUser) setStatusFilter(e.target.value); }}>
-                  {isQuerableOperatorUser ? (
-                    <option value="rejected">Rejected Only</option>
-                  ) : (
-                    <>
-                      <option value="all">All Statuses</option>
-                      <option value="submitted">Details Submitted</option>
-                      <option value="under_review">Under Review</option>
-                      <option value="operational_verified">Operational Verified</option>
-                      <option value="approved">Approved</option>
-                      <option value="rejected">Rejected</option>
-                    </>
-                  )}
+                <select style={{ ...S.input, height: '36px', fontSize: '12.5px' }} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                  <option value="all">All Statuses</option>
+                  <option value="submitted">Details Submitted</option>
+                  <option value="under_review">Under Review</option>
+                  <option value="operational_verified">Operational Verified</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
                 </select>
               </div>
 
@@ -995,14 +922,6 @@ export default function ManageApplications() {
                         <td style={{ padding: '14px 16px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                             <span style={{ fontWeight: 800, color: C.text }}>{app.bank_name || app.bank_code || 'Bank Partner'}</span>
-                            {isQuerableOperatorUser && (
-                              <span style={{
-                                fontSize: '10px', fontWeight: 800, background: '#EFF6FF', color: '#1D4ED8',
-                                border: '1px solid #BFDBFE', padding: '1px 6px', borderRadius: '4px', whiteSpace: 'nowrap'
-                              }}>
-                                Assigned Bank
-                              </span>
-                            )}
                             {isLocEocApp(app) && (
                               <span style={{
                                 fontSize: '10px', fontWeight: 800, background: '#ECFDF5', color: '#047857',
@@ -1036,15 +955,7 @@ export default function ManageApplications() {
                       {/* Actions */}
                       <td style={{ padding: '14px 16px', textAlign: 'right' }}>
                         <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px", alignItems: "center" }}>
-                          {isQuerableOperatorUser ? (
-                            <button
-                              onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }}
-                              style={{ background: "#ef444415", border: "1px solid #ef444440", color: "#ef4444", padding: "6px 12px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                              title="View Reject / Decline Query Details"
-                            >
-                              <Eye size={13} /> View Query
-                            </button>
-                          ) : isPanCheckerUser ? (
+                          {isPanCheckerUser ? (
                             <button
                               onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }}
                               style={{ background: "#2563eb15", border: "1px solid #2563eb40", color: "#2563eb", padding: "6px 12px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}

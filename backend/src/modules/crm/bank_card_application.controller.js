@@ -284,7 +284,6 @@ const listBankCardApplications = async (req, res, next) => {
     const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
     const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
     const isQdOperatorUser = ['QD OPERATOR', 'QD_OPERATOR'].includes(userDesignation) || ['QD OPERATOR', 'QD_OPERATOR'].includes(userRole);
-    const isQuerableOperatorUser = ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
 
     if (userRole !== 'SUPER_ADMIN' && req.user?.id) {
       const { rows: abRows } = await query(`
@@ -351,20 +350,6 @@ const listBankCardApplications = async (req, res, next) => {
 
     if (isRemarkOperatorUser && req.user?.id) {
       whereClause += ` AND (COALESCE(combined.dispatch_stage, '') = '' OR LOWER(COALESCE(combined.dispatch_stage, 'none')) IN ('none', 'na', 'n/a'))`;
-    }
-
-    if (isQuerableOperatorUser && req.user?.id) {
-      whereClause += ` AND (
-        (
-          LOWER(COALESCE(combined.final_stage, combined.status, '')) IN ('rejected', 'declined', 'decline', 'technical_error')
-          OR LOWER(COALESCE(combined.final_stage, combined.status, '')) LIKE '%reject%'
-          OR LOWER(COALESCE(combined.final_stage, combined.status, '')) LIKE '%decline%'
-        )
-        AND NOT (
-          LOWER(COALESCE(combined.final_stage, combined.status, '')) IN ('cancelled', 'cancel', 'canceled')
-          OR LOWER(COALESCE(combined.final_stage, combined.status, '')) LIKE '%cancel%'
-        )
-      )`;
     }
 
     if (bank_id && bank_id !== 'all') {

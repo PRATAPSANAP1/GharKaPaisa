@@ -120,9 +120,9 @@ export default function SuperAdminDashboard() {
     if (!editForm.id) return;
     setSubmittingEdit(true);
     try {
-      const isOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'Querable Operator', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'Queryable Operator', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(editForm.designation);
+      const isOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(editForm.designation);
       if (isOpHead && editForm.bank_ids.length === 0) {
-        alert('Please select at least one assigned bank for Operational Head, Administrative Operator, Administrative Sales Executive, PAN Checker, Remark Operator, QD Operator, KYC Operator, Final Status Operator, or Querable Operator designation');
+        alert('Please select at least one assigned bank for Operational Head, Administrative Operator, Administrative Sales Executive, PAN Checker, Remark Operator, QD Operator, KYC Operator, or Final Status Operator designation');
         setSubmittingEdit(false);
         return;
       }
@@ -338,9 +338,9 @@ export default function SuperAdminDashboard() {
       return setFormErr('Password must be at least 8 characters long');
     }
 
-    const isOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'Querable Operator', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'Queryable Operator', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(form.designation);
+    const isOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(form.designation);
     if (isOpHead && selectedCreateBankIds.length === 0) {
-      return setFormErr('At least one bank must be selected for Operational Head, Administrative Operator, Administrative Sales Executive, PAN Checker, Remark Operator, QD Operator, KYC Operator, Final Status Operator, or Querable Operator designation');
+      return setFormErr('At least one bank must be selected for Operational Head, Administrative Operator, Administrative Sales Executive, PAN Checker, Remark Operator, QD Operator, KYC Operator, or Final Status Operator designation');
     }
 
     setFormLoading(true);
@@ -458,7 +458,7 @@ export default function SuperAdminDashboard() {
     
     // Check if user is an admin or has an admin designation
     const isAdminRoleOrDesig = ['ADMIN', 'SUPER_ADMIN', 'KYC_OPERATOR', 'HR'].includes(r) ||
-      ['operational head', 'backend', 'administrative operator', 'administrative sales executive', 'pan checker', 'remark operator', 'qd operator', 'kyc operator', 'final status operator', 'querable operator', 'queryable operator'].some(d => desig.includes(d));
+      ['operational head', 'backend', 'administrative operator', 'administrative sales executive', 'pan checker', 'remark operator', 'qd operator', 'kyc operator', 'final status operator'].some(d => desig.includes(d));
     
     if (!isAdminRoleOrDesig && r === 'EMPLOYEE') return false;
 
@@ -1010,7 +1010,7 @@ export default function SuperAdminDashboard() {
                   value={form.designation}
                   onChange={(e) => {
                     handleChange(e);
-                    if (['Operational Head', 'Backend', 'Administrative Operator', 'Administrative Sales Executive', 'PAN Checker', 'Remark Operator', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'Querable Operator', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'Queryable Operator', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(e.target.value) && allBanks.length === 0) {
+                    if (['Operational Head', 'Backend', 'Administrative Operator', 'Administrative Sales Executive', 'PAN Checker', 'Remark Operator', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(e.target.value) && allBanks.length === 0) {
                       api.get('/banks').then(res => {
                         if (res.data && res.data.data) setAllBanks(res.data.data);
                       }).catch(err => console.error(err));
@@ -1030,7 +1030,6 @@ export default function SuperAdminDashboard() {
                   <option value="QD Operator">QD Operator</option>
                   <option value="KYC Operator">KYC Operator</option>
                   <option value="Final Status Operator">Final Status Operator</option>
-                  <option value="Querable Operator">Querable Operator</option>
                   <option value="Backend">Backend</option>
                   <option value="Super Admin">Super Admin</option>
                   <option value="Senior Manager">Senior Manager</option>
@@ -1040,8 +1039,8 @@ export default function SuperAdminDashboard() {
                 </select>
               </div>
 
-              {/* Operational Head / Administrative Operator / Administrative Sales Executive / PAN Checker / Remark Operator / QD Operator / KYC Operator / Final Status Operator / Querable Operator Bank Assignment Section */}
-              {(['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'Querable Operator', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'Queryable Operator', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(form.designation)) && (
+              {/* Operational Head / Administrative Operator / Administrative Sales Executive / PAN Checker / Remark Operator / QD Operator / KYC Operator / Final Status Operator Bank Assignment Section */}
+              {(['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(form.designation)) && (
                 <div style={{ gridColumn: "span 2", background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "12px", padding: "16px", marginTop: "4px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                     <div>
@@ -1264,7 +1263,7 @@ export default function SuperAdminDashboard() {
                     onChange={e => {
                       const val = e.target.value;
                       setEditForm({ ...editForm, designation: val });
-                      if (['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'Querable Operator', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'Queryable Operator', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(val) && allBanks.length === 0) {
+                      if (['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(val) && allBanks.length === 0) {
                         api.get('/banks').then(res => {
                           if (res.data && res.data.data) setAllBanks(res.data.data);
                         }).catch(err => console.error(err));
@@ -1282,14 +1281,13 @@ export default function SuperAdminDashboard() {
                     <option value="QD Operator">QD Operator</option>
                     <option value="KYC Operator">KYC Operator</option>
                     <option value="Final Status Operator">Final Status Operator</option>
-                    <option value="Querable Operator">Querable Operator</option>
                     <option value="Backend">Backend</option>
                     <option value="Super Admin">Super Admin</option>
                     <option value="Senior Manager">Senior Manager</option>
                     <option value="Manager">Manager</option>
                     <option value="Team Leader">Team Leader</option>
                     <option value="Telecaller">Telecaller</option>
-                    {editForm.designation && !['Operational Head', 'Administrative Operator', 'Administrative Sales Executive', 'PAN Checker', 'Remark Operator', 'QD Operator', 'KYC Operator', 'Final Status Operator', 'Querable Operator', 'Queryable Operator', 'Backend', 'Super Admin', 'Senior Manager', 'Manager', 'Team Leader', 'Telecaller', ''].includes(editForm.designation) && (
+                    {editForm.designation && !['Operational Head', 'Administrative Operator', 'Administrative Sales Executive', 'PAN Checker', 'Remark Operator', 'QD Operator', 'KYC Operator', 'Final Status Operator', 'Backend', 'Super Admin', 'Senior Manager', 'Manager', 'Team Leader', 'Telecaller', ''].includes(editForm.designation) && (
                       <option value={editForm.designation}>{editForm.designation}</option>
                     )}
                   </select>
@@ -1322,8 +1320,8 @@ export default function SuperAdminDashboard() {
                   />
                 </div>
 
-                {/* Bank Assignments (If Operational Head, Administrative Operator, PAN Checker, Remark Operator, QD Operator, KYC Operator, Final Status Operator, or Querable Operator) */}
-                {(['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'Querable Operator', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'Queryable Operator', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(editForm.designation)) && (
+                {/* Bank Assignments (If Operational Head, Administrative Operator, PAN Checker, Remark Operator, QD Operator, KYC Operator, or Final Status Operator) */}
+                {(['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(editForm.designation)) && (
                   <div style={{ gridColumn: "span 2", background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "12px", padding: "16px", marginTop: "4px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                       <div>
