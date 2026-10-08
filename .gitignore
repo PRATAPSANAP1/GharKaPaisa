@@ -4,6 +4,8 @@ dist/
 .DS_Store
 build/
 logs/
+*.log
+scratch/
 .agents/
 skills-lock.json
 # Firebase service account private key — NEVER commit

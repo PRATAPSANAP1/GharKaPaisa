@@ -34,6 +34,12 @@ const errorHandler = (err, req, res, next) => {
     path: req.path,
     method: req.method,
     ip: req.ip,
+    code: err?.code,
+    detail: err?.detail,
+    hint: err?.hint,
+    constraint: err?.constraint,
+    table: err?.table,
+    column: err?.column
   });
 
   // Multer errors
