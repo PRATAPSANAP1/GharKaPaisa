@@ -479,7 +479,7 @@ const updateAdmin = async (req, res, next) => {
     }
 
     if (normRole) {
-      await query(`UPDATE users SET user_role = $1 WHERE id = $2`, [normRole, existing.id]).catch(() => {});
+      await query(`UPDATE users SET role = $1::user_role WHERE id = $2`, [normRole, existing.id]).catch(() => {});
       if (normRole === 'HR') {
         const fullNameVal = fullName !== undefined ? fullName.trim() : (existing.full_name || 'HR Manager');
         const emailVal = email !== undefined ? email.trim().toLowerCase() : existing.email;
