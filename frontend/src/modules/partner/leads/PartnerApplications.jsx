@@ -1271,14 +1271,19 @@ export default function PartnerApplications() {
         const isHdfcBank = (bankId === HDFC_BANK_ID) || 
           (String(bankName).toLowerCase().includes('hdfc') && !String(productName).toLowerCase().includes('tata'));
 
-        const categoryStr = `${d.category || viewApp.category || ''} ${d.product_type || viewApp.product_type || ''} ${d.product_category || viewApp.product_category || ''} ${d.sub_category || viewApp.sub_category || ''} ${d.lead_type || viewApp.lead_type || ''} ${d.card_name || viewApp.card_name || ''} ${d.product_name || viewApp.product_name || ''} ${productName}`.toLowerCase();
+        const categoryStr = `${d.category || viewApp.category || ''} ${d.sub_category || viewApp.sub_category || ''} ${d.product_type || viewApp.product_type || ''} ${d.product_category || viewApp.product_category || ''} ${d.lead_type || viewApp.lead_type || ''} ${d.card_name || viewApp.card_name || ''} ${d.product_name || viewApp.product_name || ''} ${productName}`.toLowerCase();
 
-        const isSmartEmi = categoryStr.includes('smart_emi') || categoryStr.includes('smart emi');
+        const isSmartEmi = categoryStr.includes('smart_emi') || categoryStr.includes('smart emi') || categoryStr.includes('eoc') || categoryStr.includes('emi_on_credit_card') || categoryStr.includes('emi on credit card');
         const isLoanOnCreditCard = !isSmartEmi && (
           categoryStr.includes('loan_on_credit_card') || 
           categoryStr.includes('loan on credit card') || 
           categoryStr.includes('card_loan') || 
-          categoryStr.includes('card loan')
+          categoryStr.includes('card loan') ||
+          categoryStr.includes('loan_on_card') ||
+          categoryStr.includes('loan on card') ||
+          categoryStr.includes('loc_eoc') ||
+          categoryStr.includes('loc/eoc') ||
+          /\bloc\b/.test(categoryStr)
         );
 
         const rawProcess = String(d.process_type || d.process_by || viewApp.process_type || viewApp.process_by || 'lead_punching').trim().toLowerCase();

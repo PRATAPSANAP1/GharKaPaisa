@@ -224,16 +224,19 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const [appFileGenerated, setAppFileGenerated] = useState(sanitizeVal(application?.app_file_generated) || sanitizeVal(application?.appfile_generated) || sanitizeVal(application?.physical_details?.app_file_generated) || 'None');
   const [declineReason, setDeclineReason] = useState(sanitizeVal(application?.decline_reason) || sanitizeVal(application?.physical_details?.decline_reason));
   const [eligibleReQd, setEligibleReQd] = useState(sanitizeVal(application?.eligible_reqd) || sanitizeVal(application?.physical_details?.eligible_reqd) || 'No');
-  const categoryStr = `${application?.category || ''} ${application?.product_type || ''} ${application?.product_category || ''} ${application?.lead_type || ''} ${application?.card_name || ''} ${application?.product_name || ''} ${application?.product?.name || ''}`.toLowerCase();
+  const categoryStr = `${application?.category || ''} ${application?.sub_category || ''} ${application?.product_category || ''} ${application?.product_type || ''} ${application?.lead_type || ''} ${application?.card_name || ''} ${application?.product_name || ''} ${application?.product?.name || ''}`.toLowerCase();
   
-  const isSmartEmi = categoryStr.includes('smart_emi') || categoryStr.includes('smart emi');
+  const isSmartEmi = categoryStr.includes('smart_emi') || categoryStr.includes('smart emi') || categoryStr.includes('eoc') || categoryStr.includes('emi_on_credit_card') || categoryStr.includes('emi on credit card');
   const isLoanOnCreditCard = !isSmartEmi && (
     categoryStr.includes('loan_on_credit_card') || 
     categoryStr.includes('loan on credit card') || 
     categoryStr.includes('card_loan') || 
     categoryStr.includes('card loan') ||
-    categoryStr.includes('loan') ||
-    categoryStr.includes('loans')
+    categoryStr.includes('loan_on_card') ||
+    categoryStr.includes('loan on card') ||
+    categoryStr.includes('loc_eoc') ||
+    categoryStr.includes('loc/eoc') ||
+    /\bloc\b/.test(categoryStr)
   );
 
   // Smart EMI States

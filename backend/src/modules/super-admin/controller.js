@@ -65,50 +65,15 @@ const safeTxQuery = async (client, text, params) => {
 const insertBankAssignment = async (adminId, bankId, category, createdById, client = null) => {
   const cat = (category || 'credit_card').toLowerCase() === 'loc_eoc' ? 'loc_eoc' : 'credit_card';
   const cBy = createdById || null;
+  const qFn = client ? (q, p) => client.query(q, p) : (q, p) => query(q, p);
 
-  try {
-    if (client) await client.query('SAVEPOINT sp_aba_1');
-    const qFn = client ? (q, p) => client.query(q, p) : (q, p) => query(q, p);
-    await qFn(
-      `INSERT INTO admin_bank_assignments (admin_id, bank_id, category, created_by) VALUES ($1, $2, $3, $4) ON CONFLICT (admin_id, bank_id, category) DO NOTHING`,
-      [adminId, bankId, cat, cBy]
-    );
-    if (client) await client.query('RELEASE SAVEPOINT sp_aba_1');
-    return;
-  } catch (err1) {
-    if (client) await client.query('ROLLBACK TO SAVEPOINT sp_aba_1').catch(() => {});
-  }
-
-  try {
-    if (client) await client.query('SAVEPOINT sp_aba_2');
-    const qFn = client ? (q, p) => client.query(q, p) : (q, p) => query(q, p);
-    await qFn(
-      `INSERT INTO admin_bank_assignments (admin_id, bank_id, category, created_by) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
-      [adminId, bankId, cat, cBy]
-    );
-    if (client) await client.query('RELEASE SAVEPOINT sp_aba_2');
-    return;
-  } catch (err2) {
-    if (client) await client.query('ROLLBACK TO SAVEPOINT sp_aba_2').catch(() => {});
-  }
-
-  try {
-    if (client) await client.query('SAVEPOINT sp_aba_3');
-    const qFn = client ? (q, p) => client.query(q, p) : (q, p) => query(q, p);
-    await qFn(
-      `INSERT INTO admin_bank_assignments (admin_id, bank_id, created_by) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
-      [adminId, bankId, cBy]
-    );
-    if (client) await client.query('RELEASE SAVEPOINT sp_aba_3');
-    return;
-  } catch (err3) {
-    if (client) await client.query('ROLLBACK TO SAVEPOINT sp_aba_3').catch(() => {});
-    await safeTxQuery(
-      client,
-      `INSERT INTO admin_bank_assignments (admin_id, bank_id) VALUES ($1, $2)`,
-      [adminId, bankId]
-    );
-  }
+  return qFn(
+    `INSERT INTO admin_bank_assignments (admin_id, bank_id, category, created_by)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (admin_id, bank_id, category)
+     DO UPDATE SET is_active = TRUE`,
+    [adminId, bankId, cat, cBy]
+  );
 };
 
 const parseAssignmentPairsFromBody = (body) => {
@@ -647,117 +612,92 @@ const getAdminBanks = async (req, res, next) => {
 };
 
 const updateAdminBanks = async (req, res, next) => {
-  const client = await getClient();
+  let client;
+
   try {
+    client = await getClient();
+
     console.log('[BANK ASSIGNMENT] REQUEST RECEIVED', {
       adminId: req.params.id,
       bodyKeys: Object.keys(req.body || {})
     });
-    console.log('[BANK ASSIGNMENT] BODY', {
-      assignments: req.body?.assignments,
-      has_loc_eoc: req.body?.has_loc_eoc,
-      hasLocEoc: req.body?.hasLocEoc
-    });
+    console.log('[BANK ASSIGNMENT] BODY', req.body);
 
-    await client.query('BEGIN');
     const { id } = req.params;
-    let rawPairs = parseAssignmentPairsFromBody(req.body);
-    if (!rawPairs) rawPairs = [];
 
-    console.log('[BANK ASSIGNMENT] Loading admin');
     const { rows: [userRec] } = await client.query(`SELECT id, role, designation FROM users WHERE id::text = $1`, [id]);
     if (!userRec) {
-      await client.query('ROLLBACK');
       return notFound(res, 'Admin user not found');
     }
 
-    console.log('[BANK ASSIGNMENT] Admin found:', { id: userRec.id, role: userRec.role, designation: userRec.designation });
+    let rawPairs = parseAssignmentPairsFromBody(req.body) || [];
+    console.log('[BANK ASSIGNMENT] PARSED PAIRS', rawPairs);
 
-    const actorId = req.user?.id || req.user?._id || req.user?.userId || null;
-
-    console.log('[BANK ASSIGNMENT] Validating assignments', { rawPairsCount: rawPairs.length });
-
-    // Deduplicate pairs based on resolved bank_id + category
     const uniqueMap = new Map();
     for (const pair of rawPairs) {
       const rawBId = pair.bank_id || pair.bankId || pair.id;
-      console.log('[BANK ASSIGNMENT] Resolving bank ID:', rawBId);
+      if (!rawBId) continue;
       const bId = await resolveBankId(rawBId, client);
-      if (!bId) {
-        console.log('[BANK ASSIGNMENT] Bank ID resolution failed for:', rawBId);
-        continue;
-      }
+      if (!bId) continue;
+
+      // Verify the bank exists in database
+      const { rows: bankCheck } = await client.query(`SELECT id FROM banks WHERE id = $1`, [bId]);
+      if (bankCheck.length === 0) continue;
+
       const cat = (pair.category || 'credit_card').toLowerCase() === 'loc_eoc' ? 'loc_eoc' : 'credit_card';
       const key = `${bId}_${cat}`;
       if (!uniqueMap.has(key)) {
         uniqueMap.set(key, { bank_id: bId, category: cat });
       }
     }
+
     const assignmentPairs = Array.from(uniqueMap.values());
+    console.log('[BANK ASSIGNMENT] RESOLVED PAIRS', assignmentPairs);
 
-    console.log('[BANK ASSIGNMENT] Unique assignment pairs:', assignmentPairs);
+    const actorId = req.user?.id || req.user?._id || req.user?.userId || null;
 
-    console.log('[BANK ASSIGNMENT] Starting transaction');
-    await safeTxQuery(client, `DELETE FROM admin_bank_assignments WHERE admin_id = $1`, [userRec.id]);
-    console.log('[BANK ASSIGNMENT] Removed old assignments');
-    await safeTxQuery(client, `UPDATE banks SET operation_head_id = NULL WHERE operation_head_id = $1`, [userRec.id]);
-    await safeTxQuery(client, `UPDATE products SET operation_head_id = NULL WHERE operation_head_id = $1`, [userRec.id]);
-    console.log('[BANK ASSIGNMENT] Cleared operation_head_id from banks and products');
+    console.log('[BANK ASSIGNMENT] BEGIN');
+    await client.query('BEGIN');
 
-    const isTargetOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'OPERATIONS_HEAD'].includes(userRec.designation)
-      || ['OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS_HEAD', 'OPERATIONS HEAD'].includes(userRec.role);
+    console.log('[BANK ASSIGNMENT] DELETE OLD');
+    await client.query(`DELETE FROM admin_bank_assignments WHERE admin_id = $1`, [userRec.id]);
 
-    console.log('[BANK ASSIGNMENT] Is operational head:', isTargetOpHead);
+    const currentDesig = userRec.designation;
+    const currentRole = userRec.role;
+    const isTargetOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'OPERATIONS_HEAD'].includes(currentDesig)
+      || ['OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS_HEAD', 'OPERATIONS HEAD'].includes(currentRole);
 
-    console.log('[BANK ASSIGNMENT] Inserting new assignments');
+    if (isTargetOpHead) {
+      await client.query(`UPDATE banks SET operation_head_id = NULL WHERE operation_head_id = $1`, [userRec.id]);
+      await client.query(`UPDATE products SET operation_head_id = NULL WHERE operation_head_id = $1`, [userRec.id]);
+    }
+
+    console.log('[BANK ASSIGNMENT] INSERT');
     for (const pair of assignmentPairs) {
-      console.log('[BANK ASSIGNMENT] Inserting pair:', pair);
       await insertBankAssignment(userRec.id, pair.bank_id, pair.category, actorId, client);
       if (isTargetOpHead) {
-        console.log('[BANK ASSIGNMENT] Setting operation_head_id for bank:', pair.bank_id);
-        await safeTxQuery(client, `UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [userRec.id, pair.bank_id]);
-        await safeTxQuery(client, `UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [userRec.id, pair.bank_id]);
-        const { rows: bRows } = await safeTxQuery(client, `SELECT short_code, name FROM banks WHERE id = $1`, [pair.bank_id]);
-        if (bRows && bRows.length > 0 && ((bRows[0].short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(bRows[0].name || '') || pair.category === 'loc_eoc')) {
-          console.log('[BANK ASSIGNMENT] Setting operation_head_id for LOC/EOC products');
-          await safeTxQuery(client, `UPDATE products SET operation_head_id = $1 WHERE category = 'loc_eoc' OR category::text IN ('loan_on_credit_card', 'smart_emi')`, [userRec.id]);
+        await client.query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [userRec.id, pair.bank_id]);
+        await client.query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [userRec.id, pair.bank_id]);
+        if (pair.category === 'loc_eoc') {
+          await client.query(`UPDATE products SET operation_head_id = $1 WHERE category = 'loc_eoc' OR category::text IN ('loan_on_credit_card', 'smart_emi')`, [userRec.id]);
         }
       }
     }
-    console.log('[BANK ASSIGNMENT] All assignments inserted');
 
-    console.log('[BANK ASSIGNMENT] Checking LOC/EOC status');
-    if (req.body.has_loc_eoc !== undefined || req.body.hasLocEoc !== undefined) {
-      const val = req.body.has_loc_eoc !== undefined ? Boolean(req.body.has_loc_eoc) : Boolean(req.body.hasLocEoc);
-      console.log('[BANK ASSIGNMENT] Setting has_loc_eoc from body:', val);
-      await safeTxQuery(client, `UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [val, userRec.id]);
-    } else {
-      let locCheckRows = [];
-      const resLoc = await safeTxQuery(client, `
-        SELECT 1 FROM admin_bank_assignments aba
-        JOIN banks b ON b.id = aba.bank_id
-        WHERE aba.admin_id = $1 AND (aba.category = 'loc_eoc' OR UPPER(COALESCE(b.short_code, '')) = 'LOC_EOC' OR b.name ~* 'loc|loan on card|smart emi')
-      `, [userRec.id]);
-      locCheckRows = resLoc.rows || [];
-      if (locCheckRows.length === 0) {
-        const resLoc2 = await safeTxQuery(client, `
-          SELECT 1 FROM admin_bank_assignments aba
-          JOIN banks b ON b.id = aba.bank_id
-          WHERE aba.admin_id = $1 AND (UPPER(COALESCE(b.short_code, '')) = 'LOC_EOC' OR b.name ~* 'loc|loan on card|smart emi')
-        `, [userRec.id]);
-        locCheckRows = resLoc2.rows || [];
-      }
-      const hasLoc = locCheckRows.length > 0;
-      console.log('[BANK ASSIGNMENT] Auto-detected has_loc_eoc:', hasLoc);
-      await safeTxQuery(client, `UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [hasLoc, userRec.id]);
+    console.log('[BANK ASSIGNMENT] UPDATE LOC/EOC');
+    const hasLocEoc = assignmentPairs.some(pair => pair.category === 'loc_eoc');
+    await client.query(`UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [hasLocEoc, userRec.id]);
+
+    console.log('[BANK ASSIGNMENT] COMMIT');
+    await client.query('COMMIT');
+
+    return success(res, { adminId: userRec.id, assignedPairs: assignmentPairs }, 'Bank assignments updated successfully');
+
+  } catch (err) {
+    if (client) {
+      await client.query('ROLLBACK').catch(() => {});
     }
 
-    console.log('[BANK ASSIGNMENT] Committing transaction');
-    await client.query('COMMIT');
-    console.log('[BANK ASSIGNMENT] SUCCESS');
-    return success(res, { adminId: userRec.id, assignedPairs: assignmentPairs }, 'Bank assignments updated successfully');
-  } catch (err) {
-    await client.query('ROLLBACK');
     console.error('[SUPERADMIN BANK ASSIGNMENT ERROR]', {
       message: err?.message,
       code: err?.code,
@@ -768,10 +708,11 @@ const updateAdminBanks = async (req, res, next) => {
       column: err?.column,
       stack: err?.stack
     });
-    logger.error('Error in updateAdminBanks:', err);
-    next(err);
+
+    return next(err);
+
   } finally {
-    client.release();
+    if (client) client.release();
   }
 };
 
