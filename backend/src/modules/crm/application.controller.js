@@ -1676,6 +1676,11 @@ const listApplications = async (req, res, next) => {
       OR LOWER(COALESCE(combined.product_name, '')) LIKE '%dial a draft%'
       OR LOWER(COALESCE(combined.product_name, '')) LIKE '%jumbo loan%'
       OR LOWER(COALESCE(combined.product_name, '')) LIKE '%insta loan%'
+      OR EXISTS (
+        SELECT 1 FROM banks b_loc
+        WHERE b_loc.id = combined.bank_id
+        AND (UPPER(COALESCE(b_loc.short_code, '')) = 'LOC_EOC' OR b_loc.name ~* 'loc|loan on card|smart emi')
+      )
     )`;
 
     if (!isPartnerOrTeam && !isSuperAdmin && req.user?.id) {
@@ -1724,14 +1729,11 @@ const listApplications = async (req, res, next) => {
         )`;
       };
 
-      if (abRows.length === 0) {
-        // No banks assigned: block all applications
+      if (!isLocEocAdmin && abRows.length === 0) {
+        // No banks assigned and no LOC/EOC permission: block all applications
         baseBankAccessFilterSQL = ` AND 1=0`;
       } else if (isLocEocAdmin && regularBankAssignments.length === 0) {
-        baseBankAccessFilterSQL = ` AND (
-          ${buildBankMatchSQL(abRows)}
-          AND ${locEocAppSQL}
-        )`;
+        baseBankAccessFilterSQL = ` AND (${locEocAppSQL})`;
       } else if (isLocEocAdmin && regularBankAssignments.length > 0) {
         baseBankAccessFilterSQL = ` AND (
           ${buildBankMatchSQL(regularBankAssignments)}
