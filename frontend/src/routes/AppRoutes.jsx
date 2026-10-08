@@ -137,6 +137,7 @@ import ManageAdminInsurance from '../modules/admin/insurance/ManageAdminInsuranc
 import ManageBankCardApplications from '../modules/admin/credit-cards/ManageBankCardApplications';
 import ManageAdminProducts from '../modules/super-admin/cms/ManageAdminProducts';
 import ManageSupportTickets from '../modules/super-admin/support/ManageSupportTickets';
+import BulkSmsDashboard from '../modules/super-admin/bulk-sms/BulkSmsDashboard';
 
 const SmartMessengerRedirect = () => {
   const user = useAuthStore((state) => state.user);
@@ -440,6 +441,12 @@ const AppRoutes = () => {
             <Route path="/super-admin/messenger" element={<MessengerView />} />
             <Route path="/super-admin/view-messages" element={<SuperAdminViewMessages />} />
             <Route path="/super-admin/whatsapp" element={<SuperAdminWhatsApp />} />
+            <Route path="/super-admin/bulk-sms" element={<BulkSmsDashboard />} />
+            <Route path="/super-admin/bulk-sms/campaigns" element={<BulkSmsDashboard defaultTab="campaigns" />} />
+            <Route path="/super-admin/bulk-sms/templates" element={<BulkSmsDashboard defaultTab="templates" />} />
+            <Route path="/admin/bulk-sms" element={<BulkSmsDashboard />} />
+            <Route path="/admin/bulk-sms/campaigns" element={<BulkSmsDashboard defaultTab="campaigns" />} />
+            <Route path="/admin/bulk-sms/templates" element={<BulkSmsDashboard defaultTab="templates" />} />
             <Route path="/super-admin/profile" element={<AdminProfilePage />} />
             <Route path="/super-admin/support" element={<ManageSupportTickets />} />
 

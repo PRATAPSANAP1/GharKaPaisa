@@ -10,7 +10,7 @@ import logo from '../assets/logos/logo.png';
 import Chatbot from '../components/Chatbot/Chatbot';
 import AnnouncementBanner from '../components/AnnouncementBanner';
 import { MdNotifications } from 'react-icons/md';
-import { FaWhatsapp, FaComments } from 'react-icons/fa';
+import { FaWhatsapp, FaComments, FaCommentDots } from 'react-icons/fa';
 
 // ── Chevron Component for Collapsible Items ──────────────────────────────────
 const Chevron = ({ open, color = "currentColor", size = 16 }) => (
@@ -240,6 +240,7 @@ const SuperAdminLayout = () => {
     {
       title: "SYSTEM & REPORTS",
       items: [
+        { path: '/super-admin/bulk-sms', label: 'Bulk SMS', icon: <FaCommentDots size={16} /> },
         { path: '/super-admin/whatsapp', label: 'WhatsApp Business', icon: <FaWhatsapp size={16} /> },
         { path: '/super-admin/messenger', label: 'Messenger', icon: <Icons.profile size={16} /> },
         { path: '/super-admin/view-messages', label: 'View Messages', icon: <Icons.clock size={16} /> },

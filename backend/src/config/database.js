@@ -25,7 +25,7 @@ const poolOptions = process.env.DATABASE_URL
 
 // Enhanced Connection Pool Settings for High Availability and Connection Resiliency
 poolOptions.max = parseInt(process.env.DB_POOL_MAX) || 10;
-poolOptions.min = parseInt(process.env.DB_POOL_MIN) || 2;
+poolOptions.min = (process.env.NODE_ENV === 'test' || process.env.SKIP_DB === 'true') ? 0 : (parseInt(process.env.DB_POOL_MIN) || 2);
 poolOptions.idleTimeoutMillis = parseInt(process.env.DB_IDLE_TIMEOUT) || 30000;
 poolOptions.connectionTimeoutMillis = parseInt(process.env.DB_CONN_TIMEOUT) || 10000;
 poolOptions.acquireTimeoutMillis = parseInt(process.env.DB_ACQUIRE_TIMEOUT) || 10000;

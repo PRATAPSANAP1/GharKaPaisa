@@ -90,12 +90,15 @@ router.use('/kyc',              kycRouter);
 
 const kycOperatorRoute                     = require('../modules/kyc-operator/kyc-operator.routes.js');
 const superAdminReportsRoute               = require('../modules/reports/reports.routes.js');
+const bulkSmsRoute                         = require('../modules/bulk-sms/bulk-sms.routes.js');
 
 // ── Admin / CRM / Operational Scopes ───────────────────────────
 router.use('/kyc-operator',     kycOperatorRoute);
 router.use('/kyc/applications', kycOperatorRoute);
 router.use('/super-admin/reports', superAdminReportsRoute);
 router.use('/superadmin/reports', superAdminReportsRoute);
+router.use('/admin/bulk-sms',   bulkSmsRoute);
+router.use('/super-admin/bulk-sms', bulkSmsRoute);
 router.use('/admin',            adminRoute);
 router.use('/superadmin',       superadminRouter);
 router.use('/applications',     applicationRouter);
