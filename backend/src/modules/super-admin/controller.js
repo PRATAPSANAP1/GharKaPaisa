@@ -266,7 +266,7 @@ const createAdmin = async (req, res, next) => {
         const bId = await resolveBankId(pair.bank_id || pair.id);
         if (!bId) continue;
         const cat = (pair.category || 'credit_card').toLowerCase() === 'loc_eoc' ? 'loc_eoc' : 'credit_card';
-        await query(`INSERT INTO admin_bank_assignments (admin_id, bank_id, category, created_by) VALUES ($1, $2, $3, $4) ON CONFLICT (admin_id, bank_id, category) DO NOTHING`, [dbUser.id, bId, cat, req.user.id]);
+        await insertBankAssignment(dbUser.id, bId, cat, req.user.id);
         if (isNewUserOpHead) {
           await query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [dbUser.id, bId]);
           await query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [dbUser.id, bId]);
@@ -490,7 +490,7 @@ const updateAdmin = async (req, res, next) => {
         const bId = await resolveBankId(pair.bank_id || pair.id);
         if (!bId) continue;
         const cat = (pair.category || 'credit_card').toLowerCase() === 'loc_eoc' ? 'loc_eoc' : 'credit_card';
-        await query(`INSERT INTO admin_bank_assignments (admin_id, bank_id, category, created_by) VALUES ($1, $2, $3, $4) ON CONFLICT (admin_id, bank_id, category) DO NOTHING`, [existing.id, bId, cat, req.user.id]);
+        await insertBankAssignment(existing.id, bId, cat, req.user.id);
         if (isTargetOpHead) {
           await query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [existing.id, bId]);
           await query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [existing.id, bId]);
@@ -587,7 +587,7 @@ const updateAdminBanks = async (req, res, next) => {
       const bId = await resolveBankId(pair.bank_id || pair.id);
       if (!bId) continue;
       const cat = (pair.category || 'credit_card').toLowerCase() === 'loc_eoc' ? 'loc_eoc' : 'credit_card';
-      await query(`INSERT INTO admin_bank_assignments (admin_id, bank_id, category, created_by) VALUES ($1, $2, $3, $4) ON CONFLICT (admin_id, bank_id, category) DO NOTHING`, [userRec.id, bId, cat, req.user.id]);
+      await insertBankAssignment(userRec.id, bId, cat, req.user.id);
       if (isTargetOpHead) {
         await query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [userRec.id, bId]);
         await query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [userRec.id, bId]);
