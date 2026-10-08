@@ -104,24 +104,32 @@ const getMe = async (req, res, next) => {
 
     if (isStaffOrOperator) {
       const { rows: rawAssignedBanks } = await query(`
-        SELECT b.id, b.name, b.short_code, b.short_code as code
+        SELECT b.id, b.name, b.short_code, b.short_code as code, COALESCE(aba.category, 'credit_card') as category
         FROM admin_bank_assignments aba
         JOIN banks b ON b.id = aba.bank_id
         WHERE aba.admin_id = $1
       `, [user.id]).catch(() => ({ rows: [] }));
       const assignedBanks = rawAssignedBanks.map(b => ({
         ...b,
-        is_loc_eoc: (b.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '')
+        bank_id: b.id,
+        category: b.category || 'credit_card',
+        is_loc_eoc: b.category === 'loc_eoc' || (b.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '')
       }));
+      const categoryAssignments = {
+        credit_card: assignedBanks.filter(b => b.category === 'credit_card').map(b => b.id),
+        loc_eoc: assignedBanks.filter(b => b.category === 'loc_eoc').map(b => b.id)
+      };
       const hasLocEoc = Boolean(user.has_loc_eoc) || assignedBanks.some(b => b.is_loc_eoc);
       const permissions = {
         banks: assignedBanks.map(b => b.id),
         bank_codes: assignedBanks.map(b => b.code || b.short_code || b.name),
         assigned_banks: assignedBanks,
+        category_assignments: categoryAssignments,
         has_loc_eoc: hasLocEoc
       };
       user.permissions = permissions;
       user.assigned_banks = assignedBanks;
+      user.category_assignments = categoryAssignments;
       user.has_loc_eoc = hasLocEoc;
     }
 
@@ -536,21 +544,29 @@ const login = async (req, res, next) => {
     let assignedBanks = [];
     if (isStaffOrOperatorLogin) {
       const { rows: rawAssignedBanks } = await query(
-        `SELECT b.id, b.name, b.short_code, b.short_code as code FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = $1`, [user.id]
+        `SELECT b.id, b.name, b.short_code, b.short_code as code, COALESCE(aba.category, 'credit_card') as category FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = $1`, [user.id]
       ).catch(() => ({ rows: [] }));
       const assignedBanks = rawAssignedBanks.map(b => ({
         ...b,
-        is_loc_eoc: (b.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '')
+        bank_id: b.id,
+        category: b.category || 'credit_card',
+        is_loc_eoc: b.category === 'loc_eoc' || (b.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '')
       }));
+      const categoryAssignments = {
+        credit_card: assignedBanks.filter(b => b.category === 'credit_card').map(b => b.id),
+        loc_eoc: assignedBanks.filter(b => b.category === 'loc_eoc').map(b => b.id)
+      };
       const hasLocEoc = Boolean(user.has_loc_eoc) || assignedBanks.some(b => b.is_loc_eoc);
       permissions = {
         banks: assignedBanks.map(b => b.id),
         bank_codes: assignedBanks.map(b => b.code || b.short_code || b.name),
         assigned_banks: assignedBanks,
+        category_assignments: categoryAssignments,
         has_loc_eoc: hasLocEoc
       };
       user.has_loc_eoc = hasLocEoc;
       user.assigned_banks = assignedBanks;
+      user.category_assignments = categoryAssignments;
       user.permissions = permissions;
     }
 

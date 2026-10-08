@@ -125,7 +125,7 @@ function Toast({ message, type = "success", onClose }) {
 const getRoleDashboard = (user) => {
   const role = (user?.role || (typeof user === 'string' ? user : '')).toUpperCase();
   const designation = (user?.designation || '').toUpperCase();
-  if (['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(designation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(role)) {
+  if (['REMARK OPERATOR', 'REMARK_OPERATOR', 'QD OPERATOR', 'QD_OPERATOR', 'PAN CHECKER', 'PAN_CHECKER', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(designation) || ['REMARK OPERATOR', 'REMARK_OPERATOR', 'QD OPERATOR', 'QD_OPERATOR', 'PAN CHECKER', 'PAN_CHECKER', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(role)) {
     return '/admin/applications';
   }
   if (['KYC OPERATOR', 'KYC_OPERATOR'].includes(designation) || ['KYC OPERATOR', 'KYC_OPERATOR'].includes(role)) {

@@ -632,12 +632,38 @@ const migrate = async () => {
       id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       admin_id   UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       bank_id    UUID NOT NULL REFERENCES banks(id) ON DELETE CASCADE,
+      category   VARCHAR(50) NOT NULL DEFAULT 'credit_card',
       created_by UUID REFERENCES users(id),
       created_at TIMESTAMPTZ DEFAULT NOW(),
       is_active  BOOLEAN DEFAULT TRUE,
-      UNIQUE(admin_id, bank_id)
+      UNIQUE(admin_id, bank_id, category)
     )
   `);
+
+  await query(`ALTER TABLE admin_bank_assignments ADD COLUMN IF NOT EXISTS category VARCHAR(50) NOT NULL DEFAULT 'credit_card'`);
+
+  await query(`
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'admin_bank_assignments_admin_id_bank_id_key') THEN
+        ALTER TABLE admin_bank_assignments DROP CONSTRAINT admin_bank_assignments_admin_id_bank_id_key;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'admin_bank_assignments_admin_bank_category_key') THEN
+        ALTER TABLE admin_bank_assignments ADD CONSTRAINT admin_bank_assignments_admin_bank_category_key UNIQUE (admin_id, bank_id, category);
+      END IF;
+    END $$;
+  `);
+
+  // Migration for existing LOC_EOC assignments
+  await query(`
+    UPDATE admin_bank_assignments aba
+    SET category = 'loc_eoc'
+    FROM banks b
+    WHERE aba.bank_id = b.id 
+      AND (UPPER(COALESCE(b.short_code, '')) = 'LOC_EOC' OR b.name ~* 'loc|loan on card|smart emi')
+      AND aba.category = 'credit_card'
+  `);
+
 
   // ── Application Admin Assignments ──────────────────────────────
   await query(`

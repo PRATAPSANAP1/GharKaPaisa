@@ -46,7 +46,7 @@ export default function ManageApplications() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(25);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(() => isQuerableOperatorUser ? 'rejected' : "");
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);

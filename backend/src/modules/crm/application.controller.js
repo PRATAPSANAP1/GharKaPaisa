@@ -1656,7 +1656,7 @@ const listApplications = async (req, res, next) => {
     const countQueryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, validProcessBy, validOpHeadId, validUserId, isPartnerOrTeam, validScope, validMemberId, validCategory, validCommissionStatus, validFromDate, validToDate];
 
     const hasAaaTable = await ensureAssignmentsTableExists();
-    const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userDesignation) || ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userRole);
+    const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
     const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
     const isSalesExecOnlyUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
     let isLocEocAdmin = false;
@@ -1683,66 +1683,67 @@ const listApplications = async (req, res, next) => {
       )
     )`;
 
+    const creditCardAppSQL = `(
+      LOWER(COALESCE(combined.category::text, 'credit_card')) NOT IN ('loc_eoc', 'loc', 'eoc', 'loan_on_credit_card', 'smart_emi')
+      AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc', 'loc_eoc')
+      AND NOT (
+        LOWER(COALESCE(combined.product_name, '')) LIKE '%encash%'
+        OR LOWER(COALESCE(combined.product_name, '')) LIKE '%loan on card%'
+        OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smart emi%'
+        OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smartemi%'
+        OR LOWER(COALESCE(combined.product_name, '')) LIKE '%dial a draft%'
+        OR LOWER(COALESCE(combined.product_name, '')) LIKE '%jumbo loan%'
+        OR LOWER(COALESCE(combined.product_name, '')) LIKE '%insta loan%'
+      )
+    )`;
+
     if (!isPartnerOrTeam && !isSuperAdmin && req.user?.id) {
-      const { rows: [uRec] } = await query(`SELECT COALESCE(has_loc_eoc, FALSE) as has_loc_eoc FROM users WHERE id = $1`, [req.user.id]).catch(() => ({ rows: [] }));
       const resAssignments = await query(`
-        SELECT aba.bank_id, b.short_code, b.name 
+        SELECT aba.bank_id, COALESCE(aba.category, 'credit_card') as category, b.short_code, b.name 
         FROM admin_bank_assignments aba
         LEFT JOIN banks b ON b.id = aba.bank_id
         WHERE aba.admin_id = $1
       `, [req.user.id]);
       abRows = resAssignments.rows;
 
-      const isBankLocEoc = (b) => {
-        const sc = (b.short_code || '').toUpperCase();
-        const nm = (b.name || '').toLowerCase();
-        return sc === 'LOC_EOC' || sc === 'LOC' || sc === 'EOC' ||
-               nm.includes('loc') || nm.includes('eoc') ||
-               nm.includes('loan on card') || nm.includes('smart emi') || nm.includes('smartemi');
-      };
+      const buildSingleBankMatchSQL = (b) => {
+        const bId = b.bank_id;
+        const isVirtualLocBank = (b.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '');
+        if (isVirtualLocBank) return '1=1';
 
-      isLocEocAdmin = !!req.user?.has_loc_eoc || !!uRec?.has_loc_eoc || abRows.some(b => isBankLocEoc(b));
-      regularBankAssignments = abRows.filter(b => !isBankLocEoc(b));
-
-      // Extract assigned bank IDs for authorization
-      const assignedBankIds = regularBankAssignments.map(b => b.bank_id);
-      const locEocBankIds = abRows.filter(b => isBankLocEoc(b)).map(b => b.bank_id);
-
-      const buildBankMatchSQL = (bankRows) => {
-        if (!bankRows || bankRows.length === 0) return '1=0';
-        const idsList = bankRows.map(b => `'${b.bank_id}'`).join(',');
-        const hasTata = bankRows.some(b => (b.name || '').toLowerCase().includes('tata') || (b.short_code || '').toLowerCase().includes('tata'));
+        const hasTata = (b.name || '').toLowerCase().includes('tata') || (b.short_code || '').toLowerCase().includes('tata');
         const tataClause = hasTata ? '' : ` AND NOT (LOWER(COALESCE(combined.bank_name, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%tata%')`;
         return `(
           (
-            combined.bank_id IN (${idsList})
-            OR combined.product_id IN (SELECT id FROM products WHERE bank_id IN (${idsList}))
+            combined.bank_id = '${bId}'
+            OR combined.product_id IN (SELECT id FROM products WHERE bank_id = '${bId}')
             OR EXISTS (
-              SELECT 1 FROM banks b
-              WHERE b.id IN (${idsList})
+              SELECT 1 FROM banks b_chk
+              WHERE b_chk.id = '${bId}'
               AND (
-                (LOWER(b.short_code) IS NOT NULL AND LOWER(b.short_code) != '' AND (LOWER(COALESCE(combined.bank_code, '')) LIKE '%' || LOWER(b.short_code) || '%' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%' || LOWER(b.short_code) || '%'))
-                OR (LOWER(b.name) IS NOT NULL AND (LOWER(COALESCE(combined.bank_name, '')) LIKE '%' || LOWER(b.name) || '%' OR LOWER(b.name) LIKE '%' || LOWER(COALESCE(combined.bank_name, '')) || '%'))
+                (LOWER(b_chk.short_code) IS NOT NULL AND LOWER(b_chk.short_code) != '' AND (LOWER(COALESCE(combined.bank_code, '')) LIKE '%' || LOWER(b_chk.short_code) || '%' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%' || LOWER(b_chk.short_code) || '%'))
+                OR (LOWER(b_chk.name) IS NOT NULL AND (LOWER(COALESCE(combined.bank_name, '')) LIKE '%' || LOWER(b_chk.name) || '%' OR LOWER(b_chk.name) LIKE '%' || LOWER(COALESCE(combined.bank_name, '')) || '%'))
               )
             )
           )${tataClause}
         )`;
       };
 
-      if (!isLocEocAdmin && abRows.length === 0) {
-        // No banks assigned and no LOC/EOC permission: block all applications
+      if (!abRows || abRows.length === 0) {
         baseBankAccessFilterSQL = ` AND 1=0`;
-      } else if (isLocEocAdmin && regularBankAssignments.length === 0) {
-        baseBankAccessFilterSQL = ` AND (${locEocAppSQL})`;
-      } else if (isLocEocAdmin && regularBankAssignments.length > 0) {
-        baseBankAccessFilterSQL = ` AND (
-          ${buildBankMatchSQL(regularBankAssignments)}
-          OR (${locEocAppSQL})
-        )`;
-      } else if (regularBankAssignments.length > 0) {
-        baseBankAccessFilterSQL = ` AND ${buildBankMatchSQL(regularBankAssignments)}`;
       } else {
-        baseBankAccessFilterSQL = ` AND ${buildBankMatchSQL(abRows)}`;
+        const pairClauses = abRows.map(b => {
+          const bankMatch = buildSingleBankMatchSQL(b);
+          const cat = (b.category || 'credit_card').toLowerCase();
+          if (cat === 'loc_eoc') {
+            return `(${bankMatch} AND ${locEocAppSQL})`;
+          } else if (cat === 'credit_card') {
+            return `(${bankMatch} AND ${creditCardAppSQL})`;
+          } else {
+            return `(${bankMatch} AND LOWER(COALESCE(combined.category::text, '')) = '${cat}')`;
+          }
+        });
+        baseBankAccessFilterSQL = ` AND (${pairClauses.join(' OR ')})`;
       }
     }
 
@@ -5807,30 +5808,47 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
 
     const userRole = (req.user?.role || '').toUpperCase();
     const userDesignation = (req.user?.designation || '').toUpperCase();
+    const isQuerableOperator = ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
     if (userRole !== 'SUPER_ADMIN') {
-      const { rows: userBanks } = await client.query(
-        `SELECT aba.bank_id, b.short_code, b.name 
+      const { rows: userAssignments } = await client.query(
+        `SELECT aba.bank_id, COALESCE(aba.category, 'credit_card') as category, b.short_code, b.name 
          FROM admin_bank_assignments aba
          LEFT JOIN banks b ON b.id = aba.bank_id
          WHERE aba.admin_id = $1`,
         [userId]
       );
-      const isAssignedToBank = userBanks.some(b => b.bank_id === app.bank_id);
-      const hasLocEoc = userBanks.some(b => 
-        (b.short_code || '').toUpperCase() === 'LOC_EOC' || 
-        /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '')
-      );
-      let isLocEocApp = false;
-      if (hasLocEoc) {
-        const { rows: [pRow] } = await client.query(`SELECT category, sub_category, name FROM products WHERE id = $1`, [app.product_id]).catch(() => ({ rows: [] }));
-        isLocEocApp = ['loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loc', 'eoc'].includes(String(pRow?.category || app.category || '').toLowerCase()) ||
-          ['loc', 'eoc'].includes(String(pRow?.sub_category || '').toLowerCase()) ||
-          /insta\s*loan|jumbo\s*loan|smart\s*emi|loan\s*on\s*card/i.test(String(pRow?.name || ''));
+      
+      const { rows: [pRow] } = await client.query(`SELECT category, sub_category, name, bank_id FROM products WHERE id = $1`, [app.product_id]).catch(() => ({ rows: [] }));
+      const isAppLocEoc = ['loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loc', 'eoc'].includes(String(pRow?.category || app.category || '').toLowerCase()) ||
+        ['loc', 'eoc'].includes(String(pRow?.sub_category || '').toLowerCase()) ||
+        /insta\s*loan|jumbo\s*loan|smart\s*emi|loan\s*on\s*card/i.test(String(pRow?.name || ''));
+      
+      const appCategory = isAppLocEoc ? 'loc_eoc' : 'credit_card';
+      const effectiveBankId = app.bank_id || pRow?.bank_id;
+
+      const isAuthorizedPair = userAssignments.some(assignment => {
+        const assignCat = (assignment.category || 'credit_card').toLowerCase();
+        const catMatch = assignCat === appCategory;
+        const bankMatch = assignment.bank_id === effectiveBankId || 
+          (assignment.short_code && (app.bank_code || '').toLowerCase().includes(assignment.short_code.toLowerCase())) ||
+          (assignment.name && (app.bank_name || '').toLowerCase().includes(assignment.name.toLowerCase())) ||
+          (assignment.short_code || '').toUpperCase() === 'LOC_EOC';
+        return catMatch && bankMatch;
+      });
+
+      if (!isAuthorizedPair) {
+        await client.query('ROLLBACK');
+        return forbidden(res, 'You are not assigned to handle applications for this category and bank combination.');
       }
 
-      if (!isAssignedToBank && !isLocEocApp) {
-        await client.query('ROLLBACK');
-        return forbidden(res, 'You are not assigned to handle applications for this bank.');
+      if (isQuerableOperator) {
+        const statusStr = (app.status || '').toLowerCase();
+        const finalStatusStr = (app.final_status || '').toLowerCase();
+        const isRejected = statusStr.includes('reject') || statusStr.includes('decline') || finalStatusStr.includes('reject') || finalStatusStr.includes('decline');
+        if (!isRejected) {
+          await client.query('ROLLBACK');
+          return forbidden(res, 'Querable Operators can only access rejected applications.');
+        }
       }
     }
 

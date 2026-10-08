@@ -31,6 +31,210 @@ const MiniChart = ({ color }) => (
   </svg>
 );
 
+const CategoryWiseBankSelector = ({
+  allBanks = [],
+  categoryAssignments = [],
+  onChange = () => {}
+}) => {
+  const [activeTab, setActiveTab] = useState('credit_card');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const categories = [
+    { id: 'credit_card', label: 'Credit Card', desc: 'Credit Card Applications' },
+    { id: 'loc_eoc', label: 'LOC/EOC', desc: 'Loan on Credit Card & Smart EMI Applications' }
+  ];
+
+  const standardBanks = (Array.isArray(allBanks) ? allBanks : []).filter(b => {
+    const isVirtualLocBank = (b.short_code || '').toUpperCase() === 'LOC_EOC' || b.is_loc_eoc || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '');
+    return !isVirtualLocBank;
+  });
+
+  const isSelected = (cat, bankId) => {
+    return (Array.isArray(categoryAssignments) ? categoryAssignments : []).some(
+      item => (item.category || 'credit_card').toLowerCase() === cat && (item.bank_id === bankId || item.id === bankId)
+    );
+  };
+
+  const handleToggle = (cat, bankId) => {
+    let next;
+    if (isSelected(cat, bankId)) {
+      next = (Array.isArray(categoryAssignments) ? categoryAssignments : []).filter(
+        item => !((item.category || 'credit_card').toLowerCase() === cat && (item.bank_id === bankId || item.id === bankId))
+      );
+    } else {
+      next = [...(Array.isArray(categoryAssignments) ? categoryAssignments : []), { category: cat, bank_id: bankId }];
+    }
+    onChange(next);
+  };
+
+  const handleSelectAll = (cat) => {
+    const otherCatItems = (Array.isArray(categoryAssignments) ? categoryAssignments : []).filter(
+      item => (item.category || 'credit_card').toLowerCase() !== cat
+    );
+    const newCatItems = standardBanks.map(b => ({ category: cat, bank_id: b.id }));
+    onChange([...otherCatItems, ...newCatItems]);
+  };
+
+  const handleClearAll = (cat) => {
+    const next = (Array.isArray(categoryAssignments) ? categoryAssignments : []).filter(
+      item => (item.category || 'credit_card').toLowerCase() !== cat
+    );
+    onChange(next);
+  };
+
+  return (
+    <div style={{ background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "12px", padding: "16px", marginTop: "8px" }}>
+      <div style={{ marginBottom: "12px" }}>
+        <label style={{ fontSize: "14px", fontWeight: 700, color: "#0F172A", display: "block" }}>Assign Access (Category & Bank pairs) *</label>
+        <span style={{ fontSize: "12px", color: "#64748B" }}>Select banks independently under each product category</span>
+      </div>
+
+      <div style={{ display: "flex", gap: "8px", borderBottom: "1.5px solid #E2E8F0", paddingBottom: "10px", marginBottom: "12px" }}>
+        {categories.map(cat => {
+          const count = (Array.isArray(categoryAssignments) ? categoryAssignments : []).filter(
+            item => (item.category || 'credit_card').toLowerCase() === cat.id
+          ).length;
+          const isActive = activeTab === cat.id;
+          return (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => setActiveTab(cat.id)}
+              style={{
+                padding: "8px 14px",
+                borderRadius: "8px",
+                fontSize: "13px",
+                fontWeight: 700,
+                cursor: "pointer",
+                border: "1px solid",
+                borderColor: isActive ? "#2563EB" : "#CBD5E1",
+                background: isActive ? "#EFF6FF" : "#FFFFFF",
+                color: isActive ? "#1D4ED8" : "#475569",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                transition: "all 0.15s"
+              }}
+            >
+              <span>{cat.label}</span>
+              <span style={{
+                background: isActive ? "#2563EB" : "#E2E8F0",
+                color: isActive ? "#FFFFFF" : "#475569",
+                fontSize: "11px",
+                fontWeight: 800,
+                padding: "1px 6px",
+                borderRadius: "10px"
+              }}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {categories.filter(cat => cat.id === activeTab).map(cat => {
+        const catAssignments = (Array.isArray(categoryAssignments) ? categoryAssignments : []).filter(
+          item => (item.category || 'credit_card').toLowerCase() === cat.id
+        );
+        const filteredBanks = standardBanks.filter(b => 
+          (b.name || '').toLowerCase().includes((searchQuery || '').toLowerCase()) || 
+          (b.short_code || '').toLowerCase().includes((searchQuery || '').toLowerCase())
+        );
+
+        return (
+          <div key={cat.id}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", gap: "10px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "12px", color: "#64748B", fontWeight: 600 }}>
+                {cat.desc} ({catAssignments.length} selected)
+              </span>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => handleSelectAll(cat.id)}
+                  style={{ padding: "4px 10px", fontSize: "12px", fontWeight: 600, background: "#EFF6FF", color: "#2563EB", border: "1px solid #BFDBFE", borderRadius: "6px", cursor: "pointer" }}
+                >
+                  Select All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleClearAll(cat.id)}
+                  style={{ padding: "4px 10px", fontSize: "12px", fontWeight: 600, background: "#F1F5F9", color: "#64748B", border: "1px solid #CBD5E1", borderRadius: "6px", cursor: "pointer" }}
+                >
+                  Clear All
+                </button>
+              </div>
+            </div>
+
+            <div style={{ position: "relative", marginBottom: "12px" }}>
+              <input
+                type="text"
+                placeholder={`Search banks under ${cat.label}...`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ width: "100%", padding: "8px 12px 8px 34px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "13px", outline: "none", boxSizing: "border-box" }}
+              />
+              <span style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", pointerEvents: "none" }}>
+                <Search size={14} color="#9CA3AF" />
+              </span>
+            </div>
+
+            <div style={{ maxHeight: "200px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", paddingRight: "4px" }}>
+              {filteredBanks.map(bank => {
+                const checked = isSelected(cat.id, bank.id);
+                return (
+                  <div
+                    key={bank.id}
+                    onClick={() => handleToggle(cat.id, bank.id)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "8px 12px",
+                      borderRadius: "8px",
+                      border: `1px solid ${checked ? (cat.id === 'loc_eoc' ? "#059669" : "#2563EB") : "#CBD5E1"}`,
+                      background: checked ? (cat.id === 'loc_eoc' ? "#ECFDF5" : "#EFF6FF") : "#FFFFFF",
+                      cursor: "pointer",
+                      transition: "all 0.15s"
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      {bank.logo_url ? (
+                        <img src={bank.logo_url} alt={bank.name} style={{ width: "20px", height: "20px", objectFit: "contain" }} />
+                      ) : (
+                        <div style={{ width: "20px", height: "20px", background: "#DBEAFE", borderRadius: "4px", fontSize: "10px", fontWeight: 800, color: "#1E40AF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {bank.short_code?.substring(0, 2) || 'BK'}
+                        </div>
+                      )}
+                      <div>
+                        <span style={{ fontSize: "13px", fontWeight: 600, color: "#1E293B" }}>{bank.name}</span>
+                        {bank.short_code && (
+                          <span style={{ fontSize: "10px", color: "#64748B", display: "block" }}>{bank.short_code}</span>
+                        )}
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => {}}
+                      style={{ cursor: "pointer" }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+
+      {(Array.isArray(categoryAssignments) ? categoryAssignments : []).length === 0 && (
+        <div style={{ fontSize: "12px", color: "#EF4444", marginTop: "8px", fontWeight: 500, display: "flex", alignItems: "center", gap: "4px" }}>
+          <AlertTriangle size={14} /> At least one bank must be selected under Credit Card or LOC/EOC.
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function SuperAdminDashboard() {
   const { C, isDark } = useTheme();
   const S = makeS(C);
@@ -70,6 +274,11 @@ export default function SuperAdminDashboard() {
   const [formErr, setFormErr] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
 
+  // ── Category-Wise Bank Assignment State ──
+  const [createCategoryAssignments, setCreateCategoryAssignments] = useState([]);
+  const [editCategoryAssignments, setEditCategoryAssignments] = useState([]);
+  const [opHeadCategoryAssignments, setOpHeadCategoryAssignments] = useState([]);
+
   // ── Edit Admin State ──
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState(null);
@@ -88,8 +297,13 @@ export default function SuperAdminDashboard() {
   const [editBankSearchQuery, setEditBankSearchQuery] = useState('');
 
   const handleOpenEditAdminModal = (admin) => {
-    const bankIds = admin.bank_ids || admin.assigned_banks?.map(b => b.id || b._id) || [];
+    const assigned = admin.assigned_banks || [];
+    const catAssignments = assigned.map(b => ({
+      category: (b.category || (b.is_loc_eoc ? 'loc_eoc' : 'credit_card')).toLowerCase(),
+      bank_id: b.id || b._id || b.bank_id
+    }));
     setEditingAdmin(admin);
+    setEditCategoryAssignments(catAssignments);
     const validRoles = ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'PARTNER', 'HR'];
     let currentRole = String(admin.role || '').toUpperCase().trim();
     if (!validRoles.includes(currentRole)) {
@@ -103,7 +317,7 @@ export default function SuperAdminDashboard() {
       role: currentRole,
       designation: admin.designation || 'Operational Head',
       status: admin.status || 'active',
-      bank_ids: bankIds,
+      bank_ids: catAssignments.map(a => a.bank_id),
       password: ''
     });
     setEditBankSearchQuery('');
@@ -120,9 +334,9 @@ export default function SuperAdminDashboard() {
     if (!editForm.id) return;
     setSubmittingEdit(true);
     try {
-      const isOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(editForm.designation);
-      if (isOpHead && editForm.bank_ids.length === 0) {
-        alert('Please select at least one assigned bank for Operational Head, Administrative Operator, Administrative Sales Executive, PAN Checker, Remark Operator, QD Operator, KYC Operator, or Final Status Operator designation');
+      const isOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'Querable Operator', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'Queryable Operator', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(editForm.designation);
+      if (isOpHead && editCategoryAssignments.length === 0) {
+        alert('Please select at least one category and bank pair for this user');
         setSubmittingEdit(false);
         return;
       }
@@ -133,7 +347,8 @@ export default function SuperAdminDashboard() {
         role: editForm.role,
         designation: editForm.designation,
         status: editForm.status,
-        bank_ids: editForm.bank_ids
+        category_assignments: editCategoryAssignments,
+        bank_ids: editCategoryAssignments.map(a => a.bank_id)
       };
       if (editForm.password) {
         payload.password = editForm.password;
@@ -183,32 +398,27 @@ export default function SuperAdminDashboard() {
 
   const handleOpenBankModal = async (admin) => {
     setSelectedOpHead(admin);
-    setAssignedBankIds(admin.bank_ids || admin.assigned_banks?.map(b => b.id) || []);
+    const assigned = admin.assigned_banks || [];
+    const catAssignments = assigned.map(b => ({
+      category: (b.category || (b.is_loc_eoc ? 'loc_eoc' : 'credit_card')).toLowerCase(),
+      bank_id: b.id || b._id || b.bank_id
+    }));
+    setOpHeadCategoryAssignments(catAssignments);
     setBankSearchQuery('');
     setBankModalOpen(true);
 
     try {
       const res = await api.get('/banks?limit=1000');
       let banksList = res.data && res.data.data ? (Array.isArray(res.data.data) ? res.data.data : res.data.data.rows || []) : [];
-      
-      // Ensure LOC/EOC bank option is included in the list
-      const hasLocEoc = banksList.some(b => (b.short_code || '').toUpperCase() === 'LOC_EOC' || String(b.name || '').toLowerCase().includes('loc/eoc') || String(b.name || '').toLowerCase().includes('loan on card'));
-      if (!hasLocEoc) {
-        banksList = [
-          {
-            id: 'LOC_EOC',
-            name: 'LOC/EOC (Loan on Card & Smart EMI)',
-            short_code: 'LOC_EOC',
-            is_loc_eoc: true
-          },
-          ...banksList
-        ];
-      }
       setAllBanks(banksList);
 
       const assignedRes = await api.get(`/superadmin/admins/${admin._id || admin.id}/banks`);
       if (assignedRes.data && assignedRes.data.data) {
-        setAssignedBankIds(assignedRes.data.data.map(b => b.id || b));
+        const fetched = assignedRes.data.data.map(b => ({
+          category: (b.category || (b.is_loc_eoc ? 'loc_eoc' : 'credit_card')).toLowerCase(),
+          bank_id: b.id || b.bank_id
+        }));
+        setOpHeadCategoryAssignments(fetched);
       }
     } catch (err) {
       console.error('Failed to load bank assignment info:', err);
@@ -338,16 +548,17 @@ export default function SuperAdminDashboard() {
       return setFormErr('Password must be at least 8 characters long');
     }
 
-    const isOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(form.designation);
-    if (isOpHead && selectedCreateBankIds.length === 0) {
-      return setFormErr('At least one bank must be selected for Operational Head, Administrative Operator, Administrative Sales Executive, PAN Checker, Remark Operator, QD Operator, KYC Operator, or Final Status Operator designation');
+    const isOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'Querable Operator', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'Queryable Operator', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(form.designation);
+    if (isOpHead && createCategoryAssignments.length === 0) {
+      return setFormErr('At least one category and bank pair must be selected.');
     }
 
     setFormLoading(true);
     try {
       const payload = {
         ...form,
-        bank_ids: selectedCreateBankIds
+        category_assignments: createCategoryAssignments,
+        bank_ids: createCategoryAssignments.map(a => a.bank_id)
       };
       const res = await api.post('/superadmin/create-admin', payload);
       if (res.data && res.data.success) {
@@ -361,7 +572,7 @@ export default function SuperAdminDashboard() {
           confirmPassword: '',
           designation: ''
         });
-        setSelectedCreateBankIds([]);
+        setCreateCategoryAssignments([]);
         fetchAdmins(); // Refresh
         setTimeout(() => setShowCreateModal(false), 1500);
       }
@@ -658,58 +869,40 @@ export default function SuperAdminDashboard() {
                           const adminKey = admin._id || admin.id;
                           const isExpanded = !!expandedAdminBanks[adminKey];
 
-                          if (bankList.length > 5 && !isExpanded) {
-                            const firstBank = bankList[0]?.name || bankList[0]?.short_code || 'Bank';
+                          const renderBankBadge = (b, i) => {
+                            const catLabel = (b.category === 'loc_eoc' || b.is_loc_eoc) ? 'LOC/EOC' : 'CC';
+                            const badgeBg = (b.category === 'loc_eoc' || b.is_loc_eoc) ? '#ECFDF5' : '#EFF6FF';
+                            const badgeColor = (b.category === 'loc_eoc' || b.is_loc_eoc) ? '#047857' : '#1D4ED8';
+                            const borderCol = (b.category === 'loc_eoc' || b.is_loc_eoc) ? '#A7F3D0' : '#BFDBFE';
                             return (
-                              <div style={{ fontSize: "11px", color: "#4B5563", marginTop: "4px", maxWidth: "200px", lineHeight: 1.4 }}>
-                                <span>{firstBank}</span>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setExpandedAdminBanks(prev => ({ ...prev, [adminKey]: true }));
-                                  }}
-                                  style={{
-                                    background: "none",
-                                    border: "none",
-                                    color: "#2563EB",
-                                    cursor: "pointer",
-                                    fontWeight: 800,
-                                    fontSize: "11px",
-                                    padding: 0,
-                                    marginLeft: "4px",
-                                    textDecoration: "underline"
-                                  }}
-                                >
-                                  ...Read More (+{bankList.length - 1} more)
-                                </button>
-                              </div>
+                              <span key={i} style={{ background: badgeBg, color: badgeColor, border: `1px solid ${borderCol}`, borderRadius: "4px", padding: "1px 5px", fontSize: "10px", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                                {b.short_code || b.name} <span style={{ opacity: 0.75, fontSize: "9px" }}>({catLabel})</span>
+                              </span>
                             );
-                          }
+                          };
 
                           return (
-                            <div style={{ fontSize: "11px", color: "#4B5563", marginTop: "4px", maxWidth: "220px", lineHeight: 1.4 }}>
-                              {bankList.map(b => b.name || b.short_code).join(', ')}
-                              {bankList.length > 5 && isExpanded && (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "6px", maxWidth: "240px" }}>
+                              {(isExpanded ? bankList : bankList.slice(0, 3)).map((b, idx) => renderBankBadge(b, idx))}
+                              {bankList.length > 3 && (
                                 <button
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setExpandedAdminBanks(prev => ({ ...prev, [adminKey]: false }));
+                                    setExpandedAdminBanks(prev => ({ ...prev, [adminKey]: !isExpanded }));
                                   }}
                                   style={{
-                                    background: "none",
-                                    border: "none",
+                                    background: "#F3F4F6",
+                                    border: "1px solid #D1D5DB",
                                     color: "#2563EB",
                                     cursor: "pointer",
-                                    fontWeight: 800,
-                                    fontSize: "11px",
-                                    padding: 0,
-                                    marginLeft: "6px",
-                                    textDecoration: "underline"
+                                    fontWeight: 700,
+                                    fontSize: "10px",
+                                    borderRadius: "4px",
+                                    padding: "1px 6px"
                                   }}
                                 >
-                                  Show Less
+                                  {isExpanded ? 'Less' : `+${bankList.length - 3} more`}
                                 </button>
                               )}
                             </div>
@@ -1010,7 +1203,7 @@ export default function SuperAdminDashboard() {
                   value={form.designation}
                   onChange={(e) => {
                     handleChange(e);
-                    if (['Operational Head', 'Backend', 'Administrative Operator', 'Administrative Sales Executive', 'PAN Checker', 'Remark Operator', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(e.target.value) && allBanks.length === 0) {
+                    if (['Operational Head', 'Backend', 'Administrative Operator', 'Administrative Sales Executive', 'PAN Checker', 'Remark Operator', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'Querable Operator', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'Queryable Operator', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(e.target.value) && allBanks.length === 0) {
                       api.get('/banks').then(res => {
                         if (res.data && res.data.data) setAllBanks(res.data.data);
                       }).catch(err => console.error(err));
@@ -1030,6 +1223,7 @@ export default function SuperAdminDashboard() {
                   <option value="QD Operator">QD Operator</option>
                   <option value="KYC Operator">KYC Operator</option>
                   <option value="Final Status Operator">Final Status Operator</option>
+                  <option value="Querable Operator">Querable Operator</option>
                   <option value="Backend">Backend</option>
                   <option value="Super Admin">Super Admin</option>
                   <option value="Senior Manager">Senior Manager</option>
@@ -1039,109 +1233,14 @@ export default function SuperAdminDashboard() {
                 </select>
               </div>
 
-              {/* Operational Head / Administrative Operator / Administrative Sales Executive / PAN Checker / Remark Operator / QD Operator / KYC Operator / Final Status Operator Bank Assignment Section */}
-              {(['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(form.designation)) && (
-                <div style={{ gridColumn: "span 2", background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "12px", padding: "16px", marginTop: "4px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                    <div>
-                      <label style={{ fontSize: "14px", fontWeight: 700, color: "#0F172A", display: "block" }}>Assign Banks *</label>
-                      <span style={{ fontSize: "12px", color: "#64748B" }}>Select one or multiple banks assigned to this Admin</span>
-                    </div>
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedCreateBankIds(allBanks.map(b => b.id))}
-                        style={{ padding: "4px 10px", fontSize: "12px", fontWeight: 600, background: "#EFF6FF", color: "#2563EB", border: "1px solid #BFDBFE", borderRadius: "6px", cursor: "pointer" }}
-                      >
-                        Select All
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedCreateBankIds([])}
-                        style={{ padding: "4px 10px", fontSize: "12px", fontWeight: 600, background: "#F1F5F9", color: "#64748B", border: "1px solid #CBD5E1", borderRadius: "6px", cursor: "pointer" }}
-                      >
-                        Clear All
-                      </button>
-                    </div>
-                  </div>
-
-                  <input
-                    type="text"
-                    placeholder="Search Banks..."
-                    value={bankSearchQuery}
-                    onChange={(e) => setBankSearchQuery(e.target.value)}
-                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "13px", marginBottom: "12px", outline: "none", boxSizing: "border-box" }}
+              {/* Category-Wise Bank Assignment Section */}
+              {(['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'Querable Operator', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'Queryable Operator', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(form.designation)) && (
+                <div style={{ gridColumn: "span 2" }}>
+                  <CategoryWiseBankSelector
+                    allBanks={allBanks}
+                    categoryAssignments={createCategoryAssignments}
+                    onChange={setCreateCategoryAssignments}
                   />
-
-                  <div style={{ maxHeight: "180px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", paddingRight: "4px" }}>
-                    {(Array.isArray(allBanks) ? allBanks : []).filter(b => b.name.toLowerCase().includes((bankSearchQuery || '').toLowerCase()) || (b.short_code || '').toLowerCase().includes((bankSearchQuery || '').toLowerCase())).map(bank => {
-                      const isChecked = selectedCreateBankIds.includes(bank.id);
-                      const isLocEoc = (bank.short_code || '').toUpperCase() === 'LOC_EOC' || bank.is_loc_eoc || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(bank.name || '');
-                      return (
-                        <div
-                          key={bank.id}
-                          onClick={() => {
-                            if (isChecked) {
-                              setSelectedCreateBankIds((Array.isArray(selectedCreateBankIds) ? selectedCreateBankIds : []).filter(id => id !== bank.id));
-                            } else {
-                              setSelectedCreateBankIds([...selectedCreateBankIds, bank.id]);
-                            }
-                          }}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            padding: "8px 12px",
-                            borderRadius: "8px",
-                            border: `1px solid ${isChecked ? (isLocEoc ? "#059669" : "#2563EB") : (isLocEoc ? "#A7F3D0" : "#CBD5E1")}`,
-                            background: isChecked ? (isLocEoc ? "#ECFDF5" : "#EFF6FF") : (isLocEoc ? "#F0FDF4" : "#FFFFFF"),
-                            cursor: "pointer",
-                            transition: "all 0.15s"
-                          }}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            {isLocEoc ? (
-                              <div style={{ width: "20px", height: "20px", background: "#059669", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                <CreditCard size={12} color="#FFFFFF" />
-                              </div>
-                            ) : bank.logo_url ? (
-                              <img src={bank.logo_url} alt={bank.name} style={{ width: "20px", height: "20px", objectFit: "contain" }} />
-                            ) : (
-                              <div style={{ width: "20px", height: "20px", background: "#DBEAFE", borderRadius: "4px", fontSize: "10px", fontWeight: 800, color: "#1E40AF", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                {bank.short_code?.substring(0, 2) || 'BK'}
-                              </div>
-                            )}
-                            <div>
-                              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                                <span style={{ fontSize: "13px", fontWeight: 600, color: "#1E293B" }}>{bank.name}</span>
-                                {isLocEoc && (
-                                  <span style={{ background: "#059669", color: "#FFFFFF", fontSize: "9px", fontWeight: 800, padding: "1px 5px", borderRadius: "4px" }}>
-                                    SPECIAL CATEGORY
-                                  </span>
-                                )}
-                              </div>
-                              {isLocEoc && (
-                                <div style={{ fontSize: "10px", color: "#047857", fontWeight: 500 }}>
-                                  All Loan on Credit Card & Smart EMI applications
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => {}} // Handled by parent div
-                            style={{ cursor: "pointer" }}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {selectedCreateBankIds.length === 0 && (
-                    <div style={{ fontSize: "12px", color: "#EF4444", marginTop: "6px", fontWeight: 500, display: "flex", alignItems: "center", gap: "4px" }}>
-                      <AlertTriangle size={14} /> At least one bank must be selected for an Operational Head.
-                    </div>
-                  )}
                 </div>
               )}
             </div>
@@ -1263,7 +1362,7 @@ export default function SuperAdminDashboard() {
                     onChange={e => {
                       const val = e.target.value;
                       setEditForm({ ...editForm, designation: val });
-                      if (['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(val) && allBanks.length === 0) {
+                      if (['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'Querable Operator', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'Queryable Operator', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(val) && allBanks.length === 0) {
                         api.get('/banks').then(res => {
                           if (res.data && res.data.data) setAllBanks(res.data.data);
                         }).catch(err => console.error(err));
@@ -1281,13 +1380,14 @@ export default function SuperAdminDashboard() {
                     <option value="QD Operator">QD Operator</option>
                     <option value="KYC Operator">KYC Operator</option>
                     <option value="Final Status Operator">Final Status Operator</option>
+                    <option value="Querable Operator">Querable Operator</option>
                     <option value="Backend">Backend</option>
                     <option value="Super Admin">Super Admin</option>
                     <option value="Senior Manager">Senior Manager</option>
                     <option value="Manager">Manager</option>
                     <option value="Team Leader">Team Leader</option>
                     <option value="Telecaller">Telecaller</option>
-                    {editForm.designation && !['Operational Head', 'Administrative Operator', 'Administrative Sales Executive', 'PAN Checker', 'Remark Operator', 'QD Operator', 'KYC Operator', 'Final Status Operator', 'Backend', 'Super Admin', 'Senior Manager', 'Manager', 'Team Leader', 'Telecaller', ''].includes(editForm.designation) && (
+                    {editForm.designation && !['Operational Head', 'Administrative Operator', 'Administrative Sales Executive', 'PAN Checker', 'Remark Operator', 'QD Operator', 'KYC Operator', 'Final Status Operator', 'Querable Operator', 'Queryable Operator', 'Backend', 'Super Admin', 'Senior Manager', 'Manager', 'Team Leader', 'Telecaller', ''].includes(editForm.designation) && (
                       <option value={editForm.designation}>{editForm.designation}</option>
                     )}
                   </select>
@@ -1320,109 +1420,14 @@ export default function SuperAdminDashboard() {
                   />
                 </div>
 
-                {/* Bank Assignments (If Operational Head, Administrative Operator, PAN Checker, Remark Operator, QD Operator, KYC Operator, or Final Status Operator) */}
-                {(['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(editForm.designation)) && (
-                  <div style={{ gridColumn: "span 2", background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "12px", padding: "16px", marginTop: "4px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                      <div>
-                        <label style={{ fontSize: "14px", fontWeight: 700, color: "#0F172A", display: "block" }}>Assigned Banks *</label>
-                        <span style={{ fontSize: "12px", color: "#64748B" }}>Select banks assigned to this Admin</span>
-                      </div>
-                      <div style={{ display: "flex", gap: "8px" }}>
-                        <button
-                          type="button"
-                          onClick={() => setEditForm({ ...editForm, bank_ids: allBanks.map(b => b.id) })}
-                          style={{ padding: "4px 10px", fontSize: "12px", fontWeight: 600, background: "#EFF6FF", color: "#2563EB", border: "1px solid #BFDBFE", borderRadius: "6px", cursor: "pointer" }}
-                        >
-                          Select All
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEditForm({ ...editForm, bank_ids: [] })}
-                          style={{ padding: "4px 10px", fontSize: "12px", fontWeight: 600, background: "#F1F5F9", color: "#64748B", border: "1px solid #CBD5E1", borderRadius: "6px", cursor: "pointer" }}
-                        >
-                          Clear All
-                        </button>
-                      </div>
-                    </div>
-
-                    <div style={{ position: "relative", marginBottom: "12px" }}>
-                      <input
-                        type="text"
-                        placeholder="Search Banks..."
-                        value={editBankSearchQuery}
-                        onChange={(e) => setEditBankSearchQuery(e.target.value)}
-                        style={{ width: "100%", padding: "8px 12px 8px 34px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "13px", outline: "none", boxSizing: "border-box" }}
-                      />
-                      <span style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", pointerEvents: "none" }}>
-                        <Search size={14} color="#9CA3AF" />
-                      </span>
-                    </div>
-
-                    <div style={{ maxHeight: "180px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", paddingRight: "4px" }}>
-                      {(Array.isArray(allBanks) ? allBanks : []).filter(b => b.name.toLowerCase().includes((editBankSearchQuery || '').toLowerCase()) || (b.short_code || '').toLowerCase().includes((editBankSearchQuery || '').toLowerCase())).map(bank => {
-                        const isChecked = editForm.bank_ids.includes(bank.id);
-                        const isLocEoc = (bank.short_code || '').toUpperCase() === 'LOC_EOC' || bank.is_loc_eoc || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(bank.name || '');
-                        return (
-                          <div
-                            key={bank.id}
-                            onClick={() => {
-                              if (isChecked) {
-                                setEditForm({ ...editForm, bank_ids: (Array.isArray(editForm.bank_ids) ? editForm.bank_ids : []).filter(id => id !== bank.id) });
-                              } else {
-                                setEditForm({ ...editForm, bank_ids: [...editForm.bank_ids, bank.id] });
-                              }
-                            }}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              padding: "8px 12px",
-                              borderRadius: "8px",
-                              border: `1px solid ${isChecked ? (isLocEoc ? "#059669" : "#2563EB") : (isLocEoc ? "#A7F3D0" : "#CBD5E1")}`,
-                              background: isChecked ? (isLocEoc ? "#ECFDF5" : "#EFF6FF") : (isLocEoc ? "#F0FDF4" : "#FFFFFF"),
-                              cursor: "pointer",
-                              transition: "all 0.15s"
-                            }}
-                          >
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                              {isLocEoc ? (
-                                <div style={{ width: "20px", height: "20px", background: "#059669", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                  <CreditCard size={12} color="#FFFFFF" />
-                                </div>
-                              ) : bank.logo_url ? (
-                                <img src={bank.logo_url} alt={bank.name} style={{ width: "20px", height: "20px", objectFit: "contain" }} />
-                              ) : (
-                                <div style={{ width: "20px", height: "20px", background: "#DBEAFE", borderRadius: "4px", fontSize: "10px", fontWeight: 800, color: "#1E40AF", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                  {bank.short_code?.substring(0, 2) || 'BK'}
-                                </div>
-                              )}
-                              <div>
-                                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                                  <span style={{ fontSize: "13px", fontWeight: 600, color: "#1E293B" }}>{bank.name}</span>
-                                  {isLocEoc && (
-                                    <span style={{ background: "#059669", color: "#FFFFFF", fontSize: "9px", fontWeight: 800, padding: "1px 5px", borderRadius: "4px" }}>
-                                      SPECIAL CATEGORY
-                                    </span>
-                                  )}
-                                </div>
-                                {isLocEoc && (
-                                  <div style={{ fontSize: "10px", color: "#047857", fontWeight: 500 }}>
-                                    All Loan on Credit Card & Smart EMI applications
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => {}}
-                              style={{ cursor: "pointer" }}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
+                {/* Bank Assignments (Category-Wise Access Control) */}
+                {(['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'Querable Operator', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'Queryable Operator', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(editForm.designation)) && (
+                  <div style={{ gridColumn: "span 2" }}>
+                    <CategoryWiseBankSelector
+                      allBanks={allBanks}
+                      categoryAssignments={editCategoryAssignments}
+                      onChange={setEditCategoryAssignments}
+                    />
                   </div>
                 )}
               </div>
@@ -1457,12 +1462,12 @@ export default function SuperAdminDashboard() {
           display: "flex", alignItems: "center", justifyContent: "center",
           padding: "20px", backdropFilter: "blur(4px)"
         }}>
-          <div style={{ background: "#FFFFFF", borderRadius: "16px", padding: "24px", maxWidth: "550px", width: "100%", maxHeight: "85vh", overflowY: "auto", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" }}>
+          <div style={{ background: "#FFFFFF", borderRadius: "16px", padding: "24px", maxWidth: "600px", width: "100%", maxHeight: "85vh", overflowY: "auto", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" }}>
             <div style={{ borderBottom: `1px solid #F3F4F6`, paddingBottom: "14px", marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#111827", margin: 0 }}>Assign Banks & Products</h3>
+                <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#111827", margin: 0 }}>Assign Category & Bank Access</h3>
                 <p style={{ fontSize: "13px", color: "#6B7280", margin: "2px 0 0 0" }}>
-                  Operation Head: <strong style={{ color: "#2563EB" }}>{selectedOpHead.fullName || selectedOpHead.full_name}</strong> ({selectedOpHead.department})
+                  Operator: <strong style={{ color: "#2563EB" }}>{selectedOpHead.fullName || selectedOpHead.full_name}</strong> ({selectedOpHead.department || selectedOpHead.designation || 'Admin'})
                 </p>
               </div>
               <button onClick={() => setBankModalOpen(false)} style={{ background: "#F3F4F6", border: "none", color: "#4B5563", cursor: "pointer", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1470,121 +1475,38 @@ export default function SuperAdminDashboard() {
               </button>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", gap: "10px", flexWrap: "wrap" }}>
-              <p style={{ fontSize: "13px", color: "#374151", margin: 0, fontWeight: 600, flex: 1 }}>
-                Select Banks & Products managed by this Operation Head ({assignedBankIds.length} Selected):
-              </p>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button
-                  type="button"
-                  onClick={() => handleSelectAllBanks(true)}
-                  style={{ padding: "4px 10px", fontSize: "12px", fontWeight: 700, background: "#EFF6FF", color: "#2563EB", border: "1px solid #BFDBFE", borderRadius: "6px", cursor: "pointer" }}
-                >
-                  Select All
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSelectAllBanks(false)}
-                  style={{ padding: "4px 10px", fontSize: "12px", fontWeight: 600, background: "#F1F5F9", color: "#64748B", border: "1px solid #E2E8F0", borderRadius: "6px", cursor: "pointer" }}
-                >
-                  Clear All
-                </button>
-              </div>
-            </div>
+            <CategoryWiseBankSelector
+              allBanks={allBanks}
+              categoryAssignments={opHeadCategoryAssignments}
+              onChange={setOpHeadCategoryAssignments}
+            />
 
-            {/* Modal Search Bar */}
-            <div style={{ position: "relative", marginBottom: "14px" }}>
-              <input 
-                type="text"
-                placeholder="Search bank or product (e.g. LOC, HDFC, SBI)..."
-                value={bankSearchQuery}
-                onChange={(e) => setBankSearchQuery(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "9px 12px 9px 34px",
-                  borderRadius: "8px",
-                  border: "1px solid #D1D5DB",
-                  fontSize: "13px",
-                  outline: "none",
-                  boxSizing: "border-box"
-                }}
-              />
-              <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", pointerEvents: "none" }}>
-                <Search size={14} color="#9CA3AF" />
-              </span>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "50vh", overflowY: "auto", paddingRight: "4px" }}>
-              {allBanks.length === 0 ? (
-                <div style={{ color: "#6B7280", padding: "20px", textAlign: "center" }}>Loading banks & products list...</div>
-              ) : (
-                allBanks
-                  .filter(bank => {
-                    const q = (bankSearchQuery || '').toLowerCase();
-                    return bank.name.toLowerCase().includes(q) || (bank.short_code || '').toLowerCase().includes(q);
-                  })
-                  .map(bank => {
-                    const isChecked = isBankAssigned(bank);
-                    const isLocEoc = (bank.short_code || '').toUpperCase() === 'LOC_EOC' || bank.is_loc_eoc || String(bank.name || '').toLowerCase().includes('loc/eoc');
-                    
-                    return (
-                      <div
-                        key={bank.id}
-                        onClick={() => handleToggleBankAssignment(bank.id)}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          padding: "12px 16px",
-                          borderRadius: "10px",
-                          border: `1.5px solid ${isChecked ? (isLocEoc ? "#059669" : "#2563EB") : (isLocEoc ? "#A7F3D0" : "#E5E7EB")}`,
-                          background: isChecked ? (isLocEoc ? "#ECFDF5" : "#EFF6FF") : (isLocEoc ? "#F0FDF4" : "#F9FAFB"),
-                          cursor: "pointer",
-                          transition: "all 0.2s"
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                          {isLocEoc ? (
-                            <div style={{ width: "36px", height: "36px", background: "#059669", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                              <CreditCard size={18} color="#FFFFFF" />
-                            </div>
-                          ) : bank.logo_url ? (
-                            <img src={bank.logo_url} alt={bank.name} style={{ width: "32px", height: "32px", objectFit: "contain", borderRadius: "6px" }} />
-                          ) : (
-                            <div style={{ width: "32px", height: "32px", background: "#DBEAFE", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: "#1D4ED8", fontSize: "12px" }}>
-                              {bank.short_code?.substring(0, 3) || 'BNK'}
-                            </div>
-                          )}
-                          <div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                              <span style={{ fontWeight: 700, fontSize: "14px", color: "#111827" }}>{bank.name}</span>
-                              {isLocEoc && (
-                                <span style={{ background: "#059669", color: "#FFFFFF", fontSize: "10px", fontWeight: 800, padding: "2px 6px", borderRadius: "4px" }}>
-                                  SPECIAL CATEGORY
-                                </span>
-                              )}
-                            </div>
-                            <div style={{ fontSize: "11px", color: isLocEoc ? "#047857" : "#6B7280" }}>
-                              {isLocEoc ? 'All Loan on Credit Card & Smart EMI applications' : `Short code: ${bank.short_code}`}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div style={{ width: "22px", height: "22px", borderRadius: "6px", border: `2px solid ${isChecked ? (isLocEoc ? "#059669" : "#2563EB") : "#9CA3AF"}`, background: isChecked ? (isLocEoc ? "#059669" : "#2563EB") : "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center", color: "#FFFFFF", fontWeight: 800, fontSize: "13px" }}>
-                          {isChecked ? '✓' : ''}
-                        </div>
-                      </div>
-                    );
-                  })
-              )}
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "20px", paddingTop: "14px", borderTop: "1px solid #F3F4F6" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "20px", paddingTop: "14px", borderTop: "1px solid #F3F4F6" }}>
               <button
+                type="button"
                 onClick={() => setBankModalOpen(false)}
+                style={{ background: "#FFFFFF", border: "1px solid #D1D5DB", color: "#374151", padding: "10px 18px", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!selectedOpHead) return;
+                  try {
+                    await api.put(`/superadmin/admins/${selectedOpHead._id || selectedOpHead.id}/banks`, {
+                      category_assignments: opHeadCategoryAssignments,
+                      bank_ids: opHeadCategoryAssignments.map(a => a.bank_id)
+                    });
+                    setBankModalOpen(false);
+                    fetchAdmins();
+                  } catch (err) {
+                    alert(err.response?.data?.message || 'Failed to update bank assignments');
+                  }
+                }}
                 style={{ background: "#2563EB", border: "none", color: "#FFFFFF", padding: "10px 24px", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}
               >
-                Done / Save
+                Save Category Access
               </button>
             </div>
           </div>
