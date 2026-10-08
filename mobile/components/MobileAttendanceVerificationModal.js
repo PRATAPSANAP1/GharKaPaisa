@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,8 @@ import {
   ActivityIndicator,
   SafeAreaView,
   Platform,
-  Alert
+  Alert,
+  Linking
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
@@ -29,6 +30,7 @@ export default function MobileAttendanceVerificationModal({
   const [step, setStep] = useState('INIT'); // 'INIT' | 'LIVENESS_STREAM' | 'VERIFYING' | 'SUCCESS' | 'FAILED'
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [failureType, setFailureType] = useState('GENERAL');
 
   // Session & Credential States
   const [sessionId, setSessionId] = useState(null);
@@ -44,6 +46,7 @@ export default function MobileAttendanceVerificationModal({
     setStep('INIT');
     setLoading(false);
     setErrorMsg('');
+    setFailureType('GENERAL');
     setSessionId(null);
     setProviderSessionId(null);
     setAwsCredentials(null);
@@ -52,64 +55,97 @@ export default function MobileAttendanceVerificationModal({
   }, []);
 
   // Helper to fetch device GPS coordinates with high accuracy
+  // Strictly bounds acquisition, tracks bestAccuracy, and fails safely if accuracy > 50m
   const getDeviceLocation = useCallback(async () => {
-    try {
-      // Request foreground location permission
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        throw new Error('Location permission is required for attendance. Please allow location access in your device settings and try again.');
-      }
+    console.log('[ATTENDANCE GPS] Acquisition started');
 
-      // Request high-accuracy current location
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-        maximumAge: 0, // Do not use cached location
-      });
+    // 1. Request foreground location permission
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      const permErr = new Error('Location permission is required for attendance. Please allow location access and try again.');
+      permErr.code = 'LOCATION_PERMISSION_DENIED';
+      throw permErr;
+    }
 
-      const lat = location.coords.latitude;
-      const lng = location.coords.longitude;
-      const accuracy = location.coords.accuracy;
+    const MAX_ACCURACY_THRESHOLD = 50; // meters - STRICT BUSINESS RULE
+    let bestAccuracy = Infinity;
+    let bestLat = null;
+    let bestLng = null;
+    let readingCount = 0;
 
-      // Validate coordinates
-      if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(accuracy)) {
-        throw new Error('Invalid GPS coordinates received from device.');
-      }
-
-      if (accuracy <= 0) {
-        throw new Error('Invalid GPS accuracy received from device.');
-      }
-
-      // Check accuracy threshold (50 meters)
-      const MAX_ACCURACY_THRESHOLD = 50;
-      if (accuracy > MAX_ACCURACY_THRESHOLD) {
-        // Retry once with bounded timeout
-        console.log('[MOBILE GPS] Initial accuracy too high:', accuracy, 'm. Retrying...');
-        const retryLocation = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-          maximumAge: 0,
+    // Bounded acquisition: perform up to 5 discrete high-accuracy readings within a bounded window
+    const maxReadings = 5;
+    for (let i = 0; i < maxReadings; i++) {
+      try {
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Highest,
+          maximumAge: 0, // Fresh reading, no cache
         });
 
-        const retryAccuracy = retryLocation.coords.accuracy;
-        if (retryAccuracy > MAX_ACCURACY_THRESHOLD) {
-          throw new Error(`GPS location is not accurate enough for attendance verification (${Math.round(retryAccuracy)}m > ${MAX_ACCURACY_THRESHOLD}m threshold). Please enable High Accuracy location mode and try again outdoors or near a window.`);
+        const lat = location?.coords?.latitude;
+        const lng = location?.coords?.longitude;
+        const accuracy = location?.coords?.accuracy;
+
+        if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(accuracy) || accuracy <= 0) {
+          continue;
         }
 
-        return {
-          latitude: retryLocation.coords.latitude,
-          longitude: retryLocation.coords.longitude,
-          accuracy: retryAccuracy,
-        };
-      }
+        readingCount++;
+        const roundedAcc = Math.round(accuracy);
+        console.log(`[ATTENDANCE GPS] Reading #${readingCount}:\nlat=${lat.toFixed(6)},\nlng=${lng.toFixed(6)},\naccuracy=${roundedAcc}m`);
 
-      return {
-        latitude: lat,
-        longitude: lng,
-        accuracy: accuracy,
-      };
-    } catch (err) {
-      console.error('[MOBILE GPS ERROR]:', err);
-      throw err;
+        if (accuracy < bestAccuracy) {
+          console.log(`[ATTENDANCE GPS] Best accuracy updated:\n${bestAccuracy === Infinity ? 'Initial' : Math.round(bestAccuracy) + 'm'} -> ${roundedAcc}m`);
+          bestAccuracy = accuracy;
+          bestLat = lat;
+          bestLng = lng;
+        }
+
+        // If threshold satisfied (<= 50m), immediately accept!
+        if (accuracy <= MAX_ACCURACY_THRESHOLD) {
+          console.log('[ATTENDANCE GPS] Acquisition completed');
+          console.log(`[ATTENDANCE GPS] Best accuracy: ${roundedAcc}m`);
+          return {
+            latitude: lat,
+            longitude: lng,
+            accuracy: accuracy,
+          };
+        }
+
+        // Short bounded delay before next sample if accuracy > 50m
+        if (i < maxReadings - 1) {
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      } catch (err) {
+        console.warn(`[ATTENDANCE GPS] Sample #${i + 1} query error:`, err.message);
+      }
     }
+
+    console.log('[ATTENDANCE GPS] Acquisition completed');
+    console.log(`[ATTENDANCE GPS] Best accuracy: ${bestAccuracy === Infinity ? 'None' : Math.round(bestAccuracy) + 'm'}`);
+
+    if (bestAccuracy <= MAX_ACCURACY_THRESHOLD && bestLat !== null && bestLng !== null) {
+      return {
+        latitude: bestLat,
+        longitude: bestLng,
+        accuracy: bestAccuracy,
+      };
+    }
+
+    if (bestAccuracy !== Infinity) {
+      const roundedBest = Math.round(bestAccuracy);
+      console.log(`[ATTENDANCE GPS] LOW_ACCURACY:\nbestAccuracy=${roundedBest}m\nthreshold=${MAX_ACCURACY_THRESHOLD}m`);
+      console.warn('[ATTENDANCE GEOFENCE] Aborting /liveness/result due to LOW_ACCURACY');
+      const lowAccErr = new Error(`Your GPS accuracy is currently ${roundedBest}m. Please enable Precise Location and try again from an open area or near a window.`);
+      lowAccErr.code = 'LOW_ACCURACY';
+      lowAccErr.accuracy = roundedBest;
+      throw lowAccErr;
+    }
+
+    console.warn('[ATTENDANCE GEOFENCE] Aborting /liveness/result due to GPS_TIMEOUT');
+    const timeoutErr = new Error('Unable to obtain sufficiently accurate GPS. Please ensure Location/GPS is enabled and try again.');
+    timeoutErr.code = 'GPS_TIMEOUT';
+    throw timeoutErr;
   }, []);
 
   useEffect(() => {
@@ -152,6 +188,7 @@ export default function MobileAttendanceVerificationModal({
       if (!pId || data?.status === 'PROVIDER_NOT_CONFIGURED') {
         setLivenessStatus('FAILED');
         setStep('FAILED');
+        setFailureType('SERVICE_UNAVAILABLE');
         setErrorMsg('Face attendance verification is currently unavailable in production environment.');
         setLoading(false);
         return;
@@ -163,7 +200,7 @@ export default function MobileAttendanceVerificationModal({
       setStep('LIVENESS_STREAM');
     } catch (err) {
       console.error('[MOBILE ATTENDANCE VERIFICATION ERROR]:', err.message);
-      handleVerificationFailure(err.message);
+      handleVerificationFailure(err.message, err.code);
     } finally {
       setLoading(false);
     }
@@ -178,10 +215,18 @@ export default function MobileAttendanceVerificationModal({
 
       const targetProviderSessionId = pSessionId || providerSessionId;
 
-      // Get device GPS location for geofence verification
+      // 1. Get device GPS location for geofence verification
       const locationData = await getDeviceLocation();
 
-      // Validate Liveness Result + Execute Server-Side KYC CompareFaces + Geofence Verification
+      // Guard: never call validateLivenessResult if accuracy > 50m
+      if (!locationData || locationData.accuracy > 50) {
+        console.warn('[ATTENDANCE GEOFENCE] Aborting /liveness/result due to LOW_ACCURACY');
+        const rounded = locationData?.accuracy ? Math.round(locationData.accuracy) : 82;
+        handleVerificationFailure(`Your GPS accuracy is currently ${rounded}m. Please enable Precise Location and try again from an open area or near a window.`, 'LOW_ACCURACY');
+        return;
+      }
+
+      // 2. Validate Liveness Result + Execute Server-Side KYC CompareFaces + Geofence Verification
       await validateLivenessResult(sessionId, targetProviderSessionId, locationData);
 
       setFaceStatus('PASSED');
@@ -193,29 +238,55 @@ export default function MobileAttendanceVerificationModal({
     } catch (err) {
       console.error('[MOBILE LIVENESS ANALYSIS ERROR]:', err);
       const msg = err.response?.data?.message || err.message || 'Face liveness or KYC face match failed.';
-      handleVerificationFailure(msg);
+      const code = err.code || err.response?.data?.reason || (msg.toLowerCase().includes('accuracy') ? 'LOW_ACCURACY' : (msg.toLowerCase().includes('outside') ? 'LOCATION_MISMATCH' : 'GENERAL'));
+      handleVerificationFailure(msg, code);
     }
   };
 
-  const handleVerificationFailure = (reason) => {
+  const handleVerificationFailure = (reason, code = 'GENERAL') => {
     setStep('FAILED');
     let message = 'Face attendance verification failed.';
+    let resolvedType = code;
 
     if (reason.includes('PROVIDER_NOT_CONFIGURED') || reason.includes('unavailable')) {
       message = 'Face attendance verification is currently unavailable in production environment.';
+      resolvedType = 'SERVICE_UNAVAILABLE';
       setLivenessStatus('FAILED');
+    } else if (code === 'LOCATION_PERMISSION_DENIED' || reason.includes('Location permission is required')) {
+      message = 'Location permission is required for attendance. Please allow location access and try again.';
+      resolvedType = 'LOCATION_PERMISSION_DENIED';
+      setLivenessStatus('FAILED');
+    } else if (code === 'LOW_ACCURACY' || reason.includes('accuracy') || reason.includes('Precise Location')) {
+      message = reason;
+      resolvedType = 'LOW_ACCURACY';
+      setLivenessStatus('FAILED');
+    } else if (code === 'LOCATION_MISMATCH' || reason.includes('outside') || reason.includes('Location does not match')) {
+      message = "Location doesn't match. You must be inside the office building.";
+      resolvedType = 'LOCATION_MISMATCH';
+      setLivenessStatus('PASSED');
     } else if (reason.includes('FACE_MISMATCH') || reason.includes('FACE_REFERENCE_NOT_FOUND')) {
       message = 'Biometric face match failed. Please ensure your face matches your registered KYC photo.';
+      resolvedType = 'FACE_MISMATCH';
       setLivenessStatus('PASSED');
       setFaceStatus('FAILED');
     } else if (reason.includes('EXPIRED')) {
       message = 'Verification session expired. Please tap Retry to start a fresh session.';
+      resolvedType = 'EXPIRED';
     } else {
       message = reason || 'Attendance verification process failed. Please try again.';
       setLivenessStatus('FAILED');
     }
 
+    setFailureType(resolvedType);
     setErrorMsg(message);
+  };
+
+  const openSystemSettings = () => {
+    try {
+      Linking.openSettings();
+    } catch (e) {
+      console.warn('Cannot open settings:', e);
+    }
   };
 
   // WebView PostMessage Listener
@@ -406,6 +477,15 @@ export default function MobileAttendanceVerificationModal({
                 )}
               </TouchableOpacity>
             ) : null}
+
+            {step === 'FAILED' && (failureType === 'LOCATION_PERMISSION_DENIED' || failureType === 'LOW_ACCURACY') && (
+              <TouchableOpacity
+                style={[styles.primaryBtn, { backgroundColor: '#334155' }]}
+                onPress={openSystemSettings}
+              >
+                <Text style={styles.primaryBtnText}>Open Location Settings ⚙️</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity style={styles.cancelBtn} onPress={onClose} disabled={loading || step === 'VERIFYING'}>
               <Text style={styles.cancelBtnText}>Cancel</Text>

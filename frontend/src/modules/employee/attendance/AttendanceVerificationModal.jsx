@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import attendanceService from '../../../services/attendance.service';
 
 import AttendanceVerificationStepper from './components/AttendanceVerificationStepper';
+import GpsAcquisitionProgress from './components/GpsAcquisitionProgress';
 import LivenessPreparation from './components/LivenessPreparation';
 import CameraPermissionState from './components/CameraPermissionState';
 import LivenessState from './components/LivenessState';
@@ -21,16 +22,17 @@ export default function AttendanceVerificationModal({
 }) {
   // State Machine:
   // 'STEPPER_OVERVIEW' (Panel 2)
-  // 'PREPARING' (Panel 3)
-  // 'CAMERA_PERMISSION' | 'CAMERA_DENIED' (Panel 4)
-  // 'LIVENESS_ACTIVE' (Panels 5 & 6)
-  // 'LIVENESS_ANALYZING' (Panel 7)
-  // 'LIVENESS_PASSED' (Panel 8)
-  // 'IDENTITY_VERIFICATION' (Panel 9: Face Match & Environment)
-  // 'SUCCESS' (Panel 10)
-  // 'FAILURE' (Section 12)
+  // 'GPS_ACQUISITION' (Step 1: Bounded Precise GPS Acquisition)
+  // 'PREPARING' (Step 2: Create Verification Session & AWS Credentials)
+  // 'CAMERA_PERMISSION' | 'CAMERA_DENIED'
+  // 'LIVENESS_ACTIVE' (Step 3: Biometric Challenge)
+  // 'LIVENESS_ANALYZING' (Step 4: Backend Rekognition & Building Geofence Validation)
+  // 'LIVENESS_PASSED'
+  // 'IDENTITY_VERIFICATION' (Face Match & Environment Check)
+  // 'SUCCESS'
+  // 'FAILURE'
   const [currentState, setCurrentState] = useState('STEPPER_OVERVIEW');
-  const [identityStage, setIdentityStage] = useState('FACE_MATCH'); // 'FACE_MATCH' | 'ENVIRONMENT_CHECK' | 'COMPLETE_ATTENDANCE'
+  const [identityStage, setIdentityStage] = useState('FACE_MATCH');
   const [failureType, setFailureType] = useState('LIVENESS_FAILED');
   const [errorMessage, setErrorMessage] = useState('');
   
@@ -41,15 +43,19 @@ export default function AttendanceVerificationModal({
   const [verificationResult, setVerificationResult] = useState(null);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   
-  // GPS acquisition progress state
-  const [gpsProgress, setGpsProgress] = useState(null); // { status: 'acquiring', accuracy: 103, message: '...' }
+  // GPS acquisition progress state for UI
+  const [gpsProgress, setGpsProgress] = useState(null);
 
-  // Authoritative Session ID Refs to avoid stale closure issues during async callbacks
+  // Authoritative Session & Location Refs to prevent stale closure issues during async callbacks
   const sessionIdRef = useRef(null);
   const providerSessionIdRef = useRef(null);
   const credentialsRef = useRef(null);
   const isInitiatingRef = useRef(false);
-  const gpsProgressRef = useRef(null);
+  const verifiedLocationRef = useRef(null);
+
+  // Bounded window settings (STRICT: 50m threshold cannot be weakened)
+  const MAX_ACCURACY_THRESHOLD = 50; // meters
+  const MAX_GPS_ACQUISITION_DURATION = 25000; // 25 seconds bounded acquisition window
 
   // Window resize listener
   useEffect(() => {
@@ -65,11 +71,13 @@ export default function AttendanceVerificationModal({
     sessionIdRef.current = null;
     providerSessionIdRef.current = null;
     credentialsRef.current = null;
+    verifiedLocationRef.current = null;
     setSessionId(null);
     setAwsProviderSessionId(null);
     setAwsCredentials(null);
     setErrorMessage('');
     setVerificationResult(null);
+    setGpsProgress(null);
     onClose();
   }, [onClose]);
 
@@ -81,31 +89,226 @@ export default function AttendanceVerificationModal({
       sessionIdRef.current = null;
       providerSessionIdRef.current = null;
       credentialsRef.current = null;
+      verifiedLocationRef.current = null;
       setSessionId(null);
       setAwsProviderSessionId(null);
       setAwsCredentials(null);
       setErrorMessage('');
+      setGpsProgress(null);
     }
   }, [isOpen]);
 
-  // Step 1: Start Preparation (Panel 2 -> Panel 3 -> Panel 5)
-  const handleStartLivenessSession = useCallback(async () => {
-    if (isInitiatingRef.current) return;
+  // Safely check if browser/device location permission is available
+  const checkLocationPermission = useCallback(async () => {
+    if (!navigator?.geolocation) {
+      return { supported: false, state: 'unsupported' };
+    }
+    if (navigator?.permissions?.query) {
+      try {
+        const status = await navigator.permissions.query({ name: 'geolocation' });
+        return { supported: true, state: status.state }; // 'granted' | 'prompt' | 'denied'
+      } catch (e) {
+        return { supported: true, state: 'unknown' };
+      }
+    }
+    return { supported: true, state: 'unknown' };
+  }, []);
 
+  // STEP 1: Bounded GPS Acquisition Engine
+  // Collects GPS readings using watchPosition for a bounded window (25s max).
+  // Tracks bestAccuracy, bestLatitude, bestLongitude, bestTimestamp.
+  // Immediately accepts once accuracy <= 50m.
+  // If bounded period ends and accuracy > 50m, cleanly stops and returns LOW_ACCURACY.
+  const acquirePreciseLocation = useCallback(() => {
+    return new Promise((resolve) => {
+      if (!navigator?.geolocation) {
+        console.warn('[ATTENDANCE GEOFENCE] Geolocation API not available on device');
+        resolve({
+          success: false,
+          error: 'NO_GEOLOCATION',
+          reason: 'LOCATION_PERMISSION_DENIED',
+          message: 'Location permission is required for attendance. Please allow location access and try again.'
+        });
+        return;
+      }
+
+      console.log('[ATTENDANCE GPS] Acquisition started');
+
+      let watchId = null;
+      let masterTimeoutId = null;
+      let isResolved = false;
+
+      let bestAccuracy = Infinity;
+      let bestLatitude = null;
+      let bestLongitude = null;
+      let bestTimestamp = null;
+      let readingCount = 0;
+
+      const cleanup = () => {
+        if (watchId !== null) {
+          navigator.geolocation.clearWatch(watchId);
+          watchId = null;
+        }
+        if (masterTimeoutId !== null) {
+          clearTimeout(masterTimeoutId);
+          masterTimeoutId = null;
+        }
+      };
+
+      const safeResolve = (result) => {
+        if (isResolved) return;
+        isResolved = true;
+        cleanup();
+        resolve(result);
+      };
+
+      const geoOptions = {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 10000
+      };
+
+      const processPosition = (pos) => {
+        if (isResolved) return;
+
+        const lat = pos?.coords?.latitude;
+        const lng = pos?.coords?.longitude;
+        const accuracy = pos?.coords?.accuracy;
+        const timestamp = pos?.timestamp || Date.now();
+
+        // Strict sanity validation
+        if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(accuracy) ||
+            lat < -90 || lat > 90 || lng < -180 || lng > 180 || accuracy <= 0) {
+          console.log('[ATTENDANCE GPS] Skipping invalid reading (non-finite or out-of-range coordinates)');
+          return;
+        }
+
+        readingCount++;
+        const roundedAcc = Math.round(accuracy);
+
+        console.log(`[ATTENDANCE GPS] Reading #${readingCount}:\nlat=${lat.toFixed(6)},\nlng=${lng.toFixed(6)},\naccuracy=${roundedAcc}m`);
+
+        // Track best reading (lowest accuracy value)
+        if (accuracy < bestAccuracy) {
+          console.log(`[ATTENDANCE GPS] Best accuracy updated:\n${bestAccuracy === Infinity ? 'Initial' : Math.round(bestAccuracy) + 'm'} -> ${roundedAcc}m`);
+          bestAccuracy = accuracy;
+          bestLatitude = lat;
+          bestLongitude = lng;
+          bestTimestamp = timestamp;
+        }
+
+        // Update UI progress
+        setGpsProgress({
+          status: 'acquiring',
+          currentAccuracy: roundedAcc,
+          bestAccuracy: Math.round(bestAccuracy),
+          readingCount
+        });
+
+        // If a reading meets the <= 50m threshold, accept immediately!
+        if (accuracy <= MAX_ACCURACY_THRESHOLD) {
+          console.log('[ATTENDANCE GPS] Acquisition completed');
+          console.log(`[ATTENDANCE GPS] Best accuracy: ${roundedAcc}m`);
+          safeResolve({
+            success: true,
+            latitude: lat,
+            longitude: lng,
+            accuracy: accuracy,
+            bestAccuracy: accuracy,
+            readingCount
+          });
+        }
+      };
+
+      const handleError = (err) => {
+        if (isResolved) return;
+
+        // If we already collected a reading, let the acquisition stream continue for the remaining bounded duration
+        if (bestAccuracy !== Infinity) {
+          console.warn('[ATTENDANCE GPS] Transient position update error:', err?.message);
+          return;
+        }
+
+        if (err?.code === 1 /* PERMISSION_DENIED */) {
+          console.warn('[ATTENDANCE GPS] Location permission denied by user/browser');
+          safeResolve({
+            success: false,
+            error: 'LOCATION_PERMISSION_DENIED',
+            reason: 'LOCATION_PERMISSION_DENIED',
+            message: 'Location permission is required for attendance. Please allow location access and try again.'
+          });
+          return;
+        }
+
+        if (err?.code === 2 /* POSITION_UNAVAILABLE */) {
+          console.warn('[ATTENDANCE GPS] Position unavailable');
+          safeResolve({
+            success: false,
+            error: 'GPS_UNAVAILABLE',
+            reason: 'GPS_UNAVAILABLE',
+            message: 'GPS signal unavailable. Please ensure Location/GPS is turned on in your device settings.'
+          });
+          return;
+        }
+
+        // code === 3 (TIMEOUT per query): allow watchPosition to continue until master bounded timeout
+        console.warn('[ATTENDANCE GPS] Position query timeout, waiting for next fix...');
+      };
+
+      // Master bounded window timer
+      masterTimeoutId = setTimeout(() => {
+        if (isResolved) return;
+
+        console.log('[ATTENDANCE GPS] Acquisition completed');
+        console.log(`[ATTENDANCE GPS] Best accuracy: ${bestAccuracy === Infinity ? 'None' : Math.round(bestAccuracy) + 'm'}`);
+
+        if (bestAccuracy <= MAX_ACCURACY_THRESHOLD && bestLatitude !== null && bestLongitude !== null) {
+          safeResolve({
+            success: true,
+            latitude: bestLatitude,
+            longitude: bestLongitude,
+            accuracy: bestAccuracy,
+            bestAccuracy,
+            readingCount
+          });
+        } else if (bestAccuracy !== Infinity) {
+          const roundedBest = Math.round(bestAccuracy);
+          console.log(`[ATTENDANCE GPS] LOW_ACCURACY:\nbestAccuracy=${roundedBest}m\nthreshold=${MAX_ACCURACY_THRESHOLD}m`);
+          console.warn('[ATTENDANCE GEOFENCE] Aborting /liveness/result due to LOW_ACCURACY');
+          safeResolve({
+            success: false,
+            error: 'LOW_ACCURACY',
+            reason: 'LOW_ACCURACY',
+            accuracy: roundedBest,
+            bestAccuracy: roundedBest,
+            readingCount,
+            message: `Your GPS accuracy is currently ${roundedBest}m. Please enable Precise Location and try again from an open area or near a window.`
+          });
+        } else {
+          console.warn('[ATTENDANCE GPS] ❌ TIMEOUT: No GPS reading obtained within bounded acquisition period');
+          console.warn('[ATTENDANCE GEOFENCE] Aborting /liveness/result due to GPS_TIMEOUT');
+          safeResolve({
+            success: false,
+            error: 'GPS_TIMEOUT',
+            reason: 'GPS_TIMEOUT',
+            message: 'Unable to obtain sufficiently accurate GPS. Please ensure Location/GPS is enabled and try again.'
+          });
+        }
+      }, MAX_GPS_ACQUISITION_DURATION);
+
+      // Initial query to kick off hardware GPS provider
+      navigator.geolocation.getCurrentPosition(processPosition, handleError, geoOptions);
+
+      // Continuous bounded watch stream
+      watchId = navigator.geolocation.watchPosition(processPosition, handleError, geoOptions);
+    });
+  }, [MAX_ACCURACY_THRESHOLD, MAX_GPS_ACQUISITION_DURATION]);
+
+  // STEP 2: Prepare AWS Face Liveness Session (ONLY reached after GPS is validated <= 50m)
+  const handleStartLivenessSession = useCallback(async () => {
     try {
-      isInitiatingRef.current = true;
       setErrorMessage('');
       setCurrentState('PREPARING');
-
-      // Pre-warm high accuracy device GPS hardware chip
-      if (navigator?.geolocation?.getCurrentPosition) {
-        console.log('[ATTENDANCE GPS] Pre-warming high accuracy location chip');
-        navigator.geolocation.getCurrentPosition(() => {}, () => {}, {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 0
-        });
-      }
 
       // 1. Create Backend Verification Session (5 min expiry)
       const sessionRes = await attendanceService.createVerificationSession();
@@ -118,7 +321,7 @@ export default function AttendanceVerificationModal({
       sessionIdRef.current = newSessionId;
       setSessionId(newSessionId);
 
-      // 2. Initiate AWS Rekognition Face Liveness Session + fetch short-lived temporary AWS credentials
+      // 2. Initiate AWS Rekognition Face Liveness Session + fetch temporary AWS credentials
       const livenessRes = await attendanceService.initiateLivenessSession(newSessionId);
       const livenessData = livenessRes?.data || livenessRes;
       const rawProviderSessionId = livenessData?.providerSessionId || livenessData?.provider_session_id;
@@ -137,7 +340,6 @@ export default function AttendanceVerificationModal({
         return;
       }
 
-      // Preserve untruncated 36-char AWS Rekognition SessionId in ref & state
       const cleanProviderSessionId = String(rawProviderSessionId).trim();
       providerSessionIdRef.current = cleanProviderSessionId;
       setAwsProviderSessionId(cleanProviderSessionId);
@@ -148,13 +350,13 @@ export default function AttendanceVerificationModal({
         setAwsCredentials(tempCredentials);
       }
 
-      // Brief preparation completion delay before showing AWS Liveness Detector
+      // Transition to active live detector challenge
       setTimeout(() => {
         setCurrentState('LIVENESS_ACTIVE');
-      }, 1000);
+      }, 800);
 
     } catch (err) {
-      console.error('Verification initiation error:', err);
+      console.error('Liveness session initialization error:', err);
       const errReason = err.response?.data?.reason || err.reason;
       const isExpired = errReason === 'LIVENESS_EXPIRED' || err.response?.status === 410;
       const errText = err.response?.data?.message || err.message || (isExpired ? 'Face verification session expired. Please retry.' : 'Could not initiate face liveness session');
@@ -170,10 +372,62 @@ export default function AttendanceVerificationModal({
         setErrorMessage(errText);
       }
       setCurrentState('FAILURE');
+    }
+  }, []);
+
+  // MASTER FLOW: Initiates GPS first -> validates <= 50m -> then runs Liveness
+  const handleStartVerificationFlow = useCallback(async () => {
+    if (isInitiatingRef.current) return;
+
+    try {
+      isInitiatingRef.current = true;
+      setErrorMessage('');
+      verifiedLocationRef.current = null;
+
+      // 1. Check Location Permission
+      const perm = await checkLocationPermission();
+      if (perm.state === 'denied') {
+        setFailureType('LOCATION_PERMISSION_DENIED');
+        setErrorMessage('Location permission is required for attendance. Please allow location access and try again.');
+        setCurrentState('FAILURE');
+        return;
+      }
+
+      // 2. Start Bounded GPS Acquisition (Panel 1: GPS_ACQUISITION)
+      setCurrentState('GPS_ACQUISITION');
+      setGpsProgress({ status: 'acquiring', readingCount: 0, accuracy: null });
+
+      const gpsResult = await acquirePreciseLocation();
+
+      if (!gpsResult || !gpsResult.success) {
+        setGpsProgress(null);
+        const errType = gpsResult?.error || gpsResult?.reason || 'LOW_ACCURACY';
+        const msg = gpsResult?.message || 'Unable to obtain sufficiently accurate GPS.';
+        setFailureType(errType);
+        setErrorMessage(msg);
+        setCurrentState('FAILURE');
+        return;
+      }
+
+      // 3. Accuracy is verified <= 50m! Store coordinates
+      verifiedLocationRef.current = {
+        latitude: gpsResult.latitude,
+        longitude: gpsResult.longitude,
+        accuracy: gpsResult.accuracy
+      };
+
+      // 4. Continue with AWS Rekognition Face Liveness
+      await handleStartLivenessSession();
+
+    } catch (err) {
+      console.error('Verification flow error:', err);
+      setFailureType('GENERAL');
+      setErrorMessage(err?.message || 'Failed to initialize attendance verification');
+      setCurrentState('FAILURE');
     } finally {
       isInitiatingRef.current = false;
     }
-  }, []);
+  }, [checkLocationPermission, acquirePreciseLocation, handleStartLivenessSession]);
 
   // Custom AWS Credential Provider for FaceLivenessDetectorCore
   const credentialProvider = useCallback(async () => {
@@ -193,7 +447,6 @@ export default function AttendanceVerificationModal({
       throw new Error('Verification session lost. Please restart verification.');
     }
 
-    // Fetch fresh temporary credentials from backend if not present
     const credsRes = await attendanceService.getLivenessCredentials(currentSessionId);
     const credsData = credsRes?.data?.credentials || credsRes?.credentials;
 
@@ -216,173 +469,7 @@ export default function AttendanceVerificationModal({
     credentialProvider
   }), [credentialProvider]);
 
-  // Helper to fetch device coordinates with high accuracy (rejecting coarse / IP locations)
-  // Uses a bounded watch + poll strategy to wait for the best GPS reading within 30 seconds
-  // IMPROVED: Adds minimum warm-up period to allow GPS hardware to acquire satellite fix
-  const getDeviceLocation = useCallback(() => {
-    return new Promise((resolve) => {
-      if (!navigator?.geolocation) {
-        console.warn('[ATTENDANCE GEOFENCE] Geolocation API not available on device');
-        resolve({
-          error: 'NO_GEOLOCATION',
-          reason: 'LOCATION_DENIED',
-          message: 'Geolocation is not supported by your browser or device.'
-        });
-        return;
-      }
-
-      console.log('[ATTENDANCE GPS] Requesting high accuracy location with bounded watch strategy');
-
-      let watchId = null;
-      let intervalId = null;
-      let bestPosition = null;
-      let bestAccuracy = Infinity;
-      let hasReading = false;
-      let readingCount = 0;
-      const MIN_WARMUP_READINGS = 3; // Minimum number of readings before accepting any position
-      const MAX_WATCH_DURATION = 30000; // 30 seconds max
-      const MAX_ACCURACY_THRESHOLD = 50; // meters - STRICT THRESHOLD
-
-      const cleanup = () => {
-        if (watchId !== null) {
-          navigator.geolocation.clearWatch(watchId);
-          watchId = null;
-        }
-        if (intervalId !== null) {
-          clearInterval(intervalId);
-          intervalId = null;
-        }
-        setGpsProgress(null);
-        gpsProgressRef.current = null;
-      };
-
-      const geoOptions = {
-        enableHighAccuracy: true,
-        timeout: 30000,
-        maximumAge: 0
-      };
-
-      const timeoutId = setTimeout(() => {
-        cleanup();
-        if (!hasReading || !bestPosition) {
-          console.warn('[ATTENDANCE GPS] ❌ TIMEOUT: No GPS reading obtained within 30 seconds');
-          resolve({
-            error: 'GEO_ERROR',
-            reason: 'LOW_ACCURACY',
-            message: 'GPS is taking too long to determine your precise location. Please ensure Location/GPS is enabled and try again.'
-          });
-        } else if (bestAccuracy <= MAX_ACCURACY_THRESHOLD) {
-          console.log(`[ATTENDANCE GPS] ✅ Best reading within threshold: Accuracy: ${Math.round(bestAccuracy)}m`);
-          resolve({
-            latitude: bestPosition.coords.latitude,
-            longitude: bestPosition.coords.longitude,
-            accuracy: bestPosition.coords.accuracy
-          });
-        } else {
-          console.warn(`[ATTENDANCE GPS] ❌ LOW ACCURACY: Best accuracy ${Math.round(bestAccuracy)}m > ${MAX_ACCURACY_THRESHOLD}m threshold after 30 seconds`);
-          resolve({
-            error: 'LOW_ACCURACY',
-            reason: 'LOW_ACCURACY',
-            accuracy: bestAccuracy,
-            latitude: bestPosition?.coords?.latitude,
-            longitude: bestPosition?.coords?.longitude,
-            message: 'Your GPS location is not accurate enough to verify attendance. Please turn on Location/GPS, enable High Accuracy mode, and try again outdoors or near a window.'
-          });
-        }
-      }, MAX_WATCH_DURATION);
-
-      const processPosition = (pos) => {
-        const lat = pos?.coords?.latitude;
-        const lng = pos?.coords?.longitude;
-        const accuracy = pos?.coords?.accuracy;
-
-        if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(accuracy)) {
-          console.log('[ATTENDANCE GPS] Skipping invalid reading (non-finite coordinates)');
-          return;
-        }
-
-        if (accuracy <= 0) {
-          console.log('[ATTENDANCE GPS] Skipping invalid reading (accuracy <= 0)');
-          return;
-        }
-
-        hasReading = true;
-        readingCount++;
-        const roundedAcc = Math.round(accuracy);
-
-        console.log(`[ATTENDANCE GPS] Reading #${readingCount}: lat=${lat.toFixed(6)}, lng=${lng.toFixed(6)}, accuracy=${roundedAcc}m`);
-
-        // Update UI progress
-        setGpsProgress({ status: 'acquiring', accuracy: roundedAcc, readingCount });
-        gpsProgressRef.current = { status: 'acquiring', accuracy: roundedAcc, readingCount };
-
-        // Track the best (lowest accuracy value) position
-        if (accuracy < bestAccuracy) {
-          console.log(`[ATTENDANCE GPS] Better reading: accuracy=${roundedAcc}m (was ${Math.round(bestAccuracy)}m)`);
-          bestAccuracy = accuracy;
-          bestPosition = pos;
-        } else if (accuracy > MAX_ACCURACY_THRESHOLD) {
-          console.log(`[ATTENDANCE GPS] Accuracy insufficient: ${roundedAcc}m > ${MAX_ACCURACY_THRESHOLD}m. Waiting for better reading...`);
-        }
-
-        // IMPROVED: Only accept position after minimum warm-up readings to ensure GPS has stabilized
-        // If accuracy is within threshold (<= 50m) AND we have enough readings, accept immediately
-        if (accuracy <= MAX_ACCURACY_THRESHOLD && readingCount >= MIN_WARMUP_READINGS) {
-          cleanup();
-          clearTimeout(timeoutId);
-          console.log(`[ATTENDANCE GPS] Accuracy accepted: ${roundedAcc}m after ${readingCount} readings`);
-          console.log('[ATTENDANCE GEOFENCE] Checking exact polygon...');
-          resolve({
-            latitude: lat,
-            longitude: lng,
-            accuracy: accuracy
-          });
-        } else if (accuracy <= MAX_ACCURACY_THRESHOLD && readingCount < MIN_WARMUP_READINGS) {
-          console.log(`[ATTENDANCE GPS] Good accuracy (${roundedAcc}m) but waiting for warm-up (${readingCount}/${MIN_WARMUP_READINGS} readings)...`);
-        }
-      };
-
-      const handleError = (err) => {
-        // If we already received a reading or watch/poll is active, don't reject on a transient poll error
-        if (hasReading) return;
-
-        cleanup();
-        clearTimeout(timeoutId);
-        console.warn('[ATTENDANCE GPS] Geolocation error:', err);
-
-        let reason = 'LOCATION_DENIED';
-        let message = 'Location permission is required for attendance. Please allow location access in your browser/device settings and try again.';
-
-        if (err?.code === 1 /* PERMISSION_DENIED */) {
-          reason = 'LOCATION_DENIED';
-          message = 'Location permission is required for attendance. Please allow location access in your browser/device settings and try again.';
-        } else if (err?.code === 2 /* POSITION_UNAVAILABLE */) {
-          reason = 'LOW_ACCURACY';
-          message = 'Your device could not determine a GPS location. Please enable Location/GPS and try again.';
-        } else if (err?.code === 3 /* TIMEOUT */) {
-          reason = 'LOW_ACCURACY';
-          message = 'GPS is taking too long to determine your precise location. Please ensure Location/GPS is enabled and try again.';
-        }
-
-        resolve({ error: 'GEO_ERROR', reason, message, code: err?.code });
-      };
-
-      // 1. Initial getCurrentPosition call
-      navigator.geolocation.getCurrentPosition(processPosition, handleError, geoOptions);
-
-      // 2. Active watchPosition stream
-      watchId = navigator.geolocation.watchPosition(processPosition, () => {}, geoOptions);
-
-      // 3. Periodic getCurrentPosition retry ticks every 2.5s if accuracy > 50m
-      intervalId = setInterval(() => {
-        if (bestAccuracy > MAX_ACCURACY_THRESHOLD) {
-          navigator.geolocation.getCurrentPosition(processPosition, () => {}, geoOptions);
-        }
-      }, 2500);
-    });
-  }, []);
-
-  // Called when AWS Amplify FaceLivenessDetectorCore completes client-side challenge (Panel 5/6 -> Panel 7 -> Panel 8 -> Panel 9 -> Panel 10)
+  // Called when AWS Amplify FaceLivenessDetectorCore completes client challenge
   const handleAnalysisComplete = useCallback(async () => {
     try {
       const activeSessionId = sessionIdRef.current || sessionId;
@@ -395,42 +482,26 @@ export default function AttendanceVerificationModal({
         return;
       }
 
-      // 1. Show Panel 7 (Analyzing...)
+      // Show Panel: LIVENESS_ANALYZING
       setCurrentState('LIVENESS_ANALYZING');
-      setGpsProgress({ status: 'acquiring' });
-      gpsProgressRef.current = { status: 'acquiring' };
 
-      // 2. Fetch current GPS location for office building geofence verification
-      const locationData = await getDeviceLocation();
-      console.log('[ATTENDANCE GEOFENCE] Evaluated GPS result before backend call:', locationData);
+      // Retrieve verified GPS location from step 1
+      const locationData = verifiedLocationRef.current;
 
-      // Pre-validation guard: Do NOT call /liveness/result if GPS is unusable, denied, or accuracy > 50m
-      if (!locationData || locationData.error) {
-        const failureReason = locationData?.reason || 'LOW_ACCURACY';
-        const failureMsg = locationData?.message || 'Unable to verify your location accurately. Please enable high-accuracy GPS and try again.';
-        
-        console.warn(`[ATTENDANCE GEOFENCE] ⛔ Aborting /liveness/result call due to client-side GPS check: ${failureReason}`);
-        
-        if (failureReason === 'LOCATION_DENIED') {
-          setFailureType('LOCATION_DENIED');
-        } else {
-          setFailureType('LOW_ACCURACY');
-        }
-        setErrorMessage(failureMsg);
-        setCurrentState('FAILURE');
-        return;
-      }
-
-      // Strict sanity check on location numbers
-      if (!Number.isFinite(locationData.latitude) || !Number.isFinite(locationData.longitude) || !Number.isFinite(locationData.accuracy) || locationData.accuracy <= 0 || locationData.accuracy > 50) {
-        console.warn(`[ATTENDANCE GEOFENCE] ⛔ Aborting /liveness/result call: accuracy (${locationData?.accuracy}m) is invalid or > 50m.`);
+      // Fail-closed guard: Do NOT call /liveness/result if GPS is missing, invalid, or > 50m
+      if (!locationData || !Number.isFinite(locationData.latitude) || !Number.isFinite(locationData.longitude) ||
+          !Number.isFinite(locationData.accuracy) || locationData.accuracy <= 0 || locationData.accuracy > MAX_ACCURACY_THRESHOLD) {
+        const measuredAcc = locationData?.accuracy ? Math.round(locationData.accuracy) : 'unknown';
+        console.warn(`[ATTENDANCE GEOFENCE] ⛔ Aborting /liveness/result call due to LOW_ACCURACY: bestAccuracy=${measuredAcc}m > ${MAX_ACCURACY_THRESHOLD}m threshold`);
         setFailureType('LOW_ACCURACY');
-        setErrorMessage('Unable to verify your location accurately. Please enable high-accuracy GPS and try again.');
+        setErrorMessage(`Your GPS accuracy is currently ${measuredAcc}m. Please enable Precise Location and try again from an open area or near a window.`);
         setCurrentState('FAILURE');
         return;
       }
 
-      // 3. Validate AWS Rekognition Liveness & Building Geofence on Backend (ONLY with real GPS <= 50m)
+      console.log('[ATTENDANCE GEOFENCE] Submitting verified GPS to backend validation:', locationData);
+
+      // Validate AWS Rekognition Liveness & Building Geofence on Backend
       const validateRes = await attendanceService.validateLivenessResult(
         activeSessionId,
         activeProviderSessionId,
@@ -445,14 +516,11 @@ export default function AttendanceVerificationModal({
         }));
       }
 
-      // 4. Show Panel 8 (Liveness Check Passed!)
+      // Show Panel 8 (Liveness Check Passed!)
       setCurrentState('LIVENESS_PASSED');
 
     } catch (err) {
-      console.error('[ATTENDANCE VERIFICATION] Backend status:', err?.response?.status);
-      console.error('[ATTENDANCE VERIFICATION] Backend response:', err?.response?.data);
-      console.error('[ATTENDANCE VERIFICATION] Request:', err?.config?.data);
-      console.error('Liveness analysis / location verification error:', err);
+      console.error('[ATTENDANCE VERIFICATION] Backend validation error:', err);
       const errReason = err.response?.data?.reason || err.reason;
       const isExpired = errReason === 'LIVENESS_EXPIRED' || err.response?.status === 410;
       const isMismatch = errReason === 'FACE_MISMATCH' || err.response?.data?.message?.toLowerCase().includes('face mismatch');
@@ -468,8 +536,8 @@ export default function AttendanceVerificationModal({
         setFailureType('LOCATION_MISMATCH');
         setErrorMessage(errText || "Location doesn't match. You must be inside the office building.");
       } else if (isLocDenied) {
-        setFailureType('LOCATION_DENIED');
-        setErrorMessage('Location access is required to verify your office building presence.');
+        setFailureType('LOCATION_PERMISSION_DENIED');
+        setErrorMessage('Location permission is required for attendance. Please allow location access and try again.');
       } else if (isMismatch) {
         setFailureType('FACE_MISMATCH');
         setErrorMessage('Your face could not be matched with your registered KYC photo.');
@@ -485,7 +553,7 @@ export default function AttendanceVerificationModal({
       }
       setCurrentState('FAILURE');
     }
-  }, [sessionId, awsProviderSessionId, getDeviceLocation]);
+  }, [sessionId, awsProviderSessionId, MAX_ACCURACY_THRESHOLD]);
 
   // Step after Panel 8 (Liveness Passed) -> Panel 9 (KYC Face Match & Building Location Progress) -> Panel 10
   const handleProceedToIdentityVerification = useCallback(async () => {
@@ -494,11 +562,10 @@ export default function AttendanceVerificationModal({
       setCurrentState('IDENTITY_VERIFICATION');
       setIdentityStage('FACE_MATCH');
 
-      // Small UI tick for step 2 (KYC Face Match)
+      // Brief progress UI ticks
       await new Promise(r => setTimeout(r, 600));
       setIdentityStage('LOCATION_CHECK');
 
-      // Small UI tick for step 3 (Building Location Check)
       await new Promise(r => setTimeout(r, 600));
       setIdentityStage('COMPLETE_ATTENDANCE');
 
@@ -570,19 +637,20 @@ export default function AttendanceVerificationModal({
     handleModalClose();
   }, [handleModalClose]);
 
-  // Retry Flow: create completely NEW verification session & AWS liveness session
+  // Retry Flow: restarts fresh from permission check & GPS acquisition
   const handleRetry = useCallback(() => {
     isInitiatingRef.current = false;
     sessionIdRef.current = null;
     providerSessionIdRef.current = null;
     credentialsRef.current = null;
+    verifiedLocationRef.current = null;
     setSessionId(null);
     setAwsProviderSessionId(null);
     setAwsCredentials(null);
     setErrorMessage('');
     setVerificationResult(null);
-    handleStartLivenessSession();
-  }, [handleStartLivenessSession]);
+    handleStartVerificationFlow();
+  }, [handleStartVerificationFlow]);
 
   if (!isOpen) return null;
 
@@ -607,12 +675,21 @@ export default function AttendanceVerificationModal({
           <AttendanceVerificationStepper
             key="stepper"
             actionType={actionType}
-            onContinue={handleStartLivenessSession}
+            onContinue={handleStartVerificationFlow}
             onClose={handleModalClose}
           />
         )}
 
-        {/* PANEL 3: PREPARING LIVENESS */}
+        {/* STEP 1: BOUNDED GPS ACQUISITION PROGRESS */}
+        {currentState === 'GPS_ACQUISITION' && (
+          <GpsAcquisitionProgress
+            key="gps_acquisition"
+            gpsProgress={gpsProgress}
+            onCancel={handleModalClose}
+          />
+        )}
+
+        {/* STEP 2: PREPARING LIVENESS (Session & Credential Creation) */}
         {currentState === 'PREPARING' && (
           <LivenessPreparation
             key="preparing"
@@ -620,17 +697,17 @@ export default function AttendanceVerificationModal({
           />
         )}
 
-        {/* PANEL 4: CAMERA PERMISSION */}
+        {/* CAMERA PERMISSION STATE */}
         {currentState === 'CAMERA_PERMISSION' && (
           <CameraPermissionState
             key="camera_perm"
             isDenied={false}
-            onAllowCamera={handleStartLivenessSession}
+            onAllowCamera={handleStartVerificationFlow}
             onCancel={handleModalClose}
           />
         )}
 
-        {/* PANELS 5 & 6: LIVE AWS FACE LIVENESS DETECTOR */}
+        {/* STEP 3: LIVE AWS FACE LIVENESS DETECTOR */}
         {currentState === 'LIVENESS_ACTIVE' && awsProviderSessionId && (
           <LivenessState
             key="liveness_active"
@@ -644,12 +721,12 @@ export default function AttendanceVerificationModal({
           />
         )}
 
-        {/* PANEL 7: LIVENESS ANALYZING */}
+        {/* STEP 4: LIVENESS & BACKEND GEOFENCE ANALYZING */}
         {currentState === 'LIVENESS_ANALYZING' && (
           <LivenessAnalysis key="liveness_analyzing" gpsProgress={gpsProgress} />
         )}
 
-        {/* PANEL 8: LIVENESS SUCCESS */}
+        {/* LIVENESS SUCCESS */}
         {currentState === 'LIVENESS_PASSED' && (
           <LivenessSuccess
             key="liveness_passed"
@@ -657,7 +734,7 @@ export default function AttendanceVerificationModal({
           />
         )}
 
-        {/* PANEL 9: FACE MATCH + BUILDING LOCATION PROGRESS */}
+        {/* IDENTITY VERIFICATION PROGRESS (KYC Face Match & Office Geofence) */}
         {currentState === 'IDENTITY_VERIFICATION' && (
           <IdentityVerificationProgress
             key="identity_progress"
@@ -668,7 +745,7 @@ export default function AttendanceVerificationModal({
           />
         )}
 
-        {/* PANEL 10: ATTENDANCE SUCCESS */}
+        {/* ATTENDANCE SUCCESS */}
         {currentState === 'SUCCESS' && (
           <AttendanceSuccess
             key="success"
@@ -678,7 +755,7 @@ export default function AttendanceVerificationModal({
           />
         )}
 
-        {/* SECTION 12: FAILURE STATES */}
+        {/* FAILURE STATES (Categorized: Permission Denied, GPS Unavailable, Timeout, Low Accuracy, Outside Building) */}
         {currentState === 'FAILURE' && (
           <AttendanceFailure
             key="failure"

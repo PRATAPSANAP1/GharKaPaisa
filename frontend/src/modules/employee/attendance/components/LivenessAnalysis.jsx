@@ -78,7 +78,7 @@ export default function LivenessAnalysis({ gpsProgress }) {
           fontWeight: 700,
           color: '#111827'
         }}>
-          {gpsProgress ? 'Getting your precise location...' : 'Analyzing...'}
+          Analyzing Biometric & Location...
         </h3>
 
         <p style={{
@@ -87,41 +87,8 @@ export default function LivenessAnalysis({ gpsProgress }) {
           color: '#6B7280',
           lineHeight: 1.45
         }}>
-          {gpsProgress 
-            ? (
-              <span>
-                {gpsProgress.accuracy 
-                  ? `Improving GPS accuracy... ${gpsProgress.accuracy}m (reading ${gpsProgress.readingCount || 1})` 
-                  : 'Getting your precise location...'
-                }
-              </span>
-            ) 
-            : 'Verifying that you are a real person...'
-          }
+          Validating facial liveness and confirming office building geofence presence with backend...
         </p>
-
-        {gpsProgress && gpsProgress.accuracy && (
-          <div style={{
-            marginTop: '12px',
-            padding: '8px 16px',
-            background: gpsProgress.accuracy <= 50 ? '#D1FAE5' : '#FEF3C7',
-            borderRadius: '8px',
-            fontSize: '12px',
-            color: gpsProgress.accuracy <= 50 ? '#065F46' : '#92400E',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}>
-            <MapPin size={14} />
-            <span>
-              {gpsProgress.accuracy <= 50 
-                ? `GPS accuracy: ${gpsProgress.accuracy}m ✓` 
-                : `Working on accuracy... (${gpsProgress.accuracy}m > 50m threshold)`
-              }
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Animated subtle progress bar */}

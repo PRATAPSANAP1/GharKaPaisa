@@ -1,17 +1,32 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { RefreshCw, Camera, MapPin, AlertCircle, X, Check, ArrowLeft } from 'lucide-react';
+import { RefreshCw, Camera, MapPin, AlertCircle, X, Check, ArrowLeft, NavigationOff, Compass, ShieldAlert } from 'lucide-react';
 
 export default function AttendanceFailure({
-  failureType = 'LIVENESS_FAILED', // 'CAMERA_DENIED' | 'LOCATION_DENIED' | 'LOCATION_MISMATCH' | 'LIVENESS_FAILED' | 'FACE_MISMATCH' | 'SERVICE_UNAVAILABLE' | 'GENERAL'
+  failureType = 'LIVENESS_FAILED', // 'CAMERA_DENIED' | 'LOCATION_PERMISSION_DENIED' | 'LOCATION_DENIED' | 'GPS_UNAVAILABLE' | 'GPS_TIMEOUT' | 'LOW_ACCURACY' | 'LOCATION_MISMATCH' | 'LIVENESS_FAILED' | 'FACE_MISMATCH' | 'SERVICE_UNAVAILABLE' | 'GENERAL'
   errorMessage,
   onRetry,
   onClose
 }) {
   const isCameraError = failureType === 'CAMERA_DENIED' || errorMessage?.toLowerCase().includes('camera');
+  
+  const isLocationDenied = failureType === 'LOCATION_PERMISSION_DENIED' || 
+    failureType === 'LOCATION_DENIED' || 
+    (errorMessage?.toLowerCase().includes('location permission') && !errorMessage?.toLowerCase().includes('accuracy'));
+
+  const isGpsUnavailable = failureType === 'GPS_UNAVAILABLE' ||
+    errorMessage?.toLowerCase().includes('gps signal unavailable') ||
+    errorMessage?.toLowerCase().includes('could not determine a gps location');
+
+  const isGpsTimeout = failureType === 'GPS_TIMEOUT' ||
+    errorMessage?.toLowerCase().includes('gps is taking too long') ||
+    errorMessage?.toLowerCase().includes('gps acquisition timed out');
+
   const isLowAccuracy = failureType === 'LOW_ACCURACY' || 
     errorMessage?.toLowerCase().includes('accuracy') || 
-    errorMessage?.toLowerCase().includes('accurat');
+    errorMessage?.toLowerCase().includes('accurat') ||
+    errorMessage?.toLowerCase().includes('precise location');
+
   const isLocationMismatch = failureType === 'LOCATION_MISMATCH' || 
     failureType === 'OUTSIDE_BUILDING' ||
     failureType === 'INVALID_COORDINATES' ||
@@ -39,7 +54,7 @@ export default function AttendanceFailure({
         fontFamily: "'Inter', sans-serif"
       }}
     >
-      {/* SCREEN 10: CAMERA PERMISSION REQUIRED */}
+      {/* 1. CAMERA PERMISSION REQUIRED */}
       {isCameraError ? (
         <>
           <motion.div
@@ -65,7 +80,7 @@ export default function AttendanceFailure({
             Camera Permission Required
           </h2>
           <p style={{ margin: '0 0 24px', fontSize: '13.5px', color: '#64748B', fontWeight: 500 }}>
-            Please allow camera access to verify your identity.
+            {errorMessage || 'Please allow camera access to verify your identity.'}
           </p>
 
           <button
@@ -89,7 +104,287 @@ export default function AttendanceFailure({
               marginBottom: '12px'
             }}
           >
-            <Camera size={18} /> Enable Camera
+            <Camera size={18} /> Enable Camera & Retry
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              width: '100%',
+              height: '46px',
+              borderRadius: '14px',
+              border: '1px solid #E7EAF0',
+              background: '#FFFFFF',
+              color: '#64748B',
+              fontSize: '14.5px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            <ArrowLeft size={16} /> Go Back
+          </button>
+        </>
+      ) : isLocationDenied ? (
+        /* 2. LOCATION PERMISSION DENIED */
+        <>
+          <motion.div
+            initial={{ scale: 0.8 }}
+            animate={{ scale: 1 }}
+            style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '24px',
+              background: '#FFF0F2',
+              color: '#FF4D5E',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '20px',
+              border: '2px dashed #FFA8B3'
+            }}
+          >
+            <NavigationOff size={38} />
+          </motion.div>
+
+          <h2 style={{ margin: '0 0 6px', fontSize: '22px', fontWeight: 800, color: '#111827' }}>
+            Location Permission Required
+          </h2>
+          <p style={{ margin: '0 0 20px', fontSize: '13.5px', color: '#64748B', fontWeight: 500 }}>
+            {errorMessage || 'Location permission is required for attendance. Please allow location access and try again.'}
+          </p>
+
+          <div style={{
+            background: '#FFF0F2',
+            border: '1px solid #FFD1D6',
+            borderRadius: '18px',
+            padding: '14px 16px',
+            marginBottom: '24px',
+            textAlign: 'left'
+          }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#991B1B', marginBottom: '8px' }}>
+              How to enable location access:
+            </div>
+            <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12.5px', color: '#7F1D1D', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <li>Click the lock or site settings icon in your browser address bar</li>
+              <li>Set Location permission to <strong>Allow</strong></li>
+              <li>Enable <strong>Precise Location</strong> if prompted by your browser</li>
+              <li>Tap "Try Again" below once permission is enabled</li>
+            </ul>
+          </div>
+
+          <button
+            type="button"
+            onClick={onRetry}
+            style={{
+              width: '100%',
+              height: '50px',
+              borderRadius: '14px',
+              border: 'none',
+              background: '#FF4D5E',
+              color: '#FFFFFF',
+              fontSize: '15px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              boxShadow: '0 8px 20px -4px rgba(255, 77, 94, 0.35)',
+              marginBottom: '12px'
+            }}
+          >
+            <RefreshCw size={18} /> Try Again
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              width: '100%',
+              height: '46px',
+              borderRadius: '14px',
+              border: '1px solid #E7EAF0',
+              background: '#FFFFFF',
+              color: '#64748B',
+              fontSize: '14.5px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            <ArrowLeft size={16} /> Go Back
+          </button>
+        </>
+      ) : isGpsUnavailable ? (
+        /* 3. GPS SIGNAL UNAVAILABLE */
+        <>
+          <motion.div
+            animate={{ x: [0, -6, 6, -4, 4, 0] }}
+            transition={{ duration: 0.35, ease: 'easeInOut' }}
+            style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              background: '#FFF0F2',
+              color: '#FF4D5E',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '20px',
+              boxShadow: '0 8px 24px -4px rgba(255, 77, 94, 0.25)'
+            }}
+          >
+            <Compass size={40} />
+          </motion.div>
+
+          <h2 style={{ margin: '0 0 6px', fontSize: '22px', fontWeight: 800, color: '#111827' }}>
+            GPS Signal Unavailable
+          </h2>
+          <p style={{ margin: '0 0 20px', fontSize: '13.5px', color: '#64748B', fontWeight: 500 }}>
+            {errorMessage || 'GPS signal unavailable. Please ensure Location/GPS is turned on in your device settings.'}
+          </p>
+
+          <div style={{
+            background: '#FFF0F2',
+            border: '1px solid #FFD1D6',
+            borderRadius: '18px',
+            padding: '14px 16px',
+            marginBottom: '24px',
+            textAlign: 'left'
+          }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#991B1B', marginBottom: '8px' }}>
+              Troubleshooting tips:
+            </div>
+            <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12.5px', color: '#7F1D1D', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <li>Ensure device Location/GPS toggle is turned ON</li>
+              <li>Turn off Airplane mode and reconnect to network</li>
+              <li>Move outdoors or near a window to acquire satellite signal</li>
+            </ul>
+          </div>
+
+          <button
+            type="button"
+            onClick={onRetry}
+            style={{
+              width: '100%',
+              height: '50px',
+              borderRadius: '14px',
+              border: 'none',
+              background: '#FF4D5E',
+              color: '#FFFFFF',
+              fontSize: '15px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              boxShadow: '0 8px 20px -4px rgba(255, 77, 94, 0.35)',
+              marginBottom: '12px'
+            }}
+          >
+            <RefreshCw size={18} /> Try Again
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              width: '100%',
+              height: '46px',
+              borderRadius: '14px',
+              border: '1px solid #E7EAF0',
+              background: '#FFFFFF',
+              color: '#64748B',
+              fontSize: '14.5px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            <ArrowLeft size={16} /> Go Back
+          </button>
+        </>
+      ) : isGpsTimeout ? (
+        /* 4. GPS TIMEOUT */
+        <>
+          <motion.div
+            animate={{ x: [0, -6, 6, -4, 4, 0] }}
+            transition={{ duration: 0.35, ease: 'easeInOut' }}
+            style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              background: '#FFF0F2',
+              color: '#FF4D5E',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '20px',
+              boxShadow: '0 8px 24px -4px rgba(255, 77, 94, 0.25)'
+            }}
+          >
+            <MapPin size={40} />
+          </motion.div>
+
+          <h2 style={{ margin: '0 0 6px', fontSize: '22px', fontWeight: 800, color: '#111827' }}>
+            GPS Acquisition Timeout
+          </h2>
+          <p style={{ margin: '0 0 20px', fontSize: '13.5px', color: '#64748B', fontWeight: 500 }}>
+            {errorMessage || 'Unable to obtain sufficiently accurate GPS. Please ensure Location/GPS is enabled and try again.'}
+          </p>
+
+          <div style={{
+            background: '#FFF0F2',
+            border: '1px solid #FFD1D6',
+            borderRadius: '18px',
+            padding: '14px 16px',
+            marginBottom: '24px',
+            textAlign: 'left'
+          }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#991B1B', marginBottom: '8px' }}>
+              Suggestions:
+            </div>
+            <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12.5px', color: '#7F1D1D', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <li>Ensure device Location/GPS is enabled in high accuracy mode</li>
+              <li>Move closer to a window or outdoors to get a faster satellite fix</li>
+              <li>Turn on Wi-Fi to assist satellite positioning</li>
+            </ul>
+          </div>
+
+          <button
+            type="button"
+            onClick={onRetry}
+            style={{
+              width: '100%',
+              height: '50px',
+              borderRadius: '14px',
+              border: 'none',
+              background: '#FF4D5E',
+              color: '#FFFFFF',
+              fontSize: '15px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              boxShadow: '0 8px 20px -4px rgba(255, 77, 94, 0.35)',
+              marginBottom: '12px'
+            }}
+          >
+            <RefreshCw size={18} /> Try Again
           </button>
 
           <button
@@ -115,7 +410,7 @@ export default function AttendanceFailure({
           </button>
         </>
       ) : isLowAccuracy ? (
-        /* SCREEN: GPS ACCURACY TOO LOW */
+        /* 5. GPS ACCURACY TOO LOW (e.g. 82m > 50m) */
         <>
           <motion.div
             animate={{ x: [0, -6, 6, -4, 4, 0] }}
@@ -139,7 +434,7 @@ export default function AttendanceFailure({
           <h2 style={{ margin: '0 0 6px', fontSize: '22px', fontWeight: 800, color: '#111827' }}>
             GPS Accuracy Too Low
           </h2>
-          <p style={{ margin: '0 0 20px', fontSize: '13.5px', color: '#64748B', fontWeight: 500 }}>
+          <p style={{ margin: '0 0 20px', fontSize: '13.5px', color: '#64748B', fontWeight: 500, lineHeight: 1.5 }}>
             {errorMessage || 'Unable to verify your location accurately. Please enable high-accuracy GPS and try again.'}
           </p>
 
@@ -179,14 +474,37 @@ export default function AttendanceFailure({
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              boxShadow: '0 8px 20px -4px rgba(255, 77, 94, 0.35)'
+              boxShadow: '0 8px 20px -4px rgba(255, 77, 94, 0.35)',
+              marginBottom: '12px'
             }}
           >
             <RefreshCw size={18} /> Try Again
           </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              width: '100%',
+              height: '46px',
+              borderRadius: '14px',
+              border: '1px solid #E7EAF0',
+              background: '#FFFFFF',
+              color: '#64748B',
+              fontSize: '14.5px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            <ArrowLeft size={16} /> Go Back
+          </button>
         </>
       ) : isLocationMismatch ? (
-        /* SCREEN 9: LOCATION DOESN'T MATCH */
+        /* 6. LOCATION DOESN'T MATCH (ONLY when GPS <= 50m but outside polygon) */
         <>
           <motion.div
             animate={{ x: [0, -6, 6, -4, 4, 0] }}
@@ -264,14 +582,37 @@ export default function AttendanceFailure({
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              boxShadow: '0 8px 20px -4px rgba(255, 77, 94, 0.35)'
+              boxShadow: '0 8px 20px -4px rgba(255, 77, 94, 0.35)',
+              marginBottom: '12px'
             }}
           >
             <RefreshCw size={18} /> Try Again
           </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              width: '100%',
+              height: '46px',
+              borderRadius: '14px',
+              border: '1px solid #E7EAF0',
+              background: '#FFFFFF',
+              color: '#64748B',
+              fontSize: '14.5px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            <ArrowLeft size={16} /> Go Back
+          </button>
         </>
-      ) : failureType === 'FACE_MISMATCH' || errorMessage?.toLowerCase().includes('match') && errorMessage?.toLowerCase().includes('kyc') ? (
-        /* SCREEN: FACE MISMATCH WITH REGISTERED PHOTO */
+      ) : failureType === 'FACE_MISMATCH' || (errorMessage?.toLowerCase().includes('match') && errorMessage?.toLowerCase().includes('kyc')) ? (
+        /* 7. FACE MISMATCH WITH REGISTERED PHOTO */
         <>
           <motion.div
             animate={{ x: [0, -6, 6, -4, 4, 0] }}
@@ -335,14 +676,37 @@ export default function AttendanceFailure({
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              boxShadow: '0 8px 20px -4px rgba(255, 77, 94, 0.35)'
+              boxShadow: '0 8px 20px -4px rgba(255, 77, 94, 0.35)',
+              marginBottom: '12px'
             }}
           >
             <RefreshCw size={18} /> Try Again
           </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              width: '100%',
+              height: '46px',
+              borderRadius: '14px',
+              border: '1px solid #E7EAF0',
+              background: '#FFFFFF',
+              color: '#64748B',
+              fontSize: '14.5px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            <ArrowLeft size={16} /> Go Back
+          </button>
         </>
       ) : (
-        /* SCREEN 8: FACE NOT DETECTED / LIVENESS FAILED */
+        /* 8. FACE NOT DETECTED / GENERAL LIVENESS FAILED */
         <>
           <motion.div
             animate={{ x: [0, -6, 6, -4, 4, 0] }}
@@ -364,7 +728,7 @@ export default function AttendanceFailure({
           </motion.div>
 
           <h2 style={{ margin: '0 0 6px', fontSize: '22px', fontWeight: 800, color: '#111827' }}>
-            Face not detected
+            {failureType === 'SERVICE_UNAVAILABLE' ? 'Service Unavailable' : 'Face not detected'}
           </h2>
           <p style={{ margin: '0 0 20px', fontSize: '13.5px', color: '#64748B', fontWeight: 500 }}>
             {errorMessage || 'Liveness verification failed. Please align face inside the frame and retry.'}
@@ -407,14 +771,36 @@ export default function AttendanceFailure({
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              boxShadow: '0 8px 20px -4px rgba(255, 77, 94, 0.35)'
+              boxShadow: '0 8px 20px -4px rgba(255, 77, 94, 0.35)',
+              marginBottom: '12px'
             }}
           >
             <RefreshCw size={18} /> Try Again
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              width: '100%',
+              height: '46px',
+              borderRadius: '14px',
+              border: '1px solid #E7EAF0',
+              background: '#FFFFFF',
+              color: '#64748B',
+              fontSize: '14.5px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            <ArrowLeft size={16} /> Go Back
           </button>
         </>
       )}
     </motion.div>
   );
 }
-
