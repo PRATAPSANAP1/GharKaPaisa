@@ -4468,21 +4468,28 @@ const updateApplicationDetails = async (req, res, next) => {
     let backendRemarkToSave = (req.body.backend_remark !== undefined && canSaveBackendRemark) ? req.body.backend_remark : null;
 
     if (salesOpCodeToSave || panCheckerOpCodeToSave || remarkOpCodeToSave || backendRemarkToSave) {
-      await client.query(`
-        ALTER TABLE applications 
-        ADD COLUMN IF NOT EXISTS sales_operator_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS backend_remark TEXT
-      `).catch(() => {});
-      await client.query(`
-        UPDATE applications SET
-          sales_operator_code = COALESCE($1, sales_operator_code),
-          pan_checker_code = COALESCE($2, pan_checker_code),
-          remark_operator_code = COALESCE($3, remark_operator_code),
-          backend_remark = COALESCE($4, backend_remark)
-        WHERE id = $5
-      `, [salesOpCodeToSave, panCheckerOpCodeToSave, remarkOpCodeToSave, backendRemarkToSave, app.id]);
+      try {
+        await client.query('SAVEPOINT op_code_sp');
+        await client.query(`
+          ALTER TABLE applications 
+          ADD COLUMN IF NOT EXISTS sales_operator_code VARCHAR(100),
+          ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
+          ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
+          ADD COLUMN IF NOT EXISTS backend_remark TEXT
+        `);
+        await client.query(`
+          UPDATE applications SET
+            sales_operator_code = COALESCE($1, sales_operator_code),
+            pan_checker_code = COALESCE($2, pan_checker_code),
+            remark_operator_code = COALESCE($3, remark_operator_code),
+            backend_remark = COALESCE($4, backend_remark)
+          WHERE id = $5
+        `, [salesOpCodeToSave, panCheckerOpCodeToSave, remarkOpCodeToSave, backendRemarkToSave, app.id]);
+        await client.query('RELEASE SAVEPOINT op_code_sp');
+      } catch (opCodeErr) {
+        await client.query('ROLLBACK TO SAVEPOINT op_code_sp').catch(() => {});
+        logger.warn('Failed to save operator codes:', opCodeErr.message);
+      }
     }
 
     // 2. Update customer details if customer_id exists
