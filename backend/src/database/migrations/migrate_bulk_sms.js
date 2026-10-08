@@ -7,13 +7,17 @@ const migrateBulkSms = async () => {
   logger.info('[Bulk SMS Migration] Starting Bulk SMS tables and seed migration...');
 
   try {
-    // 1. UUID Extension
-    await query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+    // 1. UUID Extension (optional/defensive)
+    try {
+      await query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+    } catch (extErr) {
+      logger.warn('[Bulk SMS Migration] Extension uuid-ossp note:', extErr.message);
+    }
 
     // 2. SMS Templates Table
     await query(`
       CREATE TABLE IF NOT EXISTS sms_templates (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        id VARCHAR(255) PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         provider VARCHAR(50) DEFAULT 'MSG91',
         provider_template_id VARCHAR(100) NOT NULL UNIQUE,
@@ -31,9 +35,9 @@ const migrateBulkSms = async () => {
     // 3. Bulk SMS Campaigns Table
     await query(`
       CREATE TABLE IF NOT EXISTS bulk_sms_campaigns (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        id VARCHAR(255) PRIMARY KEY,
         campaign_name VARCHAR(255) NOT NULL,
-        template_id UUID REFERENCES sms_templates(id) ON DELETE SET NULL,
+        template_id VARCHAR(255) REFERENCES sms_templates(id) ON DELETE SET NULL,
         sender_id VARCHAR(50) NOT NULL DEFAULT 'GHARKP',
         status VARCHAR(50) DEFAULT 'DRAFT',
         total_recipients INT DEFAULT 0,
@@ -49,7 +53,7 @@ const migrateBulkSms = async () => {
         scheduled_at TIMESTAMPTZ,
         started_at TIMESTAMPTZ,
         completed_at TIMESTAMPTZ,
-        created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        created_by VARCHAR(255),
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
@@ -58,8 +62,8 @@ const migrateBulkSms = async () => {
     // 4. Bulk SMS Recipients Table
     await query(`
       CREATE TABLE IF NOT EXISTS bulk_sms_recipients (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        campaign_id UUID NOT NULL REFERENCES bulk_sms_campaigns(id) ON DELETE CASCADE,
+        id VARCHAR(255) PRIMARY KEY,
+        campaign_id VARCHAR(255) NOT NULL REFERENCES bulk_sms_campaigns(id) ON DELETE CASCADE,
         mobile_number VARCHAR(30) NOT NULL,
         normalized_mobile_number VARCHAR(30) NOT NULL,
         recipient_name VARCHAR(255),
@@ -83,6 +87,7 @@ const migrateBulkSms = async () => {
     // 6. Seed Standard Approved Templates
     const defaultTemplates = [
       {
+        id: 'tpl-hdfc-loan-001',
         name: 'HDFC Pre-Approved Loan',
         provider: 'MSG91',
         provider_template_id: '6a8b2b479cac2288a3094b42',
@@ -91,9 +96,10 @@ const migrateBulkSms = async () => {
         template_type: 'Promotional',
         approval_status: 'APPROVED',
         variables: JSON.stringify(['customer_name', 'loan_amount', 'bank_name']),
-        preview_url: 'https://gharkapaisa.com/apply'
+        preview_url: 'https://gharkapaisa.com/apply',
       },
       {
+        id: 'tpl-gkp-personal-002',
         name: 'GharKaPaisa Instant Personal Loan',
         provider: 'MSG91',
         provider_template_id: '6a8b2ba19aad595e3402bb84',
@@ -102,9 +108,10 @@ const migrateBulkSms = async () => {
         template_type: 'Promotional',
         approval_status: 'APPROVED',
         variables: JSON.stringify(['customer_name', 'loan_amount']),
-        preview_url: 'https://gharkapaisa.com/loans'
+        preview_url: 'https://gharkapaisa.com/loans',
       },
       {
+        id: 'tpl-cards-preapproved-003',
         name: 'SBI & HDFC Credit Card Pre-Approved',
         provider: 'MSG91',
         provider_template_id: '6a8b2c5e05a2ec7fac0b3909',
@@ -113,15 +120,15 @@ const migrateBulkSms = async () => {
         template_type: 'Promotional',
         approval_status: 'APPROVED',
         variables: JSON.stringify(['customer_name']),
-        preview_url: 'https://gharkapaisa.com/cards'
-      }
+        preview_url: 'https://gharkapaisa.com/cards',
+      },
     ];
 
     for (const t of defaultTemplates) {
-      await query(`
-        INSERT INTO sms_templates (
-          name, provider, provider_template_id, sender_id, content, template_type, approval_status, variables, preview_url
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      await query(
+        `INSERT INTO sms_templates (
+          id, name, provider, provider_template_id, sender_id, content, template_type, approval_status, variables, preview_url
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         ON CONFLICT (provider_template_id) DO UPDATE SET
           name = EXCLUDED.name,
           content = EXCLUDED.content,
@@ -129,16 +136,26 @@ const migrateBulkSms = async () => {
           variables = EXCLUDED.variables,
           approval_status = EXCLUDED.approval_status,
           updated_at = NOW();
-      `, [
-        t.name, t.provider, t.provider_template_id, t.sender_id, t.content,
-        t.template_type, t.approval_status, t.variables, t.preview_url
-      ]);
+      `,
+        [
+          t.id,
+          t.name,
+          t.provider,
+          t.provider_template_id,
+          t.sender_id,
+          t.content,
+          t.template_type,
+          t.approval_status,
+          t.variables,
+          t.preview_url,
+        ]
+      );
     }
 
     logger.info('[Bulk SMS Migration] Migration completed successfully.');
     return true;
   } catch (err) {
-    logger.error('[Bulk SMS Migration] Migration failed:', err);
+    logger.error('[Bulk SMS Migration] Migration error:', err.message);
     throw err;
   }
 };

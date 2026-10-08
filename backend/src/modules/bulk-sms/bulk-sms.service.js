@@ -14,6 +14,26 @@ const inMemoryStore = {
 
 const shouldSkipDb = () => process.env.NODE_ENV === 'test' || process.env.SKIP_DB === 'true';
 
+let tablesEnsured = false;
+let ensuringPromise = null;
+const ensureBulkSmsTables = async () => {
+  if (tablesEnsured || shouldSkipDb()) return;
+  if (!ensuringPromise) {
+    ensuringPromise = (async () => {
+      try {
+        const migrateBulkSms = require('../../database/migrations/migrate_bulk_sms');
+        await migrateBulkSms();
+        tablesEnsured = true;
+      } catch (err) {
+        logger.warn(`[Bulk-SMS] Table auto-migration notice: ${err.message}`);
+      } finally {
+        ensuringPromise = null;
+      }
+    })();
+  }
+  return ensuringPromise;
+};
+
 // Seed default approved templates
 const DEFAULT_TEMPLATES = [
   {
@@ -302,6 +322,7 @@ const parseRecipientFile = async ({ fileBuffer, fileName, fileSize, manualMobile
  */
 const getTemplates = async () => {
   if (!shouldSkipDb()) {
+    await ensureBulkSmsTables();
     try {
       const res = await query(`
         SELECT id, name, provider, provider_template_id, sender_id, content,
@@ -313,6 +334,19 @@ const getTemplates = async () => {
         return res.rows;
       }
     } catch (err) {
+      if (err.message && err.message.includes('does not exist')) {
+        tablesEnsured = false;
+        await ensureBulkSmsTables();
+        try {
+          const retryRes = await query(`
+            SELECT id, name, provider, provider_template_id, sender_id, content,
+                   template_type, approval_status, variables, preview_url, created_at
+            FROM sms_templates
+            ORDER BY created_at DESC
+          `);
+          if (retryRes.rows && retryRes.rows.length > 0) return retryRes.rows;
+        } catch (retryErr) {}
+      }
       logger.warn(`[Bulk-SMS] Database templates query fallback: ${err.message}`);
     }
   }
@@ -484,6 +518,7 @@ const createCampaign = async ({
 
   // Attempt database persistence asynchronously
   if (!shouldSkipDb()) {
+    await ensureBulkSmsTables();
     try {
       await query(
         `INSERT INTO bulk_sms_campaigns (
@@ -641,6 +676,7 @@ const getCampaignStats = async () => {
   let failed = allCampaigns.reduce((acc, c) => acc + (c.failed_count || 0), 0);
 
   if (!shouldSkipDb()) {
+    await ensureBulkSmsTables();
     try {
       const res = await query(`
         SELECT 
@@ -660,6 +696,29 @@ const getCampaignStats = async () => {
         };
       }
     } catch (err) {
+      if (err.message && err.message.includes('does not exist')) {
+        tablesEnsured = false;
+        await ensureBulkSmsTables();
+        try {
+          const retryRes = await query(`
+            SELECT 
+              COUNT(*)::INT AS total_campaigns,
+              COALESCE(SUM(sent_count), 0)::INT AS messages_sent,
+              COALESCE(SUM(delivered_count), 0)::INT AS delivered,
+              COALESCE(SUM(failed_count), 0)::INT AS failed
+            FROM bulk_sms_campaigns
+          `);
+          if (retryRes.rows && retryRes.rows[0]) {
+            const dbStats = retryRes.rows[0];
+            return {
+              total_campaigns: Math.max(totalCampaigns, Number(dbStats.total_campaigns)),
+              messages_sent: Math.max(messagesSent, Number(dbStats.messages_sent)),
+              delivered: Math.max(delivered, Number(dbStats.delivered)),
+              failed: Math.max(failed, Number(dbStats.failed)),
+            };
+          }
+        } catch (retryErr) {}
+      }
       logger.warn(`[Bulk-SMS] DB stats fallback: ${err.message}`);
     }
   }

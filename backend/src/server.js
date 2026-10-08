@@ -366,6 +366,14 @@ const startServer = async () => {
       logger.warn('Smart EMI / LOCC auto seed note:', emiErr.message);
     }
 
+    // Always ensure Bulk SMS tables exist on boot
+    try {
+      const migrateBulkSms = require('./database/migrations/migrate_bulk_sms.js');
+      await migrateBulkSms();
+    } catch (smsErr) {
+      logger.warn('Bulk SMS auto migration note:', smsErr.message);
+    }
+
     // Initialize scheduled CRON jobs
     const { initReportJobs } = require('./jobs/report.job.js');
     initReportJobs();
