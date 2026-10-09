@@ -39,6 +39,31 @@ async function migrateLocEocCategory() {
          OR product_id IN (SELECT id FROM products WHERE category::text = 'loc_eoc')
     `);
 
+    // 4. Ensure LOC/EOC remark columns exist on applications & physical_application_details
+    await query(`
+      ALTER TABLE applications 
+        ADD COLUMN IF NOT EXISTS insta_jumbo_offer VARCHAR(20),
+        ADD COLUMN IF NOT EXISTS customer_loan_type VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS customer_loan_offer VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS offer_tenure VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS disbursement_amount VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS disbursed_amount VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS disbursement_tenure VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS disbursed_tenure VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS los_no VARCHAR(100);
+
+      ALTER TABLE physical_application_details 
+        ADD COLUMN IF NOT EXISTS insta_jumbo_offer VARCHAR(20),
+        ADD COLUMN IF NOT EXISTS customer_loan_type VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS customer_loan_offer VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS offer_tenure VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS disbursement_amount VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS disbursed_amount VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS disbursement_tenure VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS disbursed_tenure VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS los_no VARCHAR(100);
+    `);
+
     logger.info('[Migration] LOC/EOC category migration completed successfully.');
   } catch (err) {
     logger.error('[Migration] Error in LOC/EOC category migration:', err);

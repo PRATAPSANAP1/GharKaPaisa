@@ -301,6 +301,14 @@ const startServer = async () => {
       logger.warn('admin_bank_assignments category auto migration note:', abaErr.message);
     }
 
+    // Always ensure LOC/EOC category and remark columns exist on boot
+    try {
+      const { migrateLocEocCategory } = require('./database/migrations/migrate_loc_eoc_category.js');
+      await migrateLocEocCategory();
+    } catch (locEocBootErr) {
+      logger.warn('LOC/EOC category boot migration note:', locEocBootErr.message);
+    }
+
     // Always ensure messenger module tables exist on boot
     try {
       const migrateMessenger = require('./database/migrations/migrate_messenger.js');

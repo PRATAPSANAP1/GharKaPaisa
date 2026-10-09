@@ -39,6 +39,119 @@ export const PAN_CHECK_REMARK_OPTIONS = [
   { code: 'V4', label: 'V4 - OFFICE ADD UNTRACEABLE' }
 ];
 
+export const isLocOrEocApplication = (app) => {
+  if (!app) return false;
+  const getClean = (val) => String(val || '').trim().toLowerCase();
+  const rawCat = getClean(app.category || app.product_category || app.product?.category || app.metadata?.category);
+  const rawSubCat = getClean(app.sub_category || app.product?.sub_category || app.product_type || app.metadata?.sub_category || app.metadata?.product_type);
+
+  const isLocSubCat = rawSubCat === 'loc' || rawSubCat === 'loan_on_credit_card' || rawSubCat === 'loan on credit card' || rawSubCat === 'loan_on_card' || rawSubCat === 'loan on card';
+  const isEocSubCat = rawSubCat === 'eoc' || rawSubCat === 'smart_emi' || rawSubCat === 'smart emi' || rawSubCat === 'smartemi' || rawSubCat === 'emi_on_credit_card' || rawSubCat === 'emi on credit card' || rawSubCat === 'emi on card';
+
+  // Strictly protect Credit Card: if category is explicitly credit card and sub_category is not LOC/EOC, return false
+  const isExplicitCC = rawCat === 'credit_card' || rawCat === 'credit_cards' || rawCat === 'cc';
+  if (isExplicitCC) {
+    if (isLocSubCat || isEocSubCat || rawSubCat === 'loc_eoc' || rawSubCat === 'loc/eoc') {
+      return true;
+    }
+    return false;
+  }
+
+  // Strictly protect other non-LOC/EOC loan categories (Personal Loan, Business Loan, Home Loan)
+  const isGenericLoan = rawCat === 'loan' || rawCat === 'loans' || rawCat === 'personal_loan' || rawCat === 'business_loan' || rawCat === 'home_loan' || rawCat === 'insurance';
+  if (isGenericLoan) {
+    if (isLocSubCat || isEocSubCat || rawSubCat === 'loc_eoc' || rawSubCat === 'loc/eoc') {
+      return true;
+    }
+    return false;
+  }
+
+  // Check category
+  if (
+    rawCat === 'loc_eoc' ||
+    rawCat === 'loc/eoc' ||
+    rawCat === 'loc' ||
+    rawCat === 'eoc' ||
+    rawCat === 'loan_on_credit_card' ||
+    rawCat === 'loan on credit card' ||
+    rawCat === 'loan_on_card' ||
+    rawCat === 'loan on card' ||
+    rawCat === 'smart_emi' ||
+    rawCat === 'smart emi' ||
+    rawCat === 'smartemi' ||
+    rawCat === 'emi_on_credit_card' ||
+    rawCat === 'emi on credit card' ||
+    rawCat === 'emi on card'
+  ) {
+    return true;
+  }
+
+  // Check sub_category
+  if (isLocSubCat || isEocSubCat || rawSubCat === 'loc_eoc' || rawSubCat === 'loc/eoc') {
+    return true;
+  }
+
+  return false;
+};
+
+export const resolveInstaJumbo = (val) => {
+  if (!val) return 'None';
+  const s = String(val).trim();
+  const lower = s.toLowerCase();
+  if (lower === 'yes') return 'Yes';
+  if (lower === 'no') return 'No';
+  if (lower === 'none') return 'None';
+  return s;
+};
+
+export const resolveCustomerLoanType = (typeVal, offerVal) => {
+  const v = String(typeVal || offerVal || '').trim();
+  if (!v) return 'None';
+  const l = v.toLowerCase();
+  if (l === 'none') return 'None';
+  if (l === 'personal loan' || l === 'personal_loan') return 'Personal Loan';
+  if (l === 'loan on card' || l === 'loan_on_card' || l === 'loan on credit card' || l === 'loan_on_credit_card') return 'Loan on Card';
+  if (l === 'smart emi' || l === 'smart_emi') return 'Smart EMI';
+  if (l === 'insta') return 'Insta';
+  if (l === 'jumbo') return 'Jumbo';
+  const VALID = ['None', 'Personal Loan', 'Loan on Card', 'Smart EMI', 'Insta', 'Jumbo'];
+  const match = VALID.find((opt) => opt.toLowerCase() === l);
+  if (match) return match;
+  return v;
+};
+
+export const resolveTenure = (val) => {
+  if (!val) return 'None';
+  const s = String(val).trim();
+  const l = s.toLowerCase();
+  if (l === 'none') return 'None';
+  if (l === '6 months' || l === '06 months') return '6 Months';
+  if (l === '1 year' || l === '01 year' || l === '1 years' || l === '01 years') return '1 Year';
+  if (l === '2 years' || l === '02 years' || l === '2 year' || l === '02 year') return '2 Years';
+  if (l === '3 years' || l === '03 years' || l === '3 year' || l === '03 year') return '3 Years';
+  if (l === '4 years' || l === '04 years' || l === '4 year' || l === '04 year') return '4 Years';
+  if (l === '5 years' || l === '05 years' || l === '5 year' || l === '05 year') return '5 Years';
+  return s;
+};
+
+export const resolveDisbursementAmount = (app) => {
+  const val = app?.disbursement_amount ?? app?.disbursed_amount ?? app?.physical_details?.disbursement_amount ?? app?.physical_details?.disbursed_amount ?? app?.disbursed_smart_emi ?? app?.physical_details?.disbursed_smart_emi;
+  if (val === null || val === undefined || val === '') return '';
+  return String(val);
+};
+
+export const resolveLosNo = (app) => {
+  return (
+    app?.los_no ||
+    app?.physical_details?.los_no ||
+    app?.bank_ref_number ||
+    app?.physical_details?.bank_ref_number ||
+    app?.bank_application_number ||
+    app?.physical_details?.bank_application_number ||
+    ''
+  ).trim();
+};
+
 const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawApp, onClose, onRefresh, initialTab = 'qd', showAllTabs = false }) => {
   const application = rawApplication || rawApp || {};
 
@@ -224,10 +337,11 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const [appFileGenerated, setAppFileGenerated] = useState(sanitizeVal(application?.app_file_generated) || sanitizeVal(application?.appfile_generated) || sanitizeVal(application?.physical_details?.app_file_generated) || 'None');
   const [declineReason, setDeclineReason] = useState(sanitizeVal(application?.decline_reason) || sanitizeVal(application?.physical_details?.decline_reason));
   const [eligibleReQd, setEligibleReQd] = useState(sanitizeVal(application?.eligible_reqd) || sanitizeVal(application?.physical_details?.eligible_reqd) || 'No');
+  const isLocOrEoc = isLocOrEocApplication(application);
   const categoryStr = `${application?.category || ''} ${application?.sub_category || ''} ${application?.product_category || ''} ${application?.product_type || ''} ${application?.lead_type || ''} ${application?.card_name || ''} ${application?.product_name || ''} ${application?.product?.name || ''}`.toLowerCase();
   
-  const isSmartEmi = categoryStr.includes('smart_emi') || categoryStr.includes('smart emi') || categoryStr.includes('eoc') || categoryStr.includes('emi_on_credit_card') || categoryStr.includes('emi on credit card');
-  const isLoanOnCreditCard = !isSmartEmi && (
+  const isSmartEmi = !isLocOrEoc && (categoryStr.includes('smart_emi') || categoryStr.includes('smart emi') || categoryStr.includes('eoc') || categoryStr.includes('emi_on_credit_card') || categoryStr.includes('emi on credit card'));
+  const isLoanOnCreditCard = !isLocOrEoc && (
     categoryStr.includes('loan_on_credit_card') || 
     categoryStr.includes('loan on credit card') || 
     categoryStr.includes('card_loan') || 
@@ -250,12 +364,17 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const [offerDeclineReason, setOfferDeclineReason] = useState(sanitizeVal(application?.offer_decline_reason) || sanitizeVal(application?.decline_reason) || sanitizeVal(application?.physical_details?.offer_decline_reason) || '');
   const [eligibleForIncentive, setEligibleForIncentive] = useState(sanitizeVal(application?.eligible_for_incentive) || sanitizeVal(application?.physical_details?.eligible_for_incentive) || 'YES');
 
-  // Loan on Credit Card States
-  const [instaJumboOffer, setInstaJumboOffer] = useState(sanitizeVal(application?.insta_jumbo_offer) || sanitizeVal(application?.physical_details?.insta_jumbo_offer) || 'Yes');
-  const [customerLoanOffer, setCustomerLoanOffer] = useState(sanitizeVal(application?.customer_loan_offer) || sanitizeVal(application?.physical_details?.customer_loan_offer) || 'Yes');
-  const [offerTenure, setOfferTenure] = useState(sanitizeVal(application?.offer_tenure) || sanitizeVal(application?.physical_details?.offer_tenure) || '6 Months');
-  const [disbursedAmount, setDisbursedAmount] = useState(sanitizeVal(application?.disbursed_amount) || sanitizeVal(application?.physical_details?.disbursed_amount) || '');
-  const [disbursedTenure, setDisbursedTenure] = useState(sanitizeVal(application?.disbursed_tenure) || sanitizeVal(application?.physical_details?.disbursed_tenure) || '6 Months');
+  // LOC / EOC Updated 6 Fields States (also used for backward compatibility with legacy loan on card)
+  const [instaJumboOffer, setInstaJumboOffer] = useState(resolveInstaJumbo(application?.insta_jumbo_offer || application?.physical_details?.insta_jumbo_offer));
+  const [customerLoanType, setCustomerLoanType] = useState(resolveCustomerLoanType(application?.customer_loan_type || application?.physical_details?.customer_loan_type, application?.customer_loan_offer || application?.physical_details?.customer_loan_offer));
+  const [customerLoanOffer, setCustomerLoanOffer] = useState(resolveCustomerLoanType(application?.customer_loan_type || application?.physical_details?.customer_loan_type, application?.customer_loan_offer || application?.physical_details?.customer_loan_offer));
+  const [offerTenure, setOfferTenure] = useState(resolveTenure(application?.offer_tenure || application?.physical_details?.offer_tenure));
+  const [disbursementAmount, setDisbursementAmount] = useState(resolveDisbursementAmount(application));
+  const [disbursedAmount, setDisbursedAmount] = useState(resolveDisbursementAmount(application));
+  const [disbursementAmountError, setDisbursementAmountError] = useState('');
+  const [disbursementTenure, setDisbursementTenure] = useState(resolveTenure(application?.disbursement_tenure || application?.physical_details?.disbursement_tenure || application?.disbursed_tenure || application?.physical_details?.disbursed_tenure));
+  const [disbursedTenure, setDisbursedTenure] = useState(resolveTenure(application?.disbursement_tenure || application?.physical_details?.disbursement_tenure || application?.disbursed_tenure || application?.physical_details?.disbursed_tenure));
+  const [losNo, setLosNo] = useState(resolveLosNo(application));
   const [finalLoanDisbursed, setFinalLoanDisbursed] = useState(sanitizeVal(application?.final_loan_disbursed) || sanitizeVal(application?.physical_details?.final_loan_disbursed) || '');
   const [finalLoanTenure, setFinalLoanTenure] = useState(sanitizeVal(application?.final_loan_tenure) || sanitizeVal(application?.physical_details?.final_loan_tenure) || '6 Months');
 
@@ -440,6 +559,28 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         if (app.decline_reason || pd.decline_reason) setDeclineReason(app.decline_reason || pd.decline_reason);
         if (app.eligible_reqd || pd.eligible_reqd) setEligibleReQd(app.eligible_reqd || pd.eligible_reqd);
         if (app.approved_amount || pd.approved_amount) setApprovedAmount(app.approved_amount || pd.approved_amount);
+
+        // LOC / EOC specific fields
+        const fetchedInstaJumbo = resolveInstaJumbo(app.insta_jumbo_offer || pd.insta_jumbo_offer);
+        const fetchedCustomerLoanType = resolveCustomerLoanType(app.customer_loan_type || pd.customer_loan_type, app.customer_loan_offer || pd.customer_loan_offer);
+        const fetchedOfferTenure = resolveTenure(app.offer_tenure || pd.offer_tenure);
+        const fetchedDisbAmount = resolveDisbursementAmount(app);
+        const fetchedDisbTenure = resolveTenure(app.disbursement_tenure || pd.disbursement_tenure || app.disbursed_tenure || pd.disbursed_tenure || app.disbursed_smart_emi_tenure || pd.disbursed_smart_emi_tenure);
+        const fetchedLosNo = resolveLosNo(app);
+
+        setInstaJumboOffer(fetchedInstaJumbo);
+        setCustomerLoanType(fetchedCustomerLoanType);
+        setCustomerLoanOffer(fetchedCustomerLoanType);
+        setOfferTenure(fetchedOfferTenure);
+        setDisbursementAmount(fetchedDisbAmount);
+        setDisbursedAmount(fetchedDisbAmount);
+        setDisbursementAmountError('');
+        setDisbursementTenure(fetchedDisbTenure);
+        setDisbursedTenure(fetchedDisbTenure);
+        setLosNo(fetchedLosNo);
+        if (fetchedLosNo) {
+          setBankRefNumber(fetchedLosNo);
+        }
       }
 
       if (timelineRes?.data?.data) {
@@ -456,7 +597,38 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
     fetchData();
   }, [fetchData]);
 
+  useEffect(() => {
+    if (application) {
+      setInstaJumboOffer(resolveInstaJumbo(application?.insta_jumbo_offer || application?.physical_details?.insta_jumbo_offer));
+      const initLoanType = resolveCustomerLoanType(application?.customer_loan_type || application?.physical_details?.customer_loan_type, application?.customer_loan_offer || application?.physical_details?.customer_loan_offer);
+      setCustomerLoanType(initLoanType);
+      setCustomerLoanOffer(initLoanType);
+      setOfferTenure(resolveTenure(application?.offer_tenure || application?.physical_details?.offer_tenure));
+      const initDisbAmount = resolveDisbursementAmount(application);
+      setDisbursementAmount(initDisbAmount);
+      setDisbursedAmount(initDisbAmount);
+      setDisbursementAmountError('');
+      const initDisbTenure = resolveTenure(application?.disbursement_tenure || application?.physical_details?.disbursement_tenure || application?.disbursed_tenure || application?.physical_details?.disbursed_tenure);
+      setDisbursementTenure(initDisbTenure);
+      setDisbursedTenure(initDisbTenure);
+      const initLos = resolveLosNo(application);
+      setLosNo(initLos);
+      if (initLos) {
+        setBankRefNumber(initLos);
+      }
+    }
+  }, [application?.id]);
+
   const handleSaveDetails = async (formType) => {
+    // Validate Disbursement Amount for LOC / EOC applications
+    if (isLocOrEoc && disbursementAmount !== '' && disbursementAmount !== null && disbursementAmount !== undefined) {
+      const num = Number(disbursementAmount);
+      if (isNaN(num) || num < 0) {
+        setDisbursementAmountError('Disbursement amount must be a valid, non-negative number.');
+        alert('Disbursement amount must be a valid, non-negative number.');
+        return;
+      }
+    }
     setActionLoading(true);
     try {
       let payload = {
@@ -507,8 +679,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           appcode_status: appcodeStatus || 'None',
           soft_approval_status: softApprovalStatus || 'None',
           iqa_stage: iqaStage || 'None',
-          bank_ref_number: bankRefNumber,
-          bank_application_number: bankRefNumber,
+          bank_ref_number: (losNo || bankRefNumber || '').trim(),
+          bank_application_number: (losNo || bankRefNumber || '').trim(),
           vkyc_status: kycStage || vkycStage || 'None',
           vkyc_stage: vkycStage || kycStage || 'None',
           vkyc_url: vkycUrl,
@@ -520,21 +692,26 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           backend_remark: backendRemark,
           notes: userRemark,
           operational_remarks: userRemark,
-          // Smart EMI & Loan on Credit Card fields
+          // LOC / EOC updated 6 fields
+          insta_jumbo_offer: instaJumboOffer,
+          customer_loan_type: customerLoanType,
+          customer_loan_offer: customerLoanType,
+          offer_tenure: offerTenure,
+          disbursement_amount: disbursementAmount !== '' && disbursementAmount !== null && disbursementAmount !== undefined ? disbursementAmount : null,
+          disbursed_amount: disbursementAmount !== '' && disbursementAmount !== null && disbursementAmount !== undefined ? disbursementAmount : null,
+          disbursed_smart_emi: disbursementAmount !== '' && disbursementAmount !== null && disbursementAmount !== undefined ? disbursementAmount : null,
+          disbursement_tenure: disbursementTenure,
+          disbursed_tenure: disbursementTenure,
+          disbursed_smart_emi_tenure: disbursementTenure,
+          los_no: (losNo || '').trim(),
+          // Legacy Smart EMI & Loan on Credit Card fields
           bank_smart_emi_offer: bankSmartEmiOffer,
           bank_smart_emi_tenure: bankSmartEmiTenure,
-          disbursed_smart_emi: disbursedSmartEmi,
-          disbursed_smart_emi_tenure: disbursedSmartEmiTenure,
           smart_emi_offer_status: smartEmiOfferStatus,
           final_smart_emi_disburse: finalSmartEmiDisburse,
           final_tenure: finalTenure,
           offer_decline_reason: offerDeclineReason,
           eligible_for_incentive: eligibleForIncentive,
-          insta_jumbo_offer: instaJumboOffer,
-          customer_loan_offer: customerLoanOffer,
-          offer_tenure: offerTenure,
-          disbursed_amount: disbursedAmount,
-          disbursed_tenure: disbursedTenure,
           final_loan_disbursed: finalLoanDisbursed,
           final_loan_tenure: finalLoanTenure
         };
@@ -599,26 +776,31 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           in_process_stage: inProcessStage || 'None',
           bank_current_lead_status: bankCurrentLeadStatus || 'None',
           bank_lead_status: bankCurrentLeadStatus || 'None',
-          bank_ref_number: bankRefNumber,
-          bank_application_number: bankRefNumber,
+          bank_ref_number: (losNo || bankRefNumber || '').trim(),
+          bank_application_number: (losNo || bankRefNumber || '').trim(),
           app_file_generated: appFileGenerated,
           digital_journey_url: digitalJourneyUrl || undefined,
           status: targetStatus,
-          // Smart EMI & Loan on Credit Card fields
+          // LOC / EOC updated 6 fields
+          insta_jumbo_offer: instaJumboOffer,
+          customer_loan_type: customerLoanType,
+          customer_loan_offer: customerLoanType,
+          offer_tenure: offerTenure,
+          disbursement_amount: disbursementAmount !== '' && disbursementAmount !== null && disbursementAmount !== undefined ? disbursementAmount : null,
+          disbursed_amount: disbursementAmount !== '' && disbursementAmount !== null && disbursementAmount !== undefined ? disbursementAmount : null,
+          disbursed_smart_emi: disbursementAmount !== '' && disbursementAmount !== null && disbursementAmount !== undefined ? disbursementAmount : null,
+          disbursement_tenure: disbursementTenure,
+          disbursed_tenure: disbursementTenure,
+          disbursed_smart_emi_tenure: disbursementTenure,
+          los_no: (losNo || '').trim(),
+          // Legacy Smart EMI & Loan on Credit Card fields
           bank_smart_emi_offer: bankSmartEmiOffer,
           bank_smart_emi_tenure: bankSmartEmiTenure,
-          disbursed_smart_emi: disbursedSmartEmi,
-          disbursed_smart_emi_tenure: disbursedSmartEmiTenure,
           smart_emi_offer_status: smartEmiOfferStatus,
           final_smart_emi_disburse: finalSmartEmiDisburse,
           final_tenure: finalTenure,
           offer_decline_reason: offerDeclineReason,
           eligible_for_incentive: eligibleForIncentive,
-          insta_jumbo_offer: instaJumboOffer,
-          customer_loan_offer: customerLoanOffer,
-          offer_tenure: offerTenure,
-          disbursed_amount: disbursedAmount,
-          disbursed_tenure: disbursedTenure,
           final_loan_disbursed: finalLoanDisbursed,
           final_loan_tenure: finalLoanTenure
         };
@@ -1777,8 +1959,164 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
-                  {/* ⚡ SMART EMI ON CREDIT CARD WORKFLOW */}
-                  {isSmartEmi ? (
+                  {/* 💳 LOC / EOC WORKFLOW (6 FIELDS ONLY) */}
+                  {isLocOrEoc ? (
+                    <>
+                      {/* Field 1: Insta / Jumbo Offer */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                          Insta / Jumbo Offer
+                        </label>
+                        <select
+                          id="loc-eoc-insta-jumbo-offer"
+                          disabled={!canEditRemark}
+                          value={instaJumboOffer || 'None'}
+                          onChange={(e) => setInstaJumboOffer(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="Yes">Yes</option>
+                          <option value="No">No</option>
+                        </select>
+                      </div>
+
+                      {/* Field 2: Customer Loan Type */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                          Customer Loan Type
+                        </label>
+                        <select
+                          id="loc-eoc-customer-loan-type"
+                          disabled={!canEditRemark}
+                          value={customerLoanType || 'None'}
+                          onChange={(e) => {
+                            setCustomerLoanType(e.target.value);
+                            setCustomerLoanOffer(e.target.value);
+                          }}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="Personal Loan">Personal Loan</option>
+                          <option value="Loan on Card">Loan on Card</option>
+                          <option value="Smart EMI">Smart EMI</option>
+                          <option value="Insta">Insta</option>
+                          <option value="Jumbo">Jumbo</option>
+                        </select>
+                      </div>
+
+                      {/* Field 3: Offer Tenure */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                          Offer Tenure
+                        </label>
+                        <select
+                          id="loc-eoc-offer-tenure"
+                          disabled={!canEditRemark}
+                          value={offerTenure || 'None'}
+                          onChange={(e) => setOfferTenure(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="6 Months">6 Months</option>
+                          <option value="1 Year">1 Year</option>
+                          <option value="2 Years">2 Years</option>
+                          <option value="3 Years">3 Years</option>
+                          <option value="4 Years">4 Years</option>
+                          <option value="5 Years">5 Years</option>
+                        </select>
+                      </div>
+
+                      {/* Field 4: Disbursement Amount */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                          Disbursement Amount
+                        </label>
+                        <input
+                          id="loc-eoc-disbursement-amount"
+                          type="number"
+                          min="0"
+                          step="any"
+                          disabled={!canEditRemark}
+                          value={disbursementAmount}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setDisbursementAmount(val);
+                            setDisbursedAmount(val);
+                            if (val === '') {
+                              setDisbursementAmountError('');
+                            } else {
+                              const num = Number(val);
+                              if (isNaN(num) || num < 0) {
+                                setDisbursementAmountError('Disbursement amount must be a valid, non-negative number.');
+                              } else {
+                                setDisbursementAmountError('');
+                              }
+                            }
+                          }}
+                          placeholder="Enter Disbursement Amount"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            borderRadius: '8px',
+                            border: `1px solid ${disbursementAmountError ? '#ef4444' : '#cbd5e1'}`,
+                            fontSize: '13px',
+                            background: !canEditRemark ? '#f8fafc' : '#fff',
+                            fontWeight: 600
+                          }}
+                        />
+                        {disbursementAmountError && (
+                          <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px', fontWeight: 600 }}>
+                            {disbursementAmountError}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Field 5: Disbursement Tenure */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                          Disbursement Tenure
+                        </label>
+                        <select
+                          id="loc-eoc-disbursement-tenure"
+                          disabled={!canEditRemark}
+                          value={disbursementTenure || 'None'}
+                          onChange={(e) => {
+                            setDisbursementTenure(e.target.value);
+                            setDisbursedTenure(e.target.value);
+                          }}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="6 Months">6 Months</option>
+                          <option value="1 Year">1 Year</option>
+                          <option value="2 Years">2 Years</option>
+                          <option value="3 Years">3 Years</option>
+                          <option value="4 Years">4 Years</option>
+                          <option value="5 Years">5 Years</option>
+                        </select>
+                      </div>
+
+                      {/* Field 6: LOS No. */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                          LOS No.
+                        </label>
+                        <input
+                          id="loc-eoc-los-no"
+                          type="text"
+                          disabled={!canEditRemark}
+                          value={losNo}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setLosNo(val);
+                            setBankRefNumber(val);
+                          }}
+                          placeholder="Enter LOS No."
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 700, fontFamily: 'monospace' }}
+                        />
+                      </div>
+                    </>
+                  ) : isSmartEmi ? (
                     <>
                       {/* 1. BANK SMART EMI OFFER */}
                       <div>
@@ -2459,7 +2797,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   )}
 
                   {/* 🏦 HDFC CARD APPROVAL CONDITIONAL FIELDS (FOR ALL HDFC CARDS) */}
-                  {(isHdfcBank || isTataCobrandHdfc) && (
+                  {(isHdfcBank || isTataCobrandHdfc) && !isLocOrEoc && (
                     <>
                       {/* WHEN CARD APPROVAL IS APPROVED */}
                       {String(cardApprovalStage || finalStatus || '').toLowerCase().includes('approve') && (

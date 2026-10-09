@@ -2516,7 +2516,22 @@ const getApplication = async (req, res, next) => {
       if (!app.customer_name && pd.full_name) app.customer_name = pd.full_name;
       if (!app.customer_mobile && pd.mobile) app.customer_mobile = pd.mobile;
       if (!app.customer_email && pd.email) app.customer_email = pd.email;
+      if (!isClean(app.insta_jumbo_offer) && pd.insta_jumbo_offer) app.insta_jumbo_offer = pd.insta_jumbo_offer;
+      if (!isClean(app.customer_loan_type) && pd.customer_loan_type) app.customer_loan_type = pd.customer_loan_type;
+      if (!isClean(app.customer_loan_type) && (app.customer_loan_offer || pd.customer_loan_offer)) app.customer_loan_type = app.customer_loan_offer || pd.customer_loan_offer;
+      if (!isClean(app.offer_tenure) && pd.offer_tenure) app.offer_tenure = pd.offer_tenure;
+      if (!isClean(app.disbursement_amount) && pd.disbursement_amount) app.disbursement_amount = pd.disbursement_amount;
+      if (!isClean(app.disbursement_amount) && (app.disbursed_amount || pd.disbursed_amount)) app.disbursement_amount = app.disbursed_amount || pd.disbursed_amount;
+      if (!isClean(app.disbursement_tenure) && pd.disbursement_tenure) app.disbursement_tenure = pd.disbursement_tenure;
+      if (!isClean(app.disbursement_tenure) && (app.disbursed_tenure || pd.disbursed_tenure)) app.disbursement_tenure = app.disbursed_tenure || pd.disbursed_tenure;
+      if (!isClean(app.los_no) && pd.los_no) app.los_no = pd.los_no;
+      if (!isClean(app.los_no) && (app.bank_application_number || app.bank_ref_number || pd.bank_ref_number)) app.los_no = app.bank_application_number || app.bank_ref_number || pd.bank_ref_number;
     }
+
+    if (!app.customer_loan_type && app.customer_loan_offer) app.customer_loan_type = app.customer_loan_offer;
+    if (!app.disbursement_amount && app.disbursed_amount) app.disbursement_amount = app.disbursed_amount;
+    if (!app.disbursement_tenure && app.disbursed_tenure) app.disbursement_tenure = app.disbursed_tenure;
+    if (!app.los_no && (app.bank_application_number || app.bank_ref_number)) app.los_no = app.bank_application_number || app.bank_ref_number;
 
     return success(res, app);
   } catch (err) {
@@ -4051,9 +4066,13 @@ const updateApplicationDetails = async (req, res, next) => {
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS eligible_for_incentive VARCHAR(20)`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS insta_jumbo_offer VARCHAR(20)`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_loan_offer VARCHAR(20)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_loan_type VARCHAR(50)`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS offer_tenure VARCHAR(50)`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS disbursed_amount VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS disbursement_amount VARCHAR(50)`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS disbursed_tenure VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS disbursement_tenure VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS los_no VARCHAR(100)`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_loan_disbursed VARCHAR(50)`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_loan_tenure VARCHAR(50)`);
 
@@ -4067,6 +4086,7 @@ const updateApplicationDetails = async (req, res, next) => {
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS mother_name VARCHAR(150)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS bank_ref_number VARCHAR(100)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS los_no VARCHAR(100)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS appcode_status VARCHAR(50)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(50)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(50)`);
@@ -4098,9 +4118,12 @@ const updateApplicationDetails = async (req, res, next) => {
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS eligible_for_incentive VARCHAR(20)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS insta_jumbo_offer VARCHAR(20)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS customer_loan_offer VARCHAR(20)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS customer_loan_type VARCHAR(50)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS offer_tenure VARCHAR(50)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS disbursed_amount VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS disbursement_amount VARCHAR(50)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS disbursed_tenure VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS disbursement_tenure VARCHAR(50)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS final_loan_disbursed VARCHAR(50)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS final_loan_tenure VARCHAR(50)`);
   } catch (_) { }
@@ -4180,12 +4203,23 @@ const updateApplicationDetails = async (req, res, next) => {
       eligible_for_incentive,
       insta_jumbo_offer,
       customer_loan_offer,
+      customer_loan_type,
       offer_tenure,
       disbursed_amount,
+      disbursement_amount,
       disbursed_tenure,
+      disbursement_tenure,
+      los_no,
       final_loan_disbursed,
       final_loan_tenure
     } = req.body;
+
+    const effectiveInstaJumboOffer = insta_jumbo_offer !== undefined ? insta_jumbo_offer : undefined;
+    const effectiveCustomerLoanType = customer_loan_type !== undefined ? customer_loan_type : customer_loan_offer;
+    const effectiveOfferTenure = offer_tenure !== undefined ? offer_tenure : undefined;
+    const effectiveDisbursementAmount = disbursement_amount !== undefined ? disbursement_amount : disbursed_amount;
+    const effectiveDisbursementTenure = disbursement_tenure !== undefined ? disbursement_tenure : disbursed_tenure;
+    const effectiveLosNo = los_no !== undefined ? los_no : (bank_application_number || bank_ref_number);
 
     let { rows: [app] } = await client.query(
       `SELECT * FROM applications 
@@ -4252,7 +4286,7 @@ const updateApplicationDetails = async (req, res, next) => {
       return error(res, 'Marking application status as Operational Verified is reserved for Administrative Operators.', 403);
     }
 
-    const appNumToSave = (bank_application_number || bank_ref_number || '').trim();
+    const appNumToSave = (effectiveLosNo || bank_application_number || bank_ref_number || '').trim();
     const employerToSave = employer || company_name || null;
     const parsedDob = parseDobToIso(dob);
 
@@ -4382,11 +4416,15 @@ const updateApplicationDetails = async (req, res, next) => {
         eligible_for_incentive = COALESCE(NULLIF($56, ''), eligible_for_incentive),
         insta_jumbo_offer = COALESCE(NULLIF($57, ''), insta_jumbo_offer),
         customer_loan_offer = COALESCE(NULLIF($58, ''), customer_loan_offer),
+        customer_loan_type = COALESCE(NULLIF($58, ''), customer_loan_type),
         offer_tenure = COALESCE(NULLIF($59, ''), offer_tenure),
         disbursed_amount = COALESCE(NULLIF($60, ''), disbursed_amount),
+        disbursement_amount = COALESCE(NULLIF($60, ''), disbursement_amount),
         disbursed_tenure = COALESCE(NULLIF($61, ''), disbursed_tenure),
+        disbursement_tenure = COALESCE(NULLIF($61, ''), disbursement_tenure),
         final_loan_disbursed = COALESCE(NULLIF($62, ''), final_loan_disbursed),
         final_loan_tenure = COALESCE(NULLIF($63, ''), final_loan_tenure),
+        los_no = COALESCE(NULLIF($1, ''), los_no),
         updated_at = NOW()
       WHERE id = $34
       RETURNING *
@@ -4447,11 +4485,11 @@ const updateApplicationDetails = async (req, res, next) => {
       cleanStr(final_tenure),
       cleanStr(offer_decline_reason),
       cleanStr(eligible_for_incentive),
-      cleanStr(insta_jumbo_offer),
-      cleanStr(customer_loan_offer),
-      cleanStr(offer_tenure),
-      cleanStr(disbursed_amount),
-      cleanStr(disbursed_tenure),
+      cleanStr(effectiveInstaJumboOffer !== undefined ? effectiveInstaJumboOffer : insta_jumbo_offer),
+      cleanStr(effectiveCustomerLoanType !== undefined ? effectiveCustomerLoanType : customer_loan_offer),
+      cleanStr(effectiveOfferTenure !== undefined ? effectiveOfferTenure : offer_tenure),
+      cleanStr(effectiveDisbursementAmount !== undefined ? effectiveDisbursementAmount : disbursed_amount),
+      cleanStr(effectiveDisbursementTenure !== undefined ? effectiveDisbursementTenure : disbursed_tenure),
       cleanStr(final_loan_disbursed),
       cleanStr(final_loan_tenure)
     ]);
@@ -4681,9 +4719,13 @@ const updateApplicationDetails = async (req, res, next) => {
           eligible_for_incentive = COALESCE(NULLIF(EXCLUDED.eligible_for_incentive, ''), physical_application_details.eligible_for_incentive),
           insta_jumbo_offer = COALESCE(NULLIF(EXCLUDED.insta_jumbo_offer, ''), physical_application_details.insta_jumbo_offer),
           customer_loan_offer = COALESCE(NULLIF(EXCLUDED.customer_loan_offer, ''), physical_application_details.customer_loan_offer),
+          customer_loan_type = COALESCE(NULLIF(EXCLUDED.customer_loan_offer, ''), physical_application_details.customer_loan_type),
           offer_tenure = COALESCE(NULLIF(EXCLUDED.offer_tenure, ''), physical_application_details.offer_tenure),
           disbursed_amount = COALESCE(NULLIF(EXCLUDED.disbursed_amount, ''), physical_application_details.disbursed_amount),
+          disbursement_amount = COALESCE(NULLIF(EXCLUDED.disbursed_amount, ''), physical_application_details.disbursement_amount),
           disbursed_tenure = COALESCE(NULLIF(EXCLUDED.disbursed_tenure, ''), physical_application_details.disbursed_tenure),
+          disbursement_tenure = COALESCE(NULLIF(EXCLUDED.disbursed_tenure, ''), physical_application_details.disbursement_tenure),
+          los_no = COALESCE(NULLIF(EXCLUDED.bank_ref_number, ''), physical_application_details.los_no),
           final_loan_disbursed = COALESCE(NULLIF(EXCLUDED.final_loan_disbursed, ''), physical_application_details.final_loan_disbursed),
           final_loan_tenure = COALESCE(NULLIF(EXCLUDED.final_loan_tenure, ''), physical_application_details.final_loan_tenure),
           updated_at = NOW()
@@ -4730,11 +4772,11 @@ const updateApplicationDetails = async (req, res, next) => {
         cleanStr(final_tenure),
         cleanStr(offer_decline_reason),
         cleanStr(eligible_for_incentive),
-        cleanStr(insta_jumbo_offer),
-        cleanStr(customer_loan_offer),
-        cleanStr(offer_tenure),
-        cleanStr(disbursed_amount),
-        cleanStr(disbursed_tenure),
+        cleanStr(effectiveInstaJumboOffer !== undefined ? effectiveInstaJumboOffer : insta_jumbo_offer),
+        cleanStr(effectiveCustomerLoanType !== undefined ? effectiveCustomerLoanType : customer_loan_offer),
+        cleanStr(effectiveOfferTenure !== undefined ? effectiveOfferTenure : offer_tenure),
+        cleanStr(effectiveDisbursementAmount !== undefined ? effectiveDisbursementAmount : disbursed_amount),
+        cleanStr(effectiveDisbursementTenure !== undefined ? effectiveDisbursementTenure : disbursed_tenure),
         cleanStr(final_loan_disbursed),
         cleanStr(final_loan_tenure)
       ]);
