@@ -641,6 +641,7 @@ const migrate = async () => {
   `);
 
   await query(`ALTER TABLE admin_bank_assignments ADD COLUMN IF NOT EXISTS category VARCHAR(50) NOT NULL DEFAULT 'credit_card'`);
+  await query(`ALTER TABLE admin_bank_assignments ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
 
   await query(`
     DO $$

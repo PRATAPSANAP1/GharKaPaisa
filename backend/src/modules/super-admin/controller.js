@@ -68,8 +68,8 @@ const insertBankAssignment = async (adminId, bankId, category, createdById, clie
   const qFn = client ? (q, p) => client.query(q, p) : (q, p) => query(q, p);
 
   return qFn(
-    `INSERT INTO admin_bank_assignments (admin_id, bank_id, category, created_by)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO admin_bank_assignments (admin_id, bank_id, category, is_active, created_by)
+     VALUES ($1, $2, $3, TRUE, $4)
      ON CONFLICT (admin_id, bank_id, category)
      DO UPDATE SET is_active = TRUE`,
     [adminId, bankId, cat, cBy]

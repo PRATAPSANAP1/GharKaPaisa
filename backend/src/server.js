@@ -282,9 +282,10 @@ const startServer = async () => {
       logger.warn('LOC/EOC user column auto migration note:', locErr.message);
     }
 
-    // Always ensure category column & constraint exist on admin_bank_assignments on boot
+    // Always ensure category & is_active columns & constraint exist on admin_bank_assignments on boot
     try {
       await db.query(`ALTER TABLE admin_bank_assignments ADD COLUMN IF NOT EXISTS category VARCHAR(50) NOT NULL DEFAULT 'credit_card'`);
+      await db.query(`ALTER TABLE admin_bank_assignments ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
       await db.query(`
         DO $$
         BEGIN
