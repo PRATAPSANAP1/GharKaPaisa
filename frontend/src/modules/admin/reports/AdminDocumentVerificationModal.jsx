@@ -5,7 +5,8 @@ import { getBankAppNumberConfig } from '../../../utils/bankAppNumberUtils';
 import { 
   X, CheckCircle, XCircle, Eye, Send, ShieldCheck, 
   Building2, User, Clock, AlertTriangle, FileText, Check, ArrowRight, ArrowLeft, Lock,
-  Share2, Copy, MessageSquare, Smartphone, Save, Sliders, Activity, Sparkles, ExternalLink, Link as LinkIcon
+  Share2, Copy, MessageSquare, Smartphone, Save, Sliders, Activity, Sparkles, ExternalLink, Link as LinkIcon,
+  Calendar
 } from 'lucide-react';
 
 export const PAN_CHECK_REMARK_OPTIONS = [
@@ -92,6 +93,129 @@ export const isLocOrEocApplication = (app) => {
   }
 
   return false;
+};
+
+export const isEocApplication = (app) => {
+  if (!app) return false;
+  if (!isLocOrEocApplication(app)) return false;
+  const getClean = (val) => String(val || '').trim().toLowerCase();
+  const rawCat = getClean(app.category || app.product_category || app.product?.category || app.metadata?.category);
+  const rawSubCat = getClean(app.sub_category || app.product?.sub_category || app.product_type || app.metadata?.sub_category || app.metadata?.product_type);
+  const name = getClean(app.product_name || app.product?.name || app.card_name);
+
+  if (rawSubCat === 'eoc' || rawSubCat === 'smart_emi' || rawSubCat === 'smart emi' || rawSubCat === 'smartemi' || rawSubCat === 'emi_on_credit_card' || rawSubCat === 'emi on credit card' || rawSubCat === 'emi on card') {
+    return true;
+  }
+  if (rawCat === 'eoc' || rawCat === 'smart_emi' || rawCat === 'smart emi' || rawCat === 'smartemi' || rawCat === 'emi_on_credit_card' || rawCat === 'emi on credit card' || rawCat === 'emi on card') {
+    return true;
+  }
+  if (name.includes('smartemi') || name.includes('smart emi') || name.includes('emi on credit card')) {
+    return true;
+  }
+  return false;
+};
+
+export const isLocApplication = (app) => {
+  if (!app) return false;
+  if (!isLocOrEocApplication(app)) return false;
+  return !isEocApplication(app);
+};
+
+export const resolveFinalBankStage = (val) => {
+  if (!val) return 'DECLINE';
+  const s = String(val).trim().toUpperCase();
+  if (s === 'DECLINE' || s === 'DECLINED' || s === 'REJECT') return 'DECLINE';
+  if (s === 'DISBURSEMENT' || s === 'DISBURSED') return 'DISBURSEMENT';
+  if (s === 'DISBURSEMENT PENDING' || s === 'DISBURSEMENT_PENDING') return 'DISBURSEMENT PENDING';
+  if (s === 'IN PROCESS' || s === 'IN_PROCESS' || s === 'IN-PROCESS') return 'IN PROCESS';
+  const VALID = ['DECLINE', 'DISBURSEMENT', 'DISBURSEMENT PENDING', 'IN PROCESS'];
+  const match = VALID.find((opt) => opt === s);
+  if (match) return match;
+  return 'DECLINE';
+};
+
+export const resolveDisbursementCompleted = (val) => {
+  if (!val) return 'None';
+  const s = String(val).trim();
+  const lower = s.toLowerCase();
+  if (lower === 'yes') return 'Yes';
+  if (lower === 'no') return 'No';
+  if (lower === 'none') return 'None';
+  return 'None';
+};
+
+export const formatDateToDdMmYyyy = (raw) => {
+  if (!raw) return '';
+  if (raw instanceof Date) {
+    if (isNaN(raw.getTime())) return '';
+    const d = String(raw.getDate()).padStart(2, '0');
+    const m = String(raw.getMonth() + 1).padStart(2, '0');
+    const y = raw.getFullYear();
+    return `${d}/${m}/${y}`;
+  }
+  const str = String(raw).trim();
+  if (!str) return '';
+  const datePart = str.split('T')[0];
+  if (datePart.includes('-')) {
+    const parts = datePart.split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+      return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+    }
+  }
+  if (str.includes('/')) {
+    const parts = str.split('/');
+    if (parts.length === 3) {
+      if (parts[2].length === 4) {
+        return `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[2]}`;
+      } else if (parts[0].length === 4) {
+        return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+      }
+    }
+  }
+  return str;
+};
+
+export const formatDateToYyyyMmDd = (raw) => {
+  if (!raw) return '';
+  if (raw instanceof Date) {
+    if (isNaN(raw.getTime())) return '';
+    const d = String(raw.getDate()).padStart(2, '0');
+    const m = String(raw.getMonth() + 1).padStart(2, '0');
+    const y = raw.getFullYear();
+    return `${y}-${m}-${d}`;
+  }
+  const str = String(raw).trim();
+  if (!str) return '';
+  const datePart = str.split('T')[0];
+  if (datePart.includes('-')) {
+    const parts = datePart.split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+      return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+    }
+  }
+  if (str.includes('/') || str.includes('-')) {
+    const parts = str.split(/[-/]/);
+    if (parts.length === 3) {
+      if (parts[2].length === 4) {
+        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      } else if (parts[0].length === 4) {
+        return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+      }
+    }
+  }
+  const digits = str.replace(/\D/g, '');
+  if (digits.length === 8) {
+    return `${digits.slice(4, 8)}-${digits.slice(2, 4)}-${digits.slice(0, 2)}`;
+  }
+  return str;
+};
+
+export const formatDateInput = (val) => {
+  if (!val) return '';
+  const cleaned = val.replace(/\D/g, '').slice(0, 8);
+  if (cleaned.length <= 2) return cleaned;
+  if (cleaned.length <= 4) return `${cleaned.slice(0, 2)}/${cleaned.slice(2)}`;
+  return `${cleaned.slice(0, 2)}/${cleaned.slice(2, 4)}/${cleaned.slice(4, 8)}`;
 };
 
 export const resolveInstaJumbo = (val) => {
@@ -338,6 +462,14 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const [declineReason, setDeclineReason] = useState(sanitizeVal(application?.decline_reason) || sanitizeVal(application?.physical_details?.decline_reason));
   const [eligibleReQd, setEligibleReQd] = useState(sanitizeVal(application?.eligible_reqd) || sanitizeVal(application?.physical_details?.eligible_reqd) || 'No');
   const isLocOrEoc = isLocOrEocApplication(application);
+  const isEoc = isEocApplication(application);
+  const isLoc = isLocApplication(application);
+
+  // Final Form 3 Fields for LOC and EOC
+  const [finalBankStage, setFinalBankStage] = useState(resolveFinalBankStage(application?.final_bank_stage || application?.physical_details?.final_bank_stage));
+  const [disbursementCompleted, setDisbursementCompleted] = useState(resolveDisbursementCompleted(application?.disbursement_completed || application?.physical_details?.disbursement_completed));
+  const [disbursementDate, setDisbursementDate] = useState(formatDateToYyyyMmDd(application?.disbursement_date || application?.physical_details?.disbursement_date || application?.disbursal_date || application?.physical_details?.disbursal_date));
+  const [disbursementDateDisplay, setDisbursementDateDisplay] = useState(formatDateToDdMmYyyy(application?.disbursement_date || application?.physical_details?.disbursement_date || application?.disbursal_date || application?.physical_details?.disbursal_date));
   const categoryStr = `${application?.category || ''} ${application?.sub_category || ''} ${application?.product_category || ''} ${application?.product_type || ''} ${application?.lead_type || ''} ${application?.card_name || ''} ${application?.product_name || ''} ${application?.product?.name || ''}`.toLowerCase();
   
   const isSmartEmi = !isLocOrEoc && (categoryStr.includes('smart_emi') || categoryStr.includes('smart emi') || categoryStr.includes('eoc') || categoryStr.includes('emi_on_credit_card') || categoryStr.includes('emi on credit card'));
@@ -581,6 +713,13 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         if (fetchedLosNo) {
           setBankRefNumber(fetchedLosNo);
         }
+
+        // LOC / EOC 3 final fields
+        setFinalBankStage(resolveFinalBankStage(app.final_bank_stage || pd.final_bank_stage));
+        setDisbursementCompleted(resolveDisbursementCompleted(app.disbursement_completed || pd.disbursement_completed));
+        const rawDisbDate = app.disbursement_date || pd.disbursement_date || app.disbursal_date || pd.disbursal_date;
+        setDisbursementDate(formatDateToYyyyMmDd(rawDisbDate));
+        setDisbursementDateDisplay(formatDateToDdMmYyyy(rawDisbDate));
       }
 
       if (timelineRes?.data?.data) {
@@ -616,6 +755,12 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
       if (initLos) {
         setBankRefNumber(initLos);
       }
+
+      setFinalBankStage(resolveFinalBankStage(application?.final_bank_stage || application?.physical_details?.final_bank_stage));
+      setDisbursementCompleted(resolveDisbursementCompleted(application?.disbursement_completed || application?.physical_details?.disbursement_completed));
+      const initRawDisbDate = application?.disbursement_date || application?.physical_details?.disbursement_date || application?.disbursal_date || application?.physical_details?.disbursal_date;
+      setDisbursementDate(formatDateToYyyyMmDd(initRawDisbDate));
+      setDisbursementDateDisplay(formatDateToDdMmYyyy(initRawDisbDate));
     }
   }, [application?.id]);
 
@@ -704,6 +849,10 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           disbursed_tenure: disbursementTenure,
           disbursed_smart_emi_tenure: disbursementTenure,
           los_no: (losNo || '').trim(),
+          final_bank_stage: finalBankStage || undefined,
+          disbursement_completed: disbursementCompleted || undefined,
+          disbursement_date: (formatDateToYyyyMmDd(disbursementDateDisplay) || undefined),
+          disbursal_date: (formatDateToYyyyMmDd(disbursementDateDisplay) || undefined),
           // Legacy Smart EMI & Loan on Credit Card fields
           bank_smart_emi_offer: bankSmartEmiOffer,
           bank_smart_emi_tenure: bankSmartEmiTenure,
@@ -773,6 +922,10 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           notes: userRemark,
           operational_remarks: userRemark,
           final_status: finalStatus,
+          final_bank_stage: finalBankStage,
+          disbursement_completed: disbursementCompleted,
+          disbursement_date: formatDateToYyyyMmDd(disbursementDateDisplay) || null,
+          disbursal_date: formatDateToYyyyMmDd(disbursementDateDisplay) || null,
           in_process_stage: inProcessStage || 'None',
           bank_current_lead_status: bankCurrentLeadStatus || 'None',
           bank_lead_status: bankCurrentLeadStatus || 'None',
@@ -3051,7 +3204,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     </div>
                   </div>
                   
-                  {isSmartEmi ? (
+                  {isEoc ? (
                     <>
                       {/* 1. FINAL STATUS */}
                       <div>
@@ -3072,7 +3225,100 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         </select>
                       </div>
 
-                      {/* 2. FINAL SMART EMI DISBURSE */}
+                      {/* 2. FINAL BANK STAGE */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>FINAL BANK STAGE</label>
+                        <select
+                          id="loc-eoc-final-bank-stage"
+                          disabled={!canEditFinal}
+                          value={finalBankStage || 'DECLINE'}
+                          onChange={(e) => setFinalBankStage(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
+                        >
+                          <option value="DECLINE">DECLINE</option>
+                          <option value="DISBURSEMENT">DISBURSEMENT</option>
+                          <option value="DISBURSEMENT PENDING">DISBURSEMENT PENDING</option>
+                          <option value="IN PROCESS">IN PROCESS</option>
+                        </select>
+                      </div>
+
+                      {/* 3. DISBURSEMENT COMPLETED */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>DISBURSEMENT COMPLETED</label>
+                        <select
+                          id="loc-eoc-disbursement-completed"
+                          disabled={!canEditFinal}
+                          value={disbursementCompleted || 'None'}
+                          onChange={(e) => setDisbursementCompleted(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="Yes">Yes</option>
+                          <option value="No">No</option>
+                        </select>
+                      </div>
+
+                      {/* 4. Disbursement Date */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Disbursement Date</label>
+                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                          <input
+                            id="loc-eoc-disbursement-date"
+                            type="text"
+                            placeholder="DD/MM/YYYY"
+                            maxLength={10}
+                            disabled={!canEditFinal}
+                            value={disbursementDateDisplay}
+                            onChange={(e) => {
+                              const formatted = formatDateInput(e.target.value);
+                              setDisbursementDateDisplay(formatted);
+                              setDisbursementDate(formatDateToYyyyMmDd(formatted));
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '10px 40px 10px 12px',
+                              borderRadius: '8px',
+                              border: '1px solid #cbd5e1',
+                              fontSize: '13px',
+                              fontWeight: 600,
+                              background: !canEditFinal ? '#f8fafc' : '#fff'
+                            }}
+                          />
+                          <input
+                            type="date"
+                            id="loc-eoc-disbursement-date-picker"
+                            disabled={!canEditFinal}
+                            value={formatDateToYyyyMmDd(disbursementDateDisplay) || ''}
+                            onChange={(e) => {
+                              const iso = e.target.value;
+                              setDisbursementDate(iso);
+                              setDisbursementDateDisplay(formatDateToDdMmYyyy(iso));
+                            }}
+                            style={{
+                              position: 'absolute',
+                              right: '8px',
+                              width: '28px',
+                              height: '28px',
+                              opacity: 0,
+                              cursor: canEditFinal ? 'pointer' : 'default',
+                              zIndex: 2
+                            }}
+                            aria-label="Pick disbursement date"
+                          />
+                          <Calendar
+                            size={18}
+                            style={{
+                              position: 'absolute',
+                              right: '12px',
+                              color: '#64748b',
+                              pointerEvents: 'none',
+                              zIndex: 1
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* 5. FINAL SMART EMI DISBURSE */}
                       <div>
                         <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>FINAL SMART EMI DISBURSE</label>
                         <input
@@ -3085,7 +3331,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         />
                       </div>
 
-                      {/* 3. FINAL TENURE */}
+                      {/* 6. FINAL TENURE */}
                       <div>
                         <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>FINAL TENURE</label>
                         <select
@@ -3102,7 +3348,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         </select>
                       </div>
 
-                      {/* 4. OFFER DECLINE REASON */}
+                      {/* 7. OFFER DECLINE REASON */}
                       <div>
                         <label style={{ fontSize: '12px', fontWeight: 800, color: '#dc2626', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>OFFER DECLINE REASON</label>
                         <input
@@ -3115,7 +3361,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         />
                       </div>
 
-                      {/* 5. ELIGIBLE FOR INCENTIVE - YES, NO */}
+                      {/* 8. ELIGIBLE FOR INCENTIVE - YES, NO */}
                       <div>
                         <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>ELIGIBLE FOR INCENTIVE</label>
                         <select
@@ -3128,8 +3374,36 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           <option value="NO">NO</option>
                         </select>
                       </div>
+
+                      {/* USER REMARK */}
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', textTransform: 'uppercase' }}>
+                          <MessageSquare size={14} /> USER REMARK (Employee / Partner Remark)
+                        </label>
+                        <textarea
+                          disabled={isLockedStatus}
+                          value={userRemark}
+                          onChange={(e) => setUserRemark(e.target.value)}
+                          placeholder="Enter user remark / notes..."
+                          rows={2}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #93c5fd', fontSize: '13px', background: isLockedStatus ? '#f8fafc' : '#eff6ff', fontWeight: 600, color: '#1e3a8a' }}
+                        />
+                      </div>
+
+                      {/* BANK REMARK */}
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>BANK REMARK</label>
+                        <textarea
+                          disabled={!canEditFinal}
+                          value={bankRemark}
+                          onChange={(e) => setBankRemark(e.target.value)}
+                          placeholder="Enter Bank Remark..."
+                          rows={3}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff' }}
+                        />
+                      </div>
                     </>
-                  ) : isLoanOnCreditCard ? (
+                  ) : isLoc ? (
                     <>
                       {/* 1. FINAL STATUS */}
                       <div>
@@ -3150,7 +3424,100 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         </select>
                       </div>
 
-                      {/* 2. FINAL LOAN DISBURSED */}
+                      {/* 2. FINAL BANK STAGE */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>FINAL BANK STAGE</label>
+                        <select
+                          id="loc-eoc-final-bank-stage"
+                          disabled={!canEditFinal}
+                          value={finalBankStage || 'DECLINE'}
+                          onChange={(e) => setFinalBankStage(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
+                        >
+                          <option value="DECLINE">DECLINE</option>
+                          <option value="DISBURSEMENT">DISBURSEMENT</option>
+                          <option value="DISBURSEMENT PENDING">DISBURSEMENT PENDING</option>
+                          <option value="IN PROCESS">IN PROCESS</option>
+                        </select>
+                      </div>
+
+                      {/* 3. DISBURSEMENT COMPLETED */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>DISBURSEMENT COMPLETED</label>
+                        <select
+                          id="loc-eoc-disbursement-completed"
+                          disabled={!canEditFinal}
+                          value={disbursementCompleted || 'None'}
+                          onChange={(e) => setDisbursementCompleted(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="Yes">Yes</option>
+                          <option value="No">No</option>
+                        </select>
+                      </div>
+
+                      {/* 4. Disbursement Date */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Disbursement Date</label>
+                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                          <input
+                            id="loc-eoc-disbursement-date"
+                            type="text"
+                            placeholder="DD/MM/YYYY"
+                            maxLength={10}
+                            disabled={!canEditFinal}
+                            value={disbursementDateDisplay}
+                            onChange={(e) => {
+                              const formatted = formatDateInput(e.target.value);
+                              setDisbursementDateDisplay(formatted);
+                              setDisbursementDate(formatDateToYyyyMmDd(formatted));
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '10px 40px 10px 12px',
+                              borderRadius: '8px',
+                              border: '1px solid #cbd5e1',
+                              fontSize: '13px',
+                              fontWeight: 600,
+                              background: !canEditFinal ? '#f8fafc' : '#fff'
+                            }}
+                          />
+                          <input
+                            type="date"
+                            id="loc-eoc-disbursement-date-picker"
+                            disabled={!canEditFinal}
+                            value={formatDateToYyyyMmDd(disbursementDateDisplay) || ''}
+                            onChange={(e) => {
+                              const iso = e.target.value;
+                              setDisbursementDate(iso);
+                              setDisbursementDateDisplay(formatDateToDdMmYyyy(iso));
+                            }}
+                            style={{
+                              position: 'absolute',
+                              right: '8px',
+                              width: '28px',
+                              height: '28px',
+                              opacity: 0,
+                              cursor: canEditFinal ? 'pointer' : 'default',
+                              zIndex: 2
+                            }}
+                            aria-label="Pick disbursement date"
+                          />
+                          <Calendar
+                            size={18}
+                            style={{
+                              position: 'absolute',
+                              right: '12px',
+                              color: '#64748b',
+                              pointerEvents: 'none',
+                              zIndex: 1
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* 5. FINAL LOAN DISBURSED */}
                       <div>
                         <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>FINAL LOAN DISBURSED</label>
                         <input
@@ -3163,7 +3530,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         />
                       </div>
 
-                      {/* 3. FINAL LOAN TENURE */}
+                      {/* 6. FINAL LOAN TENURE */}
                       <div>
                         <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>FINAL LOAN TENURE</label>
                         <select
@@ -3181,7 +3548,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         </select>
                       </div>
 
-                      {/* 4. DECLINE REASON */}
+                      {/* 7. DECLINE REASON */}
                       <div>
                         <label style={{ fontSize: '12px', fontWeight: 800, color: '#dc2626', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>DECLINE REASON</label>
                         <input
@@ -3194,7 +3561,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         />
                       </div>
 
-                      {/* 5. ELIGIBLE FOR INCENTIVE - YES, NO */}
+                      {/* 8. ELIGIBLE FOR INCENTIVE - YES, NO */}
                       <div>
                         <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>ELIGIBLE FOR INCENTIVE</label>
                         <select
@@ -3206,6 +3573,34 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           <option value="Yes">Yes</option>
                           <option value="No">No</option>
                         </select>
+                      </div>
+
+                      {/* USER REMARK */}
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', textTransform: 'uppercase' }}>
+                          <MessageSquare size={14} /> USER REMARK (Employee / Partner Remark)
+                        </label>
+                        <textarea
+                          disabled={isLockedStatus}
+                          value={userRemark}
+                          onChange={(e) => setUserRemark(e.target.value)}
+                          placeholder="Enter user remark / notes..."
+                          rows={2}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #93c5fd', fontSize: '13px', background: isLockedStatus ? '#f8fafc' : '#eff6ff', fontWeight: 600, color: '#1e3a8a' }}
+                        />
+                      </div>
+
+                      {/* BANK REMARK */}
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>BANK REMARK</label>
+                        <textarea
+                          disabled={!canEditFinal}
+                          value={bankRemark}
+                          onChange={(e) => setBankRemark(e.target.value)}
+                          placeholder="Enter Bank Remark..."
+                          rows={3}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff' }}
+                        />
                       </div>
                     </>
                   ) : (

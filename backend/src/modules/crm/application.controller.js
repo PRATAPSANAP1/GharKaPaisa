@@ -76,6 +76,16 @@ const parseDobToIso = (raw) => {
   return null;
 };
 
+// Helper to parse dates to ISO string YYYY-MM-DD avoiding timezone shifts
+const parseDateToIso = (raw) => {
+  if (!raw) return null;
+  if (raw instanceof Date) {
+    if (isNaN(raw.getTime())) return null;
+    return `${raw.getFullYear()}-${String(raw.getMonth() + 1).padStart(2, '0')}-${String(raw.getDate()).padStart(2, '0')}`;
+  }
+  return parseDobToIso(String(raw));
+};
+
 
 
 // Helper to log timeline actions with full audit metadata and timestamp
@@ -2526,12 +2536,17 @@ const getApplication = async (req, res, next) => {
       if (!isClean(app.disbursement_tenure) && (app.disbursed_tenure || pd.disbursed_tenure)) app.disbursement_tenure = app.disbursed_tenure || pd.disbursed_tenure;
       if (!isClean(app.los_no) && pd.los_no) app.los_no = pd.los_no;
       if (!isClean(app.los_no) && (app.bank_application_number || app.bank_ref_number || pd.bank_ref_number)) app.los_no = app.bank_application_number || app.bank_ref_number || pd.bank_ref_number;
+      if (!isClean(app.final_bank_stage) && pd.final_bank_stage) app.final_bank_stage = pd.final_bank_stage;
+      if (!isClean(app.disbursement_completed) && pd.disbursement_completed) app.disbursement_completed = pd.disbursement_completed;
+      if (!isClean(app.disbursement_date) && pd.disbursement_date) app.disbursement_date = pd.disbursement_date;
+      if (!isClean(app.disbursement_date) && (app.disbursal_date || pd.disbursal_date)) app.disbursement_date = app.disbursal_date || pd.disbursal_date;
     }
 
     if (!app.customer_loan_type && app.customer_loan_offer) app.customer_loan_type = app.customer_loan_offer;
     if (!app.disbursement_amount && app.disbursed_amount) app.disbursement_amount = app.disbursed_amount;
     if (!app.disbursement_tenure && app.disbursed_tenure) app.disbursement_tenure = app.disbursed_tenure;
     if (!app.los_no && (app.bank_application_number || app.bank_ref_number)) app.los_no = app.bank_application_number || app.bank_ref_number;
+    if (!app.disbursement_date && app.disbursal_date) app.disbursement_date = app.disbursal_date;
 
     return success(res, app);
   } catch (err) {
@@ -4075,6 +4090,10 @@ const updateApplicationDetails = async (req, res, next) => {
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS los_no VARCHAR(100)`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_loan_disbursed VARCHAR(50)`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_loan_tenure VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_bank_stage VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS disbursement_completed VARCHAR(20)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS disbursement_date DATE`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS disbursal_date DATE`);
 
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS token VARCHAR(255)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS address1 TEXT`);
@@ -4126,6 +4145,10 @@ const updateApplicationDetails = async (req, res, next) => {
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS disbursement_tenure VARCHAR(50)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS final_loan_disbursed VARCHAR(50)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS final_loan_tenure VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS final_bank_stage VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS disbursement_completed VARCHAR(20)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS disbursement_date DATE`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS disbursal_date DATE`);
   } catch (_) { }
 
   const client = await getClient();
@@ -4211,7 +4234,11 @@ const updateApplicationDetails = async (req, res, next) => {
       disbursement_tenure,
       los_no,
       final_loan_disbursed,
-      final_loan_tenure
+      final_loan_tenure,
+      final_bank_stage,
+      disbursement_completed,
+      disbursement_date,
+      disbursal_date
     } = req.body;
 
     const effectiveInstaJumboOffer = insta_jumbo_offer !== undefined ? insta_jumbo_offer : undefined;
@@ -4220,6 +4247,10 @@ const updateApplicationDetails = async (req, res, next) => {
     const effectiveDisbursementAmount = disbursement_amount !== undefined ? disbursement_amount : disbursed_amount;
     const effectiveDisbursementTenure = disbursement_tenure !== undefined ? disbursement_tenure : disbursed_tenure;
     const effectiveLosNo = los_no !== undefined ? los_no : (bank_application_number || bank_ref_number);
+    const effectiveFinalBankStage = final_bank_stage !== undefined ? final_bank_stage : undefined;
+    const effectiveDisbursementCompleted = disbursement_completed !== undefined ? disbursement_completed : undefined;
+    const effectiveDisbursementDate = (disbursement_date !== undefined ? disbursement_date : disbursal_date) || undefined;
+    const parsedDisbursementDate = parseDateToIso(effectiveDisbursementDate);
 
     let { rows: [app] } = await client.query(
       `SELECT * FROM applications 
@@ -4424,6 +4455,10 @@ const updateApplicationDetails = async (req, res, next) => {
         disbursement_tenure = COALESCE(NULLIF($61, ''), disbursement_tenure),
         final_loan_disbursed = COALESCE(NULLIF($62, ''), final_loan_disbursed),
         final_loan_tenure = COALESCE(NULLIF($63, ''), final_loan_tenure),
+        final_bank_stage = COALESCE(NULLIF($64, ''), final_bank_stage),
+        disbursement_completed = COALESCE(NULLIF($65, ''), disbursement_completed),
+        disbursement_date = COALESCE(NULLIF($66, '')::date, disbursement_date),
+        disbursal_date = COALESCE(NULLIF($66, '')::date, disbursal_date),
         los_no = COALESCE(NULLIF($1, ''), los_no),
         updated_at = NOW()
       WHERE id = $34
@@ -4491,7 +4526,10 @@ const updateApplicationDetails = async (req, res, next) => {
       cleanStr(effectiveDisbursementAmount !== undefined ? effectiveDisbursementAmount : disbursed_amount),
       cleanStr(effectiveDisbursementTenure !== undefined ? effectiveDisbursementTenure : disbursed_tenure),
       cleanStr(final_loan_disbursed),
-      cleanStr(final_loan_tenure)
+      cleanStr(final_loan_tenure),
+      cleanStr(effectiveFinalBankStage !== undefined ? effectiveFinalBankStage : final_bank_stage),
+      cleanStr(effectiveDisbursementCompleted !== undefined ? effectiveDisbursementCompleted : disbursement_completed),
+      cleanStr(parsedDisbursementDate)
     ]);
 
     const currentOpCode = req.user?.employee_id || req.user?.user_code || req.user?.employee_code || req.user?.emp_code || req.user?.full_name || req.user?.email || req.user?.id;
@@ -4628,6 +4666,10 @@ const updateApplicationDetails = async (req, res, next) => {
           disbursed_tenure,
           final_loan_disbursed,
           final_loan_tenure,
+          final_bank_stage,
+          disbursement_completed,
+          disbursement_date,
+          disbursal_date,
           created_at,
           updated_at
         ) VALUES (
@@ -4668,6 +4710,7 @@ const updateApplicationDetails = async (req, res, next) => {
           $32,
           $33,
           $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46, $47, $48, $49,
+          $50, $51, NULLIF($52, '')::date, NULLIF($52, '')::date,
           NOW(),
           NOW()
         ) ON CONFLICT (application_id) DO UPDATE SET
@@ -4728,6 +4771,10 @@ const updateApplicationDetails = async (req, res, next) => {
           los_no = COALESCE(NULLIF(EXCLUDED.bank_ref_number, ''), physical_application_details.los_no),
           final_loan_disbursed = COALESCE(NULLIF(EXCLUDED.final_loan_disbursed, ''), physical_application_details.final_loan_disbursed),
           final_loan_tenure = COALESCE(NULLIF(EXCLUDED.final_loan_tenure, ''), physical_application_details.final_loan_tenure),
+          final_bank_stage = COALESCE(NULLIF(EXCLUDED.final_bank_stage, ''), physical_application_details.final_bank_stage),
+          disbursement_completed = COALESCE(NULLIF(EXCLUDED.disbursement_completed, ''), physical_application_details.disbursement_completed),
+          disbursement_date = COALESCE(EXCLUDED.disbursement_date, physical_application_details.disbursement_date),
+          disbursal_date = COALESCE(EXCLUDED.disbursal_date, physical_application_details.disbursal_date),
           updated_at = NOW()
       `, [
         mobile || customer_mobile || null,
@@ -4778,7 +4825,10 @@ const updateApplicationDetails = async (req, res, next) => {
         cleanStr(effectiveDisbursementAmount !== undefined ? effectiveDisbursementAmount : disbursed_amount),
         cleanStr(effectiveDisbursementTenure !== undefined ? effectiveDisbursementTenure : disbursed_tenure),
         cleanStr(final_loan_disbursed),
-        cleanStr(final_loan_tenure)
+        cleanStr(final_loan_tenure),
+        cleanStr(effectiveFinalBankStage !== undefined ? effectiveFinalBankStage : final_bank_stage),
+        cleanStr(effectiveDisbursementCompleted !== undefined ? effectiveDisbursementCompleted : disbursement_completed),
+        cleanStr(parsedDisbursementDate)
       ]);
       await client.query('RELEASE SAVEPOINT phys_sp');
     } catch (physErr) {

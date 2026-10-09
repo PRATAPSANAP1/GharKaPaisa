@@ -50,7 +50,11 @@ async function migrateLocEocCategory() {
         ADD COLUMN IF NOT EXISTS disbursed_amount VARCHAR(50),
         ADD COLUMN IF NOT EXISTS disbursement_tenure VARCHAR(50),
         ADD COLUMN IF NOT EXISTS disbursed_tenure VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS los_no VARCHAR(100);
+        ADD COLUMN IF NOT EXISTS los_no VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS final_bank_stage VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS disbursement_completed VARCHAR(20),
+        ADD COLUMN IF NOT EXISTS disbursement_date DATE,
+        ADD COLUMN IF NOT EXISTS disbursal_date DATE;
 
       ALTER TABLE physical_application_details 
         ADD COLUMN IF NOT EXISTS insta_jumbo_offer VARCHAR(20),
@@ -61,7 +65,11 @@ async function migrateLocEocCategory() {
         ADD COLUMN IF NOT EXISTS disbursed_amount VARCHAR(50),
         ADD COLUMN IF NOT EXISTS disbursement_tenure VARCHAR(50),
         ADD COLUMN IF NOT EXISTS disbursed_tenure VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS los_no VARCHAR(100);
+        ADD COLUMN IF NOT EXISTS los_no VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS final_bank_stage VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS disbursement_completed VARCHAR(20),
+        ADD COLUMN IF NOT EXISTS disbursement_date DATE,
+        ADD COLUMN IF NOT EXISTS disbursal_date DATE;
     `);
 
     logger.info('[Migration] LOC/EOC category migration completed successfully.');
