@@ -5015,6 +5015,14 @@ const migrate = async () => {
     logger.error('LOC/EOC Category migration error note:', locEocErr.message);
   }
 
+  // CRM Application Performance & Schema Alignment Migration
+  try {
+    const { migrateCrmApplicationPerformance } = require('./migrate_crm_application_performance');
+    await migrateCrmApplicationPerformance();
+  } catch (crmPerfErr) {
+    logger.error('CRM Application Performance migration error note:', crmPerfErr.message);
+  }
+
   if (require.main === module) {
     process.exit(0);
   }

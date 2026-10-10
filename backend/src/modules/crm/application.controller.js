@@ -1553,92 +1553,16 @@ const manualCommission = async (req, res, next) => {
 
 const isUuid = (str) => typeof str === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
 
-let stageColumnsEnsured = false;
 const ensureApplicationStageColumns = async () => {
-  if (stageColumnsEnsured) return;
-  try {
-    await query(`
-      ALTER TABLE applications 
-      ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS remark_status VARCHAR(20) DEFAULT 'PENDING',
-      ADD COLUMN IF NOT EXISTS remark_updated BOOLEAN DEFAULT FALSE,
-      ADD COLUMN IF NOT EXISTS remark_updated_by UUID,
-      ADD COLUMN IF NOT EXISTS remark_updated_at TIMESTAMPTZ,
-      ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no',
-      ADD COLUMN IF NOT EXISTS bank_current_lead_status VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS approved_by UUID,
-      ADD COLUMN IF NOT EXISTS sales_operator_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS backend_remark TEXT
-    `);
-    await query(`
-      ALTER TABLE physical_application_details
-      ADD COLUMN IF NOT EXISTS sales_operator_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS backend_remark TEXT
-    `).catch(() => {});
-    stageColumnsEnsured = true;
-  } catch (err) {
-    // Ignore error if schema alter is locked or non-fatal
-  }
+  // No-op: CRM schema columns are maintained via startup migrations
+  return;
 };
 
 const listApplications = async (req, res, next) => {
   try {
-    await ensureApplicationStageColumns();
     let { page, limit, offset } = getPaginationParams(req.query);
     limit = Math.min(Math.max(parseInt(limit) || 10, 1), 50000);
     offset = (Math.max(parseInt(page) || 1, 1) - 1) * limit;
-
-    const { status, partner_id, partner_id: q_partner_id, product_id, search, bank_id, process_by, operation_head_id, operation_head, member_id, category, from_date, to_date, start_date, end_date, period } = req.query;
-    try {
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no'`).catch(() => {});
-      await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no'`).catch(() => {});
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_current_lead_status VARCHAR(100)`).catch(() => {});
-      await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS bank_current_lead_status VARCHAR(100)`).catch(() => {});
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS requery_date DATE`).catch(() => {});
-      await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS requery_date DATE`).catch(() => {});
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS remark_status VARCHAR(20) DEFAULT 'PENDING'`).catch(() => {});
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS remark_updated BOOLEAN DEFAULT FALSE`).catch(() => {});
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS remark_updated_by UUID`).catch(() => {});
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS remark_updated_at TIMESTAMPTZ`).catch(() => {});
-      await query(`UPDATE applications SET app_number = REPLACE(app_number, 'GKPEMP', 'APP20260917') WHERE app_number LIKE 'GKPEMP%'`).catch(() => {});
-      await query(`
-        UPDATE applications
-        SET 
-          process_by = CASE
-            WHEN LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%share%' OR LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%link%' THEN 'linked_share'
-            WHEN LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%direct%' OR LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%bank%' THEN 'direct_bank'
-            WHEN LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%physical%' THEN 'physical_process'
-            WHEN LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%co_browsing%' OR LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%cobrowsing%' OR LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%assist%' THEN 'co_browsing'
-            ELSE 'lead_punching'
-          END,
-          process_type = CASE
-            WHEN LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%share%' OR LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%link%' THEN 'linked_share'
-            WHEN LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%direct%' OR LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%bank%' THEN 'direct_bank'
-            WHEN LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%physical%' THEN 'physical_process'
-            WHEN LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%co_browsing%' OR LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%cobrowsing%' OR LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%assist%' THEN 'co_browsing'
-            ELSE 'lead_punching'
-          END
-        WHERE process_by IN ('employee', 'partner', 'customer_self', 'partner_self') 
-           OR process_type IN ('employee_lead', 'partner_lead', 'customer_self')
-           OR process_by NOT IN ('lead_punching', 'linked_share', 'direct_bank', 'physical_process', 'co_browsing')
-           OR process_type NOT IN ('lead_punching', 'linked_share', 'direct_bank', 'physical_process', 'co_browsing')
-      `).catch(() => {});
-      await query(`
-        UPDATE wallet_ledger wl
-        SET application_id = a.id
-        FROM applications a
-        WHERE wl.application_id IS NULL
-          AND (wl.transaction_type ILIKE '%commission%' OR wl.transaction_type IN ('PERSONAL_COMMISSION', 'TEAM_COMMISSION', 'REFERRAL_BONUS', 'OVERRIDE_COMMISSION', 'COMMISSION_RELEASE', 'REVERSAL'))
-          AND (wl.reference_number = a.id::text OR wl.reference_number = a.app_number)
-      `).catch(() => {});
-    } catch (_) {}
 
     const targetPartnerId = q_partner_id || partner_id;
     const targetOpHeadId = isUuid(operation_head_id) ? operation_head_id : (isUuid(operation_head) ? operation_head : null);
@@ -2857,7 +2781,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
 
     const userRemarkVal = user_remark || user_notes || notes || null;
     const appFileGenVal = app_file_generated || appfile_generated || null;
-    const bankAppNoVal = bank_application_number || bank_ref_number || null;
+    const bankAppNoVal = (bank_application_number || bank_ref_number || '').trim() || null;
 
     const isAppFileYes = appFileGenVal && String(appFileGenVal).trim().toLowerCase() === 'yes';
 
@@ -2879,54 +2803,6 @@ const updateBankProcessingStatus = async (req, res, next) => {
     if (final_status && !['OPERATIONS_HEAD', 'ADMIN', 'SUPER_ADMIN', 'ADMINISTRATIVE_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userRole) && !isFinalStatusOperatorUser) {
       return forbidden(res, 'Access denied. Only Operation Head, Admin, Super Admin, Administrative Operator, or Final Status Operator can update Final Status.');
     }
-
-    // Ensure columns exist
-    try {
-      await query(`
-        ALTER TABLE applications 
-        ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS income_details VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS mail_status VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
-        ADD COLUMN IF NOT EXISTS user_remark TEXT,
-        ADD COLUMN IF NOT EXISTS notes TEXT,
-        ADD COLUMN IF NOT EXISTS operational_remarks TEXT,
-        ADD COLUMN IF NOT EXISTS app_file_generated VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS last_operator_id UUID,
-        ADD COLUMN IF NOT EXISTS last_operator_name VARCHAR(255),
-        ADD COLUMN IF NOT EXISTS last_operator_role VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS last_operator_designation VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS last_operator_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS final_status_operator_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS last_operated_at TIMESTAMPTZ
-      `);
-      await query(`
-        ALTER TABLE physical_application_details 
-        ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS income_details VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS mail_status VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
-        ADD COLUMN IF NOT EXISTS user_remark TEXT,
-        ADD COLUMN IF NOT EXISTS notes TEXT,
-        ADD COLUMN IF NOT EXISTS operational_remarks TEXT,
-        ADD COLUMN IF NOT EXISTS app_file_generated VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS last_operator_id UUID,
-        ADD COLUMN IF NOT EXISTS last_operator_name VARCHAR(255),
-        ADD COLUMN IF NOT EXISTS last_operator_role VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS last_operator_designation VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS last_operator_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS final_status_operator_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS last_operated_at TIMESTAMPTZ
-      `);
-    } catch (_) { }
 
     let appRes = await query(`
       SELECT a.*, p.category as product_category 
@@ -3007,8 +2883,8 @@ const updateBankProcessingStatus = async (req, res, next) => {
     await query(`
       UPDATE applications 
       SET status = $1, 
-          bank_ref_number = COALESCE($2, bank_ref_number), 
-          bank_application_number = COALESCE($3, bank_application_number, bank_ref_number),
+          bank_ref_number = COALESCE(NULLIF($2, ''), bank_ref_number), 
+          bank_application_number = COALESCE(NULLIF($3, ''), bank_application_number, bank_ref_number),
           rejection_reason = COALESCE($4, rejection_reason), 
           approved_amount = COALESCE($5, approved_amount),
           appcode_status = COALESCE($6, appcode_status),
@@ -3092,8 +2968,8 @@ const updateBankProcessingStatus = async (req, res, next) => {
           application_id, bank_application_number, bank_ref_number, vkyc_url, user_remark, ipa_stage, kyc_stage, card_approval_stage, digital_card_issued, income_details, mail_status, app_file_generated, created_at, updated_at
         ) VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
         ON CONFLICT (application_id) DO UPDATE SET
-          bank_application_number = COALESCE(EXCLUDED.bank_application_number, physical_application_details.bank_application_number),
-          bank_ref_number = COALESCE(EXCLUDED.bank_ref_number, physical_application_details.bank_ref_number),
+          bank_application_number = COALESCE(NULLIF(EXCLUDED.bank_application_number, ''), physical_application_details.bank_application_number),
+          bank_ref_number = COALESCE(NULLIF(EXCLUDED.bank_ref_number, ''), physical_application_details.bank_ref_number),
           vkyc_url = COALESCE(EXCLUDED.vkyc_url, physical_application_details.vkyc_url),
           user_remark = COALESCE(EXCLUDED.user_remark, physical_application_details.user_remark),
           ipa_stage = COALESCE(NULLIF(EXCLUDED.ipa_stage, 'None'), NULLIF(EXCLUDED.ipa_stage, ''), physical_application_details.ipa_stage),
@@ -3211,13 +3087,6 @@ const submitPartnerApplication = async (req, res, next) => {
 
     const rawRole = String(req.user?.role || req.user?.user_role || '').toUpperCase().trim();
     const isStaff = ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'HR', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'ADMINISTRATIVE_OPERATOR'].includes(rawRole);
-
-    // Ensure database columns allow NULL for applications / leads without partners (e.g. employee / direct leads)
-    try {
-      await client.query(`ALTER TABLE applications ALTER COLUMN partner_id DROP NOT NULL`);
-      await client.query(`ALTER TABLE leads ALTER COLUMN partner_id DROP NOT NULL`);
-      await client.query(`ALTER TABLE partner_share_links ALTER COLUMN partner_id DROP NOT NULL`);
-    } catch (_) { }
 
     let partnerId = req.body.partner_id || req.body.PartnerId || null;
 
@@ -4075,132 +3944,7 @@ const exportApplicationsCSV = async (req, res, next) => {
   }
 };
 
-// PUT /applications/:id — Edit & Update Lead/Application details (Admin, Operation Head, Partner)
 const updateApplicationDetails = async (req, res, next) => {
-  // Ensure verification & tracking columns exist on applications, leads, customers, physical_application_details tables outside of transaction
-  try {
-    await query(`ALTER TYPE application_status ADD VALUE IF NOT EXISTS 'operational_verified'`).catch(() => {});
-    await query(`ALTER TYPE application_status ADD VALUE IF NOT EXISTS 'details_submitted'`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS address1 TEXT`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS address2 TEXT`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS landmark TEXT`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS state VARCHAR(100)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pincode VARCHAR(20)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS mother_name VARCHAR(150)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_name VARCHAR(150)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_mobile VARCHAR(20)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_email VARCHAR(150)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS company_name VARCHAR(200)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS designation VARCHAR(150)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_status VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_url TEXT`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS salary_slip_url TEXT`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_card_url TEXT`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS appcode_status VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_remark TEXT`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_status VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS app_file_generated VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS decline_reason TEXT`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS approved_amount DECIMAL(15,2)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS income_details VARCHAR(100)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS mail_status VARCHAR(100)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS user_remark TEXT`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS notes TEXT`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS operational_remarks TEXT`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no'`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS requery_date DATE`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS digital_journey_url TEXT`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_smart_emi_offer TEXT`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_smart_emi_tenure VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS disbursed_smart_emi VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS disbursed_smart_emi_tenure VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS smart_emi_offer_status VARCHAR(20)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_smart_emi_disburse VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_tenure VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS offer_decline_reason TEXT`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS eligible_for_incentive VARCHAR(20)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS insta_jumbo_offer VARCHAR(20)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_loan_offer VARCHAR(20)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_loan_type VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS offer_tenure VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS disbursed_amount VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS disbursement_amount VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS disbursed_tenure VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS disbursement_tenure VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS los_no VARCHAR(100)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_loan_disbursed VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_loan_tenure VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_bank_stage VARCHAR(50)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS disbursement_completed VARCHAR(20)`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS disbursement_date DATE`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS disbursal_date DATE`);
-
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS token VARCHAR(255)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS address1 TEXT`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS address2 TEXT`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS landmark TEXT`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS state VARCHAR(100)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS pincode VARCHAR(20)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS mother_name VARCHAR(150)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS bank_ref_number VARCHAR(100)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS los_no VARCHAR(100)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS appcode_status VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS bank_remark TEXT`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS final_status VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS app_file_generated VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS decline_reason TEXT`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS income_details VARCHAR(100)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS mail_status VARCHAR(100)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS vkyc_url TEXT`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS user_remark TEXT`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS notes TEXT`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS operational_remarks TEXT`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS requery_date DATE`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS bank_smart_emi_offer TEXT`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS bank_smart_emi_tenure VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS disbursed_smart_emi VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS disbursed_smart_emi_tenure VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS smart_emi_offer_status VARCHAR(20)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS final_smart_emi_disburse VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS final_tenure VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS offer_decline_reason TEXT`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS eligible_for_incentive VARCHAR(20)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS insta_jumbo_offer VARCHAR(20)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS customer_loan_offer VARCHAR(20)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS customer_loan_type VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS offer_tenure VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS disbursed_amount VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS disbursement_amount VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS disbursed_tenure VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS disbursement_tenure VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS final_loan_disbursed VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS final_loan_tenure VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS final_bank_stage VARCHAR(50)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS disbursement_completed VARCHAR(20)`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS disbursement_date DATE`);
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS disbursal_date DATE`);
-  } catch (_) { }
-
   const client = await getClient();
   try {
     await client.query('BEGIN');

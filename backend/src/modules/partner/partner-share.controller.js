@@ -735,15 +735,7 @@ const updateApplyTokenDetails = async (req, res, next) => {
     const cleanState = (state || '').toString().trim();
     const cleanPincode = (pincode || '').toString().replace(/\D/g, '').slice(0, 6);
 
-    // Ensure columns exist on customers table dynamically
-    try {
-      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20)`);
-      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS occupation VARCHAR(100)`);
-      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
-      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS state VARCHAR(100)`);
-      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)`);
-      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS monthly_income DECIMAL(15,2)`);
-    } catch (_) {}
+
 
     // Fetch Product for target redirect URL
     const { rows: [product] } = await query(`SELECT * FROM products WHERE id = $1`, [shareData.product_id]);
@@ -1027,30 +1019,7 @@ const getPostApplyDetails = async (req, res, next) => {
     const { token } = req.params;
     if (!token) return error(res, 'Token is required', 400);
 
-    // Dynamic column safety check
-    try {
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_mobile VARCHAR(50)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS dob VARCHAR(50)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_email VARCHAR(255)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS designation VARCHAR(255)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS address TEXT`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS mother_name VARCHAR(255)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_url VARCHAR(500)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_status VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS decline_reason TEXT`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS operational_remarks TEXT`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(100)`);
-    } catch (_) {}
+
 
     const { rows: [shareData] } = await query(`
       SELECT 
@@ -1254,43 +1223,7 @@ const updatePostApplyDetails = async (req, res, next) => {
       else mappedAppEnumStatus = 'submitted';
     }
 
-    // Dynamic column safety check
-    try {
-      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS address1 TEXT`);
-      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS address2 TEXT`);
-      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS landmark TEXT`);
-      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
-      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS state VARCHAR(100)`);
-      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS pincode VARCHAR(50)`);
 
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS address1 TEXT`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS address2 TEXT`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS landmark TEXT`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_mobile VARCHAR(50)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS dob VARCHAR(50)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_email VARCHAR(255)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS designation VARCHAR(255)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS address TEXT`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS mother_name VARCHAR(255)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS state VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pincode VARCHAR(50)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_url VARCHAR(500)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_status VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS decline_reason TEXT`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS operational_remarks TEXT`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(100)`);
-    } catch (_) {}
 
     let targetCustId = shareData.customer_id || shareData.lead_cust_id;
 
@@ -1417,36 +1350,6 @@ const updatePostApplyDetails = async (req, res, next) => {
 
     if (shareData.application_id) {
       try {
-        await query(`
-          ALTER TABLE physical_application_details
-            ADD COLUMN IF NOT EXISTS token VARCHAR(255),
-            ADD COLUMN IF NOT EXISTS appcode_status VARCHAR(100),
-            ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(100),
-            ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(100),
-            ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(100),
-            ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(100),
-            ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100),
-            ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
-            ADD COLUMN IF NOT EXISTS final_status VARCHAR(100),
-            ADD COLUMN IF NOT EXISTS decline_reason TEXT,
-            ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50),
-            ADD COLUMN IF NOT EXISTS full_name VARCHAR(255),
-            ADD COLUMN IF NOT EXISTS mobile VARCHAR(50),
-            ADD COLUMN IF NOT EXISTS email VARCHAR(255),
-            ADD COLUMN IF NOT EXISTS pan_number VARCHAR(50),
-            ADD COLUMN IF NOT EXISTS dob VARCHAR(50),
-            ADD COLUMN IF NOT EXISTS company_name VARCHAR(255),
-            ADD COLUMN IF NOT EXISTS designation VARCHAR(255),
-            ADD COLUMN IF NOT EXISTS address TEXT,
-            ADD COLUMN IF NOT EXISTS mother_name VARCHAR(255),
-            ADD COLUMN IF NOT EXISTS city VARCHAR(100),
-            ADD COLUMN IF NOT EXISTS state VARCHAR(100),
-            ADD COLUMN IF NOT EXISTS pincode VARCHAR(50),
-            ADD COLUMN IF NOT EXISTS address1 TEXT,
-            ADD COLUMN IF NOT EXISTS address2 TEXT,
-            ADD COLUMN IF NOT EXISTS landmark TEXT;
-        `);
-
         await query(`
           INSERT INTO physical_application_details (
             application_id, appcode_status, soft_approval_status, vkyc_stage, iqa_stage, dispatch_status,
