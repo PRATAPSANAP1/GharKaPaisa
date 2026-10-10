@@ -31,13 +31,19 @@ async function migrateLocEocCategory() {
       WHERE LOWER(name) LIKE '%smartemi%' OR LOWER(name) LIKE '%smart emi%' OR category::text = 'smart_emi'
     `);
 
-    // 3. Reclassify existing applications in 'applications' table
-    await query(`
-      UPDATE applications
-      SET category = 'loc_eoc'
-      WHERE category IN ('loan_on_credit_card', 'smart_emi', 'card_on_loan')
-         OR product_id IN (SELECT id FROM products WHERE category::text = 'loc_eoc')
+    // 3. Reclassify existing applications in 'applications' table (if category column exists)
+    const { rows: colCheck } = await query(`
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'applications' AND column_name = 'category'
     `);
+    if (colCheck.length > 0) {
+      await query(`
+        UPDATE applications
+        SET category = 'loc_eoc'
+        WHERE category IN ('loan_on_credit_card', 'smart_emi', 'card_on_loan')
+           OR product_id IN (SELECT id FROM products WHERE category::text = 'loc_eoc')
+      `).catch(() => {});
+    }
 
     // 4. Ensure LOC/EOC remark columns exist on applications & physical_application_details
     await query(`
