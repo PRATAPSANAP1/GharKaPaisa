@@ -10,6 +10,7 @@ const logger = require('../../config/logger');
 const { logAction } = require('../admin/audit.service.js');
 const { processTeamOverrideCommission } = require('../team/team.service.js');
 const { getBankApplyLinkBackend } = require('./lead.controller');
+const { sendEmail, sendLeadApplicationCreatedEmail } = require('../../services/email/email.service');
 
 // Helper to safely ensure application_admin_assignments table exists
 const ensureAssignmentsTableExists = async () => {
@@ -266,6 +267,31 @@ const submitApplication = async (req, res, next) => {
     // Notify partner
     await notify.applicationSubmitted(req.user.id, appNumber);
 
+    try {
+      let partnerEmail = req.user.email;
+      if (!partnerEmail && PartnerId) {
+        const { rows: [pUser] } = await client.query(
+          `SELECT u.email FROM partner_profiles pp JOIN users u ON u.id = pp.user_id WHERE pp.id = $1`,
+          [PartnerId]
+        ).catch(() => ({ rows: [] }));
+        partnerEmail = pUser?.email;
+      }
+      if (partnerEmail) {
+        sendLeadApplicationCreatedEmail({
+          to: partnerEmail,
+          customerName: customer.full_name || 'Customer',
+          appNumber,
+          productName: product.name || 'Financial Product',
+          mobile: customer.mobile,
+          countryCode: '+91',
+          processType: req.body.process_type || 'lead_punching',
+          commission
+        });
+      }
+    } catch (emailErr) {
+      logger.warn('Failed to dispatch partner email in submitApplication:', emailErr.message);
+    }
+
     logger.info(`Application ${appNumber} submitted by Partner ${PartnerId}`);
     return created(res, { application_id: app.id, app_number: app.app_number, commission }, 'Application submitted successfully');
   } catch (err) {
@@ -420,6 +446,29 @@ const submitPublicApplication = async (req, res, next) => {
     await logTimeline(client, app.id, 'submitted', 'Customer Submitted Form', 'Verified lead details saved.', sysUserId);
 
     await client.query('COMMIT');
+
+    if (partnerId) {
+      try {
+        const { rows: [pUser] } = await client.query(
+          `SELECT u.email FROM partner_profiles pp JOIN users u ON u.id = pp.user_id WHERE pp.id = $1`,
+          [partnerId]
+        ).catch(() => ({ rows: [] }));
+        if (pUser?.email) {
+          sendLeadApplicationCreatedEmail({
+            to: pUser.email,
+            customerName: cleanName,
+            appNumber: app.app_number || appNumber,
+            productName: product.name,
+            mobile: cleanMobile,
+            countryCode: '+91',
+            processType: process_type || 'lead_punching',
+            commission
+          });
+        }
+      } catch (emailErr) {
+        logger.warn('Failed to dispatch partner email in submitPublicApplication:', emailErr.message);
+      }
+    }
 
     const targetRedirectUrl = product.partner_url || product.application_url || product.public_url || product.apply_url || product.redirect_url || 'https://oitstack.in';
 
@@ -3576,26 +3625,27 @@ const submitPartnerApplication = async (req, res, next) => {
       }).catch(err => logger.warn('Applicant email trigger failed:', err.message));
     }
 
-    const partnerEmail = req.user.email;
+    let partnerEmail = req.user.email;
+    if (!partnerEmail && PartnerId) {
+      try {
+        const { rows: [pUser] } = await client.query(
+          `SELECT u.email FROM partner_profiles pp JOIN users u ON u.id = pp.user_id WHERE pp.id = $1`,
+          [PartnerId]
+        ).catch(() => ({ rows: [] }));
+        partnerEmail = pUser?.email;
+      } catch (_) {}
+    }
     if (partnerEmail) {
-      sendEmail({
+      sendLeadApplicationCreatedEmail({
         to: partnerEmail,
-        subject: `New Lead Logged - #${appNumber} (${trimmedName})`,
-        html: `
-          <div style="font-family: Arial, sans-serif; padding: 20px; color: #0f172a;">
-            <h2 style="color: #10b981;">New Lead Application Created</h2>
-            <p>Hello Partner,</p>
-            <p>You have successfully logged a new application for <strong>${trimmedName}</strong>.</p>
-            <ul>
-              <li><strong>App Number:</strong> #${appNumber}</li>
-              <li><strong>Product:</strong> ${product.name}</li>
-              <li><strong>Mobile:</strong> ${country_code} ${trimmedMobile}</li>
-              <li><strong>Process Assignment:</strong> ${process_type.replace(/_/g, ' ').toUpperCase()}</li>
-              <li><strong>Expected Payout:</strong> ₹${parseFloat(commission).toLocaleString('en-IN')}</li>
-            </ul>
-          </div>
-        `
-      }).catch(err => logger.warn('Partner email trigger failed:', err.message));
+        customerName: trimmedName,
+        appNumber,
+        productName: product.name,
+        mobile: trimmedMobile,
+        countryCode: country_code,
+        processType: process_type,
+        commission
+      });
     }
 
     return success(res, {

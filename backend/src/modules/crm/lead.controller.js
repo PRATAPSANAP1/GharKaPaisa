@@ -2,6 +2,8 @@ const { query, getClient } = require('../../config/database');
 const { success, created, error, notFound, paginate } = require('../../utils/response/response');
 const { getPaginationParams } = require('../../utils/helpers/helpers');
 const logger = require('../../config/logger');
+const { sendLeadApplicationCreatedEmail } = require('../../services/email/email.service');
+const { calculatePartnerCommission } = require('../partner/commission.service.js');
 
 const {
   logLeadTimeline,
@@ -289,7 +291,7 @@ const createLead = async (req, res, next) => {
     let partner = null;
     if (targetPartnerId) {
       const { rows: [p] } = await query(`
-        SELECT p.id, p.parent_partner_id, p.kyc_status, u.role
+        SELECT p.id, p.parent_partner_id, p.kyc_status, u.role, u.email
         FROM partner_profiles p
         JOIN users u ON u.id = p.user_id
         WHERE p.id = $1 OR p.user_id = $1
@@ -299,7 +301,7 @@ const createLead = async (req, res, next) => {
 
     if (!partner) {
       const { rows: [p] } = await query(`
-        SELECT p.id, p.parent_partner_id, p.kyc_status, u.role
+        SELECT p.id, p.parent_partner_id, p.kyc_status, u.role, u.email
         FROM partner_profiles p
         JOIN users u ON u.id = p.user_id
         WHERE p.user_id = $1
@@ -399,6 +401,39 @@ const createLead = async (req, res, next) => {
     const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
     const appNum = 'APP' + datePart + Math.floor(1000 + Math.random() * 9000);
 
+    const notifyPartnerLeadCreated = async (createdAppNum, createdProcessType) => {
+      try {
+        let partnerEmail = req.user.email || partner?.email;
+        if (!partnerEmail && partner?.id) {
+          const { rows: [pUser] } = await query(
+            `SELECT u.email FROM partner_profiles pp JOIN users u ON u.id = pp.user_id WHERE pp.id = $1`,
+            [partner.id]
+          ).catch(() => ({ rows: [] }));
+          partnerEmail = pUser?.email;
+        }
+
+        if (partnerEmail) {
+          let calculatedCommission = 0;
+          try {
+            calculatedCommission = await calculatePartnerCommission(targetProductId, partner?.id, incomeVal || 0);
+          } catch (_) {}
+
+          sendLeadApplicationCreatedEmail({
+            to: partnerEmail,
+            customerName: targetName.trim(),
+            appNumber: createdAppNum,
+            productName: product?.name || 'Financial Product',
+            mobile: trimmedMobile,
+            countryCode: '+91',
+            processType: createdProcessType || targetProcess,
+            commission: calculatedCommission
+          });
+        }
+      } catch (notifyErr) {
+        logger.warn('Failed to dispatch partner lead notification email:', notifyErr.message);
+      }
+    };
+
     if (targetProcess === 'linked_share') {
       const trackingToken = 'SH_' + Math.random().toString(36).substring(2, 12).toUpperCase();
       const host = req.get('host') || 'gharkapaisa.in';
@@ -438,6 +473,7 @@ const createLead = async (req, res, next) => {
       `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0, trackingToken]);
 
       await initializeLeadPipeline(lead.id, req.user.id, 'share_link', priority || 'medium');
+      notifyPartnerLeadCreated(app.app_number || appNum, 'linked_share');
 
       // Automatically send link via SMS to partner and customer (Template: Linked_share 6a8b36fe9b6fc4bd54035592)
       try {
@@ -502,6 +538,7 @@ const createLead = async (req, res, next) => {
       `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0, bankUrl]);
 
       await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
+      notifyPartnerLeadCreated(app.app_number || appNum, 'direct_bank');
 
       return created(res, {
         lead_id: lead.id,
@@ -541,6 +578,7 @@ const createLead = async (req, res, next) => {
       `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0]);
 
       await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
+      notifyPartnerLeadCreated(app.app_number || appNum, 'physical_process');
 
       const host = req.get('host') || 'gharkapaisa.in';
       const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
@@ -592,6 +630,7 @@ const createLead = async (req, res, next) => {
       `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0, cobrowsingUrl]);
 
       await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
+      notifyPartnerLeadCreated(app.app_number || appNum, 'co_browsing');
 
       return created(res, {
         lead_id: lead.id,
@@ -628,6 +667,7 @@ const createLead = async (req, res, next) => {
     `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0]);
 
     await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
+    notifyPartnerLeadCreated(app.app_number || appNum, 'lead_punching');
 
     return created(res, {
       lead_id: lead.id,
@@ -831,6 +871,31 @@ const verifyLeadOtp = async (req, res, next) => {
     await client.query('COMMIT');
 
     await logLeadTimeline(null, id, 'Lead Confirmed', `Lead OTP verified and converted to Application ${appNumber}`, 'applications', app.id, req.user.id);
+
+    try {
+      let partnerEmail = req.user.email;
+      if (!partnerEmail && lead.partner_id) {
+        const { rows: [pUser] } = await client.query(
+          `SELECT u.email FROM partner_profiles pp JOIN users u ON u.id = pp.user_id WHERE pp.id = $1`,
+          [lead.partner_id]
+        ).catch(() => ({ rows: [] }));
+        partnerEmail = pUser?.email;
+      }
+      if (partnerEmail) {
+        sendLeadApplicationCreatedEmail({
+          to: partnerEmail,
+          customerName: lead.customer_name || 'Customer',
+          appNumber: app.app_number || appNumber,
+          productName: product?.name || 'Financial Product',
+          mobile: lead.mobile,
+          countryCode: '+91',
+          processType: lead.process_type || 'lead_punching',
+          commission: app.commission_amount || 0
+        });
+      }
+    } catch (emailErr) {
+      logger.warn('Failed to dispatch partner lead conversion email:', emailErr.message);
+    }
 
     return success(res, {
       ...app,

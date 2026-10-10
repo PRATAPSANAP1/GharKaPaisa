@@ -704,6 +704,81 @@ const sendContactQueryEmail = async ({ fullName, mobile, description }) => {
   });
 };
 
+// Mask last 6 digits of mobile number (e.g. +91 9635869526 -> +91 9635******)
+const maskMobileLast6 = (mobile, countryCode = '+91') => {
+  if (!mobile) return '******';
+  const raw = String(mobile).trim();
+  let cc = (countryCode || '').trim();
+  if (!cc) cc = '+91';
+  if (!cc.startsWith('+')) cc = `+${cc}`;
+
+  let digits = raw.replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) {
+    digits = digits.slice(2);
+  } else if (digits.length === 11 && digits.startsWith('0')) {
+    digits = digits.slice(1);
+  }
+
+  if (digits.length >= 6) {
+    const visiblePart = digits.slice(0, digits.length - 6);
+    return `${cc} ${visiblePart}******`.trim();
+  }
+  return `${cc} ******`.trim();
+};
+
+/**
+ * Send "New Lead Application Created" notification email to Partner
+ * Mobile number has its last 6 digits hidden (e.g. +91 9635******)
+ */
+const sendLeadApplicationCreatedEmail = async ({
+  to,
+  customerName = 'Customer',
+  appNumber = '',
+  productName = 'Financial Product',
+  mobile = '',
+  countryCode = '+91',
+  processType = 'LEAD PUNCHING',
+  commission = 0
+}) => {
+  if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+    return;
+  }
+
+  const maskedMobile = maskMobileLast6(mobile, countryCode);
+  const cleanAppNum = String(appNumber || '').replace(/^#/, '');
+  const cleanProcess = String(processType || 'LEAD PUNCHING').replace(/_/g, ' ').toUpperCase();
+  const payoutVal = (typeof commission === 'number' || (!isNaN(parseFloat(commission)) && isFinite(commission)))
+    ? parseFloat(commission).toLocaleString('en-IN')
+    : '0';
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; padding: 20px; color: #0f172a;">
+      <h2 style="color: #10b981;">New Lead Application Created</h2>
+      <p>Hello Partner,</p>
+      <p>You have successfully logged a new application for <strong>${customerName}</strong>.</p>
+      <ul>
+        <li><strong>App Number:</strong> #${cleanAppNum}</li>
+        <li><strong>Product:</strong> ${productName}</li>
+        <li><strong>Mobile:</strong> ${maskedMobile}</li>
+        <li><strong>Process Assignment:</strong> ${cleanProcess}</li>
+        <li><strong>Expected Payout:</strong> ₹${payoutVal}</li>
+      </ul>
+      <p>Regards,<br><strong>GharKaPaisa Team</strong></p>
+    </div>
+  `;
+
+  const text = `New Lead Application Created\n\nHello Partner,\n\nYou have successfully logged a new application for ${customerName}.\n\nApp Number: #${cleanAppNum}\nProduct: ${productName}\nMobile: ${maskedMobile}\nProcess Assignment: ${cleanProcess}\nExpected Payout: ₹${payoutVal}\n\nRegards,\nGharKaPaisa Team`;
+
+  return sendEmail({
+    to,
+    subject: `New Lead Logged - #${cleanAppNum} (${customerName})`,
+    html,
+    text
+  }).catch(err => {
+    logger.warn('Partner new lead application email trigger failed:', err.message);
+  });
+};
+
 module.exports = {
   sendEmail,
   sendOtpEmail,
@@ -716,6 +791,9 @@ module.exports = {
   sendTeamInvitationEmail,
   sendEmployeeInvitationEmail,
   sendCandidateAssignedToHrEmail,
-  sendContactQueryEmail
+  sendContactQueryEmail,
+  maskMobileLast6,
+  sendLeadApplicationCreatedEmail
 };
+
 

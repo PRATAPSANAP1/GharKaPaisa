@@ -79,6 +79,28 @@ const generateTeamCode = (length = 11) => {
   return 'TM' + generateRandomReferralCode(length);
 };
 
+// Mask last 6 digits of mobile number (e.g. +91 9635869526 -> +91 9635******)
+const maskMobileLast6 = (mobile, countryCode = '+91') => {
+  if (!mobile) return '******';
+  const raw = String(mobile).trim();
+  let cc = (countryCode || '').trim();
+  if (!cc) cc = '+91';
+  if (!cc.startsWith('+')) cc = `+${cc}`;
+
+  let digits = raw.replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) {
+    digits = digits.slice(2);
+  } else if (digits.length === 11 && digits.startsWith('0')) {
+    digits = digits.slice(1);
+  }
+
+  if (digits.length >= 6) {
+    const visiblePart = digits.slice(0, digits.length - 6);
+    return `${cc} ${visiblePart}******`.trim();
+  }
+  return `${cc} ******`.trim();
+};
+
 module.exports = {
   generateAppNumber,
   generatePartnerCode,
@@ -90,4 +112,6 @@ module.exports = {
   getPaginationParams,
   buildWhereClause,
   sanitizeMobile,
+  maskMobileLast6,
 };
+
