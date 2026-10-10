@@ -121,6 +121,30 @@ export const isLocApplication = (app) => {
   return !isEocApplication(app);
 };
 
+export const SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL = 'https://www.sbicard.com/corecards/?CHN=OMLG&GEMID1=SEP1&GEMID2=YOH01';
+
+export const isCreditCardApplication = (app) => {
+  if (!app) return false;
+  if (isLocOrEocApplication(app)) return false;
+  const getClean = (val) => String(val || '').trim().toLowerCase();
+  const rawCat = getClean(app.category || app.product_category || app.product?.category || app.metadata?.category);
+
+  // Non-credit card categories
+  const nonCcList = [
+    'personal_loan', 'business_loan', 'home_loan', 'education_loan', 'gold_loan',
+    'loan', 'loans', 'insurance', 'utility', 'saving_account', 'savings_account', 'demat',
+    'loc', 'eoc', 'loc_eoc', 'loan_on_credit_card', 'smart_emi'
+  ];
+  if (nonCcList.includes(rawCat)) return false;
+
+  if (['credit_card', 'credit_cards', 'credit card', 'cc'].includes(rawCat)) return true;
+
+  const combined = `${rawCat} ${getClean(app.sub_category)} ${getClean(app.product_type)} ${getClean(app.lead_type)} ${getClean(app.product_name)} ${getClean(app.product?.name)} ${getClean(app.card_name)}`.trim();
+  if (nonCcList.some(k => combined.includes(k))) return false;
+
+  return true;
+};
+
 export const resolveFinalBankStage = (val) => {
   if (!val) return 'DECLINE';
   const s = String(val).trim().toUpperCase();
@@ -414,6 +438,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const isSbi = bankId === 'e7c2c604-139d-4fcf-a87c-695633535a02' || combinedBankText.includes('SBI') || combinedBankText.includes('STATE BANK');
   const isTataCobrandHdfc = bankId === '1eacfa67-1187-48c7-adde-8a6edcfe9969' || combinedBankText.includes('TATA CO-BRAND HDFC') || combinedBankText.includes('TATA CO BRAND HDFC') || (combinedBankText.includes('TATA') && combinedBankText.includes('HDFC'));
   const isHdfcBank = (bankId === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' || (combinedBankText.includes('HDFC') && !combinedBankText.includes('TATA'))) && !isTataCobrandHdfc;
+  const isCreditCard = isCreditCardApplication(application);
+  const isSbiCreditCard = isSbi && isCreditCard;
 
   const resolveBankRefNo = (rawRef, sysNo) => {
     const s = sanitizeVal(rawRef);
@@ -944,7 +970,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           bank_ref_number: (losNo || bankRefNumber || '').trim(),
           bank_application_number: (losNo || bankRefNumber || '').trim(),
           app_file_generated: appFileGenerated,
-          digital_journey_url: digitalJourneyUrl || undefined,
+          digital_journey_url: digitalJourneyUrl || (isSbiCreditCard ? SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL : undefined),
           status: targetStatus,
           // LOC / EOC updated 6 fields
           insta_jumbo_offer: instaJumboOffer,
@@ -1046,8 +1072,10 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <button
               type="button"
+              id="header-digital-complete-journey-btn"
               onClick={() => {
-                const link = digitalJourneyUrl || application?.digital_journey_url || application?.digital_link || application?.redirect_url || application?.product_url || application?.product?.partner_url || application?.product?.public_url || systemDigitalJourneyLink;
+                const sbiCcLink = isSbiCreditCard ? SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL : null;
+                const link = sbiCcLink || digitalJourneyUrl || application?.digital_journey_url || application?.digital_link || application?.redirect_url || application?.product_url || application?.product?.partner_url || application?.product?.public_url || systemDigitalJourneyLink;
                 if (link && link.trim() !== '') {
                   let targetUrl = link.trim();
                   if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
@@ -1072,7 +1100,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                 gap: '6px',
                 boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)'
               }}
-              title="Open Digital Complete Journey Link"
+              title={isSbiCreditCard ? "Open SBI Credit Card Digital Complete Journey" : "Open Digital Complete Journey Link"}
             >
               <ExternalLink size={15} /> Digital Complete Journey
             </button>
@@ -2007,25 +2035,29 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         </span>
                       )}
                     </div>
-                    {systemDigitalJourneyLink && (
+                    {isSbiCreditCard ? (
+                      <div style={{ fontSize: '11px', color: '#0284c7', marginBottom: '8px', fontWeight: 700 }}>
+                        SBI Credit Card Default: {SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL}
+                      </div>
+                    ) : systemDigitalJourneyLink ? (
                       <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', fontStyle: 'italic' }}>
                         System Default: {systemDigitalJourneyLink}
                       </div>
-                    )}
+                    ) : null}
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       <input
                         type="url"
                         disabled={!isSuperAdminRole && !isSuperAdminOrAdmin}
                         value={digitalJourneyUrl}
                         onChange={(e) => setDigitalJourneyUrl(e.target.value)}
-                        placeholder={isSuperAdminRole || isSuperAdminOrAdmin ? "Enter / Edit Digital Journey URL (e.g. https://bank.com/apply)" : "Only Super Admin can upload or edit Digital Journey link"}
+                        placeholder={isSbiCreditCard ? SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL : (isSuperAdminRole || isSuperAdminOrAdmin ? "Enter / Edit Digital Journey URL (e.g. https://bank.com/apply)" : "Only Super Admin can upload or edit Digital Journey link")}
                         style={{ flex: 1, minWidth: '220px', padding: '10px 12px', borderRadius: '8px', border: '1px solid #7dd3fc', fontSize: '13px', fontWeight: 600, background: (!isSuperAdminRole && !isSuperAdminOrAdmin) ? '#f8fafc' : '#fff', color: '#0f172a' }}
                       />
-                      {(digitalJourneyUrl || systemDigitalJourneyLink) && (
+                      {(digitalJourneyUrl || (isSbiCreditCard ? SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL : systemDigitalJourneyLink)) && (
                         <button
                           type="button"
                           onClick={() => {
-                            let targetUrl = (digitalJourneyUrl || systemDigitalJourneyLink).trim();
+                            let targetUrl = (digitalJourneyUrl || (isSbiCreditCard ? SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL : systemDigitalJourneyLink)).trim();
                             if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
                               targetUrl = 'https://' + targetUrl;
                             }
@@ -2465,6 +2497,56 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     </>
                   ) : isSbi ? (
                     <>
+                      {/* SBI DIGITAL COMPLETE JOURNEY BUTTON (CREDIT CARD CATEGORY ONLY) */}
+                      {isCreditCard && (
+                        <div style={{
+                          gridColumn: '1 / -1',
+                          background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                          border: '1.5px solid #93c5fd',
+                          borderRadius: '12px',
+                          padding: '14px 18px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: '12px',
+                          boxShadow: '0 2px 8px rgba(37, 99, 235, 0.08)'
+                        }}>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e40af', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <ExternalLink size={15} /> SBI DIGITAL COMPLETE JOURNEY
+                            </div>
+                            <div style={{ fontSize: '11.5px', color: '#1d4ed8', marginTop: '3px', fontWeight: 600, wordBreak: 'break-all' }}>
+                              Official Portal: {SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            id="sbi-remark-digital-complete-journey-btn"
+                            onClick={() => {
+                              window.open(SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL, '_blank', 'noopener,noreferrer');
+                            }}
+                            style={{
+                              background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                              color: '#ffffff',
+                              border: 'none',
+                              padding: '8px 16px',
+                              borderRadius: '8px',
+                              fontSize: '12.5px',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
+                            }}
+                            title="Open SBI Credit Card Digital Complete Journey"
+                          >
+                            <ExternalLink size={15} /> Digital Complete Journey
+                          </button>
+                        </div>
+                      )}
+
                       {/* 1. APPCODE STATUS (Punching only & Physical process) */}
                       {(isPunchLead || isPhysical) && (
                         <div>
