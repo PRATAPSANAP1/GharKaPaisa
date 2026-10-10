@@ -18,7 +18,9 @@ const PUBLIC_ALLOWLIST = new Set([
   'terms_url',
   'privacy_url',
   'maintenance_mode',
-  'digital_journey_link'
+  'digital_journey_link',
+  'sbi_cc_digital_journey_link',
+  'hdfc_fd_wes_cc_link'
 ]);
 
 // Public or global check to fetch settings (Filtered for public consumption)
@@ -43,10 +45,28 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-// Update settings (SuperAdmin only)
-router.post('/', jwtAuth, roleCheck('SUPER_ADMIN'), async (req, res, next) => {
+// Update settings (SuperAdmin only - supports single { key, value } or batch { settings: { ... } })
+const handleUpdateSettings = async (req, res, next) => {
   try {
-    const { key, value } = req.body;
+    const { key, value, settings } = req.body;
+
+    // Batch update mode
+    if (settings && typeof settings === 'object' && !Array.isArray(settings)) {
+      const entries = Object.entries(settings);
+      for (const [k, v] of entries) {
+        if (k && v !== undefined && v !== null) {
+          await query(`
+            INSERT INTO system_settings (key, value)
+            VALUES ($1, $2)
+            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+          `, [k, v.toString()]);
+        }
+      }
+      await logAction(req, 'UPDATE_SYSTEM_SETTINGS_BATCH', null, { count: entries.length, keys: Object.keys(settings) });
+      return success(res, {}, 'System settings updated successfully');
+    }
+
+    // Single setting mode
     if (!key || value === undefined) {
       return error(res, 'Setting key and value are required', 400);
     }
@@ -59,10 +79,14 @@ router.post('/', jwtAuth, roleCheck('SUPER_ADMIN'), async (req, res, next) => {
 
     await logAction(req, 'UPDATE_SYSTEM_SETTING', null, { key, value });
 
-    return success(res, {}, `System setting '${key}' updated to '${value}' successfully`);
+    return success(res, {}, `System setting '${key}' updated successfully`);
   } catch (err) {
     next(err);
   }
-});
+};
+
+router.post('/', jwtAuth, roleCheck('SUPER_ADMIN'), handleUpdateSettings);
+router.put('/', jwtAuth, roleCheck('SUPER_ADMIN'), handleUpdateSettings);
 
 module.exports = router;
+

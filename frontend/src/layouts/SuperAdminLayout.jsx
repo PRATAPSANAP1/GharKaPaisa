@@ -152,13 +152,14 @@ const SuperAdminLayout = () => {
 
   // Auto-expand groups based on active location
   useEffect(() => {
-    if (location.pathname.includes('/banners')) {
+    if (location.pathname.includes('/banners') || location.pathname.includes('/sections') || location.pathname.includes('/contests') || location.pathname.includes('/links')) {
       setModifyOpen(true);
     }
     if (location.pathname.includes('/products')) {
       setProductsOpen(true);
     }
   }, [location.pathname]);
+
 
   const handleLogout = () => {
     logout();
@@ -234,7 +235,8 @@ const SuperAdminLayout = () => {
       items: [
         { path: '/super-admin/banners', label: 'Banners', icon: <Icons.gift size={16} /> },
         { path: '/super-admin/contests', label: 'Contest Manager', icon: <Icons.gift size={16} /> },
-        { path: '/super-admin/sections', label: 'Homepage Sections', icon: <Icons.profile size={16} /> }
+        { path: '/super-admin/sections', label: 'Homepage Sections', icon: <Icons.profile size={16} /> },
+        { path: '/super-admin/links', label: 'Links', icon: <Icons.link size={16} /> }
       ]
     },
     {
@@ -257,8 +259,9 @@ const SuperAdminLayout = () => {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
         {categories.map((cat, idx) => {
           if (cat.isModifyGroup) {
-            const isChildActive = location.pathname.includes('/banners') || location.pathname.includes('/sections');
+            const isChildActive = location.pathname.includes('/banners') || location.pathname.includes('/sections') || location.pathname.includes('/contests') || location.pathname.includes('/links');
             return (
+
               <div key={idx} style={{ display: 'flex', flexDirection: 'column' }}>
                 <button
                   type="button"

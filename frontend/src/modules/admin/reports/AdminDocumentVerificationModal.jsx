@@ -351,13 +351,16 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Fetch system digital journey link from settings
+  // Fetch system digital journey links from settings (managed by Super Admin)
   useEffect(() => {
     const fetchSystemDigitalLink = async () => {
       try {
         const res = await api.get('/settings');
-        if (res.data?.success && res.data.data?.digital_journey_link) {
-          setSystemDigitalJourneyLink(res.data.data.digital_journey_link);
+        if (res.data?.success && res.data?.data) {
+          const s = res.data.data;
+          if (s.digital_journey_link) setSystemDigitalJourneyLink(s.digital_journey_link);
+          if (s.sbi_cc_digital_journey_link) setSbiDynamicDigitalJourneyLink(s.sbi_cc_digital_journey_link);
+          if (s.hdfc_fd_wes_cc_link) setHdfcDynamicFdWesCcLink(s.hdfc_fd_wes_cc_link);
         }
       } catch (err) {
         console.error('Failed to fetch system digital journey link:', err);
@@ -365,6 +368,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
     };
     fetchSystemDigitalLink();
   }, []);
+
 
   useEffect(() => {
     if (isQuerableOperator) {
@@ -432,6 +436,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
     application?.digital_journey_url || application?.digital_link || application?.redirect_url || application?.product_url || application?.product?.partner_url || application?.product?.public_url || ''
   );
   const [systemDigitalJourneyLink, setSystemDigitalJourneyLink] = useState('');
+  const [sbiDynamicDigitalJourneyLink, setSbiDynamicDigitalJourneyLink] = useState('');
+  const [hdfcDynamicFdWesCcLink, setHdfcDynamicFdWesCcLink] = useState('');
 
   // 2. Remark Form State (Appcode Status, Soft Approval, VKYC Stage, IQA Stage, Dispatch Status, TATA HDFC Stages)
   const bankId = application?.bank_id || application?.product?.bank_id || '';
@@ -972,7 +978,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           bank_ref_number: (losNo || bankRefNumber || '').trim(),
           bank_application_number: (losNo || bankRefNumber || '').trim(),
           app_file_generated: appFileGenerated,
-          digital_journey_url: digitalJourneyUrl || (isSbiCreditCard ? SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL : undefined),
+          digital_journey_url: digitalJourneyUrl || (isSbiCreditCard ? (sbiDynamicDigitalJourneyLink || SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL) : undefined),
           status: targetStatus,
           // LOC / EOC updated 6 fields
           insta_jumbo_offer: instaJumboOffer,
@@ -1076,7 +1082,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
               type="button"
               id="header-digital-complete-journey-btn"
               onClick={() => {
-                const sbiCcLink = isSbiCreditCard ? SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL : null;
+                const sbiCcLink = isSbiCreditCard ? (sbiDynamicDigitalJourneyLink || SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL) : null;
                 const link = sbiCcLink || digitalJourneyUrl || application?.digital_journey_url || application?.digital_link || application?.redirect_url || application?.product_url || application?.product?.partner_url || application?.product?.public_url || systemDigitalJourneyLink;
                 if (link && link.trim() !== '') {
                   let targetUrl = link.trim();
@@ -1085,7 +1091,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   }
                   window.open(targetUrl, '_blank', 'noopener,noreferrer');
                 } else {
-                  alert("No Digital Journey link assigned yet. Super Admin can configure the default link in CMS settings.");
+                  alert("No Digital Journey link assigned yet. Super Admin can configure the default link in Link Settings.");
                 }
               }}
               style={{
@@ -1112,7 +1118,11 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                 type="button"
                 id="header-hdfc-fd-wes-cc-btn"
                 onClick={() => {
-                  window.open(HDFC_FD_WES_CC_URL, '_blank', 'noopener,noreferrer');
+                  let targetUrl = (hdfcDynamicFdWesCcLink || HDFC_FD_WES_CC_URL).trim();
+                  if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+                    targetUrl = 'https://' + targetUrl;
+                  }
+                  window.open(targetUrl, '_blank', 'noopener,noreferrer');
                 }}
                 style={{
                   background: 'linear-gradient(135deg, #0284c7, #0369a1)',
@@ -2066,7 +2076,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     </div>
                     {isSbiCreditCard ? (
                       <div style={{ fontSize: '11px', color: '#0284c7', marginBottom: '8px', fontWeight: 700 }}>
-                        SBI Credit Card Default: {SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL}
+                        SBI Credit Card Official Link: {sbiDynamicDigitalJourneyLink || SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL}
                       </div>
                     ) : systemDigitalJourneyLink ? (
                       <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', fontStyle: 'italic' }}>
@@ -2079,14 +2089,14 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         disabled={!isSuperAdminRole && !isSuperAdminOrAdmin}
                         value={digitalJourneyUrl}
                         onChange={(e) => setDigitalJourneyUrl(e.target.value)}
-                        placeholder={isSbiCreditCard ? SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL : (isSuperAdminRole || isSuperAdminOrAdmin ? "Enter / Edit Digital Journey URL (e.g. https://bank.com/apply)" : "Only Super Admin can upload or edit Digital Journey link")}
+                        placeholder={isSbiCreditCard ? (sbiDynamicDigitalJourneyLink || SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL) : (isSuperAdminRole || isSuperAdminOrAdmin ? "Enter / Edit Digital Journey URL (e.g. https://bank.com/apply)" : "Only Super Admin can upload or edit Digital Journey link")}
                         style={{ flex: 1, minWidth: '220px', padding: '10px 12px', borderRadius: '8px', border: '1px solid #7dd3fc', fontSize: '13px', fontWeight: 600, background: (!isSuperAdminRole && !isSuperAdminOrAdmin) ? '#f8fafc' : '#fff', color: '#0f172a' }}
                       />
-                      {(digitalJourneyUrl || (isSbiCreditCard ? SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL : systemDigitalJourneyLink)) && (
+                      {(digitalJourneyUrl || (isSbiCreditCard ? (sbiDynamicDigitalJourneyLink || SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL) : systemDigitalJourneyLink)) && (
                         <button
                           type="button"
                           onClick={() => {
-                            let targetUrl = (digitalJourneyUrl || (isSbiCreditCard ? SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL : systemDigitalJourneyLink)).trim();
+                            let targetUrl = (digitalJourneyUrl || (isSbiCreditCard ? (sbiDynamicDigitalJourneyLink || SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL) : systemDigitalJourneyLink)).trim();
                             if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
                               targetUrl = 'https://' + targetUrl;
                             }
@@ -2099,6 +2109,39 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                       )}
                     </div>
                   </div>
+
+                  {/* HDFC FD wes CC Link Field (Super Admin Managed) */}
+                  {isHdfcCreditCard && (
+                    <div style={{ gridColumn: '1 / -1', marginTop: '6px', padding: '14px', background: '#f0fdf4', borderRadius: '10px', border: '1px solid #bbf7d0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <label style={{ fontSize: '11px', color: '#166534', fontWeight: 800, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                          <LinkIcon size={14} color="#16a34a" /> HDFC FD WES CC LINK (Super Admin Managed)
+                        </label>
+                        <span style={{ fontSize: '10px', fontWeight: 700, background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '10px' }}>
+                          SUPER ADMIN MANAGED
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#166534', marginBottom: '8px', fontWeight: 700, wordBreak: 'break-all' }}>
+                        Official Portal Link: {hdfcDynamicFdWesCcLink || HDFC_FD_WES_CC_URL}
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            let targetUrl = (hdfcDynamicFdWesCcLink || HDFC_FD_WES_CC_URL).trim();
+                            if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+                              targetUrl = 'https://' + targetUrl;
+                            }
+                            window.open(targetUrl, '_blank', 'noopener,noreferrer');
+                          }}
+                          style={{ padding: '8px 14px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          <ExternalLink size={13} /> Open FD wes CC link
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
 
                   {/* VKYC Link Modify Field */}
                   <div style={{ gridColumn: '1 / -1', marginTop: '6px', padding: '14px', background: '#f0fdf4', borderRadius: '10px', border: '1px solid #bbf7d0' }}>

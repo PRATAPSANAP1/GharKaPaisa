@@ -92,6 +92,7 @@ import ManageProducts from '../modules/super-admin/cms/ManageProducts';
 import ManageProductLinks from '../modules/super-admin/cms/ManageProductLinks';
 import ManageBanks from '../modules/super-admin/cms/ManageBanks';
 import ManageSections from '../modules/super-admin/cms/ManageSections';
+import ManageLinks from '../modules/super-admin/cms/ManageLinks';
 import ManageServices from '../modules/super-admin/system/ManageServices';
 import ManageDirectLeads from '../modules/super-admin/crm/ManageDirectLeads';
 import ManageLoanApplications from '../modules/super-admin/crm/ManageLoanApplications';
@@ -427,6 +428,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/product-links" element={<ManageProductLinks />} />
             <Route path="/super-admin/banks" element={<ManageBanks />} />
             <Route path="/super-admin/sections" element={<ManageSections />} />
+            <Route path="/super-admin/links" element={<ManageLinks />} />
             <Route path="/super-admin/services" element={<ManageServices />} />
             <Route path="/super-admin/direct-leads" element={<ManageDirectLeads />} />
             <Route path="/super-admin/loan-applications" element={<ManageLoanApplications />} />
@@ -461,6 +463,7 @@ const AppRoutes = () => {
             <Route path="/superadmin/products" element={<Navigate to="/super-admin/products" replace />} />
             <Route path="/superadmin/product-links" element={<Navigate to="/super-admin/product-links" replace />} />
             <Route path="/superadmin/sections" element={<Navigate to="/super-admin/sections" replace />} />
+            <Route path="/superadmin/links" element={<Navigate to="/super-admin/links" replace />} />
             <Route path="/superadmin/banners" element={<Navigate to="/super-admin/banners" replace />} />
             <Route path="/superadmin/wallet" element={<Navigate to="/super-admin/wallet" replace />} />
             <Route path="/superadmin/announcements" element={<Navigate to="/super-admin/announcements" replace />} />
