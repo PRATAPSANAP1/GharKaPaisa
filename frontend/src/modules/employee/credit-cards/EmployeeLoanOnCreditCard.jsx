@@ -23,7 +23,9 @@ export default function EmployeeLoanOnCreditCard() {
   const [selectedBank, setSelectedBank] = useState('ALL');
   const [dbOffers, setDbOffers] = useState([]);
   const [loadingProds, setLoadingProds] = useState(true);
+  const [apiError, setApiError] = useState(null);
   const [showCalculator, setShowCalculator] = useState(false);
+  const isMountedRef = React.useRef(true);
 
   const getBankLogo = (bankName, defaultLogo) => {
     if (defaultLogo) return defaultLogo;
@@ -37,87 +39,117 @@ export default function EmployeeLoanOnCreditCard() {
     return hdfcLogo;
   };
 
-  // Canonical HDFC Bank Instant & Jumbo Loan product
-  const defaultHdfcOffer = useMemo(() => ({
-    id: 'hdfc-instant-jumbo-loan',
-    bank: 'HDFC Bank',
-    title: 'HDFC Bank Instant & Jumbo Loan',
-    logo: hdfcLogo,
-    accent: '#0F766E',
-    maxLoan: '₹10,00,000',
-    minRoi: '11.49% - 15.50% p.a.',
-    tenure: '12 - 60 Months',
-    processingFee: '₹999 + GST',
-    disbursalTime: 'Instant (10 Seconds)',
-    badge: 'Pre-Approved',
-    apply_url: 'https://applyonline.hdfc.bank.in/loan-against-assets/insta-jumbo-loan/insta-jumbo-form.html?&XSELLINSHI=Y&XSELLINSLP=Y&Channel=DSA&DSACode=XYOH&LGCode=XYOH&LC1=YOH5&LC2=YOH5&SMCode=S54558#nbb',
-    features: [
-      'Instant 10-second cash credit directly into your bank savings account',
-      'Insta Jumbo Loan option available over and above existing credit card limit',
-      'Zero physical documentation with complete digital journey',
-      'Flexible foreclosure options after 12 monthly installments'
-    ]
-  }), []);
+  const CANONICAL_HDFC_APPLY_URL = 'https://applyonline.hdfc.bank.in/loan-against-assets/insta-jumbo-loan/insta-jumbo-form.html?&XSELLINSHI=Y&XSELLINSLP=Y&Channel=DSA&DSACode=XYOH&LGCode=XYOH&LC1=YOH5&LC2=YOH5&SMCode=S54558#nbb';
 
-  // Fetch dynamic offers from backend API
-  React.useEffect(() => {
-    const fetchDynamicOffers = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await axios.get(`${getApiV1Url()}/products?limit=1000`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
-        });
-        const prods = res.data?.data?.rows || res.data?.data || res.data?.products || [];
-        if (Array.isArray(prods) && prods.length > 0) {
-          // Strictly filter products added in super-admin loc_eoc with subcategory LOC
-          const cardLoanProds = prods.filter(p => {
-            const cat = String(p.category || '').toLowerCase().trim();
-            const subCat = String(p.sub_category || '').toUpperCase().trim();
-            return cat === 'loc_eoc' && (subCat === 'LOC' || subCat === 'LOAN ON CREDIT CARD');
-          });
+  const CANONICAL_HDFC_FEATURES = [
+    'Instant 10-second cash credit directly into your bank savings account',
+    'Insta Jumbo Loan option available over and above existing credit card limit',
+    'Zero physical documentation with complete digital journey',
+    'Flexible foreclosure options after 12 monthly installments'
+  ];
 
-          if (cardLoanProds.length > 0) {
-            const mapped = cardLoanProds.map(p => {
-              let parsedFeatures = [];
-              try {
-                parsedFeatures = typeof p.features === 'string' ? JSON.parse(p.features) : (Array.isArray(p.features) ? p.features : []);
-              } catch (e) {
-                parsedFeatures = [p.description || 'Pre-approved instant cash loan'];
-              }
-              const bName = p.bank_name || p.bank || 'HDFC Bank';
-              return {
-                id: p.id,
-                bank_id: p.bank_id,
-                bank: bName,
-                title: p.name || 'Loan on Credit Card',
-                logo: getBankLogo(bName, p.bank_logo || p.logo || p.image_url),
-                accent: '#0F766E',
-                maxLoan: p.joining_fee && p.joining_fee !== 'Nil' ? p.joining_fee : '₹10,00,000',
-                minRoi: p.interest_rate || '11.49% - 15.50% p.a.',
-                tenure: p.time_period || p.tenure || '12 - 60 Months',
-                processingFee: p.annual_fee || p.fees_charges || '₹999 + GST',
-                disbursalTime: 'Instant (10 Seconds)',
-                badge: p.badge || 'Pre-Approved',
-                apply_url: p.apply_url || p.direct_url || p.link || 'https://applyonline.hdfc.bank.in/loan-against-assets/insta-jumbo-loan/insta-jumbo-form.html?&XSELLINSHI=Y&XSELLINSLP=Y&Channel=DSA&DSACode=XYOH&LGCode=XYOH&LC1=YOH5&LC2=YOH5&SMCode=S54558#nbb',
-                features: parsedFeatures.length > 0 ? parsedFeatures : defaultHdfcOffer.features
-              };
-            });
-            setDbOffers(mapped);
-          } else {
-            setDbOffers([defaultHdfcOffer]);
+  // Stable, verified matcher for the canonical HDFC Bank Instant & Jumbo Loan offer
+  const isHdfcInstantJumboLoanOffer = (p) => {
+    if (!p) return false;
+    const pName = String(p.name || p.title || '').toLowerCase().trim();
+    const slug = String(p.slug || '').toLowerCase().trim();
+    const pId = String(p.id || '').toLowerCase().trim();
+    const bName = String(p.bank_name || p.bank || '').toLowerCase().trim();
+
+    // Strictly exclude other bank offers (e.g. Canara Bank, Union Bank)
+    if (pName.includes('canara') || bName.includes('canara')) return false;
+    if (pName.includes('union') || bName.includes('union')) return false;
+
+    // Stable canonical slug / id / exact name match
+    if (slug === 'hdfc-bank-instant-jumbo-loan' || slug === 'hdfc-instant-jumbo-loan') return true;
+    if (pId === 'hdfc-instant-jumbo-loan') return true;
+    if (pName === 'hdfc bank instant & jumbo loan' || pName === 'hdfc bank insta loan & jumbo loan') return true;
+
+    // Match HDFC card loan products (must be HDFC and contain Instant or Jumbo)
+    const isHdfc = bName.includes('hdfc') || pName.includes('hdfc');
+    const isJumboOrInstant = pName.includes('jumbo') || pName.includes('instant') || pName.includes('insta');
+    return isHdfc && isJumboOrInstant;
+  };
+
+  const fetchDynamicOffers = React.useCallback(async () => {
+    setLoadingProds(true);
+    setApiError(null);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${getApiV1Url()}/products?limit=1000`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+
+      if (!isMountedRef.current) return;
+
+      const prods = res.data?.data?.rows || res.data?.data || res.data?.products || [];
+      if (Array.isArray(prods) && prods.length > 0) {
+        // Strictly filter to the verified existing HDFC Instant & Jumbo Loan offer
+        const hdfcOffers = prods.filter(isHdfcInstantJumboLoanOffer);
+
+        if (hdfcOffers.length > 0) {
+          // Deduplicate if multiple records exist in the database
+          const seen = new Set();
+          const uniqueOffers = [];
+          for (const p of hdfcOffers) {
+            const key = p.slug || p.id || p.name;
+            if (!seen.has(key)) {
+              seen.add(key);
+              uniqueOffers.push(p);
+            }
           }
+
+          const mapped = uniqueOffers.map(p => {
+            let parsedFeatures = [];
+            try {
+              parsedFeatures = typeof p.features === 'string' ? JSON.parse(p.features) : (Array.isArray(p.features) ? p.features : []);
+            } catch (e) {
+              parsedFeatures = [p.description || 'Pre-approved instant cash loan'];
+            }
+            return {
+              id: p.id,
+              bank_id: p.bank_id,
+              bank: 'HDFC Bank',
+              title: p.name || 'HDFC Bank Instant & Jumbo Loan',
+              logo: getBankLogo('HDFC Bank', p.bank_logo || p.logo || p.image_url),
+              accent: '#0F766E',
+              maxLoan: p.joining_fee && p.joining_fee !== 'Nil' ? p.joining_fee : '₹10,00,000',
+              minRoi: p.interest_rate || '11.49% - 15.50% p.a.',
+              tenure: p.time_period || p.tenure || '12 - 60 Months',
+              processingFee: p.annual_fee || p.fees_charges || '₹999 + GST',
+              disbursalTime: 'Instant (10 Seconds)',
+              badge: p.badge || 'Pre-Approved',
+              apply_url: p.apply_url || p.direct_url || p.link || CANONICAL_HDFC_APPLY_URL,
+              features: parsedFeatures.length > 0 ? parsedFeatures : CANONICAL_HDFC_FEATURES
+            };
+          });
+          setDbOffers(mapped);
         } else {
-          setDbOffers([defaultHdfcOffer]);
+          setDbOffers([]);
         }
-      } catch (err) {
-        console.error('Failed to load dynamic Card Loan offers:', err);
-        setDbOffers([defaultHdfcOffer]);
-      } finally {
+      } else {
+        setDbOffers([]);
+      }
+    } catch (err) {
+      if (!isMountedRef.current) return;
+      console.error('Failed to load dynamic Card Loan offers:', err);
+      setApiError('Unable to load loan offers at this time. Please check your connection.');
+      setDbOffers([]);
+    } finally {
+      if (isMountedRef.current) {
         setLoadingProds(false);
       }
-    };
+    }
+  }, []);
+
+  // Fetch dynamic offers once on mount with cancellation cleanup
+  React.useEffect(() => {
+    isMountedRef.current = true;
     fetchDynamicOffers();
-  }, [defaultHdfcOffer]);
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [fetchDynamicOffers]);
 
   const activeOffers = dbOffers;
 
@@ -532,6 +564,27 @@ export default function EmployeeLoanOnCreditCard() {
       {loadingProds ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', background: C.card, borderRadius: '20px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '220px' }}>
           <LoadingLogo size={80} />
+        </div>
+      ) : apiError ? (
+        <div style={{ textAlign: 'center', padding: '60px 20px', background: C.card, borderRadius: '20px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <FaInfoCircle size={36} color="#EF4444" style={{ marginBottom: '12px' }} />
+          <h4 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 6px 0' }}>Failed to Load Offers</h4>
+          <p style={{ color: C.textMid, fontSize: '13.5px', margin: '0 0 16px 0' }}>{apiError}</p>
+          <button
+            onClick={() => fetchDynamicOffers()}
+            style={{
+              padding: '9px 20px',
+              borderRadius: '10px',
+              border: 'none',
+              background: C.employeePrimary || '#0F766E',
+              color: '#FFFFFF',
+              fontSize: '13px',
+              fontWeight: 800,
+              cursor: 'pointer'
+            }}
+          >
+            Retry
+          </button>
         </div>
       ) : filteredOffers.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', background: C.card, borderRadius: '20px', border: `1px solid ${C.border}` }}>
