@@ -1564,6 +1564,8 @@ const listApplications = async (req, res, next) => {
     limit = Math.min(Math.max(parseInt(limit) || 10, 1), 50000);
     offset = (Math.max(parseInt(page) || 1, 1) - 1) * limit;
 
+    const { status, partner_id, partner_id: q_partner_id, product_id, search, bank_id, process_by, operation_head_id, operation_head, member_id, category, from_date, to_date, start_date, end_date, period } = req.query;
+
     const targetPartnerId = q_partner_id || partner_id;
     const targetOpHeadId = isUuid(operation_head_id) ? operation_head_id : (isUuid(operation_head) ? operation_head : null);
 
