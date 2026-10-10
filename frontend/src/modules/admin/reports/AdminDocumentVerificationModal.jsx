@@ -890,6 +890,16 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           } else if (finalStatus && finalStatus.toLowerCase().includes('error')) {
             targetStatus = 'technical_error';
           }
+        } else if (isLocOrEoc) {
+          // LOC and EOC specific status resolution based on Final Bank Stage
+          const stage = String(finalBankStage || '').toUpperCase();
+          if (stage === 'DISBURSEMENT') {
+            targetStatus = 'approved';
+          } else if (stage === 'DECLINE') {
+            targetStatus = 'rejected';
+          } else if (stage === 'IN PROCESS' || stage === 'DISBURSEMENT PENDING') {
+            targetStatus = 'in_process';
+          }
         } else {
           // Non-SBI logic (Uses digitalCardIssued or cardApprovalStage for card approval check)
           if (digitalCardIssued === 'Yes' || digitalCardIssued === 'yes' || String(cardApprovalStage).toLowerCase().includes('approve')) {
@@ -921,7 +931,9 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           backend_remark: backendRemark,
           notes: userRemark,
           operational_remarks: userRemark,
-          final_status: finalStatus,
+          final_status: isLocOrEoc 
+            ? (String(finalBankStage || '').toUpperCase() === 'DISBURSEMENT' ? 'Approved' : String(finalBankStage || '').toUpperCase() === 'DECLINE' ? 'Declined' : String(finalBankStage || '').toUpperCase() === 'DISBURSEMENT PENDING' ? 'Disbursement Pending' : String(finalBankStage || '').toUpperCase() === 'IN PROCESS' ? 'In Process' : (finalBankStage || finalStatus)) 
+            : finalStatus,
           final_bank_stage: finalBankStage,
           disbursement_completed: disbursementCompleted,
           disbursement_date: formatDateToYyyyMmDd(disbursementDateDisplay) || null,
@@ -3206,26 +3218,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   
                   {isEoc ? (
                     <>
-                      {/* 1. FINAL STATUS */}
-                      <div>
-                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. FINAL STATUS</label>
-                        <select
-                          disabled={!canEditFinal}
-                          value={finalStatus || 'None'}
-                          onChange={(e) => setFinalStatus(e.target.value)}
-                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
-                        >
-                          <option value="None">None</option>
-                          <option value="approve">approve</option>
-                          <option value="decline">decline</option>
-                          <option value="in process">in process</option>
-                          {finalStatus && !['None', 'approve', 'decline', 'in process', ''].includes(finalStatus) && (
-                            <option value={finalStatus}>{finalStatus}</option>
-                          )}
-                        </select>
-                      </div>
-
-                      {/* 2. FINAL BANK STAGE */}
+                      {/* FINAL BANK STAGE */}
                       <div>
                         <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>FINAL BANK STAGE</label>
                         <select
@@ -3405,26 +3398,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     </>
                   ) : isLoc ? (
                     <>
-                      {/* 1. FINAL STATUS */}
-                      <div>
-                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. FINAL STATUS</label>
-                        <select
-                          disabled={!canEditFinal}
-                          value={finalStatus || 'None'}
-                          onChange={(e) => setFinalStatus(e.target.value)}
-                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
-                        >
-                          <option value="None">None</option>
-                          <option value="approve">approve</option>
-                          <option value="decline">decline</option>
-                          <option value="in process">in process</option>
-                          {finalStatus && !['None', 'approve', 'decline', 'in process', ''].includes(finalStatus) && (
-                            <option value={finalStatus}>{finalStatus}</option>
-                          )}
-                        </select>
-                      </div>
-
-                      {/* 2. FINAL BANK STAGE */}
+                      {/* FINAL BANK STAGE */}
                       <div>
                         <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>FINAL BANK STAGE</label>
                         <select

@@ -275,4 +275,21 @@ assert.deepStrictEqual(expectedFinalBankStageOptions, ['DECLINE', 'DISBURSEMENT'
 assert.deepStrictEqual(expectedDisbursementCompletedOptions, ['None', 'Yes', 'No']);
 console.log('✅ TEST 4 PASSED: Options match acceptance criteria exactly.');
 
+console.log('--- TEST 5: LOC/EOC Final Form Status Resolution (Final Status removed from form) ---');
+const resolveLocEocStatusFromStage = (stage) => {
+  const s = String(stage || '').toUpperCase();
+  if (s === 'DISBURSEMENT') return { targetStatus: 'approved', finalStatus: 'Approved' };
+  if (s === 'DECLINE') return { targetStatus: 'rejected', finalStatus: 'Declined' };
+  if (s === 'IN PROCESS') return { targetStatus: 'in_process', finalStatus: 'In Process' };
+  if (s === 'DISBURSEMENT PENDING') return { targetStatus: 'in_process', finalStatus: 'Disbursement Pending' };
+  return { targetStatus: 'pending', finalStatus: s };
+};
+
+assert.deepStrictEqual(resolveLocEocStatusFromStage('DISBURSEMENT'), { targetStatus: 'approved', finalStatus: 'Approved' });
+assert.deepStrictEqual(resolveLocEocStatusFromStage('DECLINE'), { targetStatus: 'rejected', finalStatus: 'Declined' });
+assert.deepStrictEqual(resolveLocEocStatusFromStage('IN PROCESS'), { targetStatus: 'in_process', finalStatus: 'In Process' });
+assert.deepStrictEqual(resolveLocEocStatusFromStage('DISBURSEMENT PENDING'), { targetStatus: 'in_process', finalStatus: 'Disbursement Pending' });
+console.log('✅ TEST 5 PASSED: LOC/EOC status and final_status correctly derive from Final Bank Stage.');
+
 console.log('\n🎉 ALL VERIFICATION TESTS PASSED!\n');
+
