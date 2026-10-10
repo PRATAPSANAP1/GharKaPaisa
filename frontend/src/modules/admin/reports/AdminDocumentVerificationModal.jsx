@@ -122,6 +122,7 @@ export const isLocApplication = (app) => {
 };
 
 export const SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL = 'https://www.sbicard.com/corecards/?CHN=OMLG&GEMID1=SEP1&GEMID2=YOH01';
+export const HDFC_FD_WES_CC_URL = 'https://pixel.hdfc.bank.in/pixel-onboard/landing/?flow=FDLien&sourcing.assist.channelCode=DSA&sourcing.assist.branchCode=XYOH&sourcing.assist.employeeCode=S54558&sourcing.assist.dsaCode=XYOH&sourcing.assist.lgCode=GHAR01&sourcing.assist.lc1Code=GHAR01&sourcing.assist.lc2Code=GHAR01&sourcing.assist.smCode=S54558';
 
 export const isCreditCardApplication = (app) => {
   if (!app) return false;
@@ -440,6 +441,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const isHdfcBank = (bankId === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' || (combinedBankText.includes('HDFC') && !combinedBankText.includes('TATA'))) && !isTataCobrandHdfc;
   const isCreditCard = isCreditCardApplication(application);
   const isSbiCreditCard = isSbi && isCreditCard;
+  const isHdfcCreditCard = isHdfcBank && isCreditCard;
 
   const resolveBankRefNo = (rawRef, sysNo) => {
     const s = sanitizeVal(rawRef);
@@ -1104,6 +1106,33 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
             >
               <ExternalLink size={15} /> Digital Complete Journey
             </button>
+
+            {isHdfcCreditCard && (
+              <button
+                type="button"
+                id="header-hdfc-fd-wes-cc-btn"
+                onClick={() => {
+                  window.open(HDFC_FD_WES_CC_URL, '_blank', 'noopener,noreferrer');
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '7px 14px',
+                  borderRadius: '8px',
+                  fontSize: '12.5px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)'
+                }}
+                title="Open HDFC FD wes CC Link"
+              >
+                <ExternalLink size={15} /> FD wes CC link
+              </button>
+            )}
 
             <button
               type="button"
@@ -2642,6 +2671,39 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   ) : isHdfcBank ? (
                     /* 🅱️ HDFC BANK WORKFLOW */
                     <>
+                      {/* FD WES CC LINK (CREDIT CARD CATEGORY ONLY) */}
+                      {isCreditCard && (
+                        <div>
+                          <label style={{ fontSize: '12px', fontWeight: 800, color: '#0369a1', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>FD WES CC LINK</label>
+                          <button
+                            type="button"
+                            id="hdfc-remark-fd-wes-cc-btn"
+                            onClick={() => {
+                              window.open(HDFC_FD_WES_CC_URL, '_blank', 'noopener,noreferrer');
+                            }}
+                            style={{
+                              width: '100%',
+                              background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                              color: '#ffffff',
+                              border: 'none',
+                              padding: '10px 14px',
+                              borderRadius: '8px',
+                              fontSize: '12.5px',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)'
+                            }}
+                            title="Open HDFC FD wes CC Link"
+                          >
+                            <ExternalLink size={15} /> FD wes CC link
+                          </button>
+                        </div>
+                      )}
+
                       {/* 1. IPA */}
                       <div>
                         <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. IPA</label>
