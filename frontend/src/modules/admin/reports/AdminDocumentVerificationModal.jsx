@@ -2497,56 +2497,6 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     </>
                   ) : isSbi ? (
                     <>
-                      {/* SBI DIGITAL COMPLETE JOURNEY BUTTON (CREDIT CARD CATEGORY ONLY) */}
-                      {isCreditCard && (
-                        <div style={{
-                          gridColumn: '1 / -1',
-                          background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
-                          border: '1.5px solid #93c5fd',
-                          borderRadius: '12px',
-                          padding: '14px 18px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          flexWrap: 'wrap',
-                          gap: '12px',
-                          boxShadow: '0 2px 8px rgba(37, 99, 235, 0.08)'
-                        }}>
-                          <div>
-                            <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e40af', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <ExternalLink size={15} /> SBI DIGITAL COMPLETE JOURNEY
-                            </div>
-                            <div style={{ fontSize: '11.5px', color: '#1d4ed8', marginTop: '3px', fontWeight: 600, wordBreak: 'break-all' }}>
-                              Official Portal: {SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL}
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            id="sbi-remark-digital-complete-journey-btn"
-                            onClick={() => {
-                              window.open(SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL, '_blank', 'noopener,noreferrer');
-                            }}
-                            style={{
-                              background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                              color: '#ffffff',
-                              border: 'none',
-                              padding: '8px 16px',
-                              borderRadius: '8px',
-                              fontSize: '12.5px',
-                              fontWeight: 800,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
-                            }}
-                            title="Open SBI Credit Card Digital Complete Journey"
-                          >
-                            <ExternalLink size={15} /> Digital Complete Journey
-                          </button>
-                        </div>
-                      )}
-
                       {/* 1. APPCODE STATUS (Punching only & Physical process) */}
                       {(isPunchLead || isPhysical) && (
                         <div>
