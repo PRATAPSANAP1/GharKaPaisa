@@ -88,42 +88,37 @@ export default function EmployeeLoanOnCreditCard() {
         const hdfcOffers = prods.filter(isHdfcInstantJumboLoanOffer);
 
         if (hdfcOffers.length > 0) {
-          // Deduplicate if multiple records exist in the database
-          const seen = new Set();
-          const uniqueOffers = [];
-          for (const p of hdfcOffers) {
-            const key = p.slug || p.id || p.name;
-            if (!seen.has(key)) {
-              seen.add(key);
-              uniqueOffers.push(p);
-            }
+          // Keep strictly ONE canonical HDFC Bank Instant & Jumbo Loan offer
+          const targetProd = hdfcOffers.find(p => 
+            p.slug === 'hdfc-bank-instant-jumbo-loan' || 
+            String(p.name || '').toLowerCase() === 'hdfc bank instant & jumbo loan'
+          ) || hdfcOffers[0];
+
+          let parsedFeatures = [];
+          try {
+            parsedFeatures = typeof targetProd.features === 'string' ? JSON.parse(targetProd.features) : (Array.isArray(targetProd.features) ? targetProd.features : []);
+          } catch (e) {
+            parsedFeatures = [targetProd.description || 'Pre-approved instant cash loan'];
           }
 
-          const mapped = uniqueOffers.map(p => {
-            let parsedFeatures = [];
-            try {
-              parsedFeatures = typeof p.features === 'string' ? JSON.parse(p.features) : (Array.isArray(p.features) ? p.features : []);
-            } catch (e) {
-              parsedFeatures = [p.description || 'Pre-approved instant cash loan'];
-            }
-            return {
-              id: p.id,
-              bank_id: p.bank_id,
-              bank: 'HDFC Bank',
-              title: p.name || 'HDFC Bank Instant & Jumbo Loan',
-              logo: getBankLogo('HDFC Bank', p.bank_logo || p.logo || p.image_url),
-              accent: '#0F766E',
-              maxLoan: p.joining_fee && p.joining_fee !== 'Nil' ? p.joining_fee : '₹10,00,000',
-              minRoi: p.interest_rate || '11.49% - 15.50% p.a.',
-              tenure: p.time_period || p.tenure || '12 - 60 Months',
-              processingFee: p.annual_fee || p.fees_charges || '₹999 + GST',
-              disbursalTime: 'Instant (10 Seconds)',
-              badge: p.badge || 'Pre-Approved',
-              apply_url: p.apply_url || p.direct_url || p.link || CANONICAL_HDFC_APPLY_URL,
-              features: parsedFeatures.length > 0 ? parsedFeatures : CANONICAL_HDFC_FEATURES
-            };
-          });
-          setDbOffers(mapped);
+          const singleOffer = {
+            id: targetProd.id,
+            bank_id: targetProd.bank_id,
+            bank: 'HDFC Bank',
+            title: targetProd.name || 'HDFC Bank Instant & Jumbo Loan',
+            logo: getBankLogo('HDFC Bank', targetProd.bank_logo || targetProd.logo || targetProd.image_url),
+            accent: '#0F766E',
+            maxLoan: targetProd.joining_fee && targetProd.joining_fee !== 'Nil' ? targetProd.joining_fee : '₹10,00,000',
+            minRoi: targetProd.interest_rate || '11.49% - 15.50% p.a.',
+            tenure: targetProd.time_period || targetProd.tenure || '12 - 60 Months',
+            processingFee: targetProd.annual_fee || targetProd.fees_charges || '₹999 + GST',
+            disbursalTime: 'Instant (10 Seconds)',
+            badge: targetProd.badge || 'Pre-Approved',
+            apply_url: targetProd.apply_url || targetProd.direct_url || targetProd.link || CANONICAL_HDFC_APPLY_URL,
+            features: parsedFeatures.length > 0 ? parsedFeatures : CANONICAL_HDFC_FEATURES
+          };
+
+          setDbOffers([singleOffer]);
         } else {
           setDbOffers([]);
         }
