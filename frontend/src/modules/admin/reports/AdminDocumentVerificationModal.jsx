@@ -2671,39 +2671,6 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   ) : isHdfcBank ? (
                     /* 🅱️ HDFC BANK WORKFLOW */
                     <>
-                      {/* FD WES CC LINK (CREDIT CARD CATEGORY ONLY) */}
-                      {isCreditCard && (
-                        <div>
-                          <label style={{ fontSize: '12px', fontWeight: 800, color: '#0369a1', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>FD WES CC LINK</label>
-                          <button
-                            type="button"
-                            id="hdfc-remark-fd-wes-cc-btn"
-                            onClick={() => {
-                              window.open(HDFC_FD_WES_CC_URL, '_blank', 'noopener,noreferrer');
-                            }}
-                            style={{
-                              width: '100%',
-                              background: 'linear-gradient(135deg, #0284c7, #0369a1)',
-                              color: '#ffffff',
-                              border: 'none',
-                              padding: '10px 14px',
-                              borderRadius: '8px',
-                              fontSize: '12.5px',
-                              fontWeight: 800,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '6px',
-                              boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)'
-                            }}
-                            title="Open HDFC FD wes CC Link"
-                          >
-                            <ExternalLink size={15} /> FD wes CC link
-                          </button>
-                        </div>
-                      )}
-
                       {/* 1. IPA */}
                       <div>
                         <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. IPA</label>
