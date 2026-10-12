@@ -835,8 +835,9 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           company_address: companyAddress,
           mother_name: motherName,
           app_number: appNumber,
-          bank_application_number: bankRefNumber || undefined,
-          bank_ref_number: bankRefNumber || undefined,
+          bank_application_number: (bankRefNumber || losNo || '').trim() || undefined,
+          bank_ref_number: (bankRefNumber || losNo || '').trim() || undefined,
+          los_no: (bankRefNumber || losNo || '').trim() || undefined,
           vkyc_url: vkycUrl,
           status: 'submitted'
         };
@@ -858,8 +859,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           appcode_status: appcodeStatus || 'None',
           soft_approval_status: softApprovalStatus || 'None',
           iqa_stage: iqaStage || 'None',
-          bank_ref_number: (losNo || bankRefNumber || '').trim(),
-          bank_application_number: (losNo || bankRefNumber || '').trim(),
+          bank_ref_number: (bankRefNumber || losNo || '').trim(),
+          bank_application_number: (bankRefNumber || losNo || '').trim(),
           vkyc_status: kycStage || vkycStage || 'None',
           vkyc_stage: vkycStage || kycStage || 'None',
           vkyc_url: vkycUrl,
@@ -882,7 +883,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           disbursement_tenure: disbursementTenure,
           disbursed_tenure: disbursementTenure,
           disbursed_smart_emi_tenure: disbursementTenure,
-          los_no: (losNo || '').trim(),
+          los_no: (bankRefNumber || losNo || '').trim(),
           final_bank_stage: finalBankStage || undefined,
           disbursement_completed: disbursementCompleted || undefined,
           disbursement_date: (formatDateToYyyyMmDd(disbursementDateDisplay) || undefined),
@@ -975,8 +976,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           in_process_stage: inProcessStage || 'None',
           bank_current_lead_status: bankCurrentLeadStatus || 'None',
           bank_lead_status: bankCurrentLeadStatus || 'None',
-          bank_ref_number: (losNo || bankRefNumber || '').trim(),
-          bank_application_number: (losNo || bankRefNumber || '').trim(),
+          bank_ref_number: (bankRefNumber || losNo || '').trim(),
+          bank_application_number: (bankRefNumber || losNo || '').trim(),
           app_file_generated: appFileGenerated,
           digital_journey_url: digitalJourneyUrl || (isSbiCreditCard ? (sbiDynamicDigitalJourneyLink || SBI_CREDIT_CARD_DIGITAL_JOURNEY_URL) : undefined),
           status: targetStatus,
@@ -991,7 +992,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           disbursement_tenure: disbursementTenure,
           disbursed_tenure: disbursementTenure,
           disbursed_smart_emi_tenure: disbursementTenure,
-          los_no: (losNo || '').trim(),
+          los_no: (bankRefNumber || losNo || '').trim(),
           // Legacy Smart EMI & Loan on Credit Card fields
           bank_smart_emi_offer: bankSmartEmiOffer,
           bank_smart_emi_tenure: bankSmartEmiTenure,
@@ -1368,7 +1369,11 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     type="text"
                     maxLength={bankAppConfig.maxLength}
                     value={bankRefNumber}
-                    onChange={(e) => setBankRefNumber(bankAppConfig.sanitize(e.target.value))}
+                    onChange={(e) => {
+                      const val = bankAppConfig.sanitize(e.target.value);
+                      setBankRefNumber(val);
+                      setLosNo(val);
+                    }}
                     style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: '#fff' }}
                     placeholder={bankAppConfig.placeholder}
                   />
@@ -1432,8 +1437,9 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         final_status: 'Operational Verified',
                         pan_check: 'yes',
                         requery_date: requeryDate || undefined,
-                        bank_application_number: bankRefNumber || undefined,
-                        bank_ref_number: bankRefNumber || undefined,
+                        bank_application_number: (bankRefNumber || losNo || '').trim() || undefined,
+                        bank_ref_number: (bankRefNumber || losNo || '').trim() || undefined,
+                        los_no: (bankRefNumber || losNo || '').trim() || undefined,
                         bank_remark: bankRemark || userRemark || 'PAN Verified OK',
                         user_remark: userRemark || bankRemark || 'PAN Verified OK',
                         ops_remark: userRemark || bankRemark || 'PAN Verified OK by PAN Checker'
@@ -1625,6 +1631,9 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     try {
                       const targetId = application.id || application.app_number;
                       const res = await api.put(`/applications/${targetId}/remark`, {
+                        bank_application_number: (bankRefNumber || losNo || '').trim() || undefined,
+                        bank_ref_number: (bankRefNumber || losNo || '').trim() || undefined,
+                        los_no: (bankRefNumber || losNo || '').trim() || undefined,
                         bank_remark: bankRemark || undefined,
                         user_remark: userRemark || undefined,
                         notes: userRemark || undefined,
@@ -2454,7 +2463,11 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           type="text"
                           disabled={!canEditRemark}
                           value={bankRefNumber}
-                          onChange={(e) => setBankRefNumber(e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setBankRefNumber(val);
+                            setLosNo(val);
+                          }}
                           placeholder="Enter LOS / Smart EMI Ref No."
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 700, fontFamily: 'monospace' }}
                         />
@@ -2561,7 +2574,11 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           type="text"
                           disabled={!canEditRemark}
                           value={bankRefNumber}
-                          onChange={(e) => setBankRefNumber(e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setBankRefNumber(val);
+                            setLosNo(val);
+                          }}
                           placeholder="Enter LOS / Bank Ref No."
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 700, fontFamily: 'monospace' }}
                         />
@@ -2617,7 +2634,11 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           maxLength={13}
                           disabled={!canEditRemark}
                           value={bankRefNumber}
-                          onChange={(e) => setBankRefNumber(e.target.value.replace(/\D/g, '').slice(0, 13))}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '').slice(0, 13);
+                            setBankRefNumber(val);
+                            setLosNo(val);
+                          }}
                           placeholder="e.g. 2925313102292 (13 numeric digits)"
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditRemark ? '#f8fafc' : '#fff' }}
                         />
@@ -2849,7 +2870,11 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           maxLength={25}
                           disabled={!canEditRemark}
                           value={bankRefNumber}
-                          onChange={(e) => setBankRefNumber(e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 25))}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 25);
+                            setBankRefNumber(val);
+                            setLosNo(val);
+                          }}
                           placeholder="e.g. D26I1045139850YZ (Alphanumeric)"
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditRemark ? '#f8fafc' : '#fff' }}
                         />
@@ -2939,7 +2964,11 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           maxLength={25}
                           disabled={!canEditRemark}
                           value={bankRefNumber}
-                          onChange={(e) => setBankRefNumber(e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 25))}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 25);
+                            setBankRefNumber(val);
+                            setLosNo(val);
+                          }}
                           placeholder="e.g. D26I1045139850YZ (Alphanumeric)"
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditRemark ? '#f8fafc' : '#fff' }}
                         />
@@ -3011,7 +3040,11 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           maxLength={bankAppConfig.maxLength}
                           disabled={!canEditRemark}
                           value={bankRefNumber}
-                          onChange={(e) => setBankRefNumber(bankAppConfig.sanitize(e.target.value))}
+                          onChange={(e) => {
+                            const val = bankAppConfig.sanitize(e.target.value);
+                            setBankRefNumber(val);
+                            setLosNo(val);
+                          }}
                           placeholder={bankAppConfig.placeholder}
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditRemark ? '#f8fafc' : '#fff' }}
                         />

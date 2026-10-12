@@ -4120,7 +4120,13 @@ const updateApplicationDetails = async (req, res, next) => {
     const effectiveOfferTenure = offer_tenure !== undefined ? offer_tenure : undefined;
     const effectiveDisbursementAmount = disbursement_amount !== undefined ? disbursement_amount : disbursed_amount;
     const effectiveDisbursementTenure = disbursement_tenure !== undefined ? disbursement_tenure : disbursed_tenure;
-    const effectiveLosNo = los_no !== undefined ? los_no : (bank_application_number || bank_ref_number);
+    const resolvedBankAppNumber = (
+      (bank_application_number !== undefined && bank_application_number !== null && String(bank_application_number).trim() !== '') ? String(bank_application_number).trim() :
+      (bank_ref_number !== undefined && bank_ref_number !== null && String(bank_ref_number).trim() !== '') ? String(bank_ref_number).trim() :
+      (los_no !== undefined && los_no !== null && String(los_no).trim() !== '') ? String(los_no).trim() :
+      ''
+    );
+    const effectiveLosNo = resolvedBankAppNumber;
     const effectiveFinalBankStage = final_bank_stage !== undefined ? final_bank_stage : undefined;
     const effectiveDisbursementCompleted = disbursement_completed !== undefined ? disbursement_completed : undefined;
     const effectiveDisbursementDate = (disbursement_date !== undefined ? disbursement_date : disbursal_date) || undefined;
@@ -4191,7 +4197,7 @@ const updateApplicationDetails = async (req, res, next) => {
       return error(res, 'Marking application status as Operational Verified is reserved for Administrative Operators.', 403);
     }
 
-    const appNumToSave = (effectiveLosNo || bank_application_number || bank_ref_number || '').trim();
+    const appNumToSave = (resolvedBankAppNumber || effectiveLosNo || bank_application_number || bank_ref_number || '').trim();
     const employerToSave = employer || company_name || null;
     const parsedDob = parseDobToIso(dob);
 
@@ -4338,7 +4344,7 @@ const updateApplicationDetails = async (req, res, next) => {
       WHERE id = $34
       RETURNING *
     `, [
-      appNumToSave || req.body.bank_application_number || null,
+      appNumToSave || req.body.bank_application_number || req.body.bank_ref_number || req.body.los_no || null,
       cleanStr(vkyc_status || req.body.vkyc_status),
       cleanStr(vkyc_url || req.body.vkyc_url),
       salary_slip_url || null,
@@ -4662,7 +4668,7 @@ const updateApplicationDetails = async (req, res, next) => {
         state || null,
         pincode || null,
         mother_name || req.body.mother_name || null,
-        appNumToSave || null,
+        appNumToSave || req.body.bank_application_number || req.body.bank_ref_number || req.body.los_no || null,
         address1 || null,
         address2 || null,
         landmark || null,
@@ -5775,7 +5781,7 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
   try {
     await client.query('BEGIN');
     const { id } = req.params;
-    const { bank_remark, user_remark, ipa_stage, vkyc_stage, vkyc_status, dispatch_status, app_file_generated, notes, decline_reason } = req.body;
+    const { bank_remark, user_remark, ipa_stage, vkyc_stage, vkyc_status, dispatch_status, app_file_generated, notes, decline_reason, bank_application_number, bank_ref_number, los_no } = req.body;
     const userId = req.user.id;
 
     // Fetch application to verify bank assignment
@@ -5855,6 +5861,13 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
     const canSaveBackendRemark = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userRole) || ['SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation) || isSalesExecUserLocal;
     const backendRemarkToSave = (req.body.backend_remark !== undefined && canSaveBackendRemark) ? req.body.backend_remark : null;
 
+    const resolvedRemarkBankAppNo = (
+      (bank_application_number !== undefined && bank_application_number !== null && String(bank_application_number).trim() !== '') ? String(bank_application_number).trim() :
+      (bank_ref_number !== undefined && bank_ref_number !== null && String(bank_ref_number).trim() !== '') ? String(bank_ref_number).trim() :
+      (los_no !== undefined && los_no !== null && String(los_no).trim() !== '') ? String(los_no).trim() :
+      null
+    );
+
     // 1. Update applications table
     await client.query(`
       UPDATE applications 
@@ -5868,19 +5881,22 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
           decline_reason = COALESCE($6, decline_reason),
           remark_operator_code = COALESCE($7, remark_operator_code),
           backend_remark = COALESCE($8, backend_remark),
+          bank_application_number = COALESCE(NULLIF($11, ''), bank_application_number),
+          bank_ref_number = COALESCE(NULLIF($11, ''), bank_ref_number),
+          los_no = COALESCE(NULLIF($11, ''), los_no),
           remark_status = 'COMPLETED',
           remark_updated = TRUE,
           remark_updated_by = $9,
           remark_updated_at = NOW(),
           updated_at = NOW()
       WHERE id = $10
-    `, [bank_remark || null, effectiveUserRemark, effectiveVkycStage, dispatch_status || null, app_file_generated || null, decline_reason || null, currentOpCode, backendRemarkToSave, userId, app.id]);
+    `, [bank_remark || null, effectiveUserRemark, effectiveVkycStage, dispatch_status || null, app_file_generated || null, decline_reason || null, currentOpCode, backendRemarkToSave, userId, app.id, resolvedRemarkBankAppNo]);
 
     // 2. Upsert physical_application_details table
     await client.query(`
       INSERT INTO physical_application_details (
-        application_id, bank_remark, user_remark, ipa_stage, vkyc_stage, dispatch_status, app_file_generated, decline_reason, remark_operator_code, backend_remark, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+        application_id, bank_remark, user_remark, ipa_stage, vkyc_stage, dispatch_status, app_file_generated, decline_reason, remark_operator_code, backend_remark, bank_application_number, bank_ref_number, los_no, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULLIF($11, ''), NULLIF($11, ''), NULLIF($11, ''), NOW(), NOW())
       ON CONFLICT (application_id) DO UPDATE SET
         bank_remark = COALESCE(EXCLUDED.bank_remark, physical_application_details.bank_remark),
         user_remark = COALESCE(EXCLUDED.user_remark, physical_application_details.user_remark),
@@ -5891,8 +5907,11 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
         decline_reason = COALESCE(EXCLUDED.decline_reason, physical_application_details.decline_reason),
         remark_operator_code = COALESCE(EXCLUDED.remark_operator_code, physical_application_details.remark_operator_code),
         backend_remark = COALESCE(EXCLUDED.backend_remark, physical_application_details.backend_remark),
+        bank_application_number = COALESCE(EXCLUDED.bank_application_number, physical_application_details.bank_application_number),
+        bank_ref_number = COALESCE(EXCLUDED.bank_ref_number, physical_application_details.bank_ref_number),
+        los_no = COALESCE(NULLIF(EXCLUDED.bank_ref_number, ''), physical_application_details.los_no),
         updated_at = NOW()
-    `, [app.id, bank_remark || null, effectiveUserRemark, ipa_stage || null, effectiveVkycStage, dispatch_status || null, app_file_generated || null, decline_reason || null, currentOpCode, backendRemarkToSave]);
+    `, [app.id, bank_remark || null, effectiveUserRemark, ipa_stage || null, effectiveVkycStage, dispatch_status || null, app_file_generated || null, decline_reason || null, currentOpCode, backendRemarkToSave, resolvedRemarkBankAppNo]);
 
     // 3. Update application_admin_assignments if exists
     await client.query(`
