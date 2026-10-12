@@ -9,11 +9,16 @@ const appCtrl = require('../crm/application.controller.js');
 const productCtrl = require('../products/controller.js');
 const walletCtrl = require('../wallet/controller.js');
 const superAdminCtrl = require('../super-admin/controller.js');
+const designationAuditCtrl = require('./designationAudit.controller.js');
 
 const { validate, commissionRules } = require('../../middleware/validation/validation.middleware.js');
 
 // All admin routes require authenticated Firebase token
 router.use(jwtAuth);
+
+// ── GET /admin/designation-rules (Read-Only Audit API) ────────────────────────
+router.get('/designation-rules', roleCheck('ADMIN', 'SUPER_ADMIN'), designationAuditCtrl.getDesignationRulesAudit);
+router.get('/designation-audit', roleCheck('ADMIN', 'SUPER_ADMIN'), designationAuditCtrl.getDesignationRulesAudit);
 
 // ── GET /admin/partners ──────────────────────────────────────────────────────
 router.get('/partners', roleCheck('ADMIN', 'SUPER_ADMIN'), partnerCtrl.listPartners);

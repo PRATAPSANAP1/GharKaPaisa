@@ -80,6 +80,7 @@ import ManagePartners from '../modules/admin/users/ManagePartners';
 import ManageWithdrawals from '../modules/admin/users/ManageWithdrawals';
 import ManageLeads from '../modules/admin/users/ManageLeads';
 import KycOperatorDashboard from '../modules/admin/kyc-operator/KycOperatorDashboard';
+import DesignationRulesAudit from '../modules/admin/rules/DesignationRulesAudit';
 
 // Super Admin Pages
 import SuperAdminOverview from '../modules/super-admin/dashboard/SuperAdminOverview';
@@ -398,6 +399,7 @@ const AppRoutes = () => {
             <Route path="/admin/wallet" element={<ManageWallet />} />
             <Route path="/admin/messenger" element={<MessengerView />} />
             <Route path="/admin/whatsapp" element={<SuperAdminWhatsApp />} />
+            <Route path="/admin/designation-rules" element={<DesignationRulesAudit />} />
           </Route>
         </Route>
       </Route>
@@ -451,6 +453,7 @@ const AppRoutes = () => {
             <Route path="/admin/bulk-sms/templates" element={<BulkSmsDashboard defaultTab="templates" />} />
             <Route path="/super-admin/profile" element={<AdminProfilePage />} />
             <Route path="/super-admin/support" element={<ManageSupportTickets />} />
+            <Route path="/super-admin/designation-rules" element={<DesignationRulesAudit />} />
 
             {/* Legacy /superadmin/ URL Redirect Compatibility */}
             <Route path="/superadmin" element={<Navigate to="/super-admin/overview" replace />} />

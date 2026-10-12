@@ -135,6 +135,57 @@ export default function ManageApplications() {
         if (!status && !search) {
           setAllCount(fetchedTotal);
         }
+
+        // ── QUERABLE OPERATOR BROWSER CONSOLE AUDIT LOGGING ──
+        if (isQuerableOperatorUser) {
+          try {
+            console.group('%c[Querable Operator Audit] Account & Showing Data Inspection', 'color: #0284c7; font-weight: 800; font-size: 13px;');
+            console.log('%c1. Account Assigned Category & Banks:', 'color: #0369a1; font-weight: 700;', {
+              designation: userDesignation,
+              role: userRole,
+              user_id: user?.id,
+              name: user?.full_name || user?.name || user?.email,
+              has_loc_eoc: hasLocEocAssigned,
+              category_assignments: user?.category_assignments || {},
+              assigned_banks_list: assignedList.map(b => ({
+                bank_id: b.id || b.bank_id,
+                name: b.name || b.bank_name || b.short_code,
+                code: b.short_code || b.code,
+                assigned_category: (b.category === 'loc_eoc' || b.is_loc_eoc) ? 'LOC & EOC' : (b.category ? b.category.toUpperCase().replace('_', ' ') : 'Credit Card'),
+                is_loc_eoc: !!b.is_loc_eoc
+              }))
+            });
+            console.table(
+              assignedList.map(b => ({
+                'Bank Name': b.name || b.bank_name || b.short_code || 'Bank',
+                'Bank Code': b.short_code || b.code || '—',
+                'Assigned Category': (b.category === 'loc_eoc' || b.is_loc_eoc) ? 'LOC & EOC' : (b.category ? b.category.toUpperCase().replace('_', ' ') : 'Credit Card'),
+                'Bank ID': b.id || b.bank_id || '—'
+              }))
+            );
+            console.log('%c2. Showing Applications Data (Category & Bank):', 'color: #059669; font-weight: 700;', {
+              total_count: fetchedTotal,
+              page_records_count: res.data.data?.length || 0,
+              active_category_filter: categoryFilter,
+              active_status: status
+            });
+            console.table(
+              (res.data.data || []).map(a => ({
+                'App Number': a.app_number || `APP${a.id}`,
+                'Bank Name': a.bank_name || a.bank_code || 'Partner Bank',
+                'Category': a.category || (isLocEocApp(a) ? 'loc_eoc' : 'credit_card'),
+                'Sub Category': a.sub_category || '—',
+                'Product': a.product_name || '—',
+                'Status': a.status || '—',
+                'Final Status': a.final_status || '—',
+                'Customer': a.customer_name || a.full_name || '—'
+              }))
+            );
+            console.groupEnd();
+          } catch (logErr) {
+            console.error('Querable Operator console audit error:', logErr);
+          }
+        }
       }
     } catch (e) {
       console.error(e);
@@ -425,17 +476,54 @@ export default function ManageApplications() {
             {isQuerableOperatorUser ? 'Review and manage assigned bank rejected applications.' : isPanCheckerUser ? 'Review and verify customer PAN details for assigned applications.' : isRemarkOperatorUser ? 'Review and update remarks for assigned bank applications.' : isQdOperatorUser ? 'Review assigned bank applications for QD form and remark details.' : 'Track, verify, update and manage operations for all submitted customer applications.'}
           </p>
           {isQuerableOperatorUser && (
-            <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
-              <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight }}>Assigned Banks:</span>
-              {assignedList.length > 0 ? (
-                assignedList.map((b, i) => (
-                  <span key={b.id || i} style={{ padding: '3px 8px', borderRadius: '6px', background: '#F1F5F9', color: '#1E293B', fontSize: '11px', fontWeight: 700, border: '1px solid #CBD5E1' }}>
-                    🏦 {b.name || b.short_code || b.code || 'Bank'}
+            <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight }}>
+                  Account Assigned Category &amp; Banks:
+                </span>
+                {assignedList.length > 0 ? (
+                  assignedList.map((b, i) => {
+                    const isLoc = b.category === 'loc_eoc' || b.is_loc_eoc;
+                    const catLabel = isLoc ? 'LOC & EOC' : (b.category ? b.category.toUpperCase().replace('_', ' ') : 'Credit Card');
+                    return (
+                      <span
+                        key={b.id || i}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: '8px',
+                          background: isLoc ? '#ECFDF5' : '#EFF6FF',
+                          color: isLoc ? '#047857' : '#1D4ED8',
+                          fontSize: '11.5px',
+                          fontWeight: 700,
+                          border: `1px solid ${isLoc ? '#A7F3D0' : '#BFDBFE'}`,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <span>🏦 {b.name || b.short_code || b.code || 'Bank'}</span>
+                        <span
+                          style={{
+                            fontSize: '9.5px',
+                            fontWeight: 800,
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                            background: isLoc ? '#059669' : '#2563EB',
+                            color: '#FFFFFF',
+                            letterSpacing: '0.02em'
+                          }}
+                        >
+                          {catLabel}
+                        </span>
+                      </span>
+                    );
+                  })
+                ) : (
+                  <span style={{ fontSize: '11.5px', color: '#EF4444', fontWeight: 700 }}>
+                    No banks/categories assigned
                   </span>
-                ))
-              ) : (
-                <span style={{ fontSize: '11.5px', color: '#EF4444', fontWeight: 700 }}>No banks assigned</span>
-              )}
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -548,7 +636,7 @@ export default function ManageApplications() {
       )}
 
       {/* ── 2.5 CATEGORY QUICK TOGGLE PILLS (LOC & EOC SUPPORT) ── */}
-      {(hasLocEocAssigned || isSuperAdmin) && (
+      {(hasLocEocAssigned || isSuperAdmin || isQuerableOperatorUser) && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, marginRight: '4px' }}>
             Category Scope:
@@ -956,12 +1044,19 @@ export default function ManageApplications() {
                         <td style={{ padding: '14px 16px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                             <span style={{ fontWeight: 800, color: C.text }}>{app.bank_name || app.bank_code || 'Bank Partner'}</span>
-                            {isLocEocApp(app) && (
+                            {isLocEocApp(app) ? (
                               <span style={{
                                 fontSize: '10px', fontWeight: 800, background: '#ECFDF5', color: '#047857',
                                 border: '1px solid #A7F3D0', padding: '1px 6px', borderRadius: '4px', whiteSpace: 'nowrap'
                               }}>
                                 {String(app.sub_category || '').toUpperCase() === 'EOC' || /smart\s*emi/i.test(app.product_name || '') ? 'EOC (Smart EMI)' : 'LOC (Loan on Card)'}
+                              </span>
+                            ) : (
+                              <span style={{
+                                fontSize: '10px', fontWeight: 800, background: '#EFF6FF', color: '#1D4ED8',
+                                border: '1px solid #BFDBFE', padding: '1px 6px', borderRadius: '4px', whiteSpace: 'nowrap'
+                              }}>
+                                {app.category && app.category !== 'credit_card' ? app.category.toUpperCase().replace('_', ' ') : 'Credit Card'}
                               </span>
                             )}
                           </div>

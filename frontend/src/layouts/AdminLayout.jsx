@@ -484,6 +484,14 @@ const AdminLayout = () => {
                     <span>Settings</span>
                   </NavLink>
                 )}
+
+                {/* Designation Rules & Permissions */}
+                {(isSuperAdmin || (userRole === 'ADMIN' && !isOpHead)) && (
+                  <NavLink to="/admin/designation-rules" style={navLinkStyle}>
+                    <Icons.shield size={18} />
+                    <span>Designation Rules</span>
+                  </NavLink>
+                )}
               </>
             )}
           </>

@@ -217,6 +217,56 @@ export default function ManageApplications() {
         setApplications(list);
         setTotalCount(total);
         setTotalPages(computedPages);
+
+        // ── QUERABLE OPERATOR BROWSER CONSOLE AUDIT LOGGING ──
+        if (isQuerableOperatorUser) {
+          try {
+            const assignedList = user?.assigned_banks?.length ? user.assigned_banks : (user?.permissions?.assigned_banks || []);
+            console.group('%c[Querable Operator Audit - SuperAdmin CRM] Account & Showing Data Inspection', 'color: #0284c7; font-weight: 800; font-size: 13px;');
+            console.log('%c1. Account Assigned Category & Banks:', 'color: #0369a1; font-weight: 700;', {
+              designation: userDesignation,
+              role: userRole,
+              user_id: user?.id,
+              name: user?.full_name || user?.name || user?.email,
+              category_assignments: user?.category_assignments || {},
+              assigned_banks_list: assignedList.map(b => ({
+                bank_id: b.id || b.bank_id,
+                name: b.name || b.bank_name || b.short_code,
+                code: b.short_code || b.code,
+                assigned_category: (b.category === 'loc_eoc' || b.is_loc_eoc) ? 'LOC & EOC' : (b.category ? b.category.toUpperCase().replace('_', ' ') : 'Credit Card'),
+                is_loc_eoc: !!b.is_loc_eoc
+              }))
+            });
+            console.table(
+              assignedList.map(b => ({
+                'Bank Name': b.name || b.bank_name || b.short_code || 'Bank',
+                'Bank Code': b.short_code || b.code || '—',
+                'Assigned Category': (b.category === 'loc_eoc' || b.is_loc_eoc) ? 'LOC & EOC' : (b.category ? b.category.toUpperCase().replace('_', ' ') : 'Credit Card'),
+                'Bank ID': b.id || b.bank_id || '—'
+              }))
+            );
+            console.log('%c2. Showing Applications Data (Category & Bank):', 'color: #059669; font-weight: 700;', {
+              total_count: total,
+              page_records_count: list.length,
+              statusFilter,
+              commFilter
+            });
+            console.table(
+              list.map(a => ({
+                'App Number': a.app_number || `APP${a.id}`,
+                'Bank Name': a.bank_name || a.bank_code || 'Partner Bank',
+                'Category': a.category || (String(a.sub_category || '').toLowerCase() === 'loc' || String(a.sub_category || '').toLowerCase() === 'eoc' ? 'loc_eoc' : 'credit_card'),
+                'Sub Category': a.sub_category || '—',
+                'Product': a.product_name || '—',
+                'Status': a.status || '—',
+                'Customer': a.customer_name || a.full_name || '—'
+              }))
+            );
+            console.groupEnd();
+          } catch (logErr) {
+            console.error('Querable Operator console audit error:', logErr);
+          }
+        }
       }
     } catch (e) {
       console.error('Applications load failed:', e);
@@ -893,7 +943,18 @@ export default function ManageApplications() {
                           {/* Product & Bank */}
                           {!isPanCheckerUser && (
                             <td style={{ padding: '14px 16px' }}>
-                              <div style={{ fontWeight: 800, color: C.text }}>{app.bank_name || 'Bank Partner'}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                <span style={{ fontWeight: 800, color: C.text }}>{app.bank_name || 'Bank Partner'}</span>
+                                {String(app.category || '').toLowerCase() === 'loc_eoc' || String(app.sub_category || '').toLowerCase() === 'loc' || String(app.sub_category || '').toLowerCase() === 'eoc' ? (
+                                  <span style={{ fontSize: '10px', fontWeight: 800, background: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0', padding: '1px 6px', borderRadius: '4px' }}>
+                                    LOC/EOC
+                                  </span>
+                                ) : (
+                                  <span style={{ fontSize: '10px', fontWeight: 800, background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', padding: '1px 6px', borderRadius: '4px' }}>
+                                    {app.category && app.category !== 'credit_card' ? app.category.toUpperCase().replace('_', ' ') : 'Credit Card'}
+                                  </span>
+                                )}
+                              </div>
                               <div style={{ fontSize: '11px', color: C.textLight }}>{app.product_name || 'Financial Product'}</div>
                             </td>
                           )}
