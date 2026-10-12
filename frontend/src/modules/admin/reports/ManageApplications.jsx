@@ -64,6 +64,8 @@ export default function ManageApplications() {
   const [partnerFilter, setPartnerFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [commFilter, setCommFilter] = useState("all");
+  const [bankFilter, setBankFilter] = useState("all");
+  const [banksList, setBanksList] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState(() => {
     if (categoryParam) return categoryParam;
     return "all";
@@ -109,6 +111,16 @@ export default function ManageApplications() {
       }
     };
     fetchAgents();
+
+    api.get('/banks')
+      .then(res => {
+        let bArr = res.data?.data || res.data || [];
+        if (!Array.isArray(bArr) && typeof bArr === 'object') {
+          bArr = bArr.banks || bArr.rows || [];
+        }
+        setBanksList(Array.isArray(bArr) ? bArr : []);
+      })
+      .catch(err => console.error('Failed to load banks for filter:', err));
   }, []);
 
   const fetchApplications = async () => {
@@ -123,6 +135,7 @@ export default function ManageApplications() {
           status: status || undefined,
           process_by: processTypeFilter !== 'all' ? processTypeFilter : undefined,
           category: categoryFilter !== 'all' ? categoryFilter : undefined,
+          bank_id: bankFilter !== 'all' ? bankFilter : undefined,
         },
       });
       if (res.data?.success) {
@@ -197,7 +210,7 @@ export default function ManageApplications() {
 
   useEffect(() => {
     fetchApplications();
-  }, [page, limit, status, processTypeFilter, categoryFilter]);
+  }, [page, limit, status, processTypeFilter, categoryFilter, bankFilter]);
 
   useEffect(() => {
     const cat = searchParams.get('category');
@@ -230,6 +243,7 @@ export default function ManageApplications() {
     setStatusFilter("all");
     setCommFilter("all");
     setCategoryFilter("all");
+    setBankFilter("all");
     setDateRange("all");
     setProcessTypeFilter("all");
     setSourceTypeFilter("all");
@@ -846,6 +860,22 @@ export default function ManageApplications() {
                   <option value="business_loan">Business Loan</option>
                   <option value="insurance">Insurance</option>
                   <option value="utility">Utility / Recharge</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>Bank Partner</label>
+                <select 
+                  style={{ ...S.input, height: '36px', fontSize: '12.5px' }} 
+                  value={bankFilter} 
+                  onChange={e => { setBankFilter(e.target.value); setPage(1); }}
+                >
+                  <option value="all">All Banks</option>
+                  {(banksList.length > 0 ? banksList : assignedList).map(b => (
+                    <option key={b.id || b.bank_id} value={b.id || b.bank_id}>
+                      {b.name || b.bank_name || b.short_code} {b.short_code ? `(${b.short_code})` : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
 

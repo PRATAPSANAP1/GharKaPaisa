@@ -1622,7 +1622,14 @@ const listApplications = async (req, res, next) => {
 
     const validPartnerId = isUuid(partnerId) ? partnerId : null;
     const validProductId = isUuid(product_id) ? product_id : null;
-    const validBankId = isUuid(bank_id) ? bank_id : null;
+    let targetBankId = bank_id || req.query.bank;
+    if (targetBankId && !isUuid(targetBankId) && targetBankId !== 'all') {
+      try {
+        const { rows: bRows } = await query(`SELECT id FROM banks WHERE LOWER(short_code) = LOWER($1) OR LOWER(name) = LOWER($1) LIMIT 1`, [targetBankId.trim()]);
+        if (bRows.length > 0) targetBankId = bRows[0].id;
+      } catch (bErr) {}
+    }
+    const validBankId = isUuid(targetBankId) ? targetBankId : null;
     const userDesignation = (req.user?.designation || '').toUpperCase();
     let rawStatus = status && status.trim() ? status.trim() : null;
     const validStatus = rawStatus;

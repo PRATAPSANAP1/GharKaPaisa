@@ -101,6 +101,7 @@ export default function ManageApplications() {
   // Partner / Employee Filter lists
   const [partnersList, setPartnersList] = useState([]);
   const [employeesList, setEmployeesList] = useState([]);
+  const [banksList, setBanksList] = useState([]);
 
   useEffect(() => {
     const fetchAgents = async () => {
@@ -126,6 +127,16 @@ export default function ManageApplications() {
       }
     };
     fetchAgents();
+
+    api.get('/banks')
+      .then(res => {
+        let bArr = res.data?.data || res.data || [];
+        if (!Array.isArray(bArr) && typeof bArr === 'object') {
+          bArr = bArr.banks || bArr.rows || [];
+        }
+        setBanksList(Array.isArray(bArr) ? bArr : []);
+      })
+      .catch(err => console.error('Failed to load banks for filter:', err));
   }, []);
 
   // Table row 3-dots action menu open state
@@ -185,6 +196,7 @@ export default function ManageApplications() {
             limit,
             status: statusFilter !== 'all' ? statusFilter : undefined,
             commission_status: commFilter !== 'all' ? commFilter : undefined,
+            bank_id: bankFilter !== 'all' ? bankFilter : undefined,
             partner_id: activePartnerId,
             source_type: activeSourceType,
             process_by: processTypeFilter !== 'all' ? processTypeFilter : undefined,
@@ -277,7 +289,7 @@ export default function ManageApplications() {
 
   useEffect(() => {
     fetchApplications();
-  }, [page, limit, statusFilter, commFilter, partnerFilter, processTypeFilter]);
+  }, [page, limit, statusFilter, commFilter, partnerFilter, processTypeFilter, bankFilter]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -702,6 +714,22 @@ export default function ManageApplications() {
                   <option value="yesterday">Yesterday</option>
                   <option value="last_7_days">Last 7 Days</option>
                   <option value="last_30_days">Last 30 Days</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>Bank Partner</label>
+                <select 
+                  style={{ ...S.input, height: '36px', fontSize: '12.5px' }} 
+                  value={bankFilter} 
+                  onChange={e => { setBankFilter(e.target.value); setPage(1); }}
+                >
+                  <option value="all">All Banks</option>
+                  {banksList.map(b => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} {b.short_code ? `(${b.short_code})` : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
 
