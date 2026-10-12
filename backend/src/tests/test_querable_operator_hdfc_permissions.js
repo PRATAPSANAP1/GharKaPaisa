@@ -51,10 +51,22 @@ function evaluateCreditCard(app) {
   if (isLocEoc) return false;
 
   const cat = String(app.category || 'credit_card').toLowerCase();
+  const pName = String(app.product_name || '').toLowerCase();
+  const subCat = String(app.sub_category || '').toLowerCase();
+
   const isCcCategory = (
-    ['credit_card', 'creditcard', 'cards', 'card'].includes(cat) ||
-    cat.includes('credit') && cat.includes('card') ||
-    app.category === null || app.category === undefined
+    ['credit_card', 'creditcard', 'cards', 'card', 'co_branded_card', 'fd_card'].includes(cat) ||
+    (cat.includes('credit') && cat.includes('card')) ||
+    (
+      (app.category === null || app.category === undefined) &&
+      !(
+        pName.includes('loan') ||
+        pName.includes('emi') ||
+        pName.includes('encash') ||
+        pName.includes('dial a draft') ||
+        ['loc', 'eoc', 'loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loan_on_card', 'card_on_loan'].includes(subCat)
+      )
+    )
   );
   return isCcCategory;
 }
@@ -411,6 +423,238 @@ console.log('Running Querable Operator HDFC Permission Test Suite...\n');
   console.log('✓ Test 8 Passed: Single application route check strictly rejects unassigned LOC/EOC.');
 }
 
+// Test 9: Co-branded and FD Credit Cards appear under HDFC Credit Card assignment
+{
+  const cobrandedAndFdApps = [
+    {
+      id: 'app-hdfc-swiggy',
+      app_number: 'APP20261010',
+      bank_id: HDFC_BANK_ID,
+      bank_name: 'HDFC Bank',
+      bank_code: 'HDFC',
+      product_name: 'Swiggy HDFC Bank Credit Card',
+      category: 'co_branded_card',
+      sub_category: 'Co-Branded Cards',
+      status: 'rejected',
+      final_status: 'rejected'
+    },
+    {
+      id: 'app-hdfc-tata-neu',
+      app_number: 'APP20261011',
+      bank_id: HDFC_BANK_ID,
+      bank_name: 'HDFC Bank',
+      bank_code: 'HDFC',
+      product_name: 'Tata Neu Plus HDFC Credit Card',
+      category: 'co_branded_card',
+      sub_category: 'Co-Branded Cards',
+      status: 'declined',
+      final_status: 'decline'
+    },
+    {
+      id: 'app-hdfc-moneyback-fd',
+      app_number: 'APP20261012',
+      bank_id: HDFC_BANK_ID,
+      bank_name: 'HDFC Bank',
+      bank_code: 'HDFC',
+      product_name: 'HDFC MoneyBack+ FD Card',
+      category: 'fd_card',
+      sub_category: 'FD Cards',
+      status: 'rejected',
+      final_status: 'rejected'
+    }
+  ];
+
+  const hdfcCreditCardAssignments = [
+    { bank_id: HDFC_BANK_ID, short_code: 'HDFC', name: 'HDFC Bank', category: 'CREDIT CARD' }
+  ];
+
+  const results = filterApplications(cobrandedAndFdApps, hdfcCreditCardAssignments, 'rejected', 'all');
+  const resultIds = results.map(r => r.id);
+
+  assert(resultIds.includes('app-hdfc-swiggy'), 'FAIL: Swiggy HDFC co-branded card must be included under Credit Card assignment');
+  assert(resultIds.includes('app-hdfc-tata-neu'), 'FAIL: Tata Neu Plus HDFC co-branded card must be included under Credit Card assignment');
+  assert(resultIds.includes('app-hdfc-moneyback-fd'), 'FAIL: HDFC MoneyBack+ FD card must be included under Credit Card assignment');
+  assert.strictEqual(results.length, 3, 'FAIL: All 3 co-branded/FD rejected cards must be returned');
+
+  console.log('✓ Test 9 Passed: Co-branded cards and FD cards are eligible and included under Credit Card assignment.');
+}
+
+// Test 10: Unlinked Instant & Jumbo Loan / LOC-EOC records do NOT leak when category is NULL
+{
+  const unlinkedApps = [
+    // Unlinked Instant & Jumbo Loan: category is null, product_name has jumbo loan
+    {
+      id: 'app-hdfc-unlinked-jumbo',
+      app_number: 'APP20261020',
+      bank_id: HDFC_BANK_ID,
+      bank_name: 'HDFC Bank',
+      bank_code: 'HDFC',
+      product_name: 'HDFC Bank Instant & Jumbo Loan',
+      category: null,
+      sub_category: null,
+      status: 'rejected',
+      final_status: 'rejected'
+    },
+    // Unlinked Instant Loan: category is null, product_name has instant loan
+    {
+      id: 'app-hdfc-unlinked-instant',
+      app_number: 'APP20261021',
+      bank_id: HDFC_BANK_ID,
+      bank_name: 'HDFC Bank',
+      bank_code: 'HDFC',
+      product_name: 'HDFC Instant Loan',
+      category: null,
+      sub_category: null,
+      status: 'rejected',
+      final_status: 'rejected'
+    },
+    // Unlinked SmartEMI: category is null, product_name has SmartEMI
+    {
+      id: 'app-hdfc-unlinked-smartemi',
+      app_number: 'APP20261022',
+      bank_id: HDFC_BANK_ID,
+      bank_name: 'HDFC Bank',
+      bank_code: 'HDFC',
+      product_name: 'HDFC SmartEMI',
+      category: null,
+      sub_category: null,
+      status: 'declined',
+      final_status: 'declined'
+    },
+    // Unlinked LOC subcategory: category is null, sub_category is LOC
+    {
+      id: 'app-hdfc-unlinked-subcat-loc',
+      app_number: 'APP20261023',
+      bank_id: HDFC_BANK_ID,
+      bank_name: 'HDFC Bank',
+      bank_code: 'HDFC',
+      product_name: 'Quick Disbursal Loan',
+      category: null,
+      sub_category: 'LOC',
+      status: 'rejected',
+      final_status: 'rejected'
+    },
+    // Legitimate unlinked Credit Card: category is null, product_name is credit card
+    {
+      id: 'app-hdfc-unlinked-legit-cc',
+      app_number: 'APP20261024',
+      bank_id: HDFC_BANK_ID,
+      bank_name: 'HDFC Bank',
+      bank_code: 'HDFC',
+      product_name: 'HDFC Freedom Credit Card',
+      category: null,
+      sub_category: null,
+      status: 'rejected',
+      final_status: 'rejected'
+    }
+  ];
+
+  const hdfcCreditCardAssignments = [
+    { bank_id: HDFC_BANK_ID, short_code: 'HDFC', name: 'HDFC Bank', category: 'CREDIT CARD' }
+  ];
+
+  const results = filterApplications(unlinkedApps, hdfcCreditCardAssignments, 'rejected', 'all');
+  const resultIds = results.map(r => r.id);
+
+  assert(!resultIds.includes('app-hdfc-unlinked-jumbo'), 'FAIL: Unlinked Instant & Jumbo Loan must NOT leak into Credit Card results');
+  assert(!resultIds.includes('app-hdfc-unlinked-instant'), 'FAIL: Unlinked Instant Loan must NOT leak into Credit Card results');
+  assert(!resultIds.includes('app-hdfc-unlinked-smartemi'), 'FAIL: Unlinked SmartEMI must NOT leak into Credit Card results');
+  assert(!resultIds.includes('app-hdfc-unlinked-subcat-loc'), 'FAIL: Unlinked LOC subcategory must NOT leak into Credit Card results');
+  assert(resultIds.includes('app-hdfc-unlinked-legit-cc'), 'FAIL: Legitimate Credit Card with null category must be included');
+  assert.strictEqual(results.length, 1, 'FAIL: Only the legitimate Credit Card must be returned');
+
+  console.log('✓ Test 10 Passed: Unclassified Instant & Jumbo Loan / LOC-EOC records strictly blocked when category is NULL.');
+}
+
+// Test 11: LOC/EOC isolation is strictly maintained across assignments
+{
+  const testApps = [
+    {
+      id: 'app-hdfc-loc-jumbo',
+      bank_id: HDFC_BANK_ID,
+      product_name: 'HDFC Bank Instant & Jumbo Loan',
+      category: 'loc_eoc',
+      sub_category: 'LOC',
+      status: 'rejected'
+    },
+    {
+      id: 'app-hdfc-eoc-emi',
+      bank_id: HDFC_BANK_ID,
+      product_name: 'HDFC Bank EMI on Credit Card',
+      category: 'loc_eoc',
+      sub_category: 'EOC',
+      status: 'declined'
+    },
+    {
+      id: 'app-hdfc-cobranded',
+      bank_id: HDFC_BANK_ID,
+      product_name: 'Swiggy HDFC Bank Credit Card',
+      category: 'co_branded_card',
+      status: 'rejected'
+    },
+    {
+      id: 'app-hdfc-fd',
+      bank_id: HDFC_BANK_ID,
+      product_name: 'HDFC MoneyBack+ FD Card',
+      category: 'fd_card',
+      status: 'rejected'
+    }
+  ];
+
+  const locEocOnlyAssignment = [
+    { bank_id: HDFC_BANK_ID, short_code: 'HDFC', name: 'HDFC Bank', category: 'LOC/EOC' }
+  ];
+  const ccOnlyAssignment = [
+    { bank_id: HDFC_BANK_ID, short_code: 'HDFC', name: 'HDFC Bank', category: 'CREDIT CARD' }
+  ];
+
+  const locResults = filterApplications(testApps, locEocOnlyAssignment, 'rejected', 'all').map(r => r.id);
+  assert(locResults.includes('app-hdfc-loc-jumbo'), 'LOC assignment must include Instant & Jumbo Loan');
+  assert(locResults.includes('app-hdfc-eoc-emi'), 'LOC assignment must include EMI on Credit Card');
+  assert(!locResults.includes('app-hdfc-cobranded'), 'LOC assignment must exclude co-branded cards');
+  assert(!locResults.includes('app-hdfc-fd'), 'LOC assignment must exclude FD cards');
+  assert.strictEqual(locResults.length, 2, 'LOC assignment must have exactly 2 LOC/EOC apps');
+
+  const ccResults = filterApplications(testApps, ccOnlyAssignment, 'rejected', 'all').map(r => r.id);
+  assert(!ccResults.includes('app-hdfc-loc-jumbo'), 'CC assignment must exclude Instant & Jumbo Loan');
+  assert(!ccResults.includes('app-hdfc-eoc-emi'), 'CC assignment must exclude EMI on Credit Card');
+  assert(ccResults.includes('app-hdfc-cobranded'), 'CC assignment must include co-branded card');
+  assert(ccResults.includes('app-hdfc-fd'), 'CC assignment must include FD card');
+  assert.strictEqual(ccResults.length, 2, 'CC assignment must have exactly 2 CC apps');
+
+  console.log('✓ Test 11 Passed: LOC/EOC and Credit Card mutual isolation strictly maintained.');
+}
+
+// Test 12: Status restrictions remain strictly enforced for Querable Operator
+{
+  const statusTestApps = [
+    { id: 's-1', bank_id: HDFC_BANK_ID, product_name: 'HDFC Millennia', category: 'credit_card', status: 'rejected' },
+    { id: 's-2', bank_id: HDFC_BANK_ID, product_name: 'Swiggy HDFC Card', category: 'co_branded_card', status: 'declined' },
+    { id: 's-3', bank_id: HDFC_BANK_ID, product_name: 'HDFC FD Card', category: 'fd_card', status: 'technical_error' },
+    { id: 's-4', bank_id: HDFC_BANK_ID, product_name: 'HDFC Millennia', category: 'credit_card', status: 'approved' },
+    { id: 's-5', bank_id: HDFC_BANK_ID, product_name: 'Swiggy HDFC Card', category: 'co_branded_card', status: 'disbursed' },
+    { id: 's-6', bank_id: HDFC_BANK_ID, product_name: 'HDFC FD Card', category: 'fd_card', status: 'details_submitted' },
+    { id: 's-7', bank_id: HDFC_BANK_ID, product_name: 'Tata Neu HDFC', category: 'co_branded_card', status: 'in_process', final_status: 'rejected' }
+  ];
+
+  const hdfcCreditCardAssignments = [
+    { bank_id: HDFC_BANK_ID, short_code: 'HDFC', name: 'HDFC Bank', category: 'CREDIT CARD' }
+  ];
+
+  const results = filterApplications(statusTestApps, hdfcCreditCardAssignments, null, 'all').map(r => r.id);
+
+  assert(results.includes('s-1'), 'Rejected card must be included');
+  assert(results.includes('s-2'), 'Declined card must be included');
+  assert(results.includes('s-3'), 'Technical error card must be included');
+  assert(!results.includes('s-4'), 'Approved card must be excluded');
+  assert(!results.includes('s-5'), 'Disbursed card must be excluded');
+  assert(!results.includes('s-6'), 'Details submitted (non-rejected) card must be excluded');
+  assert(results.includes('s-7'), 'Application with final_status=rejected must be included');
+  assert.strictEqual(results.length, 4, 'Exactly 4 non-successful cards must be returned');
+
+  console.log('✓ Test 12 Passed: Querable Operator rejected/declined status restrictions strictly enforced.');
+}
+
 console.log('\n======================================================');
-console.log('ALL 8 TEST SUITES COMPLETED SUCCESSFULLY! ZERO DEFECTS.');
+console.log('ALL 12 TEST SUITES COMPLETED SUCCESSFULLY! ZERO DEFECTS.');
 console.log('======================================================');

@@ -1684,9 +1684,18 @@ const listApplications = async (req, res, next) => {
     const creditCardAppSQL = `(
       NOT ${locEocAppSQL}
       AND (
-        LOWER(COALESCE(combined.category::text, 'credit_card')) IN ('credit_card', 'creditcard', 'cards', 'card')
+        LOWER(COALESCE(combined.category::text, 'credit_card')) IN ('credit_card', 'creditcard', 'cards', 'card', 'co_branded_card', 'fd_card')
         OR LOWER(COALESCE(combined.category::text, '')) LIKE '%credit%card%'
-        OR combined.category IS NULL
+        OR (
+          combined.category IS NULL
+          AND NOT (
+            LOWER(COALESCE(combined.product_name, '')) LIKE '%loan%'
+            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%emi%'
+            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%encash%'
+            OR LOWER(COALESCE(combined.product_name, '')) LIKE '%dial a draft%'
+            OR LOWER(COALESCE(combined.sub_category, '')) IN ('loc', 'eoc', 'loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loan_on_card', 'card_on_loan')
+          )
+        )
       )
     )`;
 
