@@ -33,7 +33,7 @@ const getNotifications = async (req, res, next) => {
     const { page, limit, offset } = getPaginationParams(req.query);
     const { unread_only, category, search } = req.query;
 
-    let where = `WHERE user_id = $1 AND (is_read = false OR COALESCE(read_at, created_at) >= NOW() - INTERVAL '2 hours')`;
+    let where = `WHERE user_id = $1 AND created_at >= NOW() - INTERVAL '48 hours' AND (is_read = false OR COALESCE(read_at, created_at) >= NOW() - INTERVAL '2 hours')`;
     const values = [req.user.id];
     let idx = 2;
 
@@ -53,7 +53,7 @@ const getNotifications = async (req, res, next) => {
     const [count, data, unreadCount] = await Promise.all([
       query(`SELECT COUNT(*) FROM notifications ${where}`, values),
       query(`SELECT * FROM notifications ${where} ORDER BY created_at DESC LIMIT $${idx} OFFSET $${idx + 1}`, [...values, limit, offset]),
-      query(`SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND is_read = false AND category != 'chat'`, [req.user.id]),
+      query(`SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND is_read = false AND category != 'chat' AND created_at >= NOW() - INTERVAL '48 hours'`, [req.user.id]),
     ]);
 
     return success(res, {
@@ -76,12 +76,12 @@ const getUnreadNotifications = async (req, res, next) => {
   try {
     const { rows: unread } = await query(`
       SELECT * FROM notifications 
-      WHERE user_id = $1 AND is_read = false AND category != 'chat'
+      WHERE user_id = $1 AND is_read = false AND category != 'chat' AND created_at >= NOW() - INTERVAL '48 hours'
       ORDER BY created_at DESC LIMIT 5
     `, [req.user.id]);
     
     const { rows: [count] } = await query(`
-      SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND is_read = false AND category != 'chat'
+      SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND is_read = false AND category != 'chat' AND created_at >= NOW() - INTERVAL '48 hours'
     `, [req.user.id]);
 
     return success(res, {

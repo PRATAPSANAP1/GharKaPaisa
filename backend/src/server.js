@@ -455,25 +455,25 @@ const startServer = async () => {
       runCommissionRelease();
       setInterval(runCommissionRelease, 6 * 60 * 60 * 1000);
 
-      // Initialize 48-Hour Messenger Message & File Purge Job timer (runs every 15 minutes and on startup)
+      // Initialize 24-Hour Messenger Message & File Purge Job timer (runs every 15 minutes and on startup)
       const runMessengerPurge = async () => {
         try {
           const { purgeExpiredMessengerMessages } = require('./jobs/messengerPurge.job.js');
           await purgeExpiredMessengerMessages();
         } catch (err) {
-          logger.error('Messenger 48-Hour Purge Job error:', err.message);
+          logger.error('Messenger 24-Hour Purge Job error:', err.message);
         }
       };
       runMessengerPurge();
       setInterval(runMessengerPurge, 15 * 60 * 1000);
 
-      // Initialize 2-Hour Read Notification Purge Job timer (runs every 5 minutes and on startup for all panels)
+      // Initialize 48-Hour Notification Purge Job timer (runs every 5 minutes and on startup for all panels)
       const runNotificationPurge = async () => {
         try {
-          const { purgeExpiredReadNotifications } = require('./jobs/notificationPurge.job.js');
-          await purgeExpiredReadNotifications();
+          const { purgeExpiredNotifications } = require('./jobs/notificationPurge.job.js');
+          await purgeExpiredNotifications();
         } catch (err) {
-          logger.error('2-Hour Read Notification Purge Job error:', err.message);
+          logger.error('48-Hour Notification Purge Job error:', err.message);
         }
       };
       runNotificationPurge();

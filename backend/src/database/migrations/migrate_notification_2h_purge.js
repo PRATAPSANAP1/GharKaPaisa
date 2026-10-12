@@ -7,9 +7,11 @@ async function migrateNotification2hPurge() {
     await query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ NULL`);
     await query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`);
     await query(`CREATE INDEX IF NOT EXISTS idx_notifications_read_at ON notifications(is_read, read_at)`);
-    logger.info('[MIGRATION COMPLETE] Notification 2-Hour Read Purge indexes verified.');
+    await query(`CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at)`);
+    logger.info('[MIGRATION COMPLETE] Notification and Messenger retention indexes verified.');
   } catch (err) {
-    logger.error('Notification 2-Hour Purge Migration Error:', err);
+    logger.error('Notification 48h / Messenger 24h Purge Migration Error:', err);
     throw err;
   }
 }

@@ -23,6 +23,7 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
       SELECT 1 FROM messages m
       LEFT JOIN message_reads mr ON mr.message_id = m.id AND mr.user_id = $1
       WHERE m.conversation_id = c.id AND m.sender_id != $1 AND mr.id IS NULL
+        AND m.created_at >= NOW() - INTERVAL '24 hours'
         AND (cp.cleared_at IS NULL OR m.created_at > cp.cleared_at)
     )`;
   }
@@ -40,10 +41,10 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
       c.description,
       c.avatar_url,
       c.application_id,
-      CASE WHEN (cp.cleared_at IS NULL OR c.last_message_at > cp.cleared_at) THEN c.last_message_id ELSE NULL END AS last_message_id,
-      CASE WHEN (cp.cleared_at IS NULL OR c.last_message_at > cp.cleared_at) THEN c.last_message_text ELSE NULL END AS last_message_text,
+      CASE WHEN (c.last_message_at >= NOW() - INTERVAL '24 hours' AND (cp.cleared_at IS NULL OR c.last_message_at > cp.cleared_at)) THEN c.last_message_id ELSE NULL END AS last_message_id,
+      CASE WHEN (c.last_message_at >= NOW() - INTERVAL '24 hours' AND (cp.cleared_at IS NULL OR c.last_message_at > cp.cleared_at)) THEN c.last_message_text ELSE NULL END AS last_message_text,
       COALESCE(
-        CASE WHEN (cp.cleared_at IS NULL OR c.last_message_at > cp.cleared_at) THEN c.last_message_at ELSE cp.cleared_at END,
+        CASE WHEN (c.last_message_at >= NOW() - INTERVAL '24 hours' AND (cp.cleared_at IS NULL OR c.last_message_at > cp.cleared_at)) THEN c.last_message_at ELSE cp.cleared_at END,
         c.last_message_at,
         c.updated_at,
         c.created_at
@@ -62,6 +63,7 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
         FROM messages m
         LEFT JOIN message_reads mr ON mr.message_id = m.id AND mr.user_id = $1
         WHERE m.conversation_id = c.id AND m.sender_id != $1 AND mr.id IS NULL
+          AND m.created_at >= NOW() - INTERVAL '24 hours'
           AND (cp.cleared_at IS NULL OR m.created_at > cp.cleared_at)
       )::INT AS unread_count,
       (
@@ -312,6 +314,7 @@ async function getMessages(conversationId, userId = null, limit = 5000, offset =
       LEFT JOIN partner_profiles pp ON pp.user_id = u.id
       LEFT JOIN employees emp ON emp.user_id = u.id
       WHERE m.conversation_id = $1 AND m.deleted_at IS NULL
+        AND m.created_at >= NOW() - INTERVAL '24 hours'
         ${clearedFilter}
       ORDER BY m.created_at DESC
       LIMIT $2 OFFSET $3
@@ -566,6 +569,7 @@ async function getUnreadCount(userId) {
     JOIN conversation_participants cp ON cp.conversation_id = m.conversation_id AND cp.user_id = $1 AND cp.left_at IS NULL
     LEFT JOIN message_reads mr ON mr.message_id = m.id AND mr.user_id = $1
     WHERE m.sender_id != $1 AND mr.id IS NULL
+      AND m.created_at >= NOW() - INTERVAL '24 hours'
       AND (cp.cleared_at IS NULL OR m.created_at > cp.cleared_at)
   `;
   const { rows } = await query(sql, [userId]);

@@ -2417,7 +2417,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <FaLock size={12} color="#DC2626" />
-                        <span>Messages & attachments automatically delete everywhere after 48 hours</span>
+                        <span>Messages & attachments automatically delete everywhere after 24 hours</span>
                       </div>
                     </div>
 
