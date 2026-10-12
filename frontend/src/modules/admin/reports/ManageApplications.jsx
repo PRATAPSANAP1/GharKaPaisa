@@ -123,6 +123,16 @@ export default function ManageApplications() {
       .catch(err => console.error('Failed to load banks for filter:', err));
   }, []);
 
+  const isLocEocApp = (app) => {
+    if (!app) return false;
+    const cat = String(app.category || '').toLowerCase();
+    const subCat = String(app.sub_category || '').toLowerCase();
+    const pName = String(app.product_name || '').toLowerCase();
+    return ['loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loc', 'eoc', 'loan_on_card', 'card_on_loan'].includes(cat) ||
+      ['loc', 'eoc', 'loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loan_on_card', 'card_on_loan'].includes(subCat) ||
+      /insta\s*loan|jumbo\s*loan|instant\s*(&|and)?\s*jumbo\s*loan|instant\s*loan|smart\s*emi|smartemi|loan\s*on\s*card|loan\s*on\s*credit\s*card|emi\s*on\s*credit\s*card|emi\s*on\s*card|encash|dial\s*a\s*draft/i.test(pName);
+  };
+
   const fetchApplications = async () => {
     setLoading(true);
     setErr("");
@@ -149,25 +159,27 @@ export default function ManageApplications() {
           setAllCount(fetchedTotal);
         }
 
-        // ── QUERABLE OPERATOR BROWSER CONSOLE AUDIT LOGGING ──
-        if (isQuerableOperatorUser) {
-          try {
-            console.group('%c[Querable Operator Audit] Account & Showing Data Inspection', 'color: #0284c7; font-weight: 800; font-size: 13px;');
-            console.log('%c1. Account Assigned Category & Banks:', 'color: #0369a1; font-weight: 700;', {
-              designation: userDesignation,
-              role: userRole,
-              user_id: user?.id,
-              name: user?.full_name || user?.name || user?.email,
-              has_loc_eoc: hasLocEocAssigned,
-              category_assignments: user?.category_assignments || {},
-              assigned_banks_list: assignedList.map(b => ({
-                bank_id: b.id || b.bank_id,
-                name: b.name || b.bank_name || b.short_code,
-                code: b.short_code || b.code,
-                assigned_category: (b.category === 'loc_eoc' || b.is_loc_eoc) ? 'LOC & EOC' : (b.category ? b.category.toUpperCase().replace('_', ' ') : 'Credit Card'),
-                is_loc_eoc: !!b.is_loc_eoc
-              }))
-            });
+        // ── ALL ADMIN ROLES & DESIGNATION PANELS BROWSER CONSOLE AUDIT LOGGING ──
+        try {
+          const designationTitle = userDesignation || userRole || 'ADMIN';
+          console.group(`%c[Admin Panel Audit - ${designationTitle}] Account & Showing Applications Inspection`, 'color: #0284c7; font-weight: 800; font-size: 13px;');
+          console.log('%c1. Account Assigned Category & Banks:', 'color: #0369a1; font-weight: 700;', {
+            designation: userDesignation || 'N/A',
+            role: userRole || 'ADMIN',
+            user_id: user?.id,
+            name: user?.full_name || user?.name || user?.email,
+            has_loc_eoc: hasLocEocAssigned,
+            category_assignments: user?.category_assignments || {},
+            assigned_banks_count: assignedList.length,
+            assigned_banks_list: assignedList.map(b => ({
+              bank_id: b.id || b.bank_id,
+              name: b.name || b.bank_name || b.short_code,
+              code: b.short_code || b.code,
+              assigned_category: (b.category === 'loc_eoc' || b.is_loc_eoc) ? 'LOC & EOC' : (b.category ? b.category.toUpperCase().replace('_', ' ') : 'Credit Card'),
+              is_loc_eoc: !!b.is_loc_eoc
+            }))
+          });
+          if (assignedList.length > 0) {
             console.table(
               assignedList.map(b => ({
                 'Bank Name': b.name || b.bank_name || b.short_code || 'Bank',
@@ -176,14 +188,19 @@ export default function ManageApplications() {
                 'Bank ID': b.id || b.bank_id || '—'
               }))
             );
-            console.log('%c2. Showing Applications Data (Category & Bank):', 'color: #059669; font-weight: 700;', {
-              total_count: fetchedTotal,
-              page_records_count: res.data.data?.length || 0,
-              active_category_filter: categoryFilter,
-              active_status: status
-            });
+          } else {
+            console.log('%cAssigned Banks: All Banks (Super Admin / Unrestricted)', 'color: #64748b; font-style: italic;');
+          }
+          console.log('%c2. Showing Applications Data (Category & Bank):', 'color: #059669; font-weight: 700;', {
+            total_count: fetchedTotal,
+            page_records_count: res.data.data?.length || 0,
+            active_category_filter: categoryFilter,
+            active_bank_filter: bankFilter,
+            active_status: status || 'all'
+          });
+          if (res.data.data && res.data.data.length > 0) {
             console.table(
-              (res.data.data || []).map(a => ({
+              res.data.data.map(a => ({
                 'App Number': a.app_number || `APP${a.id}`,
                 'Bank Name': a.bank_name || a.bank_code || 'Partner Bank',
                 'Category': a.category || (isLocEocApp(a) ? 'loc_eoc' : 'credit_card'),
@@ -194,10 +211,12 @@ export default function ManageApplications() {
                 'Customer': a.customer_name || a.full_name || '—'
               }))
             );
-            console.groupEnd();
-          } catch (logErr) {
-            console.error('Querable Operator console audit error:', logErr);
+          } else {
+            console.log('%cNo applications returned matching current filters/permissions.', 'color: #64748b; font-style: italic;');
           }
+          console.groupEnd();
+        } catch (logErr) {
+          console.error('Admin console audit logging error:', logErr);
         }
       }
     } catch (e) {
@@ -219,16 +238,6 @@ export default function ManageApplications() {
       setPage(1);
     }
   }, [searchParams]);
-
-  const isLocEocApp = (app) => {
-    if (!app) return false;
-    const cat = String(app.category || '').toLowerCase();
-    const subCat = String(app.sub_category || '').toLowerCase();
-    const pName = String(app.product_name || '').toLowerCase();
-    return ['loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loc', 'eoc'].includes(cat) ||
-      ['loc', 'eoc'].includes(subCat) ||
-      /insta\s*loan|jumbo\s*loan|smart\s*emi|smartemi|loan\s*on\s*card/i.test(pName);
-  };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
