@@ -82,7 +82,9 @@ export default function ManageWallet() {
   const [ledgerEntries, setLedgerEntries] = useState([]);
   const [teamCommissions, setTeamCommissions] = useState({ summary: {}, transactions: [] });
   const [employeeIncentives, setEmployeeIncentives] = useState({ kpi: {}, pending: [], paid: [], all: [] });
-  const [incentiveSubTab, setIncentiveSubTab] = useState('pending'); // 'pending' | 'paid'
+  const [incentiveSubTab, setIncentiveSubTab] = useState('pending'); // 'pending' | 'paid' | 'all'
+  const [incentiveSearch, setIncentiveSearch] = useState('');
+  const [selectedIncentives, setSelectedIncentives] = useState([]);
   const [reconciliation, setReconciliation] = useState(null);
   const [razorpayBalance, setRazorpayBalance] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -133,7 +135,16 @@ export default function ManageWallet() {
         api.get('/wallet/reconciliation'),
         api.get('/wallet/admin/team-commissions', { params: queryParams }),
         api.get('/wallet/admin/razorpay/balance'),
-        api.get('/employees/incentives/overview', { params: { page: 1, limit: 300 } })
+        api.get('/employees/incentives/overview', {
+          params: {
+            page: 1,
+            limit: 500,
+            startDate: filters.fromDate || undefined,
+            endDate: filters.toDate || undefined,
+            role: filters.role !== 'all' ? filters.role : undefined,
+            search: filters.userSearch || undefined
+          }
+        })
       ]);
 
       const wData = wRes.status === 'fulfilled' ? (wRes.value?.data?.data || wRes.value?.data || []) : [];
@@ -192,13 +203,65 @@ export default function ManageWallet() {
   const handleReleaseIncentivePayout = async (incentiveId) => {
     setActionLoading(true);
     try {
-      const res = await api.post(`/employees/incentives/${incentiveId}/update-status`, { status: 'PAID' });
+      const refNo = `REL-${Date.now().toString(36).toUpperCase()}`;
+      const res = await api.post(`/employees/incentives/${incentiveId}/update-status`, {
+        status: 'RELEASE',
+        payment_reference: refNo,
+        payment_method: 'BANK_TRANSFER'
+      });
       if (res.data?.success) {
-        showToast(`Incentive payout released successfully!`, 'success');
+        showToast(`Incentive payout released successfully! Ref: ${refNo}`, 'success');
         fetchAllDashboardData();
       }
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to release incentive payout', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleHoldIncentive = async (incentiveId, defaultReason) => {
+    const holdReason = defaultReason || window.prompt('Enter hold reason for this incentive:', 'Target audit / App file pending');
+    if (!holdReason) return;
+    setActionLoading(true);
+    try {
+      const res = await api.post(`/employees/incentives/${incentiveId}/update-status`, {
+        status: 'HOLD',
+        hold_reason: holdReason
+      });
+      if (res.data?.success) {
+        showToast('Incentive placed on HOLD successfully', 'success');
+        fetchAllDashboardData();
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to place incentive on hold', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleBulkReleaseIncentives = async () => {
+    if (selectedIncentives.length === 0) {
+      showToast('Please select at least one incentive transaction to release.', 'error');
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to BULK RELEASE ${selectedIncentives.length} incentive payout(s)?`)) return;
+    setActionLoading(true);
+    try {
+      const refNo = `BATCH-${Date.now().toString(36).toUpperCase()}`;
+      const res = await api.post('/employees/incentives/bulk-update-status', {
+        incentive_ids: selectedIncentives,
+        status: 'RELEASE',
+        payment_reference: refNo,
+        payment_method: 'BANK_TRANSFER'
+      });
+      if (res.data?.success) {
+        showToast(`Bulk Release Success: ${res.data.message || `${selectedIncentives.length} payouts released`}`, 'success');
+        setSelectedIncentives([]);
+        fetchAllDashboardData();
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to bulk release payouts', 'error');
     } finally {
       setActionLoading(false);
     }
@@ -266,6 +329,22 @@ export default function ManageWallet() {
         'Amount': t.amount || 0,
         'Type': t.transaction_type || '',
         'Status': t.status || ''
+      }));
+    } else if (activeTabName === 'incentives') {
+      dataToExport = (employeeIncentives.all || []).map(inc => ({
+        'Incentive ID': inc.incentive_id || inc.id || '',
+        'Employee Name': inc.employee_name || '',
+        'Employee Code': inc.emp_code || '',
+        'Role': inc.role || '',
+        'Application Number': inc.app_number || '',
+        'Product': inc.product_name || '',
+        'Customer Name': inc.customer_name || '',
+        'Customer Mobile': inc.customer_mobile || '',
+        'Earned Amount': inc.incentive_earned || 0,
+        'Paid Amount': inc.incentive_paid || 0,
+        'Status': inc.status || '',
+        'Payment Reference': inc.payment_reference || '',
+        'Date': inc.created_at || ''
       }));
     } else {
       dataToExport = pendingCommissions.map(c => ({
@@ -683,6 +762,27 @@ export default function ManageWallet() {
           </div>
         </div>
 
+        {/* Card 4: Employee Incentives */}
+        <div onClick={() => { setActiveTab('incentives'); setIncentiveSubTab('pending'); }} style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer', transition: 'transform 0.15s ease' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Employee Incentives</span>
+            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FDF2F8', color: '#DB2777', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MdAttachMoney size={22} /></div>
+          </div>
+          <div>
+            <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#DB2777', margin: 0, letterSpacing: '-0.5px' }}>
+              ₹{(() => {
+                const totalEarned = parseFloat(employeeIncentives.kpi?.total_earned || 0);
+                if (totalEarned > 0) return totalEarned.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+                const sum = (employeeIncentives.all || []).reduce((acc, r) => acc + parseFloat(r.incentive_earned || 0), 0);
+                return sum.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+              })()}
+            </h3>
+            <span style={{ fontSize: '10.5px', color: '#DB2777', fontWeight: 700, marginTop: '4px', display: 'block' }}>
+              {(employeeIncentives.pending || []).length} Pending Release
+            </span>
+          </div>
+        </div>
+
         {/* Card 5: Withdrawal Pending */}
         <div onClick={() => { setActiveTab('withdrawals'); setWithdrawalSubTab('pending'); }} style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer', transition: 'transform 0.15s ease' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -722,6 +822,7 @@ export default function ManageWallet() {
         {[
           { id: 'commissions', label: 'Commission', icon: <MdLayers size={18} /> },
           { id: 'withdrawals', label: 'Withdrawal', icon: <MdAccountBalanceWallet size={18} /> },
+          { id: 'incentives', label: 'Employee Incentives', icon: <MdAttachMoney size={18} /> },
           { id: 'add_funds', label: 'Add Funds Requests', icon: <MdAddCard size={18} /> },
           { id: 'team_commission', label: 'Team Commission Hierarchy', icon: <MdPeople size={18} /> },
           { id: 'partners', label: 'Partner Balances Overview', icon: <MdPieChart size={18} /> },
@@ -1101,6 +1202,349 @@ export default function ManageWallet() {
                 </table>
               </div>
             )}
+          </div>
+        )}
+
+        {/* TAB: Employee Incentives Management & Settlement */}
+        {activeTab === 'incentives' && (
+          <div style={{ ...S.card, padding: '20px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <MdAttachMoney style={{ color: '#DB2777' }} size={22} /> Employee Incentive Management & Payouts
+                </h3>
+                <span style={{ fontSize: '12px', color: C.textLight }}>
+                  Review calculated performance incentives, place on hold, or disburse directly to internal staff
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {selectedIncentives.length > 0 && (
+                  <button
+                    onClick={handleBulkReleaseIncentives}
+                    disabled={actionLoading}
+                    style={{
+                      background: '#10B981',
+                      color: '#FFF',
+                      border: 'none',
+                      borderRadius: '10px',
+                      padding: '8px 16px',
+                      fontSize: '12.5px',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
+                    }}
+                  >
+                    <MdCheckCircle size={16} /> Release Selected ({selectedIncentives.length})
+                  </button>
+                )}
+                <button
+                  onClick={() => exportCSVReport('incentives')}
+                  style={{
+                    background: isDark ? '#27272A' : '#F1F5F9',
+                    color: C.text,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: '10px',
+                    padding: '8px 14px',
+                    fontSize: '12.5px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <MdFileDownload size={16} /> Export CSV
+                </button>
+                <a
+                  href="/super-admin/incentives"
+                  style={{
+                    background: C.teal,
+                    color: '#FFF',
+                    borderRadius: '10px',
+                    padding: '8px 14px',
+                    fontSize: '12.5px',
+                    fontWeight: 800,
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  Full Incentive Rules & Reports →
+                </a>
+              </div>
+            </div>
+
+            {/* Quick KPI Summary Badges */}
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '12px' }}>
+              <div style={{ background: isDark ? '#27272A' : '#FDF2F8', border: `1px solid ${isDark ? '#3F3F46' : '#FBCFE8'}`, padding: '12px 14px', borderRadius: '12px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#DB2777', textTransform: 'uppercase' }}>Total Earned</span>
+                <div style={{ fontSize: '18px', fontWeight: 900, color: C.text, marginTop: '2px' }}>
+                  ₹{(parseFloat(employeeIncentives.kpi?.total_earned || 0) || (employeeIncentives.all || []).reduce((a, b) => a + parseFloat(b.incentive_earned || 0), 0)).toLocaleString('en-IN')}
+                </div>
+              </div>
+              <div style={{ background: isDark ? '#27272A' : '#FFFBEB', border: `1px solid ${isDark ? '#3F3F46' : '#FDE68A'}`, padding: '12px 14px', borderRadius: '12px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#D97706', textTransform: 'uppercase' }}>Pending Payouts</span>
+                <div style={{ fontSize: '18px', fontWeight: 900, color: '#D97706', marginTop: '2px' }}>
+                  ₹{(parseFloat(employeeIncentives.kpi?.pending_payouts || 0) || (employeeIncentives.pending || []).reduce((a, b) => a + parseFloat(b.incentive_earned || 0), 0)).toLocaleString('en-IN')}
+                </div>
+              </div>
+              <div style={{ background: isDark ? '#27272A' : '#ECFDF5', border: `1px solid ${isDark ? '#3F3F46' : '#A7F3D0'}`, padding: '12px 14px', borderRadius: '12px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#059669', textTransform: 'uppercase' }}>Paid / Released</span>
+                <div style={{ fontSize: '18px', fontWeight: 900, color: '#059669', marginTop: '2px' }}>
+                  ₹{(parseFloat(employeeIncentives.kpi?.total_paid || 0) || (employeeIncentives.paid || []).reduce((a, b) => a + parseFloat(b.incentive_paid || b.incentive_earned || 0), 0)).toLocaleString('en-IN')}
+                </div>
+              </div>
+              <div style={{ background: isDark ? '#27272A' : '#F5F3FF', border: `1px solid ${isDark ? '#3F3F46' : '#DDD6FE'}`, padding: '12px 14px', borderRadius: '12px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#7C3AED', textTransform: 'uppercase' }}>Earning Employees</span>
+                <div style={{ fontSize: '18px', fontWeight: 900, color: '#7C3AED', marginTop: '2px' }}>
+                  {employeeIncentives.kpi?.employees_earned || new Set((employeeIncentives.all || []).map(r => r.emp_code)).size} Staff
+                </div>
+              </div>
+            </div>
+
+            {/* Sub-Tabs: Pending vs Released vs All */}
+            <div style={{ display: 'flex', gap: '10px', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px', flexWrap: 'wrap' }}>
+              {[
+                { id: 'pending', label: 'Pending Release', count: (employeeIncentives.pending || []).length },
+                { id: 'paid', label: 'Released & Paid', count: (employeeIncentives.paid || []).length },
+                { id: 'all', label: 'All Transactions', count: (employeeIncentives.all || []).length }
+              ].map(st => (
+                <button
+                  key={st.id}
+                  onClick={() => { setIncentiveSubTab(st.id); setSelectedIncentives([]); }}
+                  style={{
+                    padding: '8px 18px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: incentiveSubTab === st.id ? C.teal : (isDark ? '#27272A' : '#F1F5F9'),
+                    color: incentiveSubTab === st.id ? '#FFF' : C.text,
+                    fontWeight: 800,
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>{st.label}</span>
+                  <span style={{ background: incentiveSubTab === st.id ? 'rgba(255,255,255,0.25)' : (isDark ? '#3F3F46' : '#E2E8F0'), padding: '2px 8px', borderRadius: '12px', fontSize: '11px' }}>
+                    {st.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Sub-Search input */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
+                <MdSearch size={18} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} />
+                <input
+                  type="text"
+                  placeholder="Filter by employee name, code, app ID, customer..."
+                  value={incentiveSearch}
+                  onChange={e => setIncentiveSearch(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px 8px 34px',
+                    borderRadius: '8px',
+                    border: `1px solid ${C.border}`,
+                    background: isDark ? '#27272A' : '#FFF',
+                    color: C.text,
+                    fontSize: '12.5px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+              {incentiveSearch && (
+                <button
+                  onClick={() => setIncentiveSearch('')}
+                  style={{ background: 'transparent', border: `1px solid ${C.border}`, borderRadius: '8px', padding: '6px 12px', color: C.textLight, fontSize: '12px', cursor: 'pointer' }}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {/* Table */}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <thead>
+                  <tr style={{ borderBottom: `2px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
+                    <th style={{ padding: '10px 8px', width: '36px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={
+                          selectedIncentives.length > 0 &&
+                          selectedIncentives.length === (
+                            incentiveSubTab === 'pending' ? (employeeIncentives.pending || []).length :
+                            incentiveSubTab === 'paid' ? (employeeIncentives.paid || []).length :
+                            (employeeIncentives.all || []).length
+                          )
+                        }
+                        onChange={e => {
+                          const currentList = (
+                            incentiveSubTab === 'pending' ? (employeeIncentives.pending || []) :
+                            incentiveSubTab === 'paid' ? (employeeIncentives.paid || []) :
+                            (employeeIncentives.all || [])
+                          );
+                          if (e.target.checked) {
+                            setSelectedIncentives(currentList.map(r => r.incentive_id || r.id));
+                          } else {
+                            setSelectedIncentives([]);
+                          }
+                        }}
+                      />
+                    </th>
+                    <th style={{ padding: '10px 8px' }}>Incentive ID</th>
+                    <th style={{ padding: '10px 8px' }}>Employee</th>
+                    <th style={{ padding: '10px 8px' }}>Role</th>
+                    <th style={{ padding: '10px 8px' }}>Application & Lead</th>
+                    <th style={{ padding: '10px 8px' }}>Product</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Earned Amount</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'center' }}>Status</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'center' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    let list = (
+                      incentiveSubTab === 'pending' ? (employeeIncentives.pending || []) :
+                      incentiveSubTab === 'paid' ? (employeeIncentives.paid || []) :
+                      (employeeIncentives.all || [])
+                    );
+
+                    if (incentiveSearch.trim()) {
+                      const q = incentiveSearch.toLowerCase().trim();
+                      list = list.filter(r =>
+                        (r.employee_name || '').toLowerCase().includes(q) ||
+                        (r.emp_code || '').toLowerCase().includes(q) ||
+                        (r.app_number || '').toLowerCase().includes(q) ||
+                        (r.customer_name || '').toLowerCase().includes(q) ||
+                        (r.product_name || '').toLowerCase().includes(q)
+                      );
+                    }
+
+                    if (list.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan={9} style={{ textAlign: 'center', padding: '30px', color: C.textLight, fontWeight: 600 }}>
+                            No employee incentives found for this filter.
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    return list.map(row => {
+                      const id = row.incentive_id || row.id;
+                      const isSelected = selectedIncentives.includes(id);
+                      const statusUpper = (row.status || 'PENDING').toUpperCase();
+                      const isReleased = ['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes(statusUpper);
+                      const isHold = ['HOLD', 'ON_HOLD', 'HELD'].some(h => statusUpper.includes(h));
+
+                      return (
+                        <tr key={id} style={{ borderBottom: `1px solid ${C.border}`, background: isSelected ? `${C.teal}08` : 'transparent' }}>
+                          <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {
+                                setSelectedIncentives(prev =>
+                                  prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+                                );
+                              }}
+                            />
+                          </td>
+                          <td style={{ padding: '12px 8px', fontWeight: 800, color: C.text, fontFamily: 'monospace' }}>
+                            <div>{id ? String(id).slice(0, 8) : 'N/A'}</div>
+                            <span style={{ fontSize: '10.5px', color: C.textLight }}>
+                              {row.created_at ? new Date(row.created_at).toLocaleDateString('en-IN') : ''}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 8px', fontWeight: 700 }}>
+                            <div style={{ color: C.text }}>{row.employee_name || 'Staff Member'}</div>
+                            <span style={{ fontSize: '10.5px', color: C.textLight }}>{row.emp_code || 'N/A'}</span>
+                          </td>
+                          <td style={{ padding: '12px 8px' }}>
+                            <span style={{ padding: '2px 8px', borderRadius: '6px', background: isDark ? '#27272A' : '#F1F5F9', color: C.text, fontSize: '11px', fontWeight: 700 }}>
+                              {row.role || 'Telecaller'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 8px', fontSize: '11.5px' }}>
+                            <div style={{ fontWeight: 700, color: C.text }}>App: {row.app_number || 'N/A'}</div>
+                            <div style={{ color: C.textLight, fontSize: '10.5px' }}>
+                              {row.customer_name || 'Customer'} {row.customer_mobile ? `(${row.customer_mobile})` : ''}
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 8px', fontSize: '11.5px', color: C.text }}>
+                            <div style={{ fontWeight: 600 }}>{row.product_name || 'Credit Card'}</div>
+                            <span style={{ color: C.textLight, fontSize: '10px' }}>{row.bank_name || ''}</span>
+                          </td>
+                          <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 900, color: '#10B981', fontSize: '13.5px' }}>
+                            ₹{parseFloat(row.incentive_earned || row.amount || 0).toLocaleString('en-IN')}
+                          </td>
+                          <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                            {isReleased ? (
+                              <span style={{ padding: '4px 10px', borderRadius: '10px', background: '#DCFCE7', color: '#15803D', fontWeight: 800, fontSize: '10.5px' }}>
+                                RELEASED
+                              </span>
+                            ) : isHold ? (
+                              <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <span style={{ padding: '4px 10px', borderRadius: '10px', background: '#EDE9FE', color: '#6D28D9', fontWeight: 800, fontSize: '10.5px' }}>
+                                  ON HOLD
+                                </span>
+                                {row.hold_reason && (
+                                  <span style={{ fontSize: '9.5px', color: '#6D28D9', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.hold_reason}>
+                                    {row.hold_reason}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span style={{ padding: '4px 10px', borderRadius: '10px', background: '#FEF3C7', color: '#B45309', fontWeight: 800, fontSize: '10.5px' }}>
+                                PENDING
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                              <button
+                                onClick={() => setViewDetailModalItem({ ...row, type: 'incentive', id })}
+                                style={{ background: isDark ? '#27272A' : '#E2E8F0', color: C.text, border: 'none', borderRadius: '6px', padding: '5px 8px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                              >
+                                View
+                              </button>
+                              {!isReleased && (
+                                <>
+                                  <button
+                                    onClick={() => handleReleaseIncentivePayout(id)}
+                                    disabled={actionLoading}
+                                    style={{ background: '#10B981', color: '#FFF', border: 'none', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                                  >
+                                    Release
+                                  </button>
+                                  {!isHold && (
+                                    <button
+                                      onClick={() => handleHoldIncentive(id)}
+                                      disabled={actionLoading}
+                                      style={{ background: '#8B5CF6', color: '#FFF', border: 'none', borderRadius: '6px', padding: '5px 8px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                                    >
+                                      Hold
+                                    </button>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -1720,21 +2164,31 @@ export default function ManageWallet() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px', color: C.text }}>
               <div style={{ padding: '12px', borderRadius: '10px', background: isDark ? '#27272A' : '#F8FAFC', border: `1px solid ${C.border}`, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
-                  <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 700 }}>Beneficiary User</span>
-                  <strong style={{ fontSize: '14px' }}>{viewDetailModalItem.user_name || viewDetailModalItem.first_name ? `${viewDetailModalItem.user_name || viewDetailModalItem.first_name} ${viewDetailModalItem.last_name || ''}` : 'Partner User'}</strong>
-                  <span style={{ fontSize: '11px', color: C.textLight, display: 'block' }}>Code: {viewDetailModalItem.partner_code || 'YOH-PRT001'}</span>
+                  <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 700 }}>
+                    {viewDetailModalItem.type === 'incentive' ? 'Staff Member' : 'Beneficiary User'}
+                  </span>
+                  <strong style={{ fontSize: '14px' }}>
+                    {viewDetailModalItem.employee_name || viewDetailModalItem.user_name || (viewDetailModalItem.first_name ? `${viewDetailModalItem.first_name} ${viewDetailModalItem.last_name || ''}` : 'User')}
+                  </strong>
+                  <span style={{ fontSize: '11px', color: C.textLight, display: 'block' }}>
+                    Code: {viewDetailModalItem.emp_code || viewDetailModalItem.partner_code || 'N/A'}
+                  </span>
                 </div>
                 <div>
                   <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 700 }}>Role / Hierarchy</span>
-                  <strong style={{ fontSize: '14px' }}>{viewDetailModalItem.role || 'Partner'}</strong>
-                  <span style={{ fontSize: '11px', color: C.textLight, display: 'block' }}>Dept: Sales & Financial Operations</span>
+                  <strong style={{ fontSize: '14px' }}>{viewDetailModalItem.role || 'Staff / Partner'}</strong>
+                  <span style={{ fontSize: '11px', color: C.textLight, display: 'block' }}>
+                    {viewDetailModalItem.type === 'incentive' ? 'Internal Operations' : 'Dept: Sales & Financial Operations'}
+                  </span>
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div style={{ padding: '10px 14px', borderRadius: '8px', background: isDark ? '#27272A' : '#F1F5F9' }}>
                   <span style={{ fontSize: '11px', color: C.textLight, display: 'block' }}>Financial Amount</span>
-                  <strong style={{ fontSize: '16px', color: C.green }}>₹{parseFloat(viewDetailModalItem.amount || viewDetailModalItem.credit || 0).toLocaleString('en-IN')}</strong>
+                  <strong style={{ fontSize: '16px', color: C.green }}>
+                    ₹{parseFloat(viewDetailModalItem.incentive_earned || viewDetailModalItem.amount || viewDetailModalItem.credit || 0).toLocaleString('en-IN')}
+                  </strong>
                 </div>
                 <div style={{ padding: '10px 14px', borderRadius: '8px', background: isDark ? '#27272A' : '#F1F5F9' }}>
                   <span style={{ fontSize: '11px', color: C.textLight, display: 'block' }}>Current Status</span>
@@ -1742,7 +2196,22 @@ export default function ManageWallet() {
                 </div>
               </div>
 
-              {viewDetailModalItem.bank_name && (
+              {viewDetailModalItem.type === 'incentive' && (
+                <div style={{ padding: '10px 14px', borderRadius: '8px', background: isDark ? '#27272A' : '#F8FAFC', border: `1px solid ${C.border}`, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div><strong>Application:</strong> #{viewDetailModalItem.app_number || 'N/A'}</div>
+                  <div><strong>Product:</strong> {viewDetailModalItem.product_name || 'Credit Card'}</div>
+                  <div><strong>Customer:</strong> {viewDetailModalItem.customer_name || 'Customer'}</div>
+                  <div><strong>Mobile:</strong> {viewDetailModalItem.customer_mobile || 'N/A'}</div>
+                  {viewDetailModalItem.payment_reference && (
+                    <div style={{ gridColumn: 'span 2' }}><strong>Payment Reference:</strong> <span style={{ fontFamily: 'monospace' }}>{viewDetailModalItem.payment_reference}</span></div>
+                  )}
+                  {viewDetailModalItem.hold_reason && (
+                    <div style={{ gridColumn: 'span 2', color: '#8B5CF6' }}><strong>Hold Reason:</strong> {viewDetailModalItem.hold_reason}</div>
+                  )}
+                </div>
+              )}
+
+              {viewDetailModalItem.bank_name && viewDetailModalItem.type !== 'incentive' && (
                 <div style={{ padding: '10px 14px', borderRadius: '8px', background: isDark ? '#27272A' : '#F8FAFC', border: `1px solid ${C.border}` }}>
                   <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 700 }}>Bank Settlement Account</span>
                   <div><strong>Bank:</strong> {viewDetailModalItem.bank_name}</div>
@@ -1752,7 +2221,7 @@ export default function ManageWallet() {
                 </div>
               )}
 
-              {viewDetailModalItem.product && (
+              {viewDetailModalItem.product && viewDetailModalItem.type !== 'incentive' && (
                 <div style={{ padding: '10px 14px', borderRadius: '8px', background: isDark ? '#27272A' : '#F8FAFC', border: `1px solid ${C.border}` }}>
                   <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 700 }}>Product / Application Source</span>
                   <div><strong>Product Name:</strong> {viewDetailModalItem.product}</div>
@@ -1778,7 +2247,34 @@ export default function ManageWallet() {
                 Close
               </button>
 
-              {(viewDetailModalItem.status || '').toLowerCase().includes('pending') && (
+              {viewDetailModalItem.type === 'incentive' && !['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes((viewDetailModalItem.status || '').toUpperCase()) && (
+                <>
+                  <button
+                    onClick={() => {
+                      const incId = viewDetailModalItem.incentive_id || viewDetailModalItem.id;
+                      setViewDetailModalItem(null);
+                      handleReleaseIncentivePayout(incId);
+                    }}
+                    style={{ ...S.btn('primary'), background: '#10B981', color: '#FFF', padding: '8px 18px', borderRadius: '8px', fontWeight: 900 }}
+                  >
+                    ✅ Release Incentive Payout
+                  </button>
+                  {!['HOLD', 'ON_HOLD', 'HELD'].some(h => (viewDetailModalItem.status || '').toUpperCase().includes(h)) && (
+                    <button
+                      onClick={() => {
+                        const incId = viewDetailModalItem.incentive_id || viewDetailModalItem.id;
+                        setViewDetailModalItem(null);
+                        handleHoldIncentive(incId);
+                      }}
+                      style={{ ...S.btn('outline'), color: '#8B5CF6', borderColor: '#8B5CF6', padding: '8px 16px', borderRadius: '8px', fontWeight: 800 }}
+                    >
+                      Hold Incentive
+                    </button>
+                  )}
+                </>
+              )}
+
+              {viewDetailModalItem.type !== 'incentive' && (viewDetailModalItem.status || '').toLowerCase().includes('pending') && (
                 <>
                   {viewDetailModalItem.type !== 'commission' && (
                     <button

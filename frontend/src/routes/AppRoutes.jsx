@@ -435,7 +435,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/direct-leads" element={<ManageDirectLeads />} />
             <Route path="/super-admin/loan-applications" element={<ManageLoanApplications />} />
             <Route path="/super-admin/commissions" element={<SuperAdminCommission />} />
-            <Route path="/super-admin/incentives" element={<Navigate to="/super-admin/overview" replace />} />
+            <Route path="/super-admin/incentives" element={<ManageEmployeeIncentives />} />
             <Route path="/super-admin/commission-rules" element={<Navigate to="/super-admin/commissions" replace />} />
 
             <Route path="/super-admin/wallet" element={<ManageWallet />} />
@@ -468,6 +468,7 @@ const AppRoutes = () => {
             <Route path="/superadmin/sections" element={<Navigate to="/super-admin/sections" replace />} />
             <Route path="/superadmin/links" element={<Navigate to="/super-admin/links" replace />} />
             <Route path="/superadmin/banners" element={<Navigate to="/super-admin/banners" replace />} />
+            <Route path="/superadmin/incentives" element={<Navigate to="/super-admin/incentives" replace />} />
             <Route path="/superadmin/wallet" element={<Navigate to="/super-admin/wallet" replace />} />
             <Route path="/superadmin/announcements" element={<Navigate to="/super-admin/announcements" replace />} />
             <Route path="/superadmin/services" element={<Navigate to="/super-admin/services" replace />} />

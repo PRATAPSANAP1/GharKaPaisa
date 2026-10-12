@@ -10,7 +10,7 @@ import logo from '../assets/logos/logo.png';
 import Chatbot from '../components/Chatbot/Chatbot';
 import AnnouncementBanner from '../components/AnnouncementBanner';
 import { MdNotifications } from 'react-icons/md';
-import { FaWhatsapp, FaComments, FaCommentDots } from 'react-icons/fa';
+import { FaWhatsapp, FaComments, FaCommentDots, FaCoins } from 'react-icons/fa';
 
 // ── Chevron Component for Collapsible Items ──────────────────────────────────
 const Chevron = ({ open, color = "currentColor", size = 16 }) => (
@@ -226,6 +226,7 @@ const SuperAdminLayout = () => {
       title: "FINANCE",
       items: [
         { path: '/super-admin/wallet', label: 'Wallet & Settlements', icon: <Icons.wallet size={16} /> },
+        { path: '/super-admin/incentives', label: 'Employee Incentives', icon: <FaCoins size={16} /> },
         { path: '/super-admin/commissions', label: 'Partner Commissions', icon: <Icons.gift size={16} /> }
       ]
     },
