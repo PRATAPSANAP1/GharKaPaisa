@@ -43,6 +43,7 @@ router.delete('/working-hours/policy/:id', workingHoursCtrl.deletePolicy);
 router.get('/working-hours/holidays', workingHoursCtrl.getHolidays);
 router.post('/working-hours/holiday', workingHoursCtrl.saveHoliday);
 router.delete('/working-hours/holiday/:id', workingHoursCtrl.deleteHoliday);
+router.delete('/working-hours/extension/:id', workingHoursCtrl.revokeExtension);
 
 // Dynamic Product Link Management endpoints
 router.post('/products/link', linkCtrl.saveProductLink);

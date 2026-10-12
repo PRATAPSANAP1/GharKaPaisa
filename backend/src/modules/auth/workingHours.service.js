@@ -39,6 +39,9 @@ async function ensureWorkingHoursTables() {
       );
 
       CREATE INDEX IF NOT EXISTS idx_awhe_date_user ON admin_working_hour_extensions(extension_date, user_id);
+      ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS roles VARCHAR(50)[] DEFAULT '{}';
+      ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS is_revoked BOOLEAN DEFAULT FALSE;
+      ALTER TABLE admin_working_hour_policies ADD COLUMN IF NOT EXISTS user_ids UUID[] DEFAULT '{}';
     `);
 
     const { rows: existingGlobal } = await query(`SELECT id FROM admin_working_hours WHERE user_id IS NULL AND designation IS NULL LIMIT 1`);
@@ -174,15 +177,15 @@ async function resolvePolicyForUser(user, dayName) {
       SELECT * FROM admin_working_hour_policies
       WHERE is_enabled = TRUE
         AND (
-          (scope_type = 'USER' AND user_id = $1)
-          OR (scope_type = 'DESIGNATION' AND $2 = ANY(designations))
+          (scope_type = 'USER' AND (user_id = $1 OR $1 = ANY(user_ids)))
+          OR (scope_type = 'DESIGNATION' AND ($2 = ANY(designations) OR $2 ILIKE ANY(designations)))
           OR (scope_type = 'ROLE' AND $3 = ANY(roles))
           OR (scope_type = 'GLOBAL')
         )
       ORDER BY 
         CASE 
-          WHEN scope_type = 'USER' AND user_id = $1 THEN 1
-          WHEN scope_type = 'DESIGNATION' AND $2 = ANY(designations) THEN 2
+          WHEN scope_type = 'USER' AND (user_id = $1 OR $1 = ANY(user_ids)) THEN 1
+          WHEN scope_type = 'DESIGNATION' AND ($2 = ANY(designations) OR $2 ILIKE ANY(designations)) THEN 2
           WHEN scope_type = 'ROLE' AND $3 = ANY(roles) THEN 3
           WHEN scope_type = 'GLOBAL' THEN 4
           ELSE 5
@@ -370,10 +373,15 @@ async function checkUserWorkingHours(user) {
     const { rows: extensionRows } = await query(`
       SELECT * FROM admin_working_hour_extensions
       WHERE extension_date = $1::date
-        AND (user_id = $2 OR apply_to = 'ALL')
+        AND is_revoked IS NOT TRUE
+        AND (
+          user_id = $2 
+          OR apply_to = 'ALL'
+          OR (apply_to = 'ROLE' AND $3 = ANY(roles))
+        )
       ORDER BY created_at DESC
       LIMIT 1
-    `, [dateStr, user.id]);
+    `, [dateStr, user.id, roleUpper]);
 
     let isExtended = false;
     let effectiveEndTimeStr = baseEndTimeStr;

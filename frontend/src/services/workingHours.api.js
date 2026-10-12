@@ -63,3 +63,12 @@ export const deleteHoliday = async (id) => {
   const response = await api.delete(`/superadmin/working-hours/holiday/${id}`);
   return response.data;
 };
+
+/**
+ * Revoke/delete an active extension
+ */
+export const revokeExtension = async (id) => {
+  const response = await api.delete(`/superadmin/working-hours/extension/${id}`);
+  return response.data;
+};
+

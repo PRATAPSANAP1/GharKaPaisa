@@ -57,7 +57,7 @@ const getWorkingHoursConfig = async (req, res, next) => {
       FROM admin_working_hour_extensions e
       LEFT JOIN users u ON u.id = e.user_id
       LEFT JOIN users creator ON creator.id = e.created_by
-      WHERE e.extension_date = $1::date
+      WHERE e.extension_date = $1::date AND e.is_revoked IS NOT TRUE
       ORDER BY e.created_at DESC
     `, [dateStr]);
 
@@ -85,8 +85,9 @@ const getWorkingHoursConfig = async (req, res, next) => {
       }
 
       const globalExtension = extensionsToday.find(e => e.apply_to === 'ALL');
+      const roleExtension = extensionsToday.find(e => e.apply_to === 'ROLE' && Array.isArray(e.roles) && e.roles.includes(u.role));
       const specificExt = extensionsToday.find(e => e.apply_to === 'SPECIFIC' && String(e.user_id) === String(u.id));
-      const activeExt = specificExt || globalExtension || null;
+      const activeExt = specificExt || roleExtension || globalExtension || null;
 
       let effectiveEndTime = baseEndTime;
       if (activeExt && timeToMinutes(activeExt.extended_end_time) > timeToMinutes(baseEndTime)) {

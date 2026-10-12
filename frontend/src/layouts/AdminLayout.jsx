@@ -497,19 +497,71 @@ const AdminLayout = () => {
           </>
         )}
 
-        <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+        <div style={{ marginTop: 'auto', paddingTop: '14px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {/* Operator Profile Card in Sidebar */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '10px 12px',
+            borderRadius: '12px',
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.08)'
+          }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+              color: '#ffffff',
+              fontWeight: 900,
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              {(user?.first_name || user?.name || 'A').charAt(0).toUpperCase()}
+            </div>
+            <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+              <div style={{ fontSize: '13px', fontWeight: 800, color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : (user?.name || 'Administrative Operator')}
+              </div>
+              <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.55)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {user?.designation || userRole || 'Operator'}
+              </div>
+            </div>
+          </div>
+
+          {/* Language Switcher in Sidebar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 6px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>
+              Language
+            </span>
+            <LanguageSwitcher />
+          </div>
+
+          {/* Interface Mode / Theme Toggle in Sidebar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 6px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>
+              Interface Mode
+            </span>
+            <ThemeToggle />
+          </div>
+
+          {/* Log Out Button */}
           <button
             id="admin-sidebar-logout-button"
             onClick={handleLogout}
             style={{
               width: '100%',
-              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '12px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '10px 14px', borderRadius: '12px',
               fontSize: '13.5px', fontWeight: 800, color: '#EF4444',
               background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.25)',
-              cursor: 'pointer', transition: 'all 0.2s ease'
+              cursor: 'pointer', transition: 'all 0.2s ease', marginTop: '2px'
             }}
           >
-            <Icons.logout size={18} />
+            <Icons.logout size={16} />
             <span>Log Out</span>
           </button>
         </div>
@@ -600,9 +652,8 @@ const AdminLayout = () => {
             <div className="hidden md:block" />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <LanguageSwitcher />
-            {/* Messenger Button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* Messenger Button (Mobile & Desktop) */}
             <button
               id="admin-messenger-button"
               onClick={() => navigate('/admin/messenger')}
@@ -648,7 +699,7 @@ const AdminLayout = () => {
               )}
             </button>
 
-            {/* Notification Bell Button & Popover Dropdown */}
+            {/* Notification Bell Button & Popover Dropdown (Mobile & Desktop) */}
             <div style={{ position: 'relative' }} ref={notifDropdownRef}>
               <button
                 id="admin-notification-bell"
@@ -701,7 +752,7 @@ const AdminLayout = () => {
                   position: 'absolute',
                   top: '48px',
                   right: 0,
-                  width: '340px',
+                  width: 'min(340px, calc(100vw - 32px))',
                   background: C.card,
                   border: `1px solid ${C.border}`,
                   borderRadius: '16px',
@@ -786,20 +837,22 @@ const AdminLayout = () => {
               )}
             </div>
 
-            <ThemeToggle />
-            <LanguageSwitcher />
-            <button
-              id="admin-logout-button"
-              onClick={handleLogout}
-              className="hidden md:flex"
-              style={{
-                display: 'flex', alignItems: 'center', gap: '8px', background: `${C.red}10`,
-                color: C.red, border: 'none', borderRadius: '8px', padding: '8px 16px',
-                fontSize: '13px', fontWeight: 700, cursor: 'pointer'
-              }}
-            >
-              <Icons.logout size={14} /> Log Out
-            </button>
+            {/* Desktop Only Extra Controls */}
+            <div className="hidden md:flex" style={{ alignItems: 'center', gap: '10px' }}>
+              <LanguageSwitcher />
+              <ThemeToggle />
+              <button
+                id="admin-logout-button"
+                onClick={handleLogout}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px', background: `${C.red}10`,
+                  color: C.red, border: 'none', borderRadius: '8px', padding: '8px 16px',
+                  fontSize: '13px', fontWeight: 700, cursor: 'pointer'
+                }}
+              >
+                <Icons.logout size={14} /> Log Out
+              </button>
+            </div>
           </div>
         </header>
 
