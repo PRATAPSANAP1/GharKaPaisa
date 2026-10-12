@@ -171,7 +171,7 @@ export default function ManageDirectLeads() {
             onClick={handleExportCSV}
             disabled={exporting}
             style={{
-              padding: "12px 22px", borderRadius: "12px", border: `1px solid ${C.teal}`,
+              padding: "12px 22px", borderRadius: "8px", border: `1px solid ${C.teal}`,
               background: "transparent",
               color: C.teal, fontWeight: 800, fontSize: "14px", cursor: "pointer",
               display: "flex", alignItems: "center", gap: "8px"
@@ -184,14 +184,14 @@ export default function ManageDirectLeads() {
           <button
             onClick={() => setShowApplyModal(true)}
             style={{
-              padding: "12px 22px", borderRadius: "12px", border: "none",
+              padding: "12px 22px", borderRadius: "8px", border: "none",
               background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
               color: "#FFFFFF", fontWeight: 800, fontSize: "14px", cursor: "pointer",
               display: "flex", alignItems: "center", gap: "8px",
               boxShadow: `0 4px 16px ${C.primary}35`
             }}
           >
-            <FaPlus size={14} />
+            <FaClipboardList size={14} />
             <span>Apply Direct Lead</span>
           </button>
         </div>
@@ -199,8 +199,8 @@ export default function ManageDirectLeads() {
 
       {/* Stats Cards Section */}
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(200px, 1fr))", gap: isMobile ? "10px" : "16px", marginBottom: "24px" }}>
-        <div style={{ ...S.card, display: "flex", alignItems: "center", gap: "12px", padding: isMobile ? "12px" : "18px" }}>
-          <div style={{ width: "38px", height: "38px", background: `${C.primary}15`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", color: C.primary, fontSize: "18px", flexShrink: 0 }}>
+        <div style={{ ...S.card, borderRadius: "8px", display: "flex", alignItems: "center", gap: "12px", padding: isMobile ? "12px" : "18px" }}>
+          <div style={{ width: "38px", height: "38px", background: `${C.primary}15`, borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", color: C.primary, fontSize: "18px", flexShrink: 0 }}>
             <FaCreditCard size={18} />
           </div>
           <div style={{ minWidth: 0 }}>
@@ -209,8 +209,8 @@ export default function ManageDirectLeads() {
           </div>
         </div>
 
-        <div style={{ ...S.card, display: "flex", alignItems: "center", gap: "12px", padding: isMobile ? "12px" : "18px" }}>
-          <div style={{ width: "38px", height: "38px", background: `${C.green}15`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", color: C.green, fontSize: "18px", flexShrink: 0 }}>
+        <div style={{ ...S.card, borderRadius: "8px", display: "flex", alignItems: "center", gap: "12px", padding: isMobile ? "12px" : "18px" }}>
+          <div style={{ width: "38px", height: "38px", background: `${C.green}15`, borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", color: C.green, fontSize: "18px", flexShrink: 0 }}>
             <FaFire size={18} />
           </div>
           <div style={{ minWidth: 0 }}>
@@ -219,8 +219,8 @@ export default function ManageDirectLeads() {
           </div>
         </div>
 
-        <div style={{ ...S.card, display: "flex", alignItems: "center", gap: "12px", padding: isMobile ? "12px" : "18px" }}>
-          <div style={{ width: "38px", height: "38px", background: `${C.teal}15`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", color: C.teal, fontSize: "18px", flexShrink: 0 }}>
+        <div style={{ ...S.card, borderRadius: "8px", display: "flex", alignItems: "center", gap: "12px", padding: isMobile ? "12px" : "18px" }}>
+          <div style={{ width: "38px", height: "38px", background: `${C.teal}15`, borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", color: C.teal, fontSize: "18px", flexShrink: 0 }}>
             <FaCreditCard size={18} />
           </div>
           <div style={{ minWidth: 0 }}>
@@ -229,8 +229,8 @@ export default function ManageDirectLeads() {
           </div>
         </div>
 
-        <div style={{ ...S.card, display: "flex", alignItems: "center", gap: "12px", padding: isMobile ? "12px" : "18px" }}>
-          <div style={{ width: "38px", height: "38px", background: `${C.gold}15`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", color: C.gold, fontSize: "18px", flexShrink: 0 }}>
+        <div style={{ ...S.card, borderRadius: "8px", display: "flex", alignItems: "center", gap: "12px", padding: isMobile ? "12px" : "18px" }}>
+          <div style={{ width: "38px", height: "38px", background: `${C.gold}15`, borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", color: C.gold, fontSize: "18px", flexShrink: 0 }}>
             <FaShieldAlt size={18} />
           </div>
           <div style={{ minWidth: 0 }}>
@@ -249,7 +249,7 @@ export default function ManageDirectLeads() {
               key={cat.id}
               onClick={() => { setActiveCategory(cat.id); setPage(1); }}
               style={{
-                padding: "10px 18px", borderRadius: "12px",
+                padding: "10px 18px", borderRadius: "8px",
                 border: `1.5px solid ${isActive ? C.primary : C.border}`,
                 background: isActive ? `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)` : C.card,
                 color: isActive ? "#FFFFFF" : C.text,
@@ -266,22 +266,22 @@ export default function ManageDirectLeads() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div style={{ ...S.card, padding: "18px", marginBottom: "24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
+      <div style={{ ...S.card, borderRadius: "8px", padding: "18px", marginBottom: "24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
         <form onSubmit={handleSearchSubmit} style={{ display: "flex", flex: 1, gap: "12px", maxWidth: isMobile ? "100%" : "500px", width: "100%" }}>
           <input
-            style={{ ...S.input, margin: 0, flex: 1 }}
+            style={{ ...S.input, margin: 0, flex: 1, borderRadius: "8px" }}
             placeholder="Search by customer name, mobile, bank..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <button type="submit" style={{ ...S.btn("primary", false), padding: "10px 20px", fontSize: "13px", fontWeight: 700, flexShrink: 0 }}>
+          <button type="submit" style={{ ...S.btn("primary", false), padding: "10px 20px", fontSize: "13px", fontWeight: 700, borderRadius: "8px", flexShrink: 0 }}>
             Search
           </button>
         </form>
 
         <button 
           onClick={fetchLeads}
-          style={{ background: `${C.teal}10`, border: `1px solid ${C.teal}35`, color: C.teal, borderRadius: "10px", padding: "10px 18px", fontSize: "13px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", width: isMobile ? "100%" : "auto" }}
+          style={{ background: `${C.teal}10`, border: `1px solid ${C.teal}35`, color: C.teal, borderRadius: "8px", padding: "10px 18px", fontSize: "13px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", width: isMobile ? "100%" : "auto" }}
         >
           <FaSyncAlt size={14} />
           <span>Refresh Table</span>
@@ -301,7 +301,7 @@ export default function ManageDirectLeads() {
       )}
 
       {/* Data Table */}
-      <div style={{ ...S.card, padding: 0, overflow: "hidden", border: `1px solid ${C.border}` }}>
+      <div style={{ ...S.card, borderRadius: isMobile ? "8px" : "0px", padding: 0, overflow: "hidden", border: `1px solid ${C.border}` }}>
         {loading ? (
           <div style={{ textAlign: "center", padding: "50px", color: C.textLight }}>
             <div style={{ width: "24px", height: "24px", border: `3px solid ${C.primary}`, borderTopColor: "transparent", borderRadius: "50%", margin: "0 auto 12px", animation: "spin 1s linear infinite" }}></div>
@@ -318,7 +318,7 @@ export default function ManageDirectLeads() {
             {leads.map((lead) => {
               const catLabel = !lead.category || lead.category === 'credit_card' ? 'Credit Card' : (lead.category === 'insurance' ? 'Insurance' : String(lead.category).replace(/_/g, ' '));
               return (
-                <div key={lead.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: "14px", padding: "14px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div key={lead.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: "8px", padding: "14px", display: "flex", flexDirection: "column", gap: "10px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div>
                       <div style={{ fontWeight: 800, fontSize: "15px", color: C.text }}>{lead.customer_name}</div>
@@ -490,7 +490,7 @@ export default function ManageDirectLeads() {
       {/* ═══ APPLY / ADD DIRECT LEAD MODAL ═══ */}
       {showApplyModal && (
         <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
-          <div style={{ background: C.card, width: "100%", maxWidth: "500px", borderRadius: "20px", border: `1px solid ${C.border}`, boxShadow: "0 25px 50px rgba(0,0,0,0.3)", padding: "24px" }}>
+          <div style={{ background: C.card, width: "100%", maxWidth: "500px", borderRadius: "8px", border: `1px solid ${C.border}`, boxShadow: "0 25px 50px rgba(0,0,0,0.3)", padding: "24px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
               <h3 style={{ fontSize: "18px", fontWeight: 800, color: C.text, margin: 0 }}>Apply / Record Direct Lead</h3>
               <button onClick={() => setShowApplyModal(false)} style={{ background: "none", border: "none", color: C.textMid, cursor: "pointer", display: "flex", alignItems: "center" }}>

@@ -11,6 +11,7 @@ import Chatbot from '../components/Chatbot/Chatbot';
 import AnnouncementBanner from '../components/AnnouncementBanner';
 import { MdNotifications } from 'react-icons/md';
 import { FaWhatsapp, FaComments, FaCommentDots, FaCoins } from 'react-icons/fa';
+import { getMessengerSocket } from '../services/messengerSocket';
 
 // ── Chevron Component for Collapsible Items ──────────────────────────────────
 const Chevron = ({ open, color = "currentColor", size = 16 }) => (
@@ -129,10 +130,38 @@ const SuperAdminLayout = () => {
     window.addEventListener('messenger:unread_updated', handleUnreadUpdate);
     const interval = setInterval(fetchNotifications, 10000);
 
+    // Socket real-time messenger events
+    const socket = getMessengerSocket();
+    const handleSocketUnread = (data) => {
+      const count = typeof data?.count === 'number' ? data.count : (typeof data?.unread_count === 'number' ? data.unread_count : null);
+      if (count !== null) {
+        setMessengerUnread(count);
+      } else {
+        fetchNotifications();
+      }
+    };
+    const handleSocketNewMessage = (data) => {
+      fetchNotifications();
+    };
+    const handleSocketReadReceipt = () => {
+      fetchNotifications();
+    };
+
+    if (socket) {
+      socket.on('messenger:unread_count', handleSocketUnread);
+      socket.on('message:new', handleSocketNewMessage);
+      socket.on('message:read', handleSocketReadReceipt);
+    }
+
     return () => {
       eventSource.close();
       window.removeEventListener('messenger:unread_updated', handleUnreadUpdate);
       clearInterval(interval);
+      if (socket) {
+        socket.off('messenger:unread_count', handleSocketUnread);
+        socket.off('message:new', handleSocketNewMessage);
+        socket.off('message:read', handleSocketReadReceipt);
+      }
     };
   }, [user?.id]);
 

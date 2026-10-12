@@ -30,7 +30,8 @@ import {
   savePolicy,
   deletePolicy,
   saveHoliday,
-  deleteHoliday
+  deleteHoliday,
+  revokeExtension
 } from '../../../services/workingHours.api';
 
 const DAYS_OF_WEEK = [
@@ -52,6 +53,174 @@ const DEFAULT_SCHEDULE = {
   saturday:  { is_working: true,  start_time: '09:30 AM', end_time: '08:00 PM' },
   sunday:    { is_working: false, start_time: '09:30 AM', end_time: '08:00 PM' }
 };
+
+function SearchableUserSelect({
+  users = [],
+  selectedUserIds = [],
+  onChange,
+  placeholder = "Search by staff name, employee ID, email...",
+  multi = true,
+  label = "Select Staff Users"
+}) {
+  const [query, setQuery] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+
+  const filtered = users.filter(u => {
+    const q = query.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      (u.user && u.user.toLowerCase().includes(q)) ||
+      (u.email && u.email.toLowerCase().includes(q)) ||
+      (u.employeeId && u.employeeId.toLowerCase().includes(q)) ||
+      (u.designation && u.designation.toLowerCase().includes(q))
+    );
+  });
+
+  const selectedList = users.filter(u => selectedUserIds.includes(u.id));
+
+  const toggleUser = (userId) => {
+    if (!multi) {
+      onChange([userId]);
+      setIsOpen(false);
+      return;
+    }
+    if (selectedUserIds.includes(userId)) {
+      onChange(selectedUserIds.filter(id => id !== userId));
+    } else {
+      onChange([...selectedUserIds, userId]);
+    }
+  };
+
+  const handleSelectAll = () => {
+    const allFilteredIds = filtered.map(u => u.id);
+    const combined = Array.from(new Set([...selectedUserIds, ...allFilteredIds]));
+    onChange(combined);
+  };
+
+  const handleDeselectAll = () => {
+    const filteredIdSet = new Set(filtered.map(u => u.id));
+    onChange(selectedUserIds.filter(id => !filteredIdSet.has(id)));
+  };
+
+  return (
+    <div style={{ position: 'relative', marginBottom: '16px' }}>
+      <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+        {label} {multi && `(${selectedUserIds.length} selected)`}
+      </label>
+
+      {/* Selected tags */}
+      {selectedList.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px', maxHeight: '110px', overflowY: 'auto' }}>
+          {selectedList.map(u => (
+            <span key={u.id} style={{
+              display: 'inline-flex', alignItems: 'center', gap: '4px',
+              padding: '3px 8px', borderRadius: '6px', backgroundColor: '#EEF2FF',
+              color: '#4F46E5', fontSize: '12px', fontWeight: 600, border: '1px solid #C7D2FE'
+            }}>
+              <span>{u.user}</span>
+              {u.employeeId && <span style={{ fontSize: '10px', color: '#6366F1' }}>({u.employeeId})</span>}
+              <button
+                type="button"
+                onClick={() => toggleUser(u.id)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4F46E5', padding: 0, display: 'flex', alignItems: 'center' }}
+              >
+                <X size={12} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Search Input */}
+      <div style={{ position: 'relative' }}>
+        <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+        <input
+          type="text"
+          placeholder={placeholder}
+          value={query}
+          onFocus={() => setIsOpen(true)}
+          onChange={e => { setQuery(e.target.value); setIsOpen(true); }}
+          style={{
+            width: '100%', padding: '10px 14px 10px 36px', borderRadius: '8px',
+            border: '1px solid #CBD5E1', fontSize: '14px', outline: 'none', boxSizing: 'border-box'
+          }}
+        />
+        {selectedUserIds.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94A3B8', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {/* Dropdown Options */}
+      {isOpen && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
+          backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px',
+          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)', zIndex: 100, maxHeight: '220px',
+          overflowY: 'auto'
+        }}>
+          {multi && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', borderBottom: '1px solid #F1F5F9', backgroundColor: '#F8FAFC', fontSize: '12px' }}>
+              <button type="button" onClick={handleSelectAll} style={{ background: 'none', border: 'none', color: '#4F46E5', fontWeight: 700, cursor: 'pointer' }}>
+                Select All ({filtered.length})
+              </button>
+              <button type="button" onClick={handleDeselectAll} style={{ background: 'none', border: 'none', color: '#64748B', fontWeight: 600, cursor: 'pointer' }}>
+                Deselect All
+              </button>
+              <button type="button" onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', color: '#0F172A', fontWeight: 700, cursor: 'pointer' }}>
+                Done ✕
+              </button>
+            </div>
+          )}
+
+          {filtered.length === 0 ? (
+            <div style={{ padding: '16px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>
+              No staff found matching "{query}"
+            </div>
+          ) : (
+            filtered.map(u => {
+              const isSelected = selectedUserIds.includes(u.id);
+              return (
+                <div
+                  key={u.id}
+                  onClick={() => toggleUser(u.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '8px 12px', borderBottom: '1px solid #F8FAFC', cursor: 'pointer',
+                    backgroundColor: isSelected ? '#EEF2FF' : '#FFFFFF'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => {}}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>
+                        {u.user} {u.employeeId && <span style={{ color: '#4F46E5', fontSize: '11px', fontWeight: 600 }}>({u.employeeId})</span>}
+                      </div>
+                      <div style={{ fontSize: '11.5px', color: '#64748B' }}>
+                        {u.designation} • {u.role} {u.email && `• ${u.email}`}
+                      </div>
+                    </div>
+                  </div>
+                  {isSelected && <Check size={16} color="#4F46E5" />}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AdminWorkingHours() {
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
@@ -113,7 +282,14 @@ export default function AdminWorkingHours() {
   const [extendForm, setExtendForm] = useState({
     applyTo: 'SPECIFIC',
     userId: '',
+    userIds: [],
+    roles: [],
+    designations: [],
+    dateMode: 'SINGLE',
     extensionDate: new Date().toISOString().split('T')[0],
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+    extendedStartTime: '09:30 AM',
     extendedEndTime: '09:00 PM',
     reason: ''
   });
@@ -203,9 +379,27 @@ export default function AdminWorkingHours() {
 
   const handleSavePolicySubmit = async (e) => {
     e.preventDefault();
+    if (policyForm.scopeType === 'USER' && !policyForm.userId && (!policyForm.userIds || policyForm.userIds.length === 0)) {
+      showToast('Please select a staff user for the policy', 'error');
+      return;
+    }
+    if (policyForm.scopeType === 'DESIGNATION' && (!policyForm.designations || policyForm.designations.length === 0)) {
+      showToast('Please select at least one target designation', 'error');
+      return;
+    }
+    if (policyForm.scopeType === 'ROLE' && (!policyForm.roles || policyForm.roles.length === 0)) {
+      showToast('Please select at least one target role', 'error');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const res = await savePolicy(policyForm);
+      const selectedUserId = policyForm.userId || (policyForm.userIds?.[0] || null);
+      const res = await savePolicy({
+        ...policyForm,
+        userId: selectedUserId,
+        userIds: policyForm.userIds || (selectedUserId ? [selectedUserId] : [])
+      });
       if (res.success) {
         showToast('Weekly Schedule Policy saved successfully');
         setShowPolicyModal(false);
@@ -299,13 +493,48 @@ export default function AdminWorkingHours() {
   // Extension Modal Submit
   const handleCreateExtension = async (e) => {
     e.preventDefault();
+    if (!extendForm.reason?.trim()) {
+      showToast('Please provide a reason for the extension', 'error');
+      return;
+    }
+    if (extendForm.applyTo === 'SPECIFIC' && (!extendForm.userIds || extendForm.userIds.length === 0) && !extendForm.userId) {
+      showToast('Please select at least one staff user', 'error');
+      return;
+    }
+    if (extendForm.applyTo === 'DESIGNATION' && (!extendForm.designations || extendForm.designations.length === 0)) {
+      showToast('Please select at least one target designation', 'error');
+      return;
+    }
+    if (extendForm.applyTo === 'ROLE' && (!extendForm.roles || extendForm.roles.length === 0)) {
+      showToast('Please select at least one target role', 'error');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const res = await extendWorkingHours(extendForm);
+      const selectedUserIds = extendForm.userIds && extendForm.userIds.length > 0 
+        ? extendForm.userIds 
+        : (extendForm.userId ? [extendForm.userId] : []);
+
+      const payload = {
+        applyTo: extendForm.applyTo,
+        userId: selectedUserIds[0] || null,
+        userIds: selectedUserIds,
+        roles: extendForm.roles || [],
+        designations: extendForm.designations || [],
+        extensionDate: extendForm.dateMode === 'SINGLE' ? extendForm.extensionDate : null,
+        startDate: extendForm.dateMode === 'RANGE' ? extendForm.startDate : null,
+        endDate: extendForm.dateMode === 'RANGE' ? extendForm.endDate : null,
+        extendedStartTime: extendForm.extendedStartTime || '09:30 AM',
+        extendedEndTime: extendForm.extendedEndTime || '09:00 PM',
+        reason: extendForm.reason.trim()
+      };
+      const res = await extendWorkingHours(payload);
       if (res.success) {
         showToast(res.message || 'Working hours extended successfully');
         setShowExtendModal(false);
         loadData();
+        loadHistory();
       } else {
         showToast(res.message || 'Failed to create extension', 'error');
       }
@@ -313,6 +542,22 @@ export default function AdminWorkingHours() {
       showToast(err.message || 'Failed to extend working hours', 'error');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleRevokeExtension = async (id) => {
+    if (!window.confirm('Are you sure you want to revoke this working hours extension?')) return;
+    try {
+      const res = await revokeExtension(id);
+      if (res.success) {
+        showToast('Extension revoked successfully');
+        loadData();
+        loadHistory();
+      } else {
+        showToast(res.message || 'Failed to revoke extension', 'error');
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to revoke extension', 'error');
     }
   };
 
@@ -405,31 +650,31 @@ export default function AdminWorkingHours() {
             }}
           >
             <PlusCircle size={16} />
-            <span>+ Policy</span>
+            <span>Add Policy</span>
           </button>
           <button
             onClick={handleOpenNewHoliday}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: isMobile ? '8px 12px' : '10px 18px',
-              backgroundColor: '#0284C7', color: '#FFFFFF', border: 'none', borderRadius: '10px',
+              backgroundColor: '#0284C7', color: '#FFFFFF', border: 'none', borderRadius: '8px',
               fontWeight: 700, cursor: 'pointer', fontSize: isMobile ? '12px' : '13.5px', flex: isMobile ? '1 1 120px' : 'none',
               boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)'
             }}
           >
             <Calendar size={16} />
-            <span>+ Holiday</span>
+            <span>Add Holiday</span>
           </button>
           <button
             onClick={() => setShowExtendModal(true)}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: isMobile ? '8px 12px' : '10px 18px',
-              backgroundColor: '#10B981', color: '#FFFFFF', border: 'none', borderRadius: '10px',
+              backgroundColor: '#10B981', color: '#FFFFFF', border: 'none', borderRadius: '8px',
               fontWeight: 700, cursor: 'pointer', fontSize: isMobile ? '12px' : '13.5px', flex: isMobile ? '1 1 100%' : 'none',
               boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
             }}
           >
             <Zap size={16} />
-            <span>Extend Today</span>
+            <span>Extend Working Hours</span>
           </button>
         </div>
       </div>
@@ -441,25 +686,25 @@ export default function AdminWorkingHours() {
         gap: isMobile ? '10px' : '14px',
         marginBottom: '20px'
       }}>
-        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px' }}>
+        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '14px' }}>
           <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 800, textTransform: 'uppercase' }}>Active Policies</div>
           <div style={{ fontSize: isMobile ? '18px' : '22px', fontWeight: 900, color: '#4F46E5', marginTop: '4px' }}>{policies.length}</div>
           <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>Weekly shift schedules</div>
         </div>
 
-        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px' }}>
+        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '14px' }}>
           <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 800, textTransform: 'uppercase' }}>Holiday Rules</div>
           <div style={{ fontSize: isMobile ? '18px' : '22px', fontWeight: 900, color: '#0284C7', marginTop: '4px' }}>{holidays.length}</div>
           <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>Configured calendar days</div>
         </div>
 
-        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px' }}>
+        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '14px' }}>
           <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 800, textTransform: 'uppercase' }}>Monitored Staff</div>
           <div style={{ fontSize: isMobile ? '18px' : '22px', fontWeight: 900, color: '#10B981', marginTop: '4px' }}>{users.length}</div>
           <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>Active employees & admins</div>
         </div>
 
-        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px' }}>
+        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '14px' }}>
           <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 800, textTransform: 'uppercase' }}>Extensions Today</div>
           <div style={{ fontSize: isMobile ? '18px' : '22px', fontWeight: 900, color: '#D97706', marginTop: '4px' }}>{extensionsToday.length}</div>
           <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>Active shift overrides</div>
@@ -522,7 +767,7 @@ export default function AdminWorkingHours() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '20px' }}>
             {policies.map(p => (
               <div key={p.id} style={{
-                backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '20px',
+                backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '20px',
                 border: '1px solid #E2E8F0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
@@ -593,12 +838,12 @@ export default function AdminWorkingHours() {
           {isMobile ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {holidays.length === 0 ? (
-                <div style={{ padding: '30px', textAlign: 'center', color: '#94A3B8', background: '#FFFFFF', borderRadius: '12px' }}>
+                <div style={{ padding: '30px', textAlign: 'center', color: '#94A3B8', background: '#FFFFFF', borderRadius: '8px' }}>
                   No holiday rules configured yet.
                 </div>
               ) : (
                 holidays.map(h => (
-                  <div key={h.id} style={{ background: '#FFFFFF', borderRadius: '14px', padding: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div key={h.id} style={{ background: '#FFFFFF', borderRadius: '8px', padding: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div>
                         <div style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A' }}>{h.holiday_name}</div>
@@ -629,7 +874,7 @@ export default function AdminWorkingHours() {
               )}
             </div>
           ) : (
-            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '0px', border: '1px solid #E2E8F0', overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
@@ -731,12 +976,12 @@ export default function AdminWorkingHours() {
           {isMobile ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {filteredUsers.length === 0 ? (
-                <div style={{ padding: '30px', textAlign: 'center', color: '#94A3B8', background: '#FFFFFF', borderRadius: '12px' }}>
+                <div style={{ padding: '30px', textAlign: 'center', color: '#94A3B8', background: '#FFFFFF', borderRadius: '8px' }}>
                   No staff records matching filter.
                 </div>
               ) : (
                 filteredUsers.map(u => (
-                  <div key={u.id} style={{ background: '#FFFFFF', borderRadius: '14px', padding: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div key={u.id} style={{ background: '#FFFFFF', borderRadius: '8px', padding: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div>
                         <div style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A' }}>{u.user}</div>
@@ -777,7 +1022,7 @@ export default function AdminWorkingHours() {
               )}
             </div>
           ) : (
-            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '0px', border: '1px solid #E2E8F0', overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
@@ -849,53 +1094,110 @@ export default function AdminWorkingHours() {
           {isMobile ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {historyList.length === 0 ? (
-                <div style={{ padding: '30px', textAlign: 'center', color: '#94A3B8', background: '#FFFFFF', borderRadius: '12px' }}>
+                <div style={{ padding: '30px', textAlign: 'center', color: '#94A3B8', background: '#FFFFFF', borderRadius: '8px' }}>
                   No past extensions recorded.
                 </div>
               ) : (
                 historyList.map(h => (
-                  <div key={h.id} style={{ background: '#FFFFFF', borderRadius: '14px', padding: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div key={h.id} style={{ background: '#FFFFFF', borderRadius: '8px', padding: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div>
                         <div style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A' }}>
-                          {h.apply_to === 'ALL' ? 'All Users' : (h.target_user_name || h.target_user_email)}
+                          {h.apply_to === 'ALL' ? 'All Staff' : (h.target_user_name || h.target_user_email || h.apply_to)}
                         </div>
-                        <div style={{ fontSize: '12px', color: '#64748B' }}>📅 {h.extension_date ? h.extension_date.split('T')[0] : ''}</div>
+                        <div style={{ fontSize: '12px', color: '#64748B' }}>
+                          📅 {h.start_date && h.end_date ? `${h.start_date.split('T')[0]} to ${h.end_date.split('T')[0]}` : (h.extension_date ? h.extension_date.split('T')[0] : 'Single Day')}
+                        </div>
                       </div>
-                      <span style={{ fontSize: '12px', fontWeight: 900, color: '#059669', background: '#DCFCE7', padding: '3px 8px', borderRadius: '8px' }}>
-                        Until {h.extended_end_time}
+                      <span style={{
+                        fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '6px',
+                        backgroundColor: h.is_revoked ? '#F1F5F9' : '#DCFCE7',
+                        color: h.is_revoked ? '#64748B' : '#15803D'
+                      }}>
+                        {h.is_revoked ? 'Revoked' : 'Active'}
                       </span>
                     </div>
+
+                    <div style={{ background: '#F8FAFC', borderRadius: '6px', padding: '8px 10px', fontSize: '12px', display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#64748B' }}>Extended Shift:</span>
+                      <strong style={{ color: '#059669' }}>{h.extended_start_time || '09:30 AM'} - {h.extended_end_time}</strong>
+                    </div>
+
                     <div style={{ fontSize: '12px', color: '#475569' }}>Reason: {h.reason || 'N/A'}</div>
-                    <div style={{ fontSize: '11px', color: '#94A3B8' }}>Approved by {h.created_by_name || h.created_by_email || 'Super Admin'}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '11px', color: '#94A3B8' }}>By {h.created_by_name || h.created_by_email || 'Super Admin'}</span>
+                      {!h.is_revoked && (
+                        <button
+                          onClick={() => handleRevokeExtension(h.id)}
+                          style={{ padding: '4px 8px', background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 700 }}
+                        >
+                          Revoke
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))
               )}
             </div>
           ) : (
-            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '0px', border: '1px solid #E2E8F0', overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
-                    <th style={{ padding: '14px 20px', fontWeight: 700 }}>Date</th>
+                    <th style={{ padding: '14px 20px', fontWeight: 700 }}>Date / Range</th>
                     <th style={{ padding: '14px 20px', fontWeight: 700 }}>Applied To</th>
-                    <th style={{ padding: '14px 20px', fontWeight: 700 }}>Extended End Time</th>
+                    <th style={{ padding: '14px 20px', fontWeight: 700 }}>Extended Hours</th>
                     <th style={{ padding: '14px 20px', fontWeight: 700 }}>Reason</th>
                     <th style={{ padding: '14px 20px', fontWeight: 700 }}>Granted By</th>
+                    <th style={{ padding: '14px 20px', fontWeight: 700 }}>Status</th>
+                    <th style={{ padding: '14px 20px', fontWeight: 700, textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {historyList.map(h => (
-                    <tr key={h.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                      <td style={{ padding: '14px 20px', fontWeight: 600 }}>{h.extension_date ? h.extension_date.split('T')[0] : ''}</td>
-                      <td style={{ padding: '14px 20px', fontWeight: 700, color: '#0F172A' }}>
-                        {h.apply_to === 'ALL' ? 'All Users' : (h.target_user_name || h.target_user_email)}
+                  {historyList.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ padding: '36px', textAlign: 'center', color: '#94A3B8' }}>
+                        No past working hour extensions found.
                       </td>
-                      <td style={{ padding: '14px 20px', fontWeight: 700, color: '#059669' }}>{h.extended_end_time}</td>
-                      <td style={{ padding: '14px 20px', color: '#475569' }}>{h.reason || 'N/A'}</td>
-                      <td style={{ padding: '14px 20px', color: '#64748B' }}>{h.created_by_name || h.created_by_email || 'Super Admin'}</td>
                     </tr>
-                  ))}
+                  ) : (
+                    historyList.map(h => (
+                      <tr key={h.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                        <td style={{ padding: '14px 20px', fontWeight: 600 }}>
+                          {h.start_date && h.end_date ? `${h.start_date.split('T')[0]} to ${h.end_date.split('T')[0]}` : (h.extension_date ? h.extension_date.split('T')[0] : 'Today')}
+                        </td>
+                        <td style={{ padding: '14px 20px', fontWeight: 700, color: '#0F172A' }}>
+                          {h.apply_to === 'ALL' ? 'All Staff' : (h.target_user_name || h.target_user_email || h.apply_to)}
+                        </td>
+                        <td style={{ padding: '14px 20px', fontWeight: 700, color: '#059669' }}>
+                          {h.extended_start_time || '09:30 AM'} - {h.extended_end_time}
+                        </td>
+                        <td style={{ padding: '14px 20px', color: '#475569' }}>{h.reason || 'N/A'}</td>
+                        <td style={{ padding: '14px 20px', color: '#64748B' }}>{h.created_by_name || h.created_by_email || 'Super Admin'}</td>
+                        <td style={{ padding: '14px 20px' }}>
+                          <span style={{
+                            fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '6px',
+                            backgroundColor: h.is_revoked ? '#F1F5F9' : '#DCFCE7',
+                            color: h.is_revoked ? '#64748B' : '#15803D'
+                          }}>
+                            {h.is_revoked ? 'Revoked' : 'Active'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px 20px', textAlign: 'right' }}>
+                          {!h.is_revoked ? (
+                            <button
+                              onClick={() => handleRevokeExtension(h.id)}
+                              style={{ padding: '6px 12px', background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}
+                            >
+                              Revoke
+                            </button>
+                          ) : (
+                            <span style={{ fontSize: '12px', color: '#94A3B8' }}>—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1007,20 +1309,14 @@ export default function AdminWorkingHours() {
 
               {/* User search / select */}
               {policyForm.scopeType === 'USER' && (
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>Select Specific User</label>
-                  <select
-                    value={policyForm.userId}
-                    onChange={e => setPolicyForm({ ...policyForm, userId: e.target.value })}
-                    required
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '14px', backgroundColor: '#FFFFFF' }}
-                  >
-                    <option value="">-- Select Admin User --</option>
-                    {users.map(u => (
-                      <option key={u.id} value={u.id}>{u.user} ({u.designation} - {u.role})</option>
-                    ))}
-                  </select>
-                </div>
+                <SearchableUserSelect
+                  users={users}
+                  selectedUserIds={policyForm.userId ? [policyForm.userId] : (policyForm.userIds || [])}
+                  onChange={(ids) => setPolicyForm({ ...policyForm, userId: ids[0] || '', userIds: ids })}
+                  multi={false}
+                  label="Target Staff User"
+                  placeholder="Search staff by name, employee code, email..."
+                />
               )}
 
               {/* Weekly Schedule Days (Monday - Sunday) */}
@@ -1251,45 +1547,289 @@ export default function AdminWorkingHours() {
           position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: 'rgba(15, 23, 42, 0.6)',
           backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
         }}>
-          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', width: '100%', maxWidth: '480px', overflow: 'hidden' }}>
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>Extend End Time for Today</h3>
+          <div style={{
+            backgroundColor: '#FFFFFF', borderRadius: '8px', width: '100%', maxWidth: '560px',
+            maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}>
+            <div style={{ padding: '18px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>Extend Working Hours</h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748B' }}>Adjust start and end shift times for specific staff, roles, or all employees.</p>
+              </div>
               <button onClick={() => setShowExtendModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}><X size={20} /></button>
             </div>
+
             <form onSubmit={handleCreateExtension} style={{ padding: '24px' }}>
+              {/* Target Scope Selection */}
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>Apply Extension To</label>
-                <select value={extendForm.applyTo} onChange={e => setExtendForm({ ...extendForm, applyTo: e.target.value })} style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '14px', backgroundColor: '#FFFFFF' }}>
-                  <option value="SPECIFIC">Specific Staff User</option>
+                <select
+                  value={extendForm.applyTo}
+                  onChange={e => setExtendForm({ ...extendForm, applyTo: e.target.value })}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', backgroundColor: '#FFFFFF' }}
+                >
+                  <option value="SPECIFIC">Specific Staff User(s)</option>
+                  <option value="DESIGNATION">Specific Designation(s)</option>
+                  <option value="ROLE">Specific Role(s)</option>
+                  <option value="COMBINED">Combined (Users + Roles + Designations)</option>
                   <option value="ALL">All Staff Users</option>
                 </select>
               </div>
-              {extendForm.applyTo === 'SPECIFIC' && (
+
+              {/* Searchable Multi-User Selector */}
+              {(extendForm.applyTo === 'SPECIFIC' || extendForm.applyTo === 'COMBINED') && (
+                <SearchableUserSelect
+                  users={users}
+                  selectedUserIds={extendForm.userIds || []}
+                  onChange={(ids) => setExtendForm({ ...extendForm, userIds: ids, userId: ids[0] || '' })}
+                  multi={true}
+                  label="Target Staff Users"
+                  placeholder="Search staff by name, employee code, email..."
+                />
+              )}
+
+              {/* Multi-role selector */}
+              {(extendForm.applyTo === 'ROLE' || extendForm.applyTo === 'COMBINED') && (
                 <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>Select User *</label>
-                  <select value={extendForm.userId} onChange={e => setExtendForm({ ...extendForm, userId: e.target.value })} required style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '14px', backgroundColor: '#FFFFFF' }}>
-                    <option value="">-- Select Staff User --</option>
-                    {users.map(u => (
-                      <option key={u.id} value={u.id}>{u.user} ({u.designation})</option>
-                    ))}
-                  </select>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>Target Roles</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {distinctRoles.map(r => {
+                      const selected = extendForm.roles?.includes(r);
+                      return (
+                        <button
+                          key={r}
+                          type="button"
+                          onClick={() => toggleRole(extendForm, setExtendForm, r)}
+                          style={{
+                            padding: '6px 12px', borderRadius: '6px', border: '1px solid',
+                            borderColor: selected ? '#10B981' : '#CBD5E1',
+                            backgroundColor: selected ? '#ECFDF5' : '#FFFFFF',
+                            color: selected ? '#047857' : '#475569', fontWeight: 700, cursor: 'pointer', fontSize: '12.5px'
+                          }}
+                        >
+                          {r} {selected && '✓'}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
+
+              {/* Multi-designation selector */}
+              {(extendForm.applyTo === 'DESIGNATION' || extendForm.applyTo === 'COMBINED') && (
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>Target Designations</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '130px', overflowY: 'auto' }}>
+                    {distinctDesignations.map(d => {
+                      const selected = extendForm.designations?.includes(d);
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => toggleDesignation(extendForm, setExtendForm, d)}
+                          style={{
+                            padding: '6px 12px', borderRadius: '6px', border: '1px solid',
+                            borderColor: selected ? '#10B981' : '#CBD5E1',
+                            backgroundColor: selected ? '#ECFDF5' : '#FFFFFF',
+                            color: selected ? '#047857' : '#475569', fontWeight: 700, cursor: 'pointer', fontSize: '12.5px'
+                          }}
+                        >
+                          {d} {selected && '✓'}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Date Scope Mode */}
               <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>Extension Date</label>
-                <input type="date" value={extendForm.extensionDate} onChange={e => setExtendForm({ ...extendForm, extensionDate: e.target.value })} style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '14px' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 700, color: '#334155' }}>Extension Date</label>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setExtendForm({ ...extendForm, dateMode: 'SINGLE' })}
+                      style={{
+                        padding: '3px 8px', fontSize: '11px', fontWeight: 700, borderRadius: '4px', border: '1px solid',
+                        borderColor: extendForm.dateMode === 'SINGLE' ? '#4F46E5' : '#CBD5E1',
+                        backgroundColor: extendForm.dateMode === 'SINGLE' ? '#EEF2FF' : '#FFFFFF',
+                        color: extendForm.dateMode === 'SINGLE' ? '#4F46E5' : '#64748B', cursor: 'pointer'
+                      }}
+                    >
+                      Single Day
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExtendForm({ ...extendForm, dateMode: 'RANGE' })}
+                      style={{
+                        padding: '3px 8px', fontSize: '11px', fontWeight: 700, borderRadius: '4px', border: '1px solid',
+                        borderColor: extendForm.dateMode === 'RANGE' ? '#4F46E5' : '#CBD5E1',
+                        backgroundColor: extendForm.dateMode === 'RANGE' ? '#EEF2FF' : '#FFFFFF',
+                        color: extendForm.dateMode === 'RANGE' ? '#4F46E5' : '#64748B', cursor: 'pointer'
+                      }}
+                    >
+                      Date Range
+                    </button>
+                  </div>
+                </div>
+
+                {extendForm.dateMode === 'SINGLE' ? (
+                  <div>
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
+                      <input
+                        type="date"
+                        value={extendForm.extensionDate}
+                        onChange={e => setExtendForm({ ...extendForm, extensionDate: e.target.value })}
+                        style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setExtendForm({ ...extendForm, extensionDate: new Date().toISOString().split('T')[0] })}
+                        style={{ padding: '8px 12px', background: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Today
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const tom = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+                          setExtendForm({ ...extendForm, extensionDate: tom });
+                        }}
+                        style={{ padding: '8px 12px', background: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Tomorrow
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', color: '#64748B', marginBottom: '2px' }}>Start Date</label>
+                      <input
+                        type="date"
+                        value={extendForm.startDate}
+                        onChange={e => setExtendForm({ ...extendForm, startDate: e.target.value })}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', color: '#64748B', marginBottom: '2px' }}>End Date</label>
+                      <input
+                        type="date"
+                        value={extendForm.endDate}
+                        onChange={e => setExtendForm({ ...extendForm, endDate: e.target.value })}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>New End Time *</label>
-                <input type="text" placeholder="e.g. 10:00 PM" value={extendForm.extendedEndTime} onChange={e => setExtendForm({ ...extendForm, extendedEndTime: e.target.value })} required style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '14px' }} />
+
+              {/* START TIME & END TIME MODIFICATION */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                {/* Start Time */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                    Extension Start Time
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 08:30 AM"
+                    value={extendForm.extendedStartTime}
+                    onChange={e => setExtendForm({ ...extendForm, extendedStartTime: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13.5px', boxSizing: 'border-box' }}
+                  />
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                    {['08:00 AM', '08:30 AM', '09:00 AM', '09:30 AM'].map(st => (
+                      <button
+                        key={st}
+                        type="button"
+                        onClick={() => setExtendForm({ ...extendForm, extendedStartTime: st })}
+                        style={{
+                          padding: '2px 6px', fontSize: '10.5px', borderRadius: '4px', border: '1px solid #CBD5E1',
+                          background: extendForm.extendedStartTime === st ? '#EEF2FF' : '#F8FAFC',
+                          color: extendForm.extendedStartTime === st ? '#4F46E5' : '#475569',
+                          cursor: 'pointer', fontWeight: 600
+                        }}
+                      >
+                        {st}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* End Time */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                    Extension End Time *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 10:00 PM"
+                    value={extendForm.extendedEndTime}
+                    onChange={e => setExtendForm({ ...extendForm, extendedEndTime: e.target.value })}
+                    required
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13.5px', boxSizing: 'border-box' }}
+                  />
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                    {[
+                      { label: '+1h', val: '09:00 PM' },
+                      { label: '+2h', val: '10:00 PM' },
+                      { label: '+3h', val: '11:00 PM' },
+                      { label: 'Midnight', val: '11:59 PM' }
+                    ].map(preset => (
+                      <button
+                        key={preset.val}
+                        type="button"
+                        onClick={() => setExtendForm({ ...extendForm, extendedEndTime: preset.val })}
+                        style={{
+                          padding: '2px 6px', fontSize: '10.5px', borderRadius: '4px', border: '1px solid #CBD5E1',
+                          background: extendForm.extendedEndTime === preset.val ? '#DCFCE7' : '#F8FAFC',
+                          color: extendForm.extendedEndTime === preset.val ? '#15803D' : '#475569',
+                          cursor: 'pointer', fontWeight: 600
+                        }}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
+
+              {/* Reason (Required) */}
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>Reason</label>
-                <input type="text" placeholder="Month-end application processing" value={extendForm.reason} onChange={e => setExtendForm({ ...extendForm, reason: e.target.value })} style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '14px' }} />
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                  Reason for Extension *
+                </label>
+                <textarea
+                  required
+                  rows={2}
+                  placeholder="e.g. Month-end financial audits, urgent leads clearance, special campaign shift"
+                  value={extendForm.reason}
+                  onChange={e => setExtendForm({ ...extendForm, reason: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13.5px', boxSizing: 'border-box', outline: 'none', resize: 'vertical' }}
+                />
               </div>
+
+              {/* Action Buttons */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                <button type="button" onClick={() => setShowExtendModal(false)} style={{ padding: '10px 18px', backgroundColor: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '10px', fontWeight: 600 }}>Cancel</button>
-                <button type="submit" disabled={submitting} style={{ padding: '10px 22px', backgroundColor: '#10B981', color: '#FFFFFF', border: 'none', borderRadius: '10px', fontWeight: 700 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowExtendModal(false)}
+                  style={{ padding: '10px 18px', backgroundColor: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  style={{
+                    padding: '10px 22px', backgroundColor: '#10B981', color: '#FFFFFF', border: 'none',
+                    borderRadius: '8px', fontWeight: 700, cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
+                  }}
+                >
                   {submitting ? 'Saving...' : 'Save Extension'}
                 </button>
               </div>

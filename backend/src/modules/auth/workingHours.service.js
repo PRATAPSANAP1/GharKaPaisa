@@ -40,8 +40,17 @@ async function ensureWorkingHoursTables() {
 
       CREATE INDEX IF NOT EXISTS idx_awhe_date_user ON admin_working_hour_extensions(extension_date, user_id);
       ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS roles VARCHAR(50)[] DEFAULT '{}';
+      ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS designations VARCHAR(100)[] DEFAULT '{}';
+      ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS user_ids UUID[] DEFAULT '{}';
+      ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS original_start_time VARCHAR(20) DEFAULT '09:30 AM';
+      ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS extended_start_time VARCHAR(20) DEFAULT NULL;
+      ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS start_date DATE DEFAULT NULL;
+      ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS end_date DATE DEFAULT NULL;
       ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS is_revoked BOOLEAN DEFAULT FALSE;
+      ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
       ALTER TABLE admin_working_hour_policies ADD COLUMN IF NOT EXISTS user_ids UUID[] DEFAULT '{}';
+      ALTER TABLE admin_working_hour_policies ADD COLUMN IF NOT EXISTS grace_period INT DEFAULT 0;
     `);
 
     const { rows: existingGlobal } = await query(`SELECT id FROM admin_working_hours WHERE user_id IS NULL AND designation IS NULL LIMIT 1`);
@@ -178,14 +187,14 @@ async function resolvePolicyForUser(user, dayName) {
       WHERE is_enabled = TRUE
         AND (
           (scope_type = 'USER' AND (user_id = $1 OR $1 = ANY(user_ids)))
-          OR (scope_type = 'DESIGNATION' AND ($2 = ANY(designations) OR $2 ILIKE ANY(designations)))
+          OR (scope_type = 'DESIGNATION' AND ($2 = ANY(designations) OR EXISTS (SELECT 1 FROM unnest(designations) d WHERE LOWER(d) = LOWER($2))))
           OR (scope_type = 'ROLE' AND $3 = ANY(roles))
           OR (scope_type = 'GLOBAL')
         )
       ORDER BY 
         CASE 
           WHEN scope_type = 'USER' AND (user_id = $1 OR $1 = ANY(user_ids)) THEN 1
-          WHEN scope_type = 'DESIGNATION' AND ($2 = ANY(designations) OR $2 ILIKE ANY(designations)) THEN 2
+          WHEN scope_type = 'DESIGNATION' AND ($2 = ANY(designations) OR EXISTS (SELECT 1 FROM unnest(designations) d WHERE LOWER(d) = LOWER($2))) THEN 2
           WHEN scope_type = 'ROLE' AND $3 = ANY(roles) THEN 3
           WHEN scope_type = 'GLOBAL' THEN 4
           ELSE 5
@@ -370,29 +379,47 @@ async function checkUserWorkingHours(user) {
     let endMinutes = timeToMinutes(baseEndTimeStr);
 
     // 5. Check active temporary extensions for today in Asia/Kolkata
+    const userDesignation = user.designation || '';
     const { rows: extensionRows } = await query(`
       SELECT * FROM admin_working_hour_extensions
-      WHERE extension_date = $1::date
+      WHERE (extension_date = $1::date OR ($1::date >= start_date AND $1::date <= end_date))
         AND is_revoked IS NOT TRUE
         AND (
           user_id = $2 
+          OR ($2 = ANY(user_ids))
           OR apply_to = 'ALL'
-          OR (apply_to = 'ROLE' AND $3 = ANY(roles))
+          OR (apply_to IN ('ROLE', 'COMBINED') AND $3 = ANY(roles))
+          OR (apply_to IN ('DESIGNATION', 'COMBINED') AND ($4 = ANY(designations) OR EXISTS (SELECT 1 FROM unnest(designations) d WHERE LOWER(d) = LOWER($4))))
         )
-      ORDER BY created_at DESC
+      ORDER BY 
+        CASE 
+          WHEN user_id = $2 OR ($2 = ANY(user_ids)) THEN 1
+          WHEN apply_to IN ('DESIGNATION', 'COMBINED') AND ($4 = ANY(designations) OR EXISTS (SELECT 1 FROM unnest(designations) d WHERE LOWER(d) = LOWER($4))) THEN 2
+          WHEN apply_to IN ('ROLE', 'COMBINED') AND $3 = ANY(roles) THEN 3
+          ELSE 4
+        END ASC,
+        created_at DESC
       LIMIT 1
-    `, [dateStr, user.id, roleUpper]);
+    `, [dateStr, user.id, roleUpper, userDesignation]);
 
     let isExtended = false;
     let effectiveEndTimeStr = baseEndTimeStr;
 
     if (extensionRows.length > 0) {
       const ext = extensionRows[0];
-      const extEndMinutes = timeToMinutes(ext.extended_end_time);
-      if (extEndMinutes > endMinutes) {
-        endMinutes = extEndMinutes;
-        effectiveEndTimeStr = ext.extended_end_time;
+      if (ext.extended_start_time) {
+        const extStartMinutes = timeToMinutes(ext.extended_start_time);
+        startMinutes = extStartMinutes;
+        baseStartTimeStr = ext.extended_start_time;
         isExtended = true;
+      }
+      if (ext.extended_end_time) {
+        const extEndMinutes = timeToMinutes(ext.extended_end_time);
+        if (extEndMinutes > endMinutes || isExtended) {
+          endMinutes = extEndMinutes;
+          effectiveEndTimeStr = ext.extended_end_time;
+          isExtended = true;
+        }
       }
     }
 

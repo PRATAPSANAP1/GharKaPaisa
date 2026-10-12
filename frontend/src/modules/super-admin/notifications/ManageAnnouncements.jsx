@@ -433,7 +433,7 @@ export default function ManageAnnouncements() {
       )}
 
       {/* TOP DYNAMIC KPI CARDS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: '16px', marginBottom: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: isMobile ? '10px' : '16px', marginBottom: '24px' }}>
         {[
           { label: 'Total Announcements', val: totalCount, icon: <MdAnnouncement size={24} color="#0284c7" />, bg: '#e0f2fe', filterKey: 'all' },
           { label: 'Published Live', val: publishedCount, icon: <MdCheckCircle size={24} color="#16a34a" />, bg: '#dcfce7', filterKey: 'published' },
@@ -446,8 +446,8 @@ export default function ManageAnnouncements() {
             onClick={() => setFilterStatus(kpi.filterKey)}
             style={{
               ...S.card,
-              padding: '18px',
-              borderRadius: '16px',
+              padding: isMobile ? '12px' : '18px',
+              borderRadius: '8px',
               cursor: 'pointer',
               border: filterStatus === kpi.filterKey ? `2px solid ${C.primary}` : `1px solid ${C.border}`,
               transition: 'transform 0.2s',
@@ -500,7 +500,7 @@ export default function ManageAnnouncements() {
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 300px', gap: '24px', alignItems: 'start' }}>
           
           {/* MAIN TABLE */}
-          <div style={{ ...S.card, padding: '20px', borderRadius: '16px' }}>
+          <div style={{ ...S.card, padding: '20px', borderRadius: isMobile ? '8px' : '0px' }}>
             
             {/* Search Bar */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
@@ -637,7 +637,7 @@ export default function ManageAnnouncements() {
           {/* RIGHT SIDE QUICK ACTIONS PANEL */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             
-            <div style={{ ...S.card, padding: '20px', borderRadius: '16px', background: C.cardBg }}>
+            <div style={{ ...S.card, padding: '20px', borderRadius: '8px', background: C.cardBg }}>
               <h3 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 14px', color: C.text }}>Quick Actions</h3>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -669,7 +669,7 @@ export default function ManageAnnouncements() {
 
             {/* TOP PERFORMING ANNOUNCEMENT DYNAMIC HIGHLIGHT */}
             {topPerformingAnn && (
-              <div style={{ ...S.card, padding: '20px', borderRadius: '16px', background: `linear-gradient(135deg, ${C.primary}10 0%, ${C.primary}02 100%)`, border: `1px solid ${C.primary}30` }}>
+              <div style={{ ...S.card, padding: '20px', borderRadius: '8px', background: `linear-gradient(135deg, ${C.primary}10 0%, ${C.primary}02 100%)`, border: `1px solid ${C.primary}30` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 800, color: C.primary, textTransform: 'uppercase' }}>
                   <MdCheckCircle /> Top Performing Broadcast
                 </div>
@@ -858,7 +858,7 @@ export default function ManageAnnouncements() {
       {activeTab === 'history' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
-          <div style={{ ...S.card, padding: '24px', borderRadius: '16px' }}>
+          <div style={{ ...S.card, padding: '24px', borderRadius: isMobile ? '8px' : '0px' }}>
             
             {/* Header & Controls */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
@@ -1020,7 +1020,7 @@ export default function ManageAnnouncements() {
       {/* MODAL 1: CREATE / EDIT ANNOUNCEMENT FORM */}
       {formOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '8px' : '16px' }}>
-          <div style={{ ...S.card, width: '100%', maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto', padding: isMobile ? '16px' : '28px', position: 'relative', borderRadius: '20px' }}>
+          <div style={{ ...S.card, width: '100%', maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto', padding: isMobile ? '16px' : '28px', position: 'relative', borderRadius: '8px' }}>
             
             <button 
               onClick={() => setFormOpen(false)}
@@ -1372,7 +1372,7 @@ export default function ManageAnnouncements() {
       {/* MODAL 2: 360° ANNOUNCEMENT DETAILS & ENGAGEMENT REPORT */}
       {detailModalOpen && selectedAnnouncement && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '8px' : '16px' }}>
-          <div style={{ ...S.card, width: '100%', maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto', padding: isMobile ? '16px' : '28px', position: 'relative', borderRadius: '20px' }}>
+          <div style={{ ...S.card, width: '100%', maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto', padding: isMobile ? '16px' : '28px', position: 'relative', borderRadius: '8px' }}>
             
             <button 
               onClick={() => setDetailModalOpen(false)}

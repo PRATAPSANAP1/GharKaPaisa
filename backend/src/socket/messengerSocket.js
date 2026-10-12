@@ -380,6 +380,9 @@ async function emitNewMessage(conversationId, messageData, senderId) {
       [conversationId]
     );
 
+    const { createNotification } = require('../modules/notifications/service');
+    const messengerRepo = require('../modules/messenger/messenger.repository');
+
     for (const p of participants) {
       ioInstance.to(`user:${p.user_id}`).emit('message:new', {
         conversation_id: conversationId,
@@ -390,6 +393,44 @@ async function emitNewMessage(conversationId, messageData, senderId) {
         last_message: messageData,
         sender_id: senderId
       });
+
+      // If participant is not the sender, send real-time notification and update unread count
+      if (p.user_id !== senderId) {
+        try {
+          const unreadCount = await messengerRepo.getUnreadCount(p.user_id);
+          ioInstance.to(`user:${p.user_id}`).emit('messenger:unread_count', {
+            count: unreadCount,
+            unread_count: unreadCount
+          });
+
+          // Check if an existing unread notification for this conversation already exists
+          const { rows: existingNotif } = await query(
+            `SELECT id FROM notifications 
+             WHERE user_id = $1 AND category = 'chat' AND link LIKE $2 AND is_read = false
+             LIMIT 1`,
+            [p.user_id, `%${conversationId}%`]
+          );
+
+          if (existingNotif.length === 0) {
+            const senderName = messageData.sender_name || 'Someone';
+            const title = `New message from ${senderName}`;
+            const msgSnippet = messageData.message_text 
+              ? (messageData.message_text.length > 80 ? messageData.message_text.slice(0, 80) + '...' : messageData.message_text) 
+              : 'Sent an attachment';
+
+            await createNotification(
+              p.user_id,
+              title,
+              msgSnippet,
+              'info',
+              `/super-admin/messenger?conversationId=${conversationId}`,
+              { category: 'chat', priority: 'normal', channel: 'in-app' }
+            );
+          }
+        } catch (notifErr) {
+          logger.warn('[Socket Messenger] Failed to dispatch recipient notification:', notifErr.message);
+        }
+      }
     }
   } catch (err) {
     logger.warn('[Socket Messenger] Failed to broadcast new message:', err.message);
@@ -404,6 +445,8 @@ async function emitReadReceipt(conversationId, userId, readAt) {
       [conversationId]
     );
 
+    const messengerRepo = require('../modules/messenger/messenger.repository');
+
     for (const p of participants) {
       ioInstance.to(`user:${p.user_id}`).emit('message:read', {
         conversation_id: conversationId,
@@ -411,6 +454,14 @@ async function emitReadReceipt(conversationId, userId, readAt) {
         read_at: readAt || new Date().toISOString()
       });
     }
+
+    try {
+      const unreadCount = await messengerRepo.getUnreadCount(userId);
+      ioInstance.to(`user:${userId}`).emit('messenger:unread_count', {
+        count: unreadCount,
+        unread_count: unreadCount
+      });
+    } catch (e) {}
   } catch (err) {
     logger.warn('[Socket Messenger] Failed to broadcast read receipt:', err.message);
   }

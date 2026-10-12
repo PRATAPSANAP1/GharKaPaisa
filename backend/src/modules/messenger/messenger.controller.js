@@ -191,6 +191,16 @@ async function getUnreadCount(req, res, next) {
   }
 }
 
+async function getUnreadCount(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const count = await service.getUserUnreadCount(userId);
+    return success(res, { unread_count: count, count });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function getContacts(req, res, next) {
   try {
     const user = req.user;
