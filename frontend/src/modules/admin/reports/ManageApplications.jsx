@@ -14,6 +14,10 @@ import AdminDocumentVerificationModal from './AdminDocumentVerificationModal';
 import ExportApplicationsModal from '../../../components/Admin/ExportApplicationsModal';
 import LoadingLogo from '../../../components/Loader/LoadingLogo';
 import { useAuthStore } from '../../../app/store/authStore';
+import {
+  CURING_DESIGNATION_BADGES,
+  getHdfcCuringDesignation
+} from '../../../constants/hdfcDeclineCodes';
 
 export default function ManageApplications() {
   const { C, isDark } = useTheme();
@@ -30,7 +34,11 @@ export default function ManageApplications() {
   const isQdOperatorUser = ['QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER'].includes(userDesignation) || ['QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER'].includes(userRole);
   const isFinalStatusOperatorUser = ['FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userDesignation) || ['FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userRole);
   const isQuerableOperatorUser = ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
-  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR', 'FINAL_STATUS_OPERATOR', 'FINAL STATUS OPERATOR', 'QUERABLE_OPERATOR', 'QUERABLE OPERATOR', 'QUERYABLE_OPERATOR', 'QUERYABLE OPERATOR'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE_OPERATOR', 'QUERABLE OPERATOR', 'QUERYABLE_OPERATOR', 'QUERYABLE OPERATOR'].includes(userDesignation);
+  const isPhysicalCurableUser = ['PHYSICAL CURABLE', 'PHYSICAL_CURABLE'].includes(userDesignation) || ['PHYSICAL CURABLE', 'PHYSICAL_CURABLE'].includes(userRole);
+  const isDigitalCurableUser = ['DIGITAL CURABLE', 'DIGITAL_CURABLE'].includes(userDesignation) || ['DIGITAL CURABLE', 'DIGITAL_CURABLE'].includes(userRole);
+  const isEmailCurableUser = ['EMAIL CURABLE', 'EMAIL_CURABLE'].includes(userDesignation) || ['EMAIL CURABLE', 'EMAIL_CURABLE'].includes(userRole);
+  const isCurableOperatorUser = isPhysicalCurableUser || isDigitalCurableUser || isEmailCurableUser;
+  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR', 'FINAL_STATUS_OPERATOR', 'FINAL STATUS OPERATOR', 'QUERABLE_OPERATOR', 'QUERABLE OPERATOR', 'QUERYABLE_OPERATOR', 'QUERYABLE OPERATOR', 'PHYSICAL_CURABLE', 'PHYSICAL CURABLE', 'DIGITAL_CURABLE', 'DIGITAL CURABLE', 'EMAIL_CURABLE', 'EMAIL CURABLE'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE_OPERATOR', 'QUERABLE OPERATOR', 'QUERYABLE_OPERATOR', 'QUERYABLE OPERATOR', 'PHYSICAL CURABLE', 'PHYSICAL_CURABLE', 'DIGITAL CURABLE', 'DIGITAL_CURABLE', 'EMAIL CURABLE', 'EMAIL_CURABLE'].includes(userDesignation);
   const isOpsHead = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD'].includes(userRole) && !isOpsOperator;
   const isOpsHeadOrSuperAdmin = isOpsHead || isOpsOperator;
 
@@ -46,7 +54,7 @@ export default function ManageApplications() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(25);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState(() => isQuerableOperatorUser ? 'rejected' : "");
+  const [status, setStatus] = useState(() => (isQuerableOperatorUser || isCurableOperatorUser) ? 'rejected' : "");
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -122,6 +130,69 @@ export default function ManageApplications() {
       })
       .catch(err => console.error('Failed to load banks for filter:', err));
   }, []);
+
+  // Helper to mask last 6 digits of mobile number (e.g. 9876543210 -> 9876******)
+  const maskMobileNumber = (raw) => {
+    if (!raw) return '—';
+    const str = String(raw).trim();
+    if (str.length <= 6) return '******';
+    return str.slice(0, str.length - 6) + '******';
+  };
+
+  // Helper to check if a field has actual meaningful value and should be shown
+  const hasMeaningfulValue = (val) => {
+    if (val === null || val === undefined) return false;
+    const s = String(val).trim();
+    return s !== '' && s !== '—' && s !== '-' && s !== 'N/A' && s !== 'NA' && s !== 'null' && s !== 'undefined' && s !== '₹0' && s !== '0';
+  };
+
+  // Helper to format date as DD/MM/YYYY
+  const formatDisplayDate = (raw) => {
+    if (!raw) return '—';
+    try {
+      const dt = new Date(raw);
+      if (isNaN(dt.getTime())) return String(raw);
+      return dt.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    } catch (e) {
+      return String(raw);
+    }
+  };
+
+  // Helper to get formatted Referred By (Partner / Employee) Name
+  const getReferredByName = (app) => {
+    if (!app) return 'Direct / Customer Online';
+    if (app.employee_name || app.emp_code) {
+      const code = app.emp_code ? ` (${app.emp_code})` : '';
+      return `${app.employee_name || 'Employee'}${code}`;
+    }
+    const partnerName = `${app.partner_first_name || app.Partner_first_name || ''} ${app.partner_last_name || app.Partner_last_name || ''}`.trim() || app.partner_name || app.partner_company_name;
+    if (partnerName || app.partner_code || app.Partner_code) {
+      const code = (app.partner_code || app.Partner_code) ? ` (${app.partner_code || app.Partner_code})` : '';
+      return `${partnerName || 'Partner'}${code}`;
+    }
+    return 'Direct / Customer Online';
+  };
+
+  // Helper to detect HDFC Bank EMI on Credit Card / Check Loan Application
+  const isHdfcCheckLoanApplication = (app) => {
+    if (!app) return false;
+    const cat = String(app.category || app.product_category || '').toLowerCase().trim();
+    const subCat = String(app.sub_category || '').toLowerCase().trim();
+    const prod = String(app.product_name || app.product?.name || '').toLowerCase().trim();
+    const bank = String(app.bank_name || app.bank?.name || app.bank_code || '').toLowerCase().trim();
+
+    const isHdfc = bank.includes('hdfc') || prod.includes('hdfc');
+    const isLocEocCategory = ['loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loc', 'eoc', 'loan_on_card', 'card_on_loan'].includes(cat) ||
+                             ['loc_eoc', 'loc', 'eoc', 'smart_emi', 'loan_on_credit_card', 'loan_on_card'].includes(subCat);
+    const isLocEocProduct = prod.includes('emi on credit card') || prod.includes('smart emi') || prod.includes('smartemi') ||
+                            prod.includes('instant & jumbo') || prod.includes('insta') || prod.includes('jumbo') ||
+                            prod.includes('loan on card') || prod.includes('loan on credit card');
+
+    if (cat === 'loc_eoc' && prod.includes('emi on credit card') && bank.includes('hdfc')) return true;
+    if (prod.includes('hdfc bank emi on credit card')) return true;
+
+    return isHdfc && (isLocEocCategory || isLocEocProduct);
+  };
 
   const isLocEocApp = (app) => {
     if (!app) return false;
@@ -264,7 +335,7 @@ export default function ManageApplications() {
     setSelectedApp(app);
     setAppDetail(app);
     setLoadingDetail(true);
-    setSuperAdminRemark("");
+    setSuperAdminRemark(app?.ops_remark || app?.operational_remarks || app?.processing_remark || app?.remarks || "");
     setTimelines([]);
     const targetId = app?.id || app?.application_id || app?.app_number || app?.lead_id;
     try {
@@ -278,6 +349,9 @@ export default function ManageApplications() {
         const realAppId = det.app_number || det.id || app?.app_number || app?.id || det.application_id || app?.application_id;
         const merged = { ...app, ...det, ...pd, real_id: realAppId, app_number: det.app_number || app?.app_number };
         setAppDetail(merged);
+        if (det.ops_remark || det.operational_remarks || det.processing_remark || det.remarks || pd.ops_remark || pd.operational_remarks) {
+          setSuperAdminRemark(det.ops_remark || det.operational_remarks || det.processing_remark || det.remarks || pd.ops_remark || pd.operational_remarks);
+        }
       }
       if (tRes?.data?.success) {
         setTimelines(tRes.data.data || []);
@@ -493,12 +567,12 @@ export default function ManageApplications() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: 900, color: C.text, margin: 0, letterSpacing: '-0.02em' }}>
-            {isQuerableOperatorUser ? 'Querable Operator Applications Queue' : isPanCheckerUser ? 'PAN Checker Review Queue' : isRemarkOperatorUser ? 'Remark Operator Queue' : isQdOperatorUser ? 'QD Operator Queue' : 'Applications Management'}
+            {isPhysicalCurableUser ? 'Physical Curable Operations Queue' : isDigitalCurableUser ? 'Digital Curable Operations Queue' : isEmailCurableUser ? 'Email Curable Operations Queue' : isQuerableOperatorUser ? 'Querable Operator Applications Queue' : isPanCheckerUser ? 'PAN Checker Review Queue' : isRemarkOperatorUser ? 'Remark Operator Queue' : isQdOperatorUser ? 'QD Operator Queue' : 'Applications Management'}
           </h2>
           <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>
-            {isQuerableOperatorUser ? 'Review and manage assigned bank rejected applications.' : isPanCheckerUser ? 'Review and verify customer PAN details for assigned applications.' : isRemarkOperatorUser ? 'Review and update remarks for assigned bank applications.' : isQdOperatorUser ? 'Review assigned bank applications for QD form and remark details.' : 'Track, verify, update and manage operations for all submitted customer applications.'}
+            {isPhysicalCurableUser ? 'Review and cure HDFC physical curable declined applications (Document pickups, physical verifications).' : isDigitalCurableUser ? 'Review and cure HDFC digital curable declined applications (VKYC, customer link re-trigger).' : isEmailCurableUser ? 'Review and cure HDFC email curable declined applications (Bank underwriting appeals).' : isQuerableOperatorUser ? 'Review and manage assigned bank rejected applications.' : isPanCheckerUser ? 'Review and verify customer PAN details for assigned applications.' : isRemarkOperatorUser ? 'Review and update remarks for assigned bank applications.' : isQdOperatorUser ? 'Review assigned bank applications for QD form and remark details.' : 'Track, verify, update and manage operations for all submitted customer applications.'}
           </p>
-          {isQuerableOperatorUser && (
+          {(isQuerableOperatorUser || isCurableOperatorUser) && (
             <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
                 <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight }}>
@@ -1065,7 +1139,9 @@ export default function ManageApplications() {
                             </div>
                             <div>
                               <div style={{ fontWeight: 800, color: C.text }}>{custName}</div>
-                              <div style={{ fontSize: '11px', color: C.textLight }}>{app.customer_mobile || app.mobile || 'No Mobile'}</div>
+                              <div style={{ fontSize: '11px', color: C.textLight }}>
+                                {isAdministrativeOperatorUser ? maskMobileNumber(app.customer_mobile || app.mobile) : (app.customer_mobile || app.mobile || 'No Mobile')}
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -1107,12 +1183,32 @@ export default function ManageApplications() {
                       {!isPanCheckerUser && !isRemarkOperatorUser && !isQdOperatorUser && (
                         <td style={{ padding: '14px 16px' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <span style={{
-                              display: "inline-block", padding: "3px 8px", borderRadius: "6px", fontSize: "10.5px", fontWeight: 800, textTransform: "uppercase", width: "fit-content",
-                              background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`
-                            }}>
-                              {badge.label}
-                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              <span style={{
+                                display: "inline-block", padding: "3px 8px", borderRadius: "6px", fontSize: "10.5px", fontWeight: 800, textTransform: "uppercase", width: "fit-content",
+                                background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`
+                              }}>
+                                {badge.label}
+                              </span>
+                              {(app.curing_designation || app.decline_code) && (() => {
+                                const desig = app.curing_designation || getHdfcCuringDesignation(app.decline_code);
+                                const badgeInfo = CURING_DESIGNATION_BADGES[desig];
+                                if (!badgeInfo) return null;
+                                return (
+                                  <span style={{
+                                    display: "inline-block", padding: "2px 6px", borderRadius: "4px", fontSize: "10px", fontWeight: 800,
+                                    background: badgeInfo.bg, color: badgeInfo.text, border: `1px solid ${badgeInfo.border}`
+                                  }}>
+                                    🛡️ {badgeInfo.label}
+                                  </span>
+                                );
+                              })()}
+                            </div>
+                            {app.decline_code && (
+                              <div style={{ fontSize: '10.5px', color: '#dc2626', fontWeight: 700 }}>
+                                Decline Code: <strong>{app.decline_code}</strong>
+                              </div>
+                            )}
                             <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>
                               Comm: <span style={{ color: app.commission_released || app.commission_status === 'processed' ? '#059669' : C.textMid }}>₹{parseFloat(app.commission_amount || 0).toLocaleString('en-IN')} ({app.commission_released || app.commission_status === 'processed' ? 'Released' : 'Pending'})</span>
                             </div>
@@ -1123,7 +1219,24 @@ export default function ManageApplications() {
                       {/* Actions */}
                       <td style={{ padding: '14px 16px', textAlign: 'right' }}>
                         <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px", alignItems: "center" }}>
-                          {isQuerableOperatorUser ? (
+                          {isCurableOperatorUser ? (
+                            <>
+                              <button
+                                onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }}
+                                style={{ background: "#ea580c15", border: "1px solid #ea580c40", color: "#ea580c", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: 'center', gap: "4px" }}
+                                title="Open Bank Remark Form to cure application"
+                              >
+                                <FileEdit size={12} /> Cure / Remark
+                              </button>
+                              <button
+                                onClick={() => { setVerifyModalTab('final'); setVerifyModalApp(app); }}
+                                style={{ background: "#2563eb15", border: "1px solid #2563eb40", color: "#2563eb", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                title="Update Final Status"
+                              >
+                                <CheckCircle2 size={12} /> Final
+                              </button>
+                            </>
+                          ) : isQuerableOperatorUser ? (
                             <button
                               onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }}
                               style={{ background: "#ef444415", border: "1px solid #ef444440", color: "#ef4444", padding: "6px 12px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
@@ -1287,14 +1400,34 @@ export default function ManageApplications() {
 
                 {/* Header Summary */}
                 <div style={{ borderBottom: `1px solid ${C.border}`, paddingBottom: '14px', marginRight: '40px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 800, background: `${C.primary}15`, color: C.primary, padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace' }}>
-                    {appDetail.app_number || appDetail.application_no || 'APP-REF'}
-                  </span>
-                  <h3 style={{ fontSize: '20px', fontWeight: 800, color: C.text, margin: '6px 0 2px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 800, background: `${C.primary}15`, color: C.primary, padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace' }}>
+                      {appDetail.app_number || appDetail.application_no || 'APP-REF'}
+                    </span>
+                    {isHdfcCheckLoanApplication(appDetail) && (
+                      <span style={{
+                        fontSize: '11.5px',
+                        fontWeight: 900,
+                        background: '#EFF6FF',
+                        color: '#1D4ED8',
+                        border: '1px solid #BFDBFE',
+                        padding: '2px 10px',
+                        borderRadius: '6px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        letterSpacing: '0.3px',
+                        textTransform: 'uppercase'
+                      }}>
+                        ⚡ View check loan application
+                      </span>
+                    )}
+                  </div>
+                  <h3 style={{ fontSize: '20px', fontWeight: 800, color: C.text, margin: '4px 0 2px' }}>
                     {appDetail.customer_name || appDetail.full_name || 'Customer'}
                   </h3>
                   <p style={{ fontSize: '12.5px', color: C.textLight, margin: 0 }}>
-                    Category: <strong>{appDetail.category || 'credit_card'}</strong> • Product: <strong>{appDetail.product_name || 'Credit Card'}</strong> • Bank: <strong>{appDetail.bank_name || 'Partner Bank'}</strong>
+                    Category: <strong>{appDetail.category || 'loc_eoc'}</strong> • Product: <strong>{appDetail.product_name || 'Credit Card'}</strong> • Bank: <strong>{appDetail.bank_name || 'Partner Bank'}</strong>
                   </p>
                 </div>
 
@@ -1370,85 +1503,268 @@ export default function ManageApplications() {
                   </div>
                 </div>
 
-                {/* Form 1: Quick Details */}
-                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
-                  <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.primary, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
-                    Form 1: Quick Details
-                  </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
-                    <div><span style={{ color: C.textLight }}>Customer Name:</span> <strong style={{ color: C.text }}>{appDetail.customer_name || appDetail.full_name || appDetail.pan_name || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Mobile Number:</span> <strong style={{ color: C.text }}>{appDetail.customer_mobile || appDetail.mobile || appDetail.aadhaar_linked_mobile || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Email Address:</span> <strong style={{ color: C.text }}>{appDetail.customer_email || appDetail.email || appDetail.personal_email || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>PAN Card Number:</span> <strong style={{ color: C.text, fontFamily: 'monospace' }}>{appDetail.pan_number || appDetail.pan || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Date of Birth (DOB):</span> <strong style={{ color: C.text }}>{appDetail.dob || appDetail.date_of_birth || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Aadhaar Number:</span> <strong style={{ color: C.text, fontFamily: 'monospace' }}>{appDetail.aadhaar_number || appDetail.aadhaar_no || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Mother's Name:</span> <strong style={{ color: C.text }}>{appDetail.mother_name || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Employer / Company Name:</span> <strong style={{ color: C.text }}>{appDetail.company_name || appDetail.employer_name || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Occupation / Designation:</span> <strong style={{ color: C.text }}>{appDetail.designation || appDetail.occupation || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Monthly Income / Salary:</span> <strong style={{ color: '#16a34a', fontWeight: 800 }}>{(appDetail.monthly_salary || appDetail.monthly_income) ? `₹${parseFloat(appDetail.monthly_salary || appDetail.monthly_income).toLocaleString('en-IN')}` : '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Residential Address:</span> <strong style={{ color: C.text }}>{[appDetail.address || appDetail.residential_address || appDetail.flat_no, appDetail.city, appDetail.state, appDetail.pincode].filter(Boolean).join(', ') || '—'}</strong></div>
-                    <div>
-                      <span style={{ color: C.textLight }}>Referred By (Partner / Employee):</span>{' '}
-                      <strong style={{ color: C.text }}>
-                        {appDetail.employee_name || appDetail.emp_code
-                          ? `Employee: ${appDetail.employee_name} (${String(appDetail.emp_code || 'EMP')})`
-                          : appDetail.partner_code || appDetail.Partner_first_name || appDetail.partner_first_name
-                            ? `Partner: ${appDetail.partner_first_name || appDetail.Partner_first_name || ''} ${appDetail.partner_last_name || appDetail.Partner_last_name || ''} (${appDetail.partner_code || appDetail.Partner_code || 'N/A'})`.trim()
-                            : 'Direct / Customer Online'}
-                      </strong>
+                {isHdfcCheckLoanApplication(appDetail) ? (
+                  <>
+                    {/* Form 1 : Quick details */}
+                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
+                      <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.primary, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
+                        Form 1 : Quick details
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
+                        <div>
+                          <span style={{ color: C.textLight }}>1. Customer name:</span>{' '}
+                          <strong style={{ color: C.text }}>{appDetail.customer_name || appDetail.full_name || appDetail.pan_name || '—'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: C.textLight }}>2. Mobile number:</span>{' '}
+                          <strong style={{ color: C.text, fontFamily: 'monospace' }}>
+                            {maskMobileNumber(appDetail.customer_mobile || appDetail.mobile || appDetail.aadhaar_linked_mobile)}
+                          </strong>
+                        </div>
+                        <div style={{ gridColumn: 'span 2' }}>
+                          <span style={{ color: C.textLight }}>3. Referred by (partner/employee) :</span>{' '}
+                          <strong style={{ color: C.text }}>"{getReferredByName(appDetail)}"</strong>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
 
-                {/* Part 2: Operational Processing & Remark Form */}
-                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
-                  <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: '#0d9488', margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
-                    Part 2: Operational Processing &amp; Remark Form
-                  </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
-                    <div><span style={{ color: C.textLight }}>Appcode Status:</span> <strong style={{ color: C.text }}>{appDetail.appcode_status || 'Appcode Pending'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Soft Approval Status:</span> <strong style={{ color: C.text }}>{appDetail.soft_approval_status || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>VKYC Stage:</span> <strong style={{ color: C.text }}>{appDetail.vkyc_stage || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>IQA Stage:</span> <strong style={{ color: C.text }}>{appDetail.iqa_stage || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Dispatch Status:</span> <strong style={{ color: C.text }}>{appDetail.dispatch_status || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Operational Remarks:</span> <strong style={{ color: C.text }}>{appDetail.ops_remark || appDetail.processing_remark || appDetail.remarks || '—'}</strong></div>
-                  </div>
-                </div>
+                    {/* Form 2 : remark form */}
+                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
+                      <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: '#0d9488', margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
+                        Form 2 : remark form
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
+                        <div>
+                          <span style={{ color: C.textLight }}>1. Insta/jumbo:</span>{' '}
+                          <strong style={{ color: C.text }}>
+                            {appDetail.insta_jumbo_offer || appDetail.insta_jumbo || appDetail.physical_details?.insta_jumbo_offer || 'None'}
+                          </strong>
+                        </div>
+                        <div>
+                          <span style={{ color: C.textLight }}>2. Customer loan type:</span>{' '}
+                          <strong style={{ color: C.text }}>
+                            {appDetail.customer_loan_type || appDetail.customer_loan_offer || appDetail.physical_details?.customer_loan_type || appDetail.physical_details?.customer_loan_offer || 'None'}
+                          </strong>
+                        </div>
+                        <div>
+                          <span style={{ color: C.textLight }}>3. Offer tenure:</span>{' '}
+                          <strong style={{ color: C.text }}>
+                            {appDetail.offer_tenure || appDetail.physical_details?.offer_tenure || 'None'}
+                          </strong>
+                        </div>
+                        <div>
+                          <span style={{ color: C.textLight }}>4. Disbursement amount:</span>{' '}
+                          <strong style={{ color: '#16a34a', fontWeight: 800 }}>
+                            {(() => {
+                              const amt = appDetail.disbursement_amount ?? appDetail.disbursed_amount ?? appDetail.disbursed_smart_emi ?? appDetail.physical_details?.disbursement_amount ?? appDetail.physical_details?.disbursed_amount;
+                              if (amt !== null && amt !== undefined && amt !== '' && !isNaN(Number(amt)) && Number(amt) >= 0) {
+                                return `₹${parseFloat(amt).toLocaleString('en-IN')}`;
+                              }
+                              return '—';
+                            })()}
+                          </strong>
+                        </div>
+                        <div>
+                          <span style={{ color: C.textLight }}>5. Disbursement tenure:</span>{' '}
+                          <strong style={{ color: C.text }}>
+                            {appDetail.disbursement_tenure || appDetail.disbursed_tenure || appDetail.disbursed_smart_emi_tenure || appDetail.physical_details?.disbursement_tenure || 'None'}
+                          </strong>
+                        </div>
+                        <div>
+                          <span style={{ color: C.textLight }}>6. Operational remark:</span>{' '}
+                          <strong style={{ color: C.text }}>
+                            {appDetail.ops_remark || appDetail.processing_remark || appDetail.remarks || appDetail.operational_remarks || appDetail.user_remark || '—'}
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
 
-                {/* Part 3: Bank Remark & Final Form */}
-                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
-                  <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: '#9333ea', margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
-                    Part 3: Bank Remark &amp; Final Form
-                  </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
-                    <div><span style={{ color: C.textLight }}>App / Bank Reference #:</span> <strong style={{ color: C.text, fontFamily: 'monospace' }}>{appDetail.bank_ref_number || appDetail.bank_application_number || appDetail.app_number || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Applied Loan Amount:</span> <strong style={{ color: C.text }}>{(appDetail.loan_amount && Number(appDetail.loan_amount) > 0) ? `₹${parseFloat(appDetail.loan_amount).toLocaleString('en-IN')}` : '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Commission Amount / Status:</span> <strong style={{ color: C.text }}>{appDetail.commission_amount ? `₹${parseFloat(appDetail.commission_amount).toLocaleString('en-IN')}` : '₹500.00'} ({appDetail.commission_status || 'pending'})</strong></div>
-                    <div><span style={{ color: C.textLight }}>VKYC / Direct Web Link:</span> <strong style={{ color: C.text }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const link = appDetail.vkyc_url || appDetail.vkyc_link || appDetail.physical_details?.vkyc_url;
-                          if (link && String(link).trim() !== '' && String(link).toUpperCase() !== 'N/A' && String(link).toUpperCase() !== 'NA') {
-                            let targetUrl = String(link).trim();
-                            if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
-                              targetUrl = 'https://' + targetUrl;
-                            }
-                            window.open(targetUrl, '_blank', 'noopener,noreferrer');
-                          } else {
-                            alert("Link not assigned");
-                          }
-                        }}
-                        style={{ background: 'none', border: 'none', color: C.primary, fontWeight: 700, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
-                      >
-                        Open Link ↗
-                      </button>
-                    </strong></div>
-                    <div><span style={{ color: C.textLight }}>Final Status from Bank:</span> <strong style={{ color: C.text }}>{appDetail.final_status || 'pending'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Eligible for Re-QD:</span> <strong style={{ color: C.text }}>{appDetail.eligible_reqd || 'No'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Bank Remark:</span> <strong style={{ color: C.text }}>{appDetail.bank_remark || '—'}</strong></div>
-                  </div>
-                </div>
+                    {/* Form 3 : final form */}
+                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
+                      <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: '#9333ea', margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
+                        Form 3 : final form
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
+                        <div>
+                          <span style={{ color: C.textLight }}>1. Los NO:</span>{' '}
+                          <strong style={{ color: C.text, fontFamily: 'monospace' }}>
+                            {appDetail.los_no || appDetail.bank_ref_number || appDetail.bank_application_number || appDetail.physical_details?.los_no || '—'}
+                          </strong>
+                        </div>
+                        <div>
+                          <span style={{ color: C.textLight }}>2. Disbursement completed:</span>{' '}
+                          <strong style={{ color: C.text }}>
+                            {appDetail.disbursement_completed || appDetail.physical_details?.disbursement_completed || 'None'}
+                          </strong>
+                        </div>
+                        <div>
+                          <span style={{ color: C.textLight }}>3. DISBURSEMENT date:</span>{' '}
+                          <strong style={{ color: C.text }}>
+                            {formatDisplayDate(appDetail.disbursement_date || appDetail.disbursal_date || appDetail.physical_details?.disbursement_date || appDetail.physical_details?.disbursal_date)}
+                          </strong>
+                        </div>
+                        <div>
+                          <span style={{ color: C.textLight }}>4. Decline reason:</span>{' '}
+                          <strong style={{ color: C.text }}>
+                            {appDetail.decline_reason || appDetail.offer_decline_reason || appDetail.physical_details?.decline_reason || '—'}
+                          </strong>
+                        </div>
+                        <div>
+                          <span style={{ color: C.textLight }}>5. User remark:</span>{' '}
+                          <strong style={{ color: C.text }}>
+                            {appDetail.user_remark || appDetail.notes || appDetail.physical_details?.user_remark || '—'}
+                          </strong>
+                        </div>
+                        <div>
+                          <span style={{ color: C.textLight }}>6. Bank remark:</span>{' '}
+                          <strong style={{ color: C.text }}>
+                            {appDetail.bank_remark || appDetail.physical_details?.bank_remark || '—'}
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Form 1: Quick Details */}
+                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
+                      <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.primary, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
+                        Form 1: Quick Details
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
+                        <div><span style={{ color: C.textLight }}>Customer Name:</span> <strong style={{ color: C.text }}>{appDetail.customer_name || appDetail.full_name || appDetail.pan_name || '—'}</strong></div>
+                        <div><span style={{ color: C.textLight }}>Mobile Number:</span> <strong style={{ color: C.text, fontFamily: 'monospace' }}>{maskMobileNumber(appDetail.customer_mobile || appDetail.mobile || appDetail.aadhaar_linked_mobile)}</strong></div>
+                        
+                        {hasMeaningfulValue(appDetail.customer_email || appDetail.email || appDetail.personal_email) && (
+                          <div><span style={{ color: C.textLight }}>Email Address:</span> <strong style={{ color: C.text }}>{appDetail.customer_email || appDetail.email || appDetail.personal_email}</strong></div>
+                        )}
+                        
+                        {hasMeaningfulValue(appDetail.pan_number || appDetail.pan) && (
+                          <div><span style={{ color: C.textLight }}>PAN Card Number:</span> <strong style={{ color: C.text, fontFamily: 'monospace' }}>{appDetail.pan_number || appDetail.pan}</strong></div>
+                        )}
+                        
+                        {hasMeaningfulValue(appDetail.dob || appDetail.date_of_birth) && (
+                          <div><span style={{ color: C.textLight }}>Date of Birth (DOB):</span> <strong style={{ color: C.text }}>{appDetail.dob || appDetail.date_of_birth}</strong></div>
+                        )}
+                        
+                        {hasMeaningfulValue(appDetail.aadhaar_number || appDetail.aadhaar_no) && (
+                          <div><span style={{ color: C.textLight }}>Aadhaar Number:</span> <strong style={{ color: C.text, fontFamily: 'monospace' }}>{appDetail.aadhaar_number || appDetail.aadhaar_no}</strong></div>
+                        )}
+                        
+                        {hasMeaningfulValue(appDetail.mother_name) && (
+                          <div><span style={{ color: C.textLight }}>Mother's Name:</span> <strong style={{ color: C.text }}>{appDetail.mother_name}</strong></div>
+                        )}
+                        
+                        {hasMeaningfulValue(appDetail.company_name || appDetail.employer_name) && (
+                          <div><span style={{ color: C.textLight }}>Employer / Company Name:</span> <strong style={{ color: C.text }}>{appDetail.company_name || appDetail.employer_name}</strong></div>
+                        )}
+                        
+                        {hasMeaningfulValue(appDetail.designation || appDetail.occupation) && (
+                          <div><span style={{ color: C.textLight }}>Occupation / Designation:</span> <strong style={{ color: C.text }}>{appDetail.designation || appDetail.occupation}</strong></div>
+                        )}
+                        
+                        {((appDetail.monthly_salary || appDetail.monthly_income) && Number(appDetail.monthly_salary || appDetail.monthly_income) > 0) && (
+                          <div><span style={{ color: C.textLight }}>Monthly Income / Salary:</span> <strong style={{ color: '#16a34a', fontWeight: 800 }}>₹{parseFloat(appDetail.monthly_salary || appDetail.monthly_income).toLocaleString('en-IN')}</strong></div>
+                        )}
+                        
+                        {hasMeaningfulValue([appDetail.address || appDetail.residential_address || appDetail.flat_no, appDetail.city, appDetail.state, appDetail.pincode].filter(Boolean).join(', ')) && (
+                          <div><span style={{ color: C.textLight }}>Residential Address:</span> <strong style={{ color: C.text }}>{[appDetail.address || appDetail.residential_address || appDetail.flat_no, appDetail.city, appDetail.state, appDetail.pincode].filter(Boolean).join(', ')}</strong></div>
+                        )}
+                        
+                        <div>
+                          <span style={{ color: C.textLight }}>Referred By (Partner / Employee):</span>{' '}
+                          <strong style={{ color: C.text }}>
+                            "{getReferredByName(appDetail)}"
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Part 2: Operational Processing & Remark Form */}
+                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
+                      <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: '#0d9488', margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
+                        Part 2: Operational Processing &amp; Remark Form
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
+                        <div><span style={{ color: C.textLight }}>Appcode Status:</span> <strong style={{ color: C.text }}>{appDetail.appcode_status || 'Appcode Pending'}</strong></div>
+                        <div><span style={{ color: C.textLight }}>Soft Approval Status:</span> <strong style={{ color: C.text }}>{appDetail.soft_approval_status || '—'}</strong></div>
+                        <div><span style={{ color: C.textLight }}>VKYC Stage:</span> <strong style={{ color: C.text }}>{appDetail.vkyc_stage || '—'}</strong></div>
+                        <div><span style={{ color: C.textLight }}>IQA Stage:</span> <strong style={{ color: C.text }}>{appDetail.iqa_stage || '—'}</strong></div>
+                        <div><span style={{ color: C.textLight }}>Dispatch Status:</span> <strong style={{ color: C.text }}>{appDetail.dispatch_status || '—'}</strong></div>
+                        <div><span style={{ color: C.textLight }}>Operational Remarks:</span> <strong style={{ color: C.text }}>{appDetail.ops_remark || appDetail.processing_remark || appDetail.remarks || '—'}</strong></div>
+                      </div>
+                    </div>
+
+                    {/* Part 3: Bank Remark & Final Form */}
+                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
+                      <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: '#9333ea', margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
+                        Part 3: Bank Remark &amp; Final Form
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
+                        <div><span style={{ color: C.textLight }}>App / Bank Reference #:</span> <strong style={{ color: C.text, fontFamily: 'monospace' }}>{appDetail.bank_ref_number || appDetail.bank_application_number || appDetail.app_number || '—'}</strong></div>
+                        <div><span style={{ color: C.textLight }}>Applied Loan Amount:</span> <strong style={{ color: C.text }}>{(appDetail.loan_amount && Number(appDetail.loan_amount) > 0) ? `₹${parseFloat(appDetail.loan_amount).toLocaleString('en-IN')}` : '—'}</strong></div>
+                        <div><span style={{ color: C.textLight }}>Commission Amount / Status:</span> <strong style={{ color: C.text }}>{appDetail.commission_amount ? `₹${parseFloat(appDetail.commission_amount).toLocaleString('en-IN')}` : '₹500.00'} ({appDetail.commission_status || 'pending'})</strong></div>
+                        <div><span style={{ color: C.textLight }}>VKYC / Direct Web Link:</span> <strong style={{ color: C.text }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const link = appDetail.vkyc_url || appDetail.vkyc_link || appDetail.physical_details?.vkyc_url;
+                              if (link && String(link).trim() !== '' && String(link).toUpperCase() !== 'N/A' && String(link).toUpperCase() !== 'NA') {
+                                let targetUrl = String(link).trim();
+                                if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+                                  targetUrl = 'https://' + targetUrl;
+                                }
+                                window.open(targetUrl, '_blank', 'noopener,noreferrer');
+                              } else {
+                                alert("Link not assigned");
+                              }
+                            }}
+                            style={{ background: 'none', border: 'none', color: C.primary, fontWeight: 700, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
+                          >
+                            Open Link ↗
+                          </button>
+                        </strong></div>
+                        <div><span style={{ color: C.textLight }}>Final Status from Bank:</span> <strong style={{ color: C.text }}>{appDetail.final_status || 'pending'}</strong></div>
+                        {appDetail.decline_code && (
+                          <div>
+                            <span style={{ color: C.textLight }}>Decline Code:</span>{' '}
+                            <strong style={{ color: '#dc2626', fontFamily: 'monospace' }}>
+                              {appDetail.decline_code}
+                            </strong>
+                            {appDetail.decline_description && (
+                              <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '6px' }}>
+                                ({appDetail.decline_description})
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {(appDetail.curing_designation || appDetail.decline_code) && (() => {
+                          const desig = appDetail.curing_designation || getHdfcCuringDesignation(appDetail.decline_code);
+                          const bInfo = CURING_DESIGNATION_BADGES[desig];
+                          if (!bInfo) return null;
+                          return (
+                            <div>
+                              <span style={{ color: C.textLight }}>Curing Team:</span>{' '}
+                              <span style={{
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '11px',
+                                fontWeight: 800,
+                                background: bInfo.bg,
+                                color: bInfo.text,
+                                border: `1px solid ${bInfo.border}`
+                              }}>
+                                🛡️ {bInfo.label}
+                              </span>
+                            </div>
+                          );
+                        })()}
+                        <div><span style={{ color: C.textLight }}>Eligible for Re-QD:</span> <strong style={{ color: C.text }}>{appDetail.eligible_reqd || 'No'}</strong></div>
+                        <div><span style={{ color: C.textLight }}>Bank Remark:</span> <strong style={{ color: C.text }}>{appDetail.bank_remark || '—'}</strong></div>
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Verification Lifecycle Log Stream */}
                 <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>

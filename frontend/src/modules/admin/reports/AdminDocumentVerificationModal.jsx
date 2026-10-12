@@ -8,6 +8,14 @@ import {
   Share2, Copy, MessageSquare, Smartphone, Save, Sliders, Activity, Sparkles, ExternalLink, Link as LinkIcon,
   Calendar
 } from 'lucide-react';
+import {
+  HDFC_DECLINE_CODES,
+  CURING_DESIGNATIONS,
+  CURING_DESIGNATION_LABELS,
+  CURING_DESIGNATION_BADGES,
+  getHdfcCuringDesignation,
+  getHdfcDeclineCodeInfo
+} from '../../../constants/hdfcDeclineCodes';
 
 export const PAN_CHECK_REMARK_OPTIONS = [
   { code: 'PAN OK', label: 'PAN OK - OK (Immediate)' },
@@ -313,9 +321,13 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const isRemarkOperator = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(role);
   const isQdOperator = ['QD OPERATOR', 'QD_OPERATOR'].includes(userDesignation) || ['QD OPERATOR', 'QD_OPERATOR'].includes(role);
   const isQuerableOperator = ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(role);
+  const isPhysicalCurable = ['PHYSICAL CURABLE', 'PHYSICAL_CURABLE'].includes(userDesignation) || ['PHYSICAL CURABLE', 'PHYSICAL_CURABLE'].includes(role);
+  const isDigitalCurable = ['DIGITAL CURABLE', 'DIGITAL_CURABLE'].includes(userDesignation) || ['DIGITAL CURABLE', 'DIGITAL_CURABLE'].includes(role);
+  const isEmailCurable = ['EMAIL CURABLE', 'EMAIL_CURABLE'].includes(userDesignation) || ['EMAIL CURABLE', 'EMAIL_CURABLE'].includes(role);
+  const isCurableOperator = isPhysicalCurable || isDigitalCurable || isEmailCurable;
   const isAdministrativeOperator = ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(role);
   const isSalesExecUser = (['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(role)) && !isAdministrativeOperator;
-  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR', 'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE_OPERATOR', 'QUERABLE OPERATOR', 'QUERYABLE_OPERATOR', 'QUERYABLE OPERATOR'].includes(role) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE_OPERATOR', 'QUERABLE OPERATOR', 'QUERYABLE_OPERATOR', 'QUERYABLE OPERATOR'].includes(userDesignation);
+  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR', 'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE_OPERATOR', 'QUERABLE OPERATOR', 'QUERYABLE_OPERATOR', 'QUERYABLE OPERATOR', 'PHYSICAL_CURABLE', 'PHYSICAL CURABLE', 'DIGITAL_CURABLE', 'DIGITAL CURABLE', 'EMAIL_CURABLE', 'EMAIL CURABLE'].includes(role) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE_OPERATOR', 'QUERABLE OPERATOR', 'QUERYABLE_OPERATOR', 'QUERYABLE OPERATOR', 'PHYSICAL CURABLE', 'PHYSICAL_CURABLE', 'DIGITAL CURABLE', 'DIGITAL_CURABLE', 'EMAIL CURABLE', 'EMAIL_CURABLE'].includes(userDesignation);
   const isSuperAdminRole = ['SUPER_ADMIN', 'SUPER ADMIN'].includes(role) || ['SUPER_ADMIN', 'SUPER ADMIN'].includes(userDesignation);
   const isOpsHead = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONAL HEAD'].includes(role) && !isOpsOperator;
   const isOpsOrAdmin = isOpsHead || isOpsOperator || isSuperAdminRole;
@@ -371,7 +383,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
 
 
   useEffect(() => {
-    if (isQuerableOperator) {
+    if (isQuerableOperator || isCurableOperator) {
       setActiveTab('remark');
       return;
     }
@@ -383,7 +395,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         setActiveTab(targetKey);
       }
     }
-  }, [application?.id, initialTab, isSalesExecUser, isQuerableOperator]);
+  }, [application?.id, initialTab, isSalesExecUser, isQuerableOperator, isCurableOperator]);
 
   const isPunchLead = processTypeStr.includes('punch') || processTypeStr.includes('lead_punching') || processTypeStr.includes('punching');
   const isDigital = isLinkedShare || isDirectBank;
@@ -394,8 +406,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
 
   // Role & Status Access Rules:
   const canEditQd = !isLockedStatus;
-  const canEditRemark = !isLockedStatus || isQuerableOperator;
-  const canEditFinal = !isSalesExecUser && !isQdOperator && (isSuperAdminOrAdmin || isFinalStatusOperator || (!isPartner && !isLockedStatus));
+  const canEditRemark = !isLockedStatus || isQuerableOperator || isCurableOperator;
+  const canEditFinal = !isSalesExecUser && !isQdOperator && (isSuperAdminOrAdmin || isFinalStatusOperator || isCurableOperator || (!isPartner && !isLockedStatus));
 
   const sanitizeVal = (val) => {
     if (!val || val === 'null' || val === 'undefined') return '';
@@ -852,6 +864,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           digital_card_issued: digitalCardIssued || 'None',
           card_activation_stage: cardActivationStage || 'None',
           decline_code: declineCode || undefined,
+          decline_description: getHdfcDeclineCodeInfo(declineCode)?.type || declineRemark || undefined,
+          curing_designation: getHdfcCuringDesignation(declineCode) || undefined,
           decline_remark: declineRemark || undefined,
           queryable_remark: queryableRemark || 'None',
           queryable_sales_remark: queryableSalesRemark || undefined,
@@ -948,6 +962,18 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           }
         }
         
+        // HDFC Bank Credit Card decline code validation
+        if ((isHdfcBank || isTataCobrandHdfc) && isCreditCard && !isLocOrEoc) {
+          const isDeclineSelected = String(finalStatus || '').toLowerCase().includes('decline') || 
+                                    String(finalStatus || '').toLowerCase().includes('reject') || 
+                                    String(targetStatus || '').toLowerCase() === 'rejected';
+          if (isDeclineSelected && (!declineCode || !String(declineCode).trim())) {
+            alert('Please select an HDFC Decline Code when updating status to Decline.');
+            setActionLoading(false);
+            return;
+          }
+        }
+
         payload = {
           ...payload,
           ipa_stage: ipaStage,
@@ -955,7 +981,9 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           card_approval_stage: cardApprovalStage,
           digital_card_issued: digitalCardIssued,
           card_activation_stage: cardActivationStage,
-          decline_code: declineCode,
+          decline_code: declineCode || undefined,
+          decline_description: getHdfcDeclineCodeInfo(declineCode)?.type || declineRemark || declineReason || undefined,
+          curing_designation: getHdfcCuringDesignation(declineCode) || undefined,
           decline_remark: declineRemark,
           queryable_remark: queryableRemark,
           queryable_sales_remark: queryableSalesRemark,
@@ -1062,6 +1090,27 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
               }}>
                 {(currentStatus || application?.status || 'details_submitted').replace(/_/g, ' ').toUpperCase()}
               </span>
+              {(application.curing_designation || declineCode) && (() => {
+                const desig = application.curing_designation || getHdfcCuringDesignation(declineCode);
+                const badge = CURING_DESIGNATION_BADGES[desig];
+                if (!badge) return null;
+                return (
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    padding: '4px 10px',
+                    borderRadius: '12px',
+                    background: badge.bg,
+                    color: badge.text,
+                    border: `1px solid ${badge.border}`,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    🛡️ {badge.label} {declineCode ? `(Code ${declineCode})` : ''}
+                  </span>
+                );
+              })()}
             </div>
             <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0', wordBreak: 'break-word' }}>
               Customer: <strong>{customerName || application.customer_name || 'Customer'}</strong> | Mobile: {(isPanChecker || isRemarkOperator) ? ((customerMobile || application.customer_mobile || application.mobile || '').length >= 6 ? `${(customerMobile || application.customer_mobile || application.mobile).slice(0, (customerMobile || application.customer_mobile || application.mobile).length - 6)}******` : '******') : (customerMobile || application.customer_mobile)} | Bank: {application.bank_name || application.bank_code || 'Partner Bank'}
@@ -3127,17 +3176,128 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                       {(String(cardApprovalStage || '').toLowerCase().includes('decline') || String(finalStatus || '').toLowerCase().includes('decline') || String(finalStatus || '').toLowerCase().includes('reject')) && (
                         <>
                           {/* 1. DECLINE CODE */}
-                          <div>
-                            <label style={{ fontSize: '12px', fontWeight: 800, color: '#dc2626', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. DECLINE CODE</label>
-                            <input
-                              type="text"
-                              disabled={!canEditRemark}
-                              value={declineCode}
-                              onChange={(e) => setDeclineCode(e.target.value)}
-                              placeholder="Enter Decline Code"
-                              style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff' }}
-                            />
-                          </div>
+                          {(isHdfcBank || isTataCobrandHdfc) ? (
+                            <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              <div>
+                                <label style={{ fontSize: '12px', fontWeight: 800, color: '#dc2626', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', textTransform: 'uppercase' }}>
+                                  <AlertTriangle size={14} /> 1. DECLINE CODE (HDFC CREDIT CARD)
+                                </label>
+                                <select
+                                  disabled={!canEditRemark}
+                                  value={declineCode || ''}
+                                  onChange={(e) => {
+                                    const selectedCode = e.target.value;
+                                    setDeclineCode(selectedCode);
+                                    const info = getHdfcDeclineCodeInfo(selectedCode);
+                                    if (info?.type) {
+                                      setDeclineRemark(info.type);
+                                      if (!declineReason) setDeclineReason(info.type);
+                                    }
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    padding: '11px 14px',
+                                    borderRadius: '8px',
+                                    border: '1.5px solid #ef4444',
+                                    fontSize: '13px',
+                                    background: !canEditRemark ? '#fef2f2' : '#fff',
+                                    fontWeight: 700,
+                                    color: '#1e293b'
+                                  }}
+                                >
+                                  <option value="">-- Select HDFC Decline Code ({HDFC_DECLINE_CODES.length} Codes) --</option>
+                                  <optgroup label="Physical Curable (26 Codes)">
+                                    {HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.PHYSICAL_CURABLE).map(c => (
+                                      <option key={c.code} value={c.code}>
+                                        {c.code} - {c.type}
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                  <optgroup label="Digital Curable (17 Codes)">
+                                    {HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.DIGITAL_CURABLE).map(c => (
+                                      <option key={c.code} value={c.code}>
+                                        {c.code} - {c.type}
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                  <optgroup label="Email Curable (8 Codes)">
+                                    {HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.EMAIL_CURABLE).map(c => (
+                                      <option key={c.code} value={c.code}>
+                                        {c.code} - {c.type}
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                </select>
+                              </div>
+
+                              {/* READ-ONLY ALLOCATED CURING TEAM BANNER */}
+                              {declineCode && (() => {
+                                const codeInfo = getHdfcDeclineCodeInfo(declineCode);
+                                const curingDesig = codeInfo?.designation || getHdfcCuringDesignation(declineCode);
+                                const badgeInfo = CURING_DESIGNATION_BADGES[curingDesig] || {
+                                  bg: '#f1f5f9',
+                                  border: '#cbd5e1',
+                                  text: '#475569',
+                                  pillBg: '#64748b',
+                                  label: 'Unassigned Curing'
+                                };
+
+                                return (
+                                  <div style={{
+                                    background: badgeInfo.bg,
+                                    border: `1.5px solid ${badgeInfo.border}`,
+                                    borderRadius: '10px',
+                                    padding: '12px 16px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '6px'
+                                  }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ fontSize: '12px', fontWeight: 800, color: '#334155', textTransform: 'uppercase' }}>
+                                          Allocated Curing Team:
+                                        </span>
+                                        <span style={{
+                                          background: badgeInfo.pillBg,
+                                          color: '#ffffff',
+                                          padding: '3px 12px',
+                                          borderRadius: '20px',
+                                          fontSize: '12px',
+                                          fontWeight: 800,
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px'
+                                        }}>
+                                          🛡️ {badgeInfo.label}
+                                        </span>
+                                      </div>
+                                      <span style={{ fontSize: '12px', fontWeight: 800, color: '#64748b' }}>
+                                        Code: <strong style={{ color: badgeInfo.text, fontFamily: 'monospace' }}>{declineCode}</strong>
+                                      </span>
+                                    </div>
+                                    <div style={{ fontSize: '12.5px', fontWeight: 700, color: badgeInfo.text }}>
+                                      Description: {codeInfo?.type || declineRemark || '—'}
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
+                                      ℹ️ Application will automatically route to <strong>{badgeInfo.label}</strong> operators in the Admin panel.
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          ) : (
+                            <div>
+                              <label style={{ fontSize: '12px', fontWeight: 800, color: '#dc2626', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. DECLINE CODE</label>
+                              <input
+                                type="text"
+                                disabled={!canEditRemark}
+                                value={declineCode}
+                                onChange={(e) => setDeclineCode(e.target.value)}
+                                placeholder="Enter Decline Code"
+                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff' }}
+                              />
+                            </div>
+                          )}
 
                           {/* 2. DECLINE REMARK */}
                           <div>
@@ -3825,6 +3985,137 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           <option value={bankCurrentLeadStatus}>{bankCurrentLeadStatus}</option>
                         )}
                       </select>
+                    </div>
+                  )}
+
+                  {/* 🏦 HDFC DECLINE CODE (ONLY FOR HDFC BANK CREDIT CARD IN FINAL FORM WHEN STATUS IS DECLINE) */}
+                  {(isHdfcBank || isTataCobrandHdfc) && (String(finalStatus || '').toLowerCase().includes('decline') || String(finalStatus || '').toLowerCase().includes('reject')) && (
+                    <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '12px', background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '12px', padding: '16px' }}>
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#dc2626', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', textTransform: 'uppercase' }}>
+                          <AlertTriangle size={15} /> DECLINE CODE (HDFC CREDIT CARD) *
+                        </label>
+                        <select
+                          disabled={!canEditFinal}
+                          value={declineCode || ''}
+                          onChange={(e) => {
+                            const selectedCode = e.target.value;
+                            setDeclineCode(selectedCode);
+                            const info = getHdfcDeclineCodeInfo(selectedCode);
+                            if (info?.type) {
+                              setDeclineRemark(info.type);
+                              setDeclineReason(info.type);
+                            }
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '11px 14px',
+                            borderRadius: '8px',
+                            border: '1.5px solid #ef4444',
+                            fontSize: '13px',
+                            background: !canEditFinal ? '#f8fafc' : '#ffffff',
+                            fontWeight: 700,
+                            color: '#1e293b'
+                          }}
+                        >
+                          <option value="">-- Select HDFC Decline Code ({HDFC_DECLINE_CODES.length} Codes) * --</option>
+                          <optgroup label="Physical Curable (26 Codes)">
+                            {HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.PHYSICAL_CURABLE).map(c => (
+                              <option key={c.code} value={c.code}>
+                                {c.code} - {c.type}
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="Digital Curable (17 Codes)">
+                            {HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.DIGITAL_CURABLE).map(c => (
+                              <option key={c.code} value={c.code}>
+                                {c.code} - {c.type}
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="Email Curable (8 Codes)">
+                            {HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.EMAIL_CURABLE).map(c => (
+                              <option key={c.code} value={c.code}>
+                                {c.code} - {c.type}
+                              </option>
+                            ))}
+                          </optgroup>
+                        </select>
+                      </div>
+
+                      {/* READ-ONLY ALLOCATED CURING TEAM BANNER */}
+                      {declineCode && (() => {
+                        const codeInfo = getHdfcDeclineCodeInfo(declineCode);
+                        const curingDesig = codeInfo?.designation || getHdfcCuringDesignation(declineCode);
+                        const badgeInfo = CURING_DESIGNATION_BADGES[curingDesig] || {
+                          bg: '#f1f5f9',
+                          border: '#cbd5e1',
+                          text: '#475569',
+                          pillBg: '#64748b',
+                          label: 'Unassigned Curing'
+                        };
+
+                        return (
+                          <div style={{
+                            background: badgeInfo.bg,
+                            border: `1.5px solid ${badgeInfo.border}`,
+                            borderRadius: '10px',
+                            padding: '14px 18px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '12px', fontWeight: 800, color: '#334155', textTransform: 'uppercase' }}>
+                                  Allocated Curing Team:
+                                </span>
+                                <span style={{
+                                  background: badgeInfo.pillBg,
+                                  color: '#ffffff',
+                                  padding: '4px 12px',
+                                  borderRadius: '20px',
+                                  fontSize: '12px',
+                                  fontWeight: 800,
+                                  letterSpacing: '0.3px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                                }}>
+                                  🛡️ {badgeInfo.label}
+                                </span>
+                              </div>
+                              <span style={{ fontSize: '12px', fontWeight: 800, color: '#64748b' }}>
+                                Code: <strong style={{ color: badgeInfo.text, fontFamily: 'monospace', fontSize: '13px' }}>{declineCode}</strong>
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '13px', fontWeight: 700, color: badgeInfo.text }}>
+                              Description: {codeInfo?.type || declineRemark || declineReason || '—'}
+                            </div>
+                            <div style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 600 }}>
+                              ℹ️ Application will automatically route to <strong>{badgeInfo.label}</strong> operators in the Admin panel.
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#dc2626', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                          DECLINE REASON / REMARK
+                        </label>
+                        <input
+                          type="text"
+                          disabled={!canEditFinal}
+                          value={declineRemark || declineReason || ''}
+                          onChange={(e) => {
+                            setDeclineRemark(e.target.value);
+                            setDeclineReason(e.target.value);
+                          }}
+                          placeholder="Enter decline description or reason"
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff' }}
+                        />
+                      </div>
                     </div>
                   )}
 

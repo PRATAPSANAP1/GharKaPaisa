@@ -5023,6 +5023,14 @@ const migrate = async () => {
     logger.error('CRM Application Performance migration error note:', crmPerfErr.message);
   }
 
+  // HDFC Curing Designations & Decline Code Migration
+  try {
+    const { migrateHdfcCuringDesignations } = require('./migrate_hdfc_curing_designations');
+    await migrateHdfcCuringDesignations();
+  } catch (hdfcCuringErr) {
+    logger.error('HDFC Curing Designations migration error note:', hdfcCuringErr.message);
+  }
+
   if (require.main === module) {
     process.exit(0);
   }

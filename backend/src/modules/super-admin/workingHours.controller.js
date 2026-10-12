@@ -561,11 +561,33 @@ const deleteHoliday = async (req, res, next) => {
   }
 };
 
+/**
+ * DELETE /api/v1/superadmin/working-hours/extension/:id
+ */
+const revokeExtension = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await query(`
+      UPDATE admin_working_hour_extensions 
+      SET is_revoked = TRUE, updated_at = NOW() 
+      WHERE id = $1
+    `, [id]);
+    await logAction(req, 'WORKING_HOURS_EXTENSION_REVOKED', null, {
+      extensionId: id,
+      revokedBy: req.user?.full_name || req.user?.email || 'Super Admin'
+    });
+    return success(res, {}, 'Extension revoked successfully.');
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getWorkingHoursConfig,
   updateWorkingHours,
   extendWorkingHours,
   getExtensionHistory,
+  revokeExtension,
   savePolicy,
   getPolicies,
   deletePolicy,

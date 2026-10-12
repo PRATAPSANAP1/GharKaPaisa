@@ -23,6 +23,9 @@ const DESIGNATIONS = {
   QD_OPERATOR: 'QD Operator',
   FINAL_STATUS_OPERATOR: 'Final Status Operator',
   QUERABLE_OPERATOR: 'Querable Operator',
+  PHYSICAL_CURABLE: 'Physical Curable',
+  DIGITAL_CURABLE: 'Digital Curable',
+  EMAIL_CURABLE: 'Email Curable',
   SUPER_ADMIN: 'Super Admin',
 };
 

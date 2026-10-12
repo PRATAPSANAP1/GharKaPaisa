@@ -11,6 +11,35 @@ const { logAction } = require('../admin/audit.service.js');
 const { processTeamOverrideCommission } = require('../team/team.service.js');
 const { getBankApplyLinkBackend } = require('./lead.controller');
 const { sendEmail, sendLeadApplicationCreatedEmail } = require('../../services/email/email.service');
+const { getHdfcCuringDesignation, getHdfcDeclineCodeInfo } = require('../../constants/hdfcDeclineCodes');
+
+// Helper to determine strictly if an application belongs to HDFC Bank Credit Card (and not LOC/EOC)
+const isHdfcCreditCardApp = (app, pRow) => {
+  if (!app) return false;
+  const bankName = String(app.bank_name || app.bank_code || '').toUpperCase();
+  const isHdfc = (
+    app.bank_id === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' ||
+    (bankName.includes('HDFC') && !bankName.includes('TATA'))
+  );
+  if (!isHdfc) return false;
+
+  const catStr = String(pRow?.category || app.category || '').toLowerCase();
+  const subCatStr = String(pRow?.sub_category || app.sub_category || '').toLowerCase();
+  const prodName = String(pRow?.name || app.product_name || '').toLowerCase();
+
+  const isLocEoc = ['loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loc', 'eoc', 'loan_on_card', 'card_on_loan'].includes(catStr) ||
+    ['loc', 'eoc', 'loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loan_on_card', 'card_on_loan'].includes(subCatStr) ||
+    /insta\s*loan|jumbo\s*loan|instant\s*(&|and)?\s*jumbo\s*loan|instant\s*loan|smart\s*emi|smartemi|loan\s*on\s*card|loan\s*on\s*credit\s*card|emi\s*on\s*credit\s*card|emi\s*on\s*card|encash|dial\s*a\s*draft/i.test(prodName);
+
+  if (isLocEoc) return false;
+
+  const isCreditCard = (
+    ['credit_card', 'creditcard', 'cards', 'card', 'co_branded_card', 'fd_card'].includes(catStr) ||
+    catStr.includes('credit') ||
+    !catStr
+  );
+  return isCreditCard;
+};
 
 // Helper to safely ensure application_admin_assignments table exists
 const ensureAssignmentsTableExists = async () => {
@@ -1648,7 +1677,7 @@ const listApplications = async (req, res, next) => {
     const countQueryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, validProcessBy, validOpHeadId, validUserId, isPartnerOrTeam, validScope, validMemberId, validCategory, validCommissionStatus, validFromDate, validToDate];
 
     const hasAaaTable = await ensureAssignmentsTableExists();
-    const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userDesignation) || ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].includes(userRole);
+    const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR', 'PHYSICAL CURABLE', 'PHYSICAL_CURABLE', 'DIGITAL CURABLE', 'DIGITAL_CURABLE', 'EMAIL CURABLE', 'EMAIL_CURABLE'].includes(userDesignation) || ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR', 'PHYSICAL CURABLE', 'PHYSICAL_CURABLE', 'DIGITAL CURABLE', 'DIGITAL_CURABLE', 'EMAIL CURABLE', 'EMAIL_CURABLE'].includes(userRole);
     const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
     const isSalesExecOnlyUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
     let isLocEocAdmin = false;
@@ -1848,8 +1877,48 @@ const listApplications = async (req, res, next) => {
       querableOperatorFilterSQL = ` ${baseBankAccessFilterSQL} AND ${rejectedCondition}`;
     }
 
+    const isPhysicalCurableUser = ['PHYSICAL CURABLE', 'PHYSICAL_CURABLE'].includes(userDesignation) || ['PHYSICAL CURABLE', 'PHYSICAL_CURABLE'].includes(userRole);
+    const isDigitalCurableUser = ['DIGITAL CURABLE', 'DIGITAL_CURABLE'].includes(userDesignation) || ['DIGITAL CURABLE', 'DIGITAL_CURABLE'].includes(userRole);
+    const isEmailCurableUser = ['EMAIL CURABLE', 'EMAIL_CURABLE'].includes(userDesignation) || ['EMAIL CURABLE', 'EMAIL_CURABLE'].includes(userRole);
+    const isCurableOperatorUser = isPhysicalCurableUser || isDigitalCurableUser || isEmailCurableUser;
+
+    let curableOperatorFilterSQL = '';
+    if (isCurableOperatorUser && req.user?.id) {
+      const physicalCodesSQL = "('41', '15R', '82', '86N', '141', '14', '14R', '426', '15', '16D', '15W', '431', '3F', '429', '417', '424', '882', '425', '52', '884', '414', '151', '34A', '35', '16R', '427')";
+      const digitalCodesSQL = "('86D', '412', '413', '415', '420', '32', '824', '823', '15S', '86I', '86C', 'EM1', '14S', '37E', '8', '86F', '86E')";
+      const emailCodesSQL = "('418', '142', '152', '92', '06A', '91', '422', '86L')";
+
+      let curableCondition = '';
+      if (isPhysicalCurableUser) {
+        curableCondition = `(UPPER(TRIM(COALESCE(combined.curing_designation, ''))) = 'PHYSICAL_CURABLE' OR UPPER(TRIM(COALESCE(combined.decline_code, ''))) IN ${physicalCodesSQL})`;
+      } else if (isDigitalCurableUser) {
+        curableCondition = `(UPPER(TRIM(COALESCE(combined.curing_designation, ''))) = 'DIGITAL_CURABLE' OR UPPER(TRIM(COALESCE(combined.decline_code, ''))) IN ${digitalCodesSQL})`;
+      } else if (isEmailCurableUser) {
+        curableCondition = `(UPPER(TRIM(COALESCE(combined.curing_designation, ''))) = 'EMAIL_CURABLE' OR UPPER(TRIM(COALESCE(combined.decline_code, ''))) IN ${emailCodesSQL})`;
+      }
+
+      const hdfcBankScopeSQL = `(
+        (LOWER(COALESCE(combined.bank_name, '')) LIKE '%hdfc%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%hdfc%')
+        AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%tata%'
+        AND LOWER(COALESCE(combined.bank_code, '')) NOT LIKE '%tata%'
+      )`;
+
+      const rejectedCondition = `(
+        LOWER(TRIM(COALESCE(combined.status, ''))) IN ('rejected', 'declined', 'decline', 'technical_error')
+        OR LOWER(TRIM(COALESCE(combined.status, ''))) LIKE '%reject%'
+        OR LOWER(TRIM(COALESCE(combined.status, ''))) LIKE '%decline%'
+        OR LOWER(TRIM(COALESCE(combined.final_status, ''))) IN ('rejected', 'declined', 'decline', 'technical_error')
+        OR LOWER(TRIM(COALESCE(combined.final_status, ''))) LIKE '%reject%'
+        OR LOWER(TRIM(COALESCE(combined.final_status, ''))) LIKE '%decline%'
+        OR LOWER(TRIM(COALESCE(combined.bank_current_lead_status, ''))) LIKE '%reject%'
+        OR LOWER(TRIM(COALESCE(combined.bank_current_lead_status, ''))) LIKE '%decline%'
+      )`;
+
+      curableOperatorFilterSQL = ` AND ${creditCardAppSQL} AND ${hdfcBankScopeSQL} AND ${rejectedCondition} AND ${curableCondition}`;
+    }
+
     if (!isPartnerOrTeam && !isSuperAdmin && req.user?.id) {
-      if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser || isQdOperatorUser || isFinalStatusOperatorUser || isQuerableOperatorUser) {
+      if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser || isQdOperatorUser || isFinalStatusOperatorUser || isQuerableOperatorUser || isCurableOperatorUser) {
         opHeadBankFilterSQL = ``;
         countOpHeadBankFilterSQL = ``;
       } else {
@@ -1949,6 +2018,9 @@ const listApplications = async (req, res, next) => {
           COALESCE(NULLIF(a.app_file_generated, ''), NULLIF(pad.app_file_generated, '')) as app_file_generated,
           COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, '')) as decline_reason,
           COALESCE(NULLIF(a.eligible_reqd, ''), NULLIF(pad.eligible_reqd, '')) as eligible_reqd,
+          COALESCE(NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as decline_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'decline_description', ''), NULLIF(to_jsonb(pad)->>'decline_description', '')) as decline_description,
+          COALESCE(NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as curing_designation,
           (to_jsonb(a)->>'last_operator_name') as last_operator_name,
           (to_jsonb(a)->>'last_operator_role') as last_operator_role,
           (to_jsonb(a)->>'last_operator_designation') as last_operator_designation,
@@ -2088,6 +2160,7 @@ const listApplications = async (req, res, next) => {
         ${remarkOperatorFilterSQL}
         ${finalStatusOperatorFilterSQL}
         ${querableOperatorFilterSQL}
+        ${curableOperatorFilterSQL}
       ORDER BY combined.created_at DESC
       LIMIT $6 OFFSET $7
     `, queryParams);
@@ -2124,7 +2197,10 @@ const listApplications = async (req, res, next) => {
       SELECT COUNT(*) FROM (
         SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, (to_jsonb(a)->>'assigned_to') as assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_application_number', ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(to_jsonb(pad)->>'dispatch_status', '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, COALESCE(NULLIF(to_jsonb(a)->>'category', ''), p.category::text) as category, COALESCE(NULLIF(to_jsonb(a)->>'sub_category', ''), p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(to_jsonb(pad)->>'pan_check', ''), 'no') as pan_check, COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(to_jsonb(pad)->>'bank_current_lead_status', ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(to_jsonb(a)->>'requery_date', ''), NULLIF(to_jsonb(pad)->>'requery_date', '')) as requery_date,
         COALESCE(NULLIF(a.final_status, ''), NULLIF(pad.final_status, ''), NULLIF(to_jsonb(pad)->>'final_status', '')) as final_status,
-        COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, ''), NULLIF(to_jsonb(pad)->>'decline_reason', '')) as decline_reason
+        COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, ''), NULLIF(to_jsonb(pad)->>'decline_reason', '')) as decline_reason,
+        COALESCE(NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as decline_code,
+        COALESCE(NULLIF(to_jsonb(a)->>'decline_description', ''), NULLIF(to_jsonb(pad)->>'decline_description', '')) as decline_description,
+        COALESCE(NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as curing_designation
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
@@ -2178,6 +2254,7 @@ const listApplications = async (req, res, next) => {
         ${remarkOperatorFilterSQL}
         ${finalStatusOperatorFilterSQL}
         ${querableOperatorFilterSQL}
+        ${curableOperatorFilterSQL}
     `, countQueryParams);
 
     // Compute real-time canonical status counts scoped to user role & bank filters
@@ -2185,7 +2262,10 @@ const listApplications = async (req, res, next) => {
       SELECT combined.status, COALESCE(combined.final_status, '') as final_status, COUNT(*)::int as count FROM (
         SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, (to_jsonb(a)->>'assigned_to') as assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_application_number', ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(to_jsonb(pad)->>'dispatch_status', '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, COALESCE(NULLIF(to_jsonb(a)->>'category', ''), p.category::text) as category, COALESCE(NULLIF(to_jsonb(a)->>'sub_category', ''), p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(to_jsonb(pad)->>'pan_check', ''), 'no') as pan_check, COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(to_jsonb(pad)->>'bank_current_lead_status', ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(to_jsonb(a)->>'requery_date', ''), NULLIF(to_jsonb(pad)->>'requery_date', '')) as requery_date,
         COALESCE(NULLIF(a.final_status, ''), NULLIF(pad.final_status, ''), NULLIF(to_jsonb(pad)->>'final_status', '')) as final_status,
-        COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, ''), NULLIF(to_jsonb(pad)->>'decline_reason', '')) as decline_reason
+        COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, ''), NULLIF(to_jsonb(pad)->>'decline_reason', '')) as decline_reason,
+        COALESCE(NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as decline_code,
+        COALESCE(NULLIF(to_jsonb(a)->>'decline_description', ''), NULLIF(to_jsonb(pad)->>'decline_description', '')) as decline_description,
+        COALESCE(NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as curing_designation
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
@@ -2239,6 +2319,7 @@ const listApplications = async (req, res, next) => {
         ${remarkOperatorFilterSQL}
         ${finalStatusOperatorFilterSQL}
         ${querableOperatorFilterSQL}
+        ${curableOperatorFilterSQL}
       GROUP BY combined.status, COALESCE(combined.final_status, ''), COALESCE(combined.bank_current_lead_status, '')
     `, countQueryParams);
     const statusCountsObj = {
@@ -4112,7 +4193,9 @@ const updateApplicationDetails = async (req, res, next) => {
       final_bank_stage,
       disbursement_completed,
       disbursement_date,
-      disbursal_date
+      disbursal_date,
+      decline_code,
+      decline_description
     } = req.body;
 
     const effectiveInstaJumboOffer = insta_jumbo_offer !== undefined ? insta_jumbo_offer : undefined;
@@ -4200,6 +4283,56 @@ const updateApplicationDetails = async (req, res, next) => {
     const appNumToSave = (resolvedBankAppNumber || effectiveLosNo || bank_application_number || bank_ref_number || '').trim();
     const employerToSave = employer || company_name || null;
     const parsedDob = parseDobToIso(dob);
+
+    const effectiveDeclineCodeInput = (decline_code !== undefined && decline_code !== null) ? String(decline_code).trim() : (req.body.decline_code ? String(req.body.decline_code).trim() : undefined);
+    const effectiveDeclineDescInput = (decline_description !== undefined && decline_description !== null) ? String(decline_description).trim() : (req.body.decline_description ? String(req.body.decline_description).trim() : undefined);
+
+    let pRow = null;
+    if (app && app.product_id) {
+      const { rows: [p] } = await client.query(`SELECT id, name, category, sub_category, bank_id FROM products WHERE id = $1`, [app.product_id]).catch(() => ({ rows: [] }));
+      pRow = p;
+    }
+    let bRow = null;
+    const effectiveBankId = app?.bank_id || pRow?.bank_id;
+    if (effectiveBankId) {
+      const { rows: [b] } = await client.query(`SELECT id, name, short_code FROM banks WHERE id = $1`, [effectiveBankId]).catch(() => ({ rows: [] }));
+      bRow = b;
+    }
+    const appWithBank = {
+      ...app,
+      bank_id: effectiveBankId,
+      bank_name: bRow?.name || app?.bank_name,
+      bank_code: bRow?.short_code || app?.bank_code,
+      product_name: pRow?.name || app?.product_name
+    };
+
+    const isHdfcCC = isHdfcCreditCardApp(appWithBank, pRow);
+
+    const isDeclinedStatus = (
+      String(final_status || '').toLowerCase().includes('decline') ||
+      String(final_status || '').toLowerCase().includes('reject') ||
+      String(status || '').toLowerCase().includes('decline') ||
+      String(status || '').toLowerCase().includes('reject')
+    );
+
+    let effectiveDeclineCode = effectiveDeclineCodeInput;
+    let derivedCuringDesignation = undefined;
+    let derivedDeclineDesc = effectiveDeclineDescInput;
+
+    if (effectiveDeclineCode) {
+      const declineInfo = getHdfcDeclineCodeInfo(effectiveDeclineCode);
+      if (declineInfo) {
+        effectiveDeclineCode = declineInfo.code;
+        derivedCuringDesignation = declineInfo.designation;
+        derivedDeclineDesc = derivedDeclineDesc || declineInfo.description;
+      } else if (isHdfcCC) {
+        await client.query('ROLLBACK');
+        return error(res, `Invalid HDFC decline code: "${effectiveDeclineCode}". Please select a valid decline code from the list.`, 400);
+      }
+    } else if (isHdfcCC && isDeclinedStatus && String(final_status || '').toLowerCase() === 'decline') {
+      await client.query('ROLLBACK');
+      return error(res, 'Decline code is required when marking final approval status as Decline for HDFC Credit Card.', 400);
+    }
 
     if (isLeadOnly) {
       const { rows: [updatedLead] } = await client.query(`
@@ -4445,6 +4578,23 @@ const updateApplicationDetails = async (req, res, next) => {
       } catch (opCodeErr) {
         await client.query('ROLLBACK TO SAVEPOINT op_code_sp').catch(() => {});
         logger.warn('Failed to save operator codes:', opCodeErr.message);
+      }
+    }
+
+    if (effectiveDeclineCode !== undefined || derivedCuringDesignation !== undefined) {
+      try {
+        await client.query('SAVEPOINT curing_sp');
+        await client.query(`
+          UPDATE applications SET
+            decline_code = COALESCE(NULLIF($1, ''), decline_code),
+            decline_description = COALESCE(NULLIF($2, ''), decline_description),
+            curing_designation = COALESCE(NULLIF($3, ''), curing_designation)
+          WHERE id = $4
+        `, [effectiveDeclineCode || null, derivedDeclineDesc || null, derivedCuringDesignation || null, app.id]);
+        await client.query('RELEASE SAVEPOINT curing_sp');
+      } catch (curingErr) {
+        await client.query('ROLLBACK TO SAVEPOINT curing_sp').catch(() => {});
+        logger.warn('Failed to update decline_code/curing_designation on applications:', curingErr.message);
       }
     }
 
@@ -4714,6 +4864,30 @@ const updateApplicationDetails = async (req, res, next) => {
     } catch (physErr) {
       await client.query('ROLLBACK TO SAVEPOINT phys_sp').catch(() => {});
       console.error('Failed to upsert physical_application_details:', physErr.message || physErr);
+    }
+
+    if (effectiveDeclineCode !== undefined || derivedCuringDesignation !== undefined) {
+      try {
+        await client.query('SAVEPOINT pad_curing_sp');
+        await client.query(`
+          UPDATE physical_application_details SET
+            decline_code = COALESCE(NULLIF($1, ''), decline_code),
+            decline_description = COALESCE(NULLIF($2, ''), decline_description),
+            curing_designation = COALESCE(NULLIF($3, ''), curing_designation)
+          WHERE application_id = $4
+        `, [effectiveDeclineCode || null, derivedDeclineDesc || null, derivedCuringDesignation || null, app.id]);
+        await client.query(`
+          UPDATE applications SET
+            decline_code = COALESCE(NULLIF($1, ''), decline_code),
+            decline_description = COALESCE(NULLIF($2, ''), decline_description),
+            curing_designation = COALESCE(NULLIF($3, ''), curing_designation)
+          WHERE id = $4
+        `, [effectiveDeclineCode || null, derivedDeclineDesc || null, derivedCuringDesignation || null, app.id]);
+        await client.query('RELEASE SAVEPOINT pad_curing_sp');
+      } catch (curingErr) {
+        await client.query('ROLLBACK TO SAVEPOINT pad_curing_sp').catch(() => {});
+        logger.warn('Failed to update decline_code/curing_designation on physical_application_details:', curingErr.message);
+      }
     }
 
     // 3. Log to timeline
@@ -5781,8 +5955,20 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
   try {
     await client.query('BEGIN');
     const { id } = req.params;
-    const { bank_remark, user_remark, ipa_stage, vkyc_stage, vkyc_status, dispatch_status, app_file_generated, notes, decline_reason, bank_application_number, bank_ref_number, los_no } = req.body;
+    const { bank_remark, user_remark, ipa_stage, vkyc_stage, vkyc_status, dispatch_status, app_file_generated, notes, decline_reason, decline_code, decline_description, bank_application_number, bank_ref_number, los_no } = req.body;
     const userId = req.user.id;
+
+    let remarkDeclineCode = decline_code ? String(decline_code).trim() : null;
+    let remarkCuringDesig = null;
+    let remarkDeclineDesc = decline_description ? String(decline_description).trim() : null;
+    if (remarkDeclineCode) {
+      const codeInfo = getHdfcDeclineCodeInfo(remarkDeclineCode);
+      if (codeInfo) {
+        remarkDeclineCode = codeInfo.code;
+        remarkCuringDesig = codeInfo.designation;
+        remarkDeclineDesc = remarkDeclineDesc || codeInfo.description;
+      }
+    }
 
     // Fetch application to verify bank assignment
     const { rows: [app] } = await client.query(
@@ -5852,6 +6038,43 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
           return forbidden(res, 'Querable Operators can only access rejected applications.');
         }
       }
+
+      const isPhysicalCurable = ['PHYSICAL CURABLE', 'PHYSICAL_CURABLE'].includes(userDesignation) || ['PHYSICAL CURABLE', 'PHYSICAL_CURABLE'].includes(userRole);
+      const isDigitalCurable = ['DIGITAL CURABLE', 'DIGITAL_CURABLE'].includes(userDesignation) || ['DIGITAL CURABLE', 'DIGITAL_CURABLE'].includes(userRole);
+      const isEmailCurable = ['EMAIL CURABLE', 'EMAIL_CURABLE'].includes(userDesignation) || ['EMAIL CURABLE', 'EMAIL_CURABLE'].includes(userRole);
+
+      if (isPhysicalCurable || isDigitalCurable || isEmailCurable) {
+        const statusStr = (app.status || '').toLowerCase();
+        const finalStatusStr = (app.final_status || '').toLowerCase();
+        const isRejected = statusStr.includes('reject') || statusStr.includes('decline') || finalStatusStr.includes('reject') || finalStatusStr.includes('decline');
+        if (!isRejected) {
+          await client.query('ROLLBACK');
+          return forbidden(res, 'Curable Operators can only access rejected or declined applications.');
+        }
+
+        const appDeclineCode = (app.decline_code || '').trim().toUpperCase();
+        const appCuringDesig = (app.curing_designation || '').trim().toUpperCase();
+
+        if (isPhysicalCurable) {
+          const physicalCodes = ['41', '15R', '82', '86N', '141', '14', '14R', '426', '15', '16D', '15W', '431', '3F', '429', '417', '424', '882', '425', '52', '884', '414', '151', '34A', '35', '16R', '427'];
+          if (appCuringDesig !== 'PHYSICAL_CURABLE' && !physicalCodes.includes(appDeclineCode)) {
+            await client.query('ROLLBACK');
+            return forbidden(res, 'This application is not allocated to Physical Curable team.');
+          }
+        } else if (isDigitalCurable) {
+          const digitalCodes = ['86D', '412', '413', '415', '420', '32', '824', '823', '15S', '86I', '86C', 'EM1', '14S', '37E', '8', '86F', '86E'];
+          if (appCuringDesig !== 'DIGITAL_CURABLE' && !digitalCodes.includes(appDeclineCode)) {
+            await client.query('ROLLBACK');
+            return forbidden(res, 'This application is not allocated to Digital Curable team.');
+          }
+        } else if (isEmailCurable) {
+          const emailCodes = ['418', '142', '152', '92', '06A', '91', '422', '86L'];
+          if (appCuringDesig !== 'EMAIL_CURABLE' && !emailCodes.includes(appDeclineCode)) {
+            await client.query('ROLLBACK');
+            return forbidden(res, 'This application is not allocated to Email Curable team.');
+          }
+        }
+      }
     }
 
     const effectiveUserRemark = user_remark || notes || null;
@@ -5912,6 +6135,30 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
         los_no = COALESCE(NULLIF(EXCLUDED.bank_ref_number, ''), physical_application_details.los_no),
         updated_at = NOW()
     `, [app.id, bank_remark || null, effectiveUserRemark, ipa_stage || null, effectiveVkycStage, dispatch_status || null, app_file_generated || null, decline_reason || null, currentOpCode, backendRemarkToSave, resolvedRemarkBankAppNo]);
+
+    if (remarkDeclineCode !== null || remarkCuringDesig !== null) {
+      try {
+        await client.query('SAVEPOINT remark_curing_sp');
+        await client.query(`
+          UPDATE applications SET
+            decline_code = COALESCE(NULLIF($1, ''), decline_code),
+            decline_description = COALESCE(NULLIF($2, ''), decline_description),
+            curing_designation = COALESCE(NULLIF($3, ''), curing_designation)
+          WHERE id = $4
+        `, [remarkDeclineCode || null, remarkDeclineDesc || null, remarkCuringDesig || null, app.id]);
+        await client.query(`
+          UPDATE physical_application_details SET
+            decline_code = COALESCE(NULLIF($1, ''), decline_code),
+            decline_description = COALESCE(NULLIF($2, ''), decline_description),
+            curing_designation = COALESCE(NULLIF($3, ''), curing_designation)
+          WHERE application_id = $4
+        `, [remarkDeclineCode || null, remarkDeclineDesc || null, remarkCuringDesig || null, app.id]);
+        await client.query('RELEASE SAVEPOINT remark_curing_sp');
+      } catch (curingErr) {
+        await client.query('ROLLBACK TO SAVEPOINT remark_curing_sp').catch(() => {});
+        logger.warn('Failed to update decline_code/curing_designation in updateRemarkOperatorApplication:', curingErr.message);
+      }
+    }
 
     // 3. Update application_admin_assignments if exists
     await client.query(`
