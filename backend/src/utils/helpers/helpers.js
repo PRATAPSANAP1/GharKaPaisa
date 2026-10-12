@@ -101,6 +101,15 @@ const maskMobileLast6 = (mobile, countryCode = '+91') => {
   return `${cc} ******`.trim();
 };
 
+// Normalize assignment category strings (CREDIT CARD, Credit Card, credit_card, LOC/EOC, loc_eoc, etc.) to canonical keys
+const normalizeAssignmentCategory = (cat) => {
+  if (!cat) return 'credit_card';
+  const c = String(cat).trim().toLowerCase().replace(/[\s\/-]+/g, '_');
+  if (['credit_card', 'creditcard', 'cards', 'card'].includes(c)) return 'credit_card';
+  if (['loc_eoc', 'loceoc', 'loc', 'eoc', 'loan_on_credit_card', 'smart_emi', 'loan_on_card', 'card_on_loan'].includes(c)) return 'loc_eoc';
+  return c;
+};
+
 module.exports = {
   generateAppNumber,
   generatePartnerCode,
@@ -113,5 +122,6 @@ module.exports = {
   buildWhereClause,
   sanitizeMobile,
   maskMobileLast6,
+  normalizeAssignmentCategory,
 };
 

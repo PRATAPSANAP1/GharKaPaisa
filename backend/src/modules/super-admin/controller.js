@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { query, getClient } = require('../../config/database');
 const { logAction } = require('../admin/audit.service.js');
-const { getPaginationParams, sanitizeMobile } = require('../../utils/helpers/helpers');
+const { getPaginationParams, sanitizeMobile, normalizeAssignmentCategory } = require('../../utils/helpers/helpers');
 const { success, created, error, paginate, notFound } = require('../../utils/response/response');
 const logger = require('../../config/logger');
 
@@ -63,7 +63,7 @@ const safeTxQuery = async (client, text, params) => {
 };
 
 const insertBankAssignment = async (adminId, bankId, category, createdById, client = null) => {
-  const cat = (category || 'credit_card').toLowerCase() === 'loc_eoc' ? 'loc_eoc' : 'credit_card';
+  const cat = normalizeAssignmentCategory(category);
   const cBy = createdById || null;
   const qFn = client ? (q, p) => client.query(q, p) : (q, p) => query(q, p);
 
@@ -308,7 +308,7 @@ const createAdmin = async (req, res, next) => {
       for (const pair of assignmentPairs) {
         const bId = await resolveBankId(pair.bank_id || pair.id);
         if (!bId) continue;
-        const cat = (pair.category || 'credit_card').toLowerCase() === 'loc_eoc' ? 'loc_eoc' : 'credit_card';
+        const cat = normalizeAssignmentCategory(pair.category);
         await insertBankAssignment(dbUser.id, bId, cat, actorId);
         if (isNewUserOpHead) {
           await query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [dbUser.id, bId]).catch(() => {});
@@ -320,7 +320,7 @@ const createAdmin = async (req, res, next) => {
         }
       }
     }
-    const hasLocEocInput = req.body.has_loc_eoc !== undefined ? Boolean(req.body.has_loc_eoc) : (req.body.hasLocEoc !== undefined ? Boolean(req.body.hasLocEoc) : assignmentPairs.some(p => (p.category || '').toLowerCase() === 'loc_eoc' || String(p.bank_id).toUpperCase() === 'LOC_EOC'));
+    const hasLocEocInput = req.body.has_loc_eoc !== undefined ? Boolean(req.body.has_loc_eoc) : (req.body.hasLocEoc !== undefined ? Boolean(req.body.hasLocEoc) : assignmentPairs.some(p => normalizeAssignmentCategory(p.category) === 'loc_eoc' || String(p.bank_id).toUpperCase() === 'LOC_EOC'));
     if (hasLocEocInput) {
       await query(`UPDATE users SET has_loc_eoc = TRUE WHERE id = $1`, [dbUser.id]);
     }
@@ -391,7 +391,7 @@ const listAdmins = async (req, res, next) => {
         adminBankIdMap[a.admin_id] = [];
         adminCategoryMap[a.admin_id] = { credit_card: [], loc_eoc: [] };
       }
-      const cat = a.category || 'credit_card';
+      const cat = normalizeAssignmentCategory(a.category);
       const isLocEoc = cat === 'loc_eoc' || (a.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(a.bank_name || '');
       const bankItem = { id: a.bank_id, bank_id: a.bank_id, name: a.bank_name, category: cat, short_code: a.short_code || a.code, logo_url: a.logo_url, is_loc_eoc: isLocEoc };
       adminBankMap[a.admin_id].push(bankItem);
@@ -644,7 +644,7 @@ const updateAdminBanks = async (req, res, next) => {
       const { rows: bankCheck } = await client.query(`SELECT id FROM banks WHERE id = $1`, [bId]);
       if (bankCheck.length === 0) continue;
 
-      const cat = (pair.category || 'credit_card').toLowerCase() === 'loc_eoc' ? 'loc_eoc' : 'credit_card';
+      const cat = normalizeAssignmentCategory(pair.category);
       const key = `${bId}_${cat}`;
       if (!uniqueMap.has(key)) {
         uniqueMap.set(key, { bank_id: bId, category: cat });
@@ -685,7 +685,7 @@ const updateAdminBanks = async (req, res, next) => {
     }
 
     console.log('[BANK ASSIGNMENT] UPDATE LOC/EOC');
-    const hasLocEoc = assignmentPairs.some(pair => pair.category === 'loc_eoc');
+    const hasLocEoc = assignmentPairs.some(pair => normalizeAssignmentCategory(pair.category) === 'loc_eoc');
     await client.query(`UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [hasLocEoc, userRec.id]);
 
     console.log('[BANK ASSIGNMENT] COMMIT');

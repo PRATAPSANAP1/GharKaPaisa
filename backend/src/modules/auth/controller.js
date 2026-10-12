@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { query, getClient } = require('../../config/database');
-const { generatePartnerCode, generateRandomReferralCode, generateTeamCode } = require('../../utils/helpers/helpers');
+const { generatePartnerCode, generateRandomReferralCode, generateTeamCode, normalizeAssignmentCategory } = require('../../utils/helpers/helpers');
 const { success, created, error } = require('../../utils/response/response');
 const logger = require('../../config/logger');
 const { sendOtpEmail, sendVerificationEmail, sendEmail } = require('../../services/email/email.service.js');
@@ -109,12 +109,15 @@ const getMe = async (req, res, next) => {
         JOIN banks b ON b.id = aba.bank_id
         WHERE aba.admin_id = $1
       `, [user.id]).catch(() => ({ rows: [] }));
-      const assignedBanks = rawAssignedBanks.map(b => ({
-        ...b,
-        bank_id: b.id,
-        category: b.category || 'credit_card',
-        is_loc_eoc: b.category === 'loc_eoc' || (b.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '')
-      }));
+      const assignedBanks = rawAssignedBanks.map(b => {
+        const normCat = normalizeAssignmentCategory(b.category);
+        return {
+          ...b,
+          bank_id: b.id,
+          category: normCat,
+          is_loc_eoc: normCat === 'loc_eoc' || (b.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '')
+        };
+      });
       const categoryAssignments = {
         credit_card: assignedBanks.filter(b => b.category === 'credit_card').map(b => b.id),
         loc_eoc: assignedBanks.filter(b => b.category === 'loc_eoc').map(b => b.id)
@@ -546,12 +549,15 @@ const login = async (req, res, next) => {
       const { rows: rawAssignedBanks } = await query(
         `SELECT b.id, b.name, b.short_code, b.short_code as code, COALESCE(aba.category, 'credit_card') as category FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = $1`, [user.id]
       ).catch(() => ({ rows: [] }));
-      const assignedBanks = rawAssignedBanks.map(b => ({
-        ...b,
-        bank_id: b.id,
-        category: b.category || 'credit_card',
-        is_loc_eoc: b.category === 'loc_eoc' || (b.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '')
-      }));
+      const assignedBanks = rawAssignedBanks.map(b => {
+        const normCat = normalizeAssignmentCategory(b.category);
+        return {
+          ...b,
+          bank_id: b.id,
+          category: normCat,
+          is_loc_eoc: normCat === 'loc_eoc' || (b.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '')
+        };
+      });
       const categoryAssignments = {
         credit_card: assignedBanks.filter(b => b.category === 'credit_card').map(b => b.id),
         loc_eoc: assignedBanks.filter(b => b.category === 'loc_eoc').map(b => b.id)

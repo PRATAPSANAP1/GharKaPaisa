@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { query, getClient } = require('../../config/database');
-const { generateAppNumber, getPaginationParams } = require('../../utils/helpers/helpers');
+const { generateAppNumber, getPaginationParams, normalizeAssignmentCategory } = require('../../utils/helpers/helpers');
 const { creditCommission, releaseHold } = require('../wallet/service.js');
 const { calculatePartnerCommission } = require('../partner/commission.service.js');
 const { notify } = require('../notifications/service.js');
@@ -1659,15 +1659,21 @@ const listApplications = async (req, res, next) => {
     let baseBankAccessFilterSQL = '';
 
     const locEocAppSQL = `(
-      LOWER(COALESCE(combined.category::text, '')) IN ('loc_eoc', 'loc', 'eoc', 'loan_on_credit_card', 'smart_emi')
-      OR LOWER(COALESCE(combined.sub_category, '')) IN ('loc', 'eoc', 'loc_eoc', 'loan_on_credit_card', 'smart_emi')
+      LOWER(COALESCE(combined.category::text, '')) IN ('loc_eoc', 'loc', 'eoc', 'loan_on_credit_card', 'smart_emi', 'loan_on_card', 'card_on_loan')
+      OR LOWER(COALESCE(combined.sub_category, '')) IN ('loc', 'eoc', 'loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loan_on_card', 'card_on_loan')
       OR LOWER(COALESCE(combined.product_name, '')) LIKE '%encash%'
       OR LOWER(COALESCE(combined.product_name, '')) LIKE '%loan on card%'
+      OR LOWER(COALESCE(combined.product_name, '')) LIKE '%loan on credit card%'
       OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smart emi%'
       OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smartemi%'
+      OR LOWER(COALESCE(combined.product_name, '')) LIKE '%emi on card%'
+      OR LOWER(COALESCE(combined.product_name, '')) LIKE '%emi on credit card%'
       OR LOWER(COALESCE(combined.product_name, '')) LIKE '%dial a draft%'
       OR LOWER(COALESCE(combined.product_name, '')) LIKE '%jumbo loan%'
       OR LOWER(COALESCE(combined.product_name, '')) LIKE '%insta loan%'
+      OR LOWER(COALESCE(combined.product_name, '')) LIKE '%instant & jumbo loan%'
+      OR LOWER(COALESCE(combined.product_name, '')) LIKE '%instant and jumbo loan%'
+      OR LOWER(COALESCE(combined.product_name, '')) LIKE '%instant loan%'
       OR EXISTS (
         SELECT 1 FROM banks b_loc
         WHERE b_loc.id = combined.bank_id
@@ -1676,16 +1682,11 @@ const listApplications = async (req, res, next) => {
     )`;
 
     const creditCardAppSQL = `(
-      LOWER(COALESCE(combined.category::text, 'credit_card')) NOT IN ('loc_eoc', 'loc', 'eoc', 'loan_on_credit_card', 'smart_emi')
-      AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc', 'loc_eoc')
-      AND NOT (
-        LOWER(COALESCE(combined.product_name, '')) LIKE '%encash%'
-        OR LOWER(COALESCE(combined.product_name, '')) LIKE '%loan on card%'
-        OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smart emi%'
-        OR LOWER(COALESCE(combined.product_name, '')) LIKE '%smartemi%'
-        OR LOWER(COALESCE(combined.product_name, '')) LIKE '%dial a draft%'
-        OR LOWER(COALESCE(combined.product_name, '')) LIKE '%jumbo loan%'
-        OR LOWER(COALESCE(combined.product_name, '')) LIKE '%insta loan%'
+      NOT ${locEocAppSQL}
+      AND (
+        LOWER(COALESCE(combined.category::text, 'credit_card')) IN ('credit_card', 'creditcard', 'cards', 'card')
+        OR LOWER(COALESCE(combined.category::text, '')) LIKE '%credit%card%'
+        OR combined.category IS NULL
       )
     )`;
 
@@ -1736,7 +1737,7 @@ const listApplications = async (req, res, next) => {
       } else {
         const pairClauses = abRows.map(b => {
           const bankMatch = buildSingleBankMatchSQL(b);
-          const cat = (b.category || 'credit_card').toLowerCase();
+          const cat = normalizeAssignmentCategory(b.category);
           if (cat === 'loc_eoc') {
             return `(${bankMatch} AND ${locEocAppSQL})`;
           } else if (cat === 'credit_card') {
@@ -2047,10 +2048,7 @@ const listApplications = async (req, res, next) => {
         AND ($13::uuid IS NULL OR combined.submitted_by = $13::uuid OR combined.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $13::uuid OR id = $13::uuid))
         AND (
           $14::text IS NULL OR $14::text = '' OR $14::text = 'all'
-          OR ($14::text IN ('loc_eoc', 'LOC/EOC', 'loc-eoc', 'LOC_EOC') AND (
-            LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc'
-            OR LOWER(COALESCE(combined.sub_category, '')) IN ('loc', 'eoc')
-          ))
+          OR ($14::text IN ('loc_eoc', 'LOC/EOC', 'loc-eoc', 'LOC_EOC') AND ${locEocAppSQL})
           OR ($14::text IN ('loan_on_credit_card', 'loc', 'LOC') AND (
             LOWER(COALESCE(combined.sub_category, '')) = 'loc'
             OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) = 'loc')
@@ -2059,7 +2057,7 @@ const listApplications = async (req, res, next) => {
             LOWER(COALESCE(combined.sub_category, '')) = 'eoc'
             OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) = 'eoc')
           ))
-          OR ($12::text = 'credit_card' AND (LOWER(combined.category::text) LIKE '%credit%' OR LOWER(combined.category::text) LIKE '%card%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
+          OR ($14::text = 'credit_card' AND ${creditCardAppSQL})
           OR ($14::text IN ('loan', 'loans', 'personal_loan') AND (LOWER(combined.category::text) LIKE '%loan%' OR LOWER(combined.category::text) LIKE '%personal%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
           OR ($14::text = 'business_loan' AND (LOWER(combined.category::text) LIKE '%business%'))
           OR ($14::text = 'insurance' AND (LOWER(combined.category::text) LIKE '%insurance%'))
@@ -2140,10 +2138,7 @@ const listApplications = async (req, res, next) => {
         AND ($11::uuid IS NULL OR combined.submitted_by = $11::uuid OR combined.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $11::uuid OR id = $11::uuid))
         AND (
           $12::text IS NULL OR $12::text = '' OR $12::text = 'all'
-          OR ($12::text IN ('loc_eoc', 'LOC/EOC', 'loc-eoc', 'LOC_EOC') AND (
-            LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc'
-            OR LOWER(COALESCE(combined.sub_category, '')) IN ('loc', 'eoc')
-          ))
+          OR ($12::text IN ('loc_eoc', 'LOC/EOC', 'loc-eoc', 'LOC_EOC') AND ${locEocAppSQL})
           OR ($12::text IN ('loan_on_credit_card', 'loc', 'LOC') AND (
             LOWER(COALESCE(combined.sub_category, '')) = 'loc'
             OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) = 'loc')
@@ -2152,7 +2147,7 @@ const listApplications = async (req, res, next) => {
             LOWER(COALESCE(combined.sub_category, '')) = 'eoc'
             OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) = 'eoc')
           ))
-          OR ($12::text = 'credit_card' AND (LOWER(combined.category::text) LIKE '%credit%' OR LOWER(combined.category::text) LIKE '%card%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
+          OR ($12::text = 'credit_card' AND ${creditCardAppSQL})
           OR ($12::text IN ('loan', 'loans', 'personal_loan') AND (LOWER(combined.category::text) LIKE '%loan%' OR LOWER(combined.category::text) LIKE '%personal%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
           OR ($12::text = 'business_loan' AND (LOWER(combined.category::text) LIKE '%business%'))
           OR ($12::text = 'insurance' AND (LOWER(combined.category::text) LIKE '%insurance%'))
@@ -2162,8 +2157,8 @@ const listApplications = async (req, res, next) => {
         AND (
           $13::text IS NULL OR $13::text = '' OR $13::text = 'all'
           OR combined.commission_status = $13::text
-          OR ($15::text = 'released' AND combined.commission_status IN ('released', 'credited', 'paid', 'approved', 'commission_released'))
-          OR ($15::text = 'pending' AND combined.commission_status IN ('pending', 'unpaid', 'due', 'initiated'))
+          OR ($13::text = 'released' AND combined.commission_status IN ('released', 'credited', 'paid', 'approved', 'commission_released'))
+          OR ($13::text = 'pending' AND combined.commission_status IN ('pending', 'unpaid', 'due', 'initiated'))
         )
         AND ($14::timestamp IS NULL OR combined.created_at >= $14::timestamp)
         AND ($15::timestamp IS NULL OR combined.created_at <= $15::timestamp)
@@ -2204,10 +2199,7 @@ const listApplications = async (req, res, next) => {
         AND ($11::uuid IS NULL OR combined.submitted_by = $11::uuid OR combined.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $11::uuid OR id = $11::uuid))
         AND (
           $12::text IS NULL OR $12::text = '' OR $12::text = 'all'
-          OR ($12::text IN ('loc_eoc', 'LOC/EOC', 'loc-eoc', 'LOC_EOC') AND (
-            LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc'
-            OR LOWER(COALESCE(combined.sub_category, '')) IN ('loc', 'eoc')
-          ))
+          OR ($12::text IN ('loc_eoc', 'LOC/EOC', 'loc-eoc', 'LOC_EOC') AND ${locEocAppSQL})
           OR ($12::text IN ('loan_on_credit_card', 'loc', 'LOC') AND (
             LOWER(COALESCE(combined.sub_category, '')) = 'loc'
             OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) = 'loc')
@@ -2216,7 +2208,7 @@ const listApplications = async (req, res, next) => {
             LOWER(COALESCE(combined.sub_category, '')) = 'eoc'
             OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) = 'eoc')
           ))
-          OR ($12::text = 'credit_card' AND (LOWER(combined.category::text) LIKE '%credit%' OR LOWER(combined.category::text) LIKE '%card%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
+          OR ($12::text = 'credit_card' AND ${creditCardAppSQL})
           OR ($12::text IN ('loan', 'loans', 'personal_loan') AND (LOWER(combined.category::text) LIKE '%loan%' OR LOWER(combined.category::text) LIKE '%personal%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
           OR ($12::text = 'business_loan' AND (LOWER(combined.category::text) LIKE '%business%'))
           OR ($12::text = 'insurance' AND (LOWER(combined.category::text) LIKE '%insurance%'))
@@ -2468,6 +2460,53 @@ const getApplication = async (req, res, next) => {
       const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       if (!partner || app.partner_id !== partner.id) {
         return forbidden(res, 'Access denied. You do not own this application.');
+      }
+    }
+
+    if (req.user && req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'PARTNER') {
+      const userDesig = (req.user.designation || '').toUpperCase();
+      const isRestrictedOperator = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'PAN CHECKER', 'PAN_CHECKER', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD OPERATOR', 'QD_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR'].some(d => userDesig.includes(d));
+
+      if (isRestrictedOperator) {
+        const { rows: abRows } = await query(`
+          SELECT aba.bank_id, COALESCE(aba.category, 'credit_card') as category, b.short_code, b.name 
+          FROM admin_bank_assignments aba
+          LEFT JOIN banks b ON b.id = aba.bank_id
+          WHERE aba.admin_id = $1
+        `, [req.user.id]).catch(() => ({ rows: [] }));
+
+        if (abRows.length > 0) {
+          const appBankId = app.bank_id;
+          const appBankCode = (app.bank_code || '').toLowerCase();
+          const appBankName = (app.bank_name || '').toLowerCase();
+          const pName = (app.product_name || '').toLowerCase();
+          const pCat = (app.category || '').toLowerCase();
+          const pSubCat = (app.sub_category || '').toLowerCase();
+
+          const isLocEocApp = ['loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loc', 'eoc', 'loan_on_card', 'card_on_loan'].includes(pCat) ||
+            ['loc', 'eoc', 'loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loan_on_card', 'card_on_loan'].includes(pSubCat) ||
+            /insta\s*loan|jumbo\s*loan|instant\s*(&|and)?\s*jumbo\s*loan|instant\s*loan|smart\s*emi|smartemi|loan\s*on\s*card|loan\s*on\s*credit\s*card|emi\s*on\s*credit\s*card|emi\s*on\s*card|encash|dial\s*a\s*draft/i.test(pName);
+
+          const effectiveAppCat = isLocEocApp ? 'loc_eoc' : 'credit_card';
+
+          const hasAccess = abRows.some(b => {
+            const assignCat = normalizeAssignmentCategory(b.category);
+            if (assignCat !== effectiveAppCat) return false;
+
+            const isVirtualLocBank = (b.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '');
+            if (isVirtualLocBank) return true;
+
+            const bankMatch = b.bank_id === appBankId ||
+              (b.short_code && appBankCode && appBankCode.includes(b.short_code.toLowerCase())) ||
+              (b.name && appBankName && appBankName.includes(b.name.toLowerCase()));
+
+            return bankMatch;
+          });
+
+          if (!hasAccess) {
+            return forbidden(res, 'Access denied: You do not have permission to view applications for this bank and category.');
+          }
+        }
       }
     }
 
@@ -3688,6 +3727,29 @@ const exportApplicationsCSV = async (req, res, next) => {
           )
         )
       `;
+    } else if (userRole !== 'SUPER_ADMIN' && userId) {
+      const { rows: abRows } = await query(`
+        SELECT aba.bank_id, COALESCE(aba.category, 'credit_card') as category, b.short_code, b.name 
+        FROM admin_bank_assignments aba
+        LEFT JOIN banks b ON b.id = aba.bank_id
+        WHERE aba.admin_id = $1
+      `, [userId]).catch(() => ({ rows: [] }));
+
+      if (abRows.length === 0) {
+        whereClause = `WHERE 1=0`;
+      } else {
+        const pairClauses = abRows.map(b => {
+          const isVirtualLocBank = (b.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '');
+          const bankMatch = isVirtualLocBank ? '1=1' : `(combined.bank_name ILIKE '%${(b.name || '').replace(/'/g, "''")}%' OR combined.bank_name ILIKE '%${(b.short_code || '').replace(/'/g, "''")}%')`;
+          const cat = normalizeAssignmentCategory(b.category);
+          if (cat === 'loc_eoc') {
+            return `(${bankMatch} AND (LOWER(COALESCE(combined.category::text, '')) IN ('loc_eoc', 'loceoc', 'loan_on_credit_card', 'smart_emi', 'loc', 'eoc', 'loan_on_card') OR LOWER(COALESCE(combined.product_name, '')) LIKE '%instant & jumbo loan%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%emi on credit card%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%jumbo%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%insta%'))`;
+          } else {
+            return `(${bankMatch} AND NOT (LOWER(COALESCE(combined.category::text, '')) IN ('loc_eoc', 'loceoc', 'loan_on_credit_card', 'smart_emi', 'loc', 'eoc') OR LOWER(COALESCE(combined.product_name, '')) LIKE '%instant & jumbo loan%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%emi on credit card%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%jumbo%' OR LOWER(COALESCE(combined.product_name, '')) LIKE '%insta%'))`;
+          }
+        });
+        whereClause = `WHERE (${pairClauses.join(' OR ')})`;
+      }
     }
 
     const { type } = req.query;
@@ -5744,15 +5806,15 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
       }
       
       const { rows: [pRow] } = await client.query(`SELECT category, sub_category, name, bank_id FROM products WHERE id = $1`, [app.product_id]).catch(() => ({ rows: [] }));
-      const isAppLocEoc = ['loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loc', 'eoc'].includes(String(pRow?.category || app.category || '').toLowerCase()) ||
-        ['loc', 'eoc'].includes(String(pRow?.sub_category || '').toLowerCase()) ||
-        /insta\s*loan|jumbo\s*loan|smart\s*emi|loan\s*on\s*card/i.test(String(pRow?.name || ''));
+      const isAppLocEoc = ['loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loc', 'eoc', 'loan_on_card', 'card_on_loan'].includes(String(pRow?.category || app.category || '').toLowerCase()) ||
+        ['loc', 'eoc', 'loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loan_on_card', 'card_on_loan'].includes(String(pRow?.sub_category || '').toLowerCase()) ||
+        /insta\s*loan|jumbo\s*loan|instant\s*(&|and)?\s*jumbo\s*loan|instant\s*loan|smart\s*emi|smartemi|loan\s*on\s*card|loan\s*on\s*credit\s*card|emi\s*on\s*credit\s*card|emi\s*on\s*card|encash|dial\s*a\s*draft/i.test(String(pRow?.name || ''));
       
       const appCategory = isAppLocEoc ? 'loc_eoc' : 'credit_card';
       const effectiveBankId = app.bank_id || pRow?.bank_id;
 
       const isAuthorizedPair = userAssignments.some(assignment => {
-        const assignCat = (assignment.category || 'credit_card').toLowerCase();
+        const assignCat = normalizeAssignmentCategory(assignment.category);
         const catMatch = assignCat === appCategory;
         const bankMatch = assignment.bank_id === effectiveBankId || 
           (assignment.short_code && (app.bank_code || '').toLowerCase().includes(assignment.short_code.toLowerCase())) ||
@@ -5981,7 +6043,8 @@ module.exports = {
   get360ApplicationTrace,
   updateRemarkOperatorApplication,
   getRemarkOperatorDashboard,
-  getApplicationOperatorHistory
+  getApplicationOperatorHistory,
+  normalizeAssignmentCategory
 };
 
 
