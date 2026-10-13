@@ -128,3 +128,33 @@ export const fetchCardBenefits = async (productId: string) => {
     throw err.response?.data || { success: false, message: 'Failed to fetch card benefits' };
   }
 };
+
+export const fetchBanks = async () => {
+  try {
+    const res = await apiClient.get('/banks');
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch banks' };
+  }
+};
+
+export const fetchProducts = async (params?: { bank?: string; category?: string }) => {
+  try {
+    const res = await apiClient.get('/products', { params });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch products' };
+  }
+};
+
+export const exportApplicationsCSV = async (params: ApplicationQueryParams = {}) => {
+  try {
+    const res = await apiClient.get('/applications/export/csv', {
+      params,
+      responseType: 'blob',
+    });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to export applications' };
+  }
+};

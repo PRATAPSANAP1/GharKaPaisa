@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   RefreshControl,
   Linking,
+  Alert,
 } from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams, router } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -18,6 +20,7 @@ import {
   fetchApplicationTimeline,
   fetchApplicationDocuments,
   fetchApplicationOperatorHistory,
+  uploadCustomerDocument,
 } from '../../services/application.service';
 
 type SegmentTab = 'overview' | 'kyc' | 'timeline' | 'docs';
@@ -159,6 +162,43 @@ export default function ApplicationDetailsScreen() {
     }
   };
 
+  const [uploading, setUploading] = useState(false);
+
+  const handleDocumentUpload = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'application/pdf'],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) {
+        return;
+      }
+
+      setUploading(true);
+
+      const formData = new FormData();
+      formData.append('document', {
+        uri: result.uri,
+        name: result.name,
+        type: result.mimeType || 'application/octet-stream',
+      } as any);
+
+      await uploadCustomerDocument(id, formData);
+      Alert.alert('Success', 'Document uploaded successfully');
+      
+      // Reload documents
+      const docsRes = await fetchApplicationDocuments(id);
+      if (docsRes?.data) {
+        setDocuments(docsRes.data);
+      }
+    } catch (err: any) {
+      Alert.alert('Upload Failed', err?.message || 'Failed to upload document');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (loading) {
     return <LoadingState message="Fetching 360° application view..." />;
   }
@@ -271,6 +311,20 @@ export default function ApplicationDetailsScreen() {
                   <Text style={styles.val}>{appData.company_name}</Text>
                 </View>
               ) : null}
+
+              {appData.income ? (
+                <View style={styles.row}>
+                  <Text style={styles.label}>Monthly Income:</Text>
+                  <Text style={styles.val}>₹{appData.income?.toLocaleString()}</Text>
+                </View>
+              ) : null}
+
+              {appData.designation ? (
+                <View style={styles.row}>
+                  <Text style={styles.label}>Designation:</Text>
+                  <Text style={styles.val}>{appData.designation}</Text>
+                </View>
+              ) : null}
             </Card>
 
             {/* Application Meta Card */}
@@ -316,6 +370,36 @@ export default function ApplicationDetailsScreen() {
                   <Text style={styles.val}>
                     ₹{(appData.approved_amount || appData.loan_amount || 0).toLocaleString()}
                   </Text>
+                </View>
+              ) : null}
+
+              {appData.commission_amount ? (
+                <View style={styles.row}>
+                  <Text style={styles.label}>Commission:</Text>
+                  <Text style={[styles.val, styles.accentText]}>
+                    ₹{appData.commission_amount.toLocaleString()}
+                  </Text>
+                </View>
+              ) : null}
+
+              {appData.commission_status ? (
+                <View style={styles.row}>
+                  <Text style={styles.label}>Commission Status:</Text>
+                  <Text style={styles.val}>{appData.commission_status}</Text>
+                </View>
+              ) : null}
+
+              {appData.process_type ? (
+                <View style={styles.row}>
+                  <Text style={styles.label}>Process Type:</Text>
+                  <Text style={styles.val}>{appData.process_type}</Text>
+                </View>
+              ) : null}
+
+              {appData.process_by ? (
+                <View style={styles.row}>
+                  <Text style={styles.label}>Process By:</Text>
+                  <Text style={styles.val}>{appData.process_by}</Text>
                 </View>
               ) : null}
             </Card>
@@ -522,6 +606,15 @@ export default function ApplicationDetailsScreen() {
         {/* DOCUMENTS TAB */}
         {activeTab === 'docs' && (
           <View>
+            <View style={styles.docActions}>
+              <Button
+                title={uploading ? 'Uploading...' : 'Upload Document'}
+                onPress={handleDocumentUpload}
+                disabled={uploading}
+                style={{ flex: 1 }}
+              />
+            </View>
+
             <Text style={styles.sectionTitle}>Application Documents</Text>
 
             {documents.length > 0 ? (
@@ -673,6 +766,10 @@ const styles = StyleSheet.create({
     color: colors.warning,
     fontWeight: typography.weights.bold,
   },
+  accentText: {
+    color: colors.accent,
+    fontWeight: typography.weights.bold,
+  },
   linkText: {
     fontSize: typography.sizes.xs,
     color: colors.primary,
@@ -778,5 +875,8 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xs,
     color: colors.textLight,
     textAlign: 'center',
+  },
+  docActions: {
+    marginBottom: spacing.md,
   },
 });

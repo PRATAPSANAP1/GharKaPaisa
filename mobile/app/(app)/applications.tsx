@@ -11,11 +11,13 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 import { Card, Input, Button, StatusBadge, LoadingState, ErrorState } from '../../components';
-import { fetchApplications, ApplicationQueryParams } from '../../services/application.service';
+import { fetchApplications, ApplicationQueryParams, fetchBanks, fetchProducts, exportApplicationsCSV } from '../../services/application.service';
 import { ApplicationItem } from '../../types';
 
 const STATUS_OPTIONS = [
@@ -36,6 +38,7 @@ const CATEGORY_OPTIONS = [
   { label: 'Business Loan', value: 'business_loan' },
   { label: 'Insurance', value: 'insurance' },
   { label: 'Utility', value: 'utility' },
+  { label: 'LOC/EOC', value: 'loc_eoc' },
 ];
 
 const PERIOD_OPTIONS = [
@@ -61,12 +64,20 @@ export default function ApplicationsScreen() {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState('all');
+  const [selectedBank, setSelectedBank] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState('');
   const [filterModalVisible, setFilterModalVisible] = useState(false);
+
+  // Banks & Products for filters
+  const [banks, setBanks] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
 
   // Temporary Filter State inside Modal
   const [tempStatus, setTempStatus] = useState('');
   const [tempCategory, setTempCategory] = useState('');
   const [tempPeriod, setTempPeriod] = useState('all');
+  const [tempBank, setTempBank] = useState('');
+  const [tempProduct, setTempProduct] = useState('');
 
   // Pagination Guards
   const [page, setPage] = useState(1);
@@ -81,6 +92,27 @@ export default function ApplicationsScreen() {
     }, 400);
     return () => clearTimeout(handler);
   }, [searchInput]);
+
+  // Load Banks & Products for filters
+  useEffect(() => {
+    const loadFilterOptions = async () => {
+      try {
+        const [banksRes, productsRes] = await Promise.all([
+          fetchBanks(),
+          fetchProducts(),
+        ]);
+        if (banksRes?.success) {
+          setBanks(banksRes.data || []);
+        }
+        if (productsRes?.success) {
+          setProducts(productsRes.data || []);
+        }
+      } catch (err) {
+        console.warn('Failed to load filter options:', err);
+      }
+    };
+    loadFilterOptions();
+  }, []);
 
   // Main Data Loading Function
   const loadData = useCallback(
@@ -104,6 +136,8 @@ export default function ApplicationsScreen() {
         status: selectedStatus || undefined,
         category: selectedCategory || undefined,
         period: selectedPeriod !== 'all' ? selectedPeriod : undefined,
+        bank_id: selectedBank || undefined,
+        product_id: selectedProduct || undefined,
       };
 
       try {
@@ -144,7 +178,7 @@ export default function ApplicationsScreen() {
   // Trigger Reload on Filter / Debounced Search change
   useEffect(() => {
     loadData(1);
-  }, [debouncedSearch, selectedStatus, selectedCategory, selectedPeriod]);
+  }, [debouncedSearch, selectedStatus, selectedCategory, selectedPeriod, selectedBank, selectedProduct]);
 
   // Pull-to-Refresh
   const handleRefresh = () => {
@@ -165,6 +199,8 @@ export default function ApplicationsScreen() {
     setTempStatus(selectedStatus);
     setTempCategory(selectedCategory);
     setTempPeriod(selectedPeriod);
+    setTempBank(selectedBank);
+    setTempProduct(selectedProduct);
     setFilterModalVisible(true);
   };
 
@@ -172,6 +208,8 @@ export default function ApplicationsScreen() {
     setSelectedStatus(tempStatus);
     setSelectedCategory(tempCategory);
     setSelectedPeriod(tempPeriod);
+    setSelectedBank(tempBank);
+    setSelectedProduct(tempProduct);
     setFilterModalVisible(false);
   };
 
@@ -181,16 +219,51 @@ export default function ApplicationsScreen() {
     setSelectedStatus('');
     setSelectedCategory('');
     setSelectedPeriod('all');
+    setSelectedBank('');
+    setSelectedProduct('');
     setTempStatus('');
     setTempCategory('');
     setTempPeriod('all');
+    setTempBank('');
+    setTempProduct('');
     setFilterModalVisible(false);
   };
 
   const activeFilterCount =
     (selectedStatus ? 1 : 0) +
     (selectedCategory ? 1 : 0) +
-    (selectedPeriod !== 'all' ? 1 : 0);
+    (selectedPeriod !== 'all' ? 1 : 0) +
+    (selectedBank ? 1 : 0) +
+    (selectedProduct ? 1 : 0);
+
+  // Export Functionality
+  const handleExportCSV = async () => {
+    try {
+      const params: ApplicationQueryParams = {
+        search: debouncedSearch.trim() || undefined,
+        status: selectedStatus || undefined,
+        category: selectedCategory || undefined,
+        period: selectedPeriod !== 'all' ? selectedPeriod : undefined,
+        bank_id: selectedBank || undefined,
+        product_id: selectedProduct || undefined,
+      };
+
+      const blob = await exportApplicationsCSV(params);
+      
+      // Create a temporary file
+      const fileUri = FileSystem.documentDirectory + 'applications_export.csv';
+      await FileSystem.writeAsStringAsync(fileUri, blob, { encoding: FileSystem.EncodingType.Base64 });
+      
+      // Share the file
+      await Sharing.shareAsync(fileUri, {
+        mimeType: 'text/csv',
+        dialogTitle: 'Export Applications',
+      });
+    } catch (err: any) {
+      console.error('Export failed:', err);
+      alert(err?.message || 'Failed to export applications');
+    }
+  };
 
   // Application Card Component
   const renderItem = ({ item }: { item: ApplicationItem }) => (
@@ -282,6 +355,12 @@ export default function ApplicationsScreen() {
             <Text style={[styles.filterBtnText, activeFilterCount > 0 && styles.filterBtnTextActive]}>
               Filter{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
             </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.exportBtn}
+            onPress={handleExportCSV}
+          >
+            <Text style={styles.exportBtnText}>Export</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -394,6 +473,60 @@ export default function ApplicationsScreen() {
                 ))}
               </View>
 
+              {/* Bank Section */}
+              <Text style={styles.filterGroupTitle}>Bank</Text>
+              <View style={styles.chipContainer}>
+                <TouchableOpacity
+                  style={[styles.chip, tempBank === '' && styles.chipActive]}
+                  onPress={() => setTempBank('')}
+                >
+                  <Text style={[styles.chipText, tempBank === '' && styles.chipTextActive]}>All Banks</Text>
+                </TouchableOpacity>
+                {banks.slice(0, 10).map(bank => (
+                  <TouchableOpacity
+                    key={bank.id}
+                    style={[styles.chip, tempBank === bank.id && styles.chipActive]}
+                    onPress={() => setTempBank(bank.id)}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        tempBank === bank.id && styles.chipTextActive,
+                      ]}
+                    >
+                      {bank.name || bank.short_code}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Product Section */}
+              <Text style={styles.filterGroupTitle}>Product</Text>
+              <View style={styles.chipContainer}>
+                <TouchableOpacity
+                  style={[styles.chip, tempProduct === '' && styles.chipActive]}
+                  onPress={() => setTempProduct('')}
+                >
+                  <Text style={[styles.chipText, tempProduct === '' && styles.chipTextActive]}>All Products</Text>
+                </TouchableOpacity>
+                {products.slice(0, 10).map(product => (
+                  <TouchableOpacity
+                    key={product.id}
+                    style={[styles.chip, tempProduct === product.id && styles.chipActive]}
+                    onPress={() => setTempProduct(product.id)}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        tempProduct === product.id && styles.chipTextActive,
+                      ]}
+                    >
+                      {product.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
               {/* Period Section */}
               <Text style={styles.filterGroupTitle}>Date Period</Text>
               <View style={styles.chipContainer}>
@@ -489,6 +622,22 @@ const styles = StyleSheet.create({
   filterBtnTextActive: {
     color: colors.primary,
     fontWeight: typography.weights.bold,
+  },
+  exportBtn: {
+    height: 48,
+    paddingHorizontal: spacing.sm + 4,
+    borderRadius: 8,
+    backgroundColor: colors.success,
+    borderWidth: 1,
+    borderColor: colors.success,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: spacing.xs,
+  },
+  exportBtnText: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
+    color: '#FFF',
   },
   listContent: {
     padding: spacing.md,
