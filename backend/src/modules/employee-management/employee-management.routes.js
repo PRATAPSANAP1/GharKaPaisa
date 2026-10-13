@@ -897,6 +897,99 @@ router.post('/:id/send-reminder', async (req, res, next) => {
   }
 });
 
+// PUT /api/v1/employees/:id — Super Admin Update Employee Record Details
+router.put('/:id', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const {
+      full_name,
+      mobile_number,
+      email_id,
+      email,
+      designation,
+      department,
+      manager_name,
+      reporting_manager,
+      work_location,
+      date_of_birth,
+      gender,
+      aadhaar_number,
+      pan_number,
+      bank_account,
+      ifsc_code,
+      admin_remarks
+    } = req.body;
+
+    const emailVal = email_id || email;
+    const managerVal = manager_name || reporting_manager;
+
+    const { rows } = await query(
+      `UPDATE employees 
+       SET full_name = COALESCE($1, full_name),
+           mobile_number = COALESCE($2, mobile_number),
+           designation = COALESCE($3, designation),
+           department = COALESCE($4, department),
+           work_location = COALESCE($5, work_location),
+           updated_at = NOW()
+       WHERE id = $6 RETURNING *`,
+      [full_name, mobile_number, designation, department, work_location, id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Employee not found' });
+    }
+
+    // Update users table email and phone if linked
+    if (rows[0].user_id) {
+      await query(
+        `UPDATE users 
+         SET email = COALESCE($1, email),
+             phone = COALESCE($2, phone),
+             full_name = COALESCE($3, full_name),
+             updated_at = NOW() 
+         WHERE id = $4`,
+        [emailVal, mobile_number, full_name, rows[0].user_id]
+      ).catch(() => {});
+    }
+
+    // Update employee_joining_details table
+    await query(
+      `UPDATE employee_joining_details 
+       SET full_name = COALESCE($1, full_name),
+           mobile_number = COALESCE($2, mobile_number),
+           email_id = COALESCE($3, email_id),
+           designation = COALESCE($4, designation),
+           department = COALESCE($5, department),
+           reporting_manager = COALESCE($6, reporting_manager),
+           work_location = COALESCE($7, work_location),
+           date_of_birth = COALESCE($8, date_of_birth),
+           gender = COALESCE($9, gender),
+           updated_at = NOW()
+       WHERE employee_id = $10`,
+      [full_name, mobile_number, emailVal, designation, department, managerVal, work_location, date_of_birth, gender, id]
+    ).catch(() => {});
+
+    // Update employee_kyc table if identity fields provided
+    if (aadhaar_number || pan_number || bank_account || ifsc_code || admin_remarks) {
+      await query(
+        `UPDATE employee_kyc 
+         SET aadhaar_number = COALESCE($1, aadhaar_number),
+             pan_number = COALESCE($2, pan_number),
+             bank_account_number = COALESCE($3, bank_account_number),
+             bank_ifsc = COALESCE($4, bank_ifsc),
+             review_notes = COALESCE($5, review_notes),
+             updated_at = NOW()
+         WHERE employee_id = $6`,
+        [aadhaar_number, pan_number, bank_account, ifsc_code, admin_remarks, id]
+      ).catch(() => {});
+    }
+
+    res.json({ success: true, message: 'Employee details updated successfully', data: rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // POST /api/v1/employees/:id/activate — Super Admin Activate / Deactivate Employee
 router.post('/:id/activate', async (req, res, next) => {
   try {

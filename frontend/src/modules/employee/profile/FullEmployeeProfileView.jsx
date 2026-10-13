@@ -342,73 +342,75 @@ Generated On  : ${new Date().toLocaleString()}
             </div>
           </div>
 
-          {/* Action Buttons & Dropdown Container */}
-          <div style={{ display: 'flex', gap: '10px', alignSelf: isMobile ? 'flex-start' : 'center', flexShrink: 0, position: 'relative' }}>
-            <button 
-              onClick={() => setShowEditModal(true)} 
-              style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: '#FFF', padding: '9px 16px', borderRadius: '12px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <FaEdit /> Edit Profile
-            </button>
+          {/* Action Buttons & Dropdown Container — Super Admin Access Only */}
+          {isSuperAdmin && (
+            <div style={{ display: 'flex', gap: '10px', alignSelf: isMobile ? 'flex-start' : 'center', flexShrink: 0, position: 'relative' }}>
+              <button 
+                onClick={() => setShowEditModal(true)} 
+                style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: '#FFF', padding: '9px 16px', borderRadius: '12px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <FaEdit /> Edit Profile
+              </button>
 
-            <button 
-              onClick={() => setShowActionsDropdown(!showActionsDropdown)} 
-              style={{ background: 'rgba(255,255,255,0.95)', border: `1px solid ${C.border}`, color: '#0F2B48', padding: '9px 14px', borderRadius: '12px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <FaEllipsisH /> Actions
-            </button>
+              <button 
+                onClick={() => setShowActionsDropdown(!showActionsDropdown)} 
+                style={{ background: 'rgba(255,255,255,0.95)', border: `1px solid ${C.border}`, color: '#0F2B48', padding: '9px 14px', borderRadius: '12px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <FaEllipsisH /> Actions
+              </button>
 
-            {/* Actions Floating Dropdown */}
-            {showActionsDropdown && (
-              <div style={{
-                position: 'absolute', top: '48px', right: 0, width: '240px',
-                background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px',
-                boxShadow: '0 12px 32px rgba(0,0,0,0.18)', zIndex: 9999, overflow: 'hidden', padding: '6px'
-              }}>
-                <button
-                  onClick={handleSendKycLink}
-                  style={{
-                    width: '100%', padding: '10px 12px', background: 'transparent', border: 'none',
-                    textAlign: 'left', fontSize: '12.5px', fontWeight: 700, color: C.text,
-                    cursor: 'pointer', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px'
-                  }}
-                >
-                  <FaEnvelope style={{ color: C.teal }} /> Send KYC Re-verification Link
-                </button>
-                <button
-                  onClick={handleResetPassword}
-                  style={{
-                    width: '100%', padding: '10px 12px', background: 'transparent', border: 'none',
-                    textAlign: 'left', fontSize: '12.5px', fontWeight: 700, color: C.text,
-                    cursor: 'pointer', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px'
-                  }}
-                >
-                  <FaShieldAlt style={{ color: '#3B82F6' }} /> Reset Login Credentials
-                </button>
-                <button
-                  onClick={handleDownloadProfileSummary}
-                  style={{
-                    width: '100%', padding: '10px 12px', background: 'transparent', border: 'none',
-                    textAlign: 'left', fontSize: '12.5px', fontWeight: 700, color: C.text,
-                    cursor: 'pointer', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px'
-                  }}
-                >
-                  <FaFileAlt style={{ color: '#10B981' }} /> Download Profile Summary
-                </button>
-                <button
-                  onClick={handleToggleAccountStatus}
-                  style={{
-                    width: '100%', padding: '10px 12px', background: 'transparent', border: 'none',
-                    textAlign: 'left', fontSize: '12.5px', fontWeight: 700, color: accountStatus === 'ACTIVE' ? '#EF4444' : '#10B981',
-                    cursor: 'pointer', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px'
-                  }}
-                >
-                  <FaTimes style={{ color: accountStatus === 'ACTIVE' ? '#EF4444' : '#10B981' }} /> 
-                  {accountStatus === 'ACTIVE' ? 'Suspend Employee Account' : 'Activate Employee Account'}
-                </button>
-              </div>
-            )}
-          </div>
+              {/* Actions Floating Dropdown */}
+              {showActionsDropdown && (
+                <div style={{
+                  position: 'absolute', top: '48px', right: 0, width: '240px',
+                  background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px',
+                  boxShadow: '0 12px 32px rgba(0,0,0,0.18)', zIndex: 9999, overflow: 'hidden', padding: '6px'
+                }}>
+                  <button
+                    onClick={handleSendKycLink}
+                    style={{
+                      width: '100%', padding: '10px 12px', background: 'transparent', border: 'none',
+                      textAlign: 'left', fontSize: '12.5px', fontWeight: 700, color: C.text,
+                      cursor: 'pointer', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px'
+                    }}
+                  >
+                    <FaEnvelope style={{ color: C.teal }} /> Send KYC Re-verification Link
+                  </button>
+                  <button
+                    onClick={handleResetPassword}
+                    style={{
+                      width: '100%', padding: '10px 12px', background: 'transparent', border: 'none',
+                      textAlign: 'left', fontSize: '12.5px', fontWeight: 700, color: C.text,
+                      cursor: 'pointer', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px'
+                    }}
+                  >
+                    <FaShieldAlt style={{ color: '#3B82F6' }} /> Reset Login Credentials
+                  </button>
+                  <button
+                    onClick={handleDownloadProfileSummary}
+                    style={{
+                      width: '100%', padding: '10px 12px', background: 'transparent', border: 'none',
+                      textAlign: 'left', fontSize: '12.5px', fontWeight: 700, color: C.text,
+                      cursor: 'pointer', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px'
+                    }}
+                  >
+                    <FaFileAlt style={{ color: '#10B981' }} /> Download Profile Summary
+                  </button>
+                  <button
+                    onClick={handleToggleAccountStatus}
+                    style={{
+                      width: '100%', padding: '10px 12px', background: 'transparent', border: 'none',
+                      textAlign: 'left', fontSize: '12.5px', fontWeight: 700, color: accountStatus === 'ACTIVE' ? '#EF4444' : '#10B981',
+                      cursor: 'pointer', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px'
+                    }}
+                  >
+                    <FaTimes style={{ color: accountStatus === 'ACTIVE' ? '#EF4444' : '#10B981' }} /> 
+                    {accountStatus === 'ACTIVE' ? 'Suspend Employee Account' : 'Activate Employee Account'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 2. Reporting & Hierarchy Info Bar */}
@@ -827,8 +829,8 @@ Generated On  : ${new Date().toLocaleString()}
         </div>
       )}
 
-      {/* EDIT PROFILE MODAL */}
-      {showEditModal && (
+      {/* EDIT PROFILE MODAL — Super Admin Access Only */}
+      {isSuperAdmin && showEditModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', width: '100%', maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', padding: '28px', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}>
             

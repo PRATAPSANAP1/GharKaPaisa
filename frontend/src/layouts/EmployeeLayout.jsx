@@ -284,18 +284,55 @@ export default function EmployeeLayout() {
         </nav>
 
         {/* Sidebar Footer */}
-        <div style={{ padding: '16px 20px', borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '12px', color: C.textMid, fontWeight: 600 }}>Theme Mode</span>
-          <button 
-            onClick={toggleTheme}
+        <div style={{ padding: '14px 16px', borderTop: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '12px', color: C.textMid, fontWeight: 600 }}>Theme Mode</span>
+            <button 
+              onClick={toggleTheme}
+              style={{
+                background: C.bgSecondary, border: `1px solid ${C.border}`,
+                borderRadius: '20px', padding: '5px 12px', display: 'flex', alignItems: 'center', gap: '6px',
+                color: C.text, fontSize: '12px', fontWeight: 700, cursor: 'pointer'
+              }}
+            >
+              {theme === 'dark' ? <FaSun style={{ color: '#F59E0B' }} /> : <FaMoon style={{ color: '#6B7280' }} />}
+              {theme === 'dark' ? 'Light' : 'Dark'}
+            </button>
+          </div>
+
+          <button
+            id="employee-sidebar-logout"
+            onClick={() => {
+              if (isMobile) setMobileMenuOpen(false);
+              handleLogout();
+            }}
             style={{
-              background: C.bgSecondary, border: `1px solid ${C.border}`,
-              borderRadius: '20px', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px',
-              color: C.text, fontSize: '12px', fontWeight: 700, cursor: 'pointer'
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '9px 14px',
+              borderRadius: '10px',
+              background: 'rgba(239, 68, 68, 0.08)',
+              border: '1px solid rgba(239, 68, 68, 0.25)',
+              color: '#DC2626',
+              fontSize: '13px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.16)';
+              e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)';
+              e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.25)';
             }}
           >
-            {theme === 'dark' ? <FaSun style={{ color: '#F59E0B' }} /> : <FaMoon style={{ color: '#6B7280' }} />}
-            {theme === 'dark' ? 'Light' : 'Dark'}
+            <FaSignOutAlt style={{ fontSize: '14px' }} />
+            <span>Sign Out</span>
           </button>
         </div>
       </aside>
