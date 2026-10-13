@@ -98,13 +98,6 @@ const createEnrollmentSession = async ({ userId, employeeId, isReEnrollment = fa
 
   const targetEmpId = employeeId || authEmpId;
 
-  // Non-administrative users cannot target other employees
-  if (!isAdminRole && authEmpId && String(targetEmpId).toLowerCase() !== String(authEmpId).toLowerCase()) {
-    const error = new Error('Unauthorized to create biometric enrollment session for another employee');
-    error.statusCode = 403;
-    throw error;
-  }
-
   // Resilient Employee Lookup (UUID, user_id, employee_id string code, candidate_id)
   let employee = null;
   const isUuid = typeof targetEmpId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetEmpId);
@@ -128,6 +121,13 @@ const createEnrollmentSession = async ({ userId, employeeId, isReEnrollment = fa
   if (!employee) {
     const error = new Error('Employee record not found');
     error.statusCode = 404;
+    throw error;
+  }
+
+  // Non-administrative users cannot target other employees
+  if (!isAdminRole && authEmpId && String(employee.id).toLowerCase() !== String(authEmpId).toLowerCase()) {
+    const error = new Error('Unauthorized to create biometric enrollment session for another employee');
+    error.statusCode = 403;
     throw error;
   }
 

@@ -309,7 +309,9 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
   }
 
   const { rows: [session] } = await query(
-    `SELECT id, employee_id, status, liveness_status, face_status, environment_status, expires_at FROM attendance_verification_sessions WHERE id = $1 LIMIT 1`,
+    `SELECT id, employee_id, status, liveness_status, face_status, environment_status, failure_reason,
+            matched_building_id, matched_building_name, expires_at 
+     FROM attendance_verification_sessions WHERE id = $1 LIMIT 1`,
     [sessionId]
   );
 
@@ -335,10 +337,69 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
     throw error;
   }
 
+  // Idempotency check: If session already reached terminal state, return existing outcome without re-invoking AWS
+  if (session.status === 'PASSED') {
+    logger.info(`[ATTENDANCE VERIFICATION] Idempotent replay for already PASSED session ${sessionId}`);
+    return {
+      success: true,
+      status: 'PASSED',
+      verification: {
+        liveness: 'PASSED',
+        face: 'PASSED',
+        location: 'PASSED',
+        building: session.matched_building_name || 'Main Office Building (Pune)',
+      },
+      isIdempotentReplay: true,
+    };
+  }
+
+  if (session.status === 'CONSUMED') {
+    const errorMsg = 'This verification session has already been used for attendance check-in.';
+    const error = new Error(errorMsg);
+    error.statusCode = 410;
+    error.reason = 'SESSION_ALREADY_CONSUMED';
+    throw error;
+  }
+
+  if (session.status === 'LIVENESS_FAILED' || session.status === 'FAILED' || session.liveness_status === 'FAILED') {
+    logger.info(`[ATTENDANCE VERIFICATION] Idempotent replay for already FAILED session ${sessionId}: reason=${session.failure_reason}`);
+    const failureReason = session.failure_reason || 'LIVENESS_FAILED';
+    const errorMsg = failureReason === 'CONFIDENCE_BELOW_THRESHOLD' || failureReason === 'LIVENESS_FAILED'
+      ? 'Liveness verification failed. Please align face inside the frame and retry.'
+      : (failureReason === 'SESSION_EXPIRED'
+        ? 'Face verification session expired. Please retry.'
+        : 'Attendance verification failed. Please try again.');
+    const error = new Error(errorMsg);
+    error.statusCode = 400;
+    error.reason = failureReason;
+    error.diagnostic = {
+      endpoint: '/api/v1/attendance/verification/liveness/result',
+      sessionId: sessionId,
+      employeeId: authEmpId,
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
+      accuracy: accuracy ?? null,
+      livenessStatus: session.liveness_status || 'FAILED',
+      faceStatus: session.face_status || 'NOT_STARTED',
+      environmentStatus: session.environment_status || 'NOT_STARTED',
+      reason: failureReason,
+      message: errorMsg,
+      isIdempotentReplay: true,
+    };
+    throw error;
+  }
+
   if (new Date(session.expires_at) < new Date()) {
     try {
-      await query(`UPDATE attendance_verification_sessions SET status = 'EXPIRED', liveness_status = 'EXPIRED' WHERE id = $1`, [sessionId]);
-    } catch (e) {}
+      await query(
+        `UPDATE attendance_verification_sessions 
+         SET status = 'EXPIRED', liveness_status = 'EXPIRED', failure_reason = 'SESSION_EXPIRED', updated_at = NOW() 
+         WHERE id = $1`,
+        [sessionId]
+      );
+    } catch (e) {
+      logger.error(`[LIVENESS DB ERROR] Failed to mark session ${sessionId} expired:`, e.message);
+    }
     const errorMsg = 'Verification session has expired. Please retry.';
     const error = new Error(errorMsg);
     error.statusCode = 410;
@@ -372,41 +433,61 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
     ? 'LIVENESS_PROCESSING'
     : (isProviderConfig || isProviderError
       ? 'AWS_LIVENESS_ERROR'
-      : (isExpired ? 'SESSION_EXPIRED' : (livenessResult.isLive ? null : 'LIVENESS_FAILED')));
+      : (isExpired ? 'SESSION_EXPIRED' : (livenessResult.isLive ? null : (livenessResult.decisionReason || 'LIVENESS_FAILED'))));
+
+  // Determine compliant database statuses adhering to schema CHECK constraints:
+  // liveness_status CHECK (IN ('PENDING', 'PASSED', 'FAILED', 'EXPIRED', 'PROVIDER_NOT_CONFIGURED'))
+  // status CHECK (IN ('CREATED', 'LIVENESS_PENDING', 'LIVENESS_PASSED', 'LIVENESS_FAILED', ..., 'FAILED', 'EXPIRED'))
+  const dbLivenessStatus = isExpired
+    ? 'EXPIRED'
+    : (isProcessing ? 'PENDING' : (isProviderConfig ? 'PROVIDER_NOT_CONFIGURED' : (livenessResult.isLive ? 'PASSED' : 'FAILED')));
+  const dbSessionStatus = isExpired
+    ? 'EXPIRED'
+    : (isProcessing ? 'LIVENESS_PENDING' : (livenessResult.isLive ? 'LIVENESS_PASSED' : 'LIVENESS_FAILED'));
 
   logger.info('[LIVENESS AWS RESULT DIAGNOSTIC]', {
     sessionId,
     employeeId: authEmpId,
     awsSessionId: providerSessionId,
     awsStatus: livenessResult.statusRaw || livenessResult.status,
+    awsEvaluationCompleted: livenessResult.awsEvaluationCompleted ?? (livenessResult.statusRaw === 'SUCCEEDED'),
     awsConfidence: livenessResult.confidence,
+    confidenceThreshold: livenessResult.confidenceThreshold ?? 85.0,
     awsReferenceImageAvailable: !!livenessResult.referenceImageBuffer,
+    decisionReason: livenessResult.decisionReason || failureReason,
     livenessStatus: livenessResult.status,
-    livenessConfidence: livenessResult.confidence,
     failureReason,
-    sessionDbStatus: session?.status || 'UNKNOWN',
+    sessionDbStatusPrior: session?.status || 'UNKNOWN',
+    sessionDbStatusNew: dbSessionStatus,
   });
 
   if (!livenessResult.isLive) {
-    const dbLivenessStatus = isExpired ? 'EXPIRED' : (isProcessing ? 'PROCESSING' : 'FAILED');
-    const dbSessionStatus = isExpired ? 'EXPIRED' : 'FAILED';
-
     try {
-      await query(
+      const updateResult = await query(
         `UPDATE attendance_verification_sessions 
          SET liveness_status = $1, status = $2, failure_reason = $3, updated_at = NOW() 
-         WHERE id = $4`,
+         WHERE id = $4
+         RETURNING id, status, liveness_status`,
         [dbLivenessStatus, dbSessionStatus, failureReason, sessionId]
       );
-    } catch (e) {}
+      if (updateResult.rowCount === 0) {
+        logger.warn(`[LIVENESS DB] Session ${sessionId} not found during liveness failure update`);
+      } else {
+        logger.info(`[LIVENESS DB] Session ${sessionId} state updated: status=${dbSessionStatus}, liveness_status=${dbLivenessStatus}`);
+      }
+    } catch (dbErr) {
+      logger.error(`[LIVENESS DB ERROR] Failed to persist liveness failure for session ${sessionId}:`, dbErr.message);
+    }
 
-    await logAction(reqUser, isExpired ? 'ATTENDANCE_LIVENESS_EXPIRED' : 'ATTENDANCE_LIVENESS_FAILED', authEmpId, {
-      session_id: sessionId,
-      reason: failureReason,
-      confidence: livenessResult.confidence,
-    });
+    if (!isProcessing) {
+      await logAction(reqUser, isExpired ? 'ATTENDANCE_LIVENESS_EXPIRED' : 'ATTENDANCE_LIVENESS_FAILED', authEmpId, {
+        session_id: sessionId,
+        reason: failureReason,
+        confidence: livenessResult.confidence,
+      });
+    }
 
-    const statusCode = isProviderConfig || isProviderError ? 503 : (isExpired ? 410 : 400);
+    const statusCode = isProviderConfig || isProviderError ? 503 : (isExpired ? 410 : (isProcessing ? 425 : 400));
     const errorMsg = isProcessing
       ? 'Face liveness check is still being processed by AWS. Please wait a moment and try again.'
       : (isProviderConfig || isProviderError
@@ -435,15 +516,23 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
     throw error;
   }
 
-  // Liveness PASSED
+  // Liveness PASSED - Persist terminal liveness pass state
   try {
-    await query(
+    const passResult = await query(
       `UPDATE attendance_verification_sessions 
        SET liveness_status = 'PASSED', status = 'LIVENESS_PASSED', updated_at = NOW() 
-       WHERE id = $1`,
+       WHERE id = $1
+       RETURNING id, status, liveness_status`,
       [sessionId]
     );
-  } catch (e) {}
+    if (passResult.rowCount === 0) {
+      logger.warn(`[LIVENESS DB] Session ${sessionId} not found during liveness pass update`);
+    } else {
+      logger.info(`[LIVENESS DB] Session ${sessionId} state updated: status=LIVENESS_PASSED, liveness_status=PASSED`);
+    }
+  } catch (dbErr) {
+    logger.error(`[LIVENESS DB ERROR] Failed to persist liveness pass for session ${sessionId}:`, dbErr.message);
+  }
 
   await logAction(reqUser, 'ATTENDANCE_LIVENESS_SUCCESS', authEmpId, {
     session_id: sessionId,

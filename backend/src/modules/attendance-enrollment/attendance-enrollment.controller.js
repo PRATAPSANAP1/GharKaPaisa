@@ -16,8 +16,14 @@ const createSession = async (req, res) => {
       targetEmployeeId = employee_id || resolvedAuthEmpId;
     } else {
       // Non-administrative roles MUST use authenticated employee ID and cannot target others
-      if (employee_id && resolvedAuthEmpId && String(employee_id).toLowerCase() !== String(resolvedAuthEmpId).toLowerCase()) {
-        return error(res, 'Unauthorized to create biometric enrollment session for another employee', 403);
+      if (employee_id) {
+        const resolvedTarget = await service.resolveEmployeeId({ id: null, employeeId: employee_id });
+        const isSelf = (resolvedTarget && resolvedAuthEmpId && String(resolvedTarget).toLowerCase() === String(resolvedAuthEmpId).toLowerCase())
+          || (resolvedAuthEmpId && String(employee_id).toLowerCase() === String(resolvedAuthEmpId).toLowerCase());
+        
+        if (!isSelf) {
+          return error(res, 'Unauthorized to create biometric enrollment session for another employee', 403);
+        }
       }
       targetEmployeeId = resolvedAuthEmpId;
     }

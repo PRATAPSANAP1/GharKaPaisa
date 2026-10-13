@@ -138,19 +138,49 @@ class FaceLivenessProvider {
         };
       }
 
-      const isLive = status === 'SUCCEEDED' && confidence >= 85.0;
+      // Configure liveness confidence threshold (defaults to AWS-recommended 85.0%)
+      const defaultThreshold = 85.0;
+      const parsedThreshold = process.env.AWS_LIVENESS_CONFIDENCE_THRESHOLD
+        ? parseFloat(process.env.AWS_LIVENESS_CONFIDENCE_THRESHOLD)
+        : defaultThreshold;
+      const confidenceThreshold = Number.isFinite(parsedThreshold) && parsedThreshold >= 0 && parsedThreshold <= 100
+        ? parsedThreshold
+        : defaultThreshold;
+
+      // In AWS Rekognition semantics:
+      // status === 'SUCCEEDED' means the evaluation job completed without technical errors.
+      // isLive is true ONLY when the evaluation completed AND the confidence meets the anti-spoofing threshold.
+      const awsEvaluationCompleted = (status === 'SUCCEEDED');
+      const isLive = awsEvaluationCompleted && (confidence >= confidenceThreshold);
+
+      let decisionReason;
+      if (status === 'IN_PROGRESS' || status === 'CREATED') {
+        decisionReason = 'EVALUATION_IN_PROGRESS';
+      } else if (status === 'EXPIRED') {
+        decisionReason = 'SESSION_EXPIRED';
+      } else if (status === 'FAILED') {
+        decisionReason = 'AWS_EVALUATION_FAILED';
+      } else if (status === 'SUCCEEDED') {
+        decisionReason = isLive ? 'LIVENESS_CONFIRMED' : 'CONFIDENCE_BELOW_THRESHOLD';
+      } else {
+        decisionReason = `AWS_${status}`;
+      }
 
       let referenceImageBuffer = null;
       if (status === 'SUCCEEDED' && response?.ReferenceImage?.Bytes) {
         referenceImageBuffer = Buffer.from(response.ReferenceImage.Bytes);
       }
 
-      logger.info(`[LIVENESS PROVIDER] Terminal AWS evaluation: SessionId=${providerSessionId}, Status=${status}, Confidence=${confidence}, isLive=${isLive}`);
+      logger.info(`[LIVENESS PROVIDER] Terminal AWS evaluation: SessionId=${providerSessionId}, Status=${status}, Confidence=${confidence}, Threshold=${confidenceThreshold}, Decision=${decisionReason}, isLive=${isLive}`);
 
       return {
         status: status === 'SUCCEEDED' ? (isLive ? 'LIVENESS_PASSED' : 'LIVENESS_FAILED') : `LIVENESS_${status}`,
         isLive,
         confidence,
+        confidenceThreshold,
+        awsEvaluationStatus: status,
+        awsEvaluationCompleted,
+        decisionReason,
         statusRaw: status,
         referenceImageBuffer,
         providerName: this.providerName,
