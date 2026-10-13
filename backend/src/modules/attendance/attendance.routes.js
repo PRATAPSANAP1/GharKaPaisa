@@ -12,8 +12,57 @@ router.get('/today', ctrl.getTodayAttendance);
 router.get('/my-attendance', ctrl.getMyAttendance);
 router.get('/my-summary', ctrl.getMySummary);
 
+// Biometric Face Enrollment routes & fallbacks
+const attendanceEnrollmentRoute = require('../attendance-enrollment/attendance-enrollment.routes.js');
+router.use('/enrollment', attendanceEnrollmentRoute);
+
+// Explicit route fallbacks for enrollment sessions and commits
+router.post(['/enrollment/session', '/enrollment/session/'], (req, res, next) => {
+  try {
+    const enrollmentCtrl = require('../attendance-enrollment/attendance-enrollment.controller');
+    return enrollmentCtrl.createSession(req, res, next);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post(['/enrollment/commit', '/enrollment/commit/'], (req, res, next) => {
+  try {
+    const { upload } = require('../../services/aws/s3.service');
+    return upload.single('face_image')(req, res, (uploadErr) => {
+      if (uploadErr) return next(uploadErr);
+      const enrollmentCtrl = require('../attendance-enrollment/attendance-enrollment.controller');
+      return enrollmentCtrl.commitFaceEnrollment(req, res, next);
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post(['/enrollment/re-enrollment/session', '/enrollment/re-enrollment/session/'], (req, res, next) => {
+  try {
+    const enrollmentCtrl = require('../attendance-enrollment/attendance-enrollment.controller');
+    return enrollmentCtrl.createReEnrollmentSession(req, res, next);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post(['/enrollment/re-enrollment/commit', '/enrollment/re-enrollment/commit/'], (req, res, next) => {
+  try {
+    const { upload } = require('../../services/aws/s3.service');
+    return upload.single('face_image')(req, res, (uploadErr) => {
+      if (uploadErr) return next(uploadErr);
+      const enrollmentCtrl = require('../attendance-enrollment/attendance-enrollment.controller');
+      return enrollmentCtrl.commitReEnrollment(req, res, next);
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Fallback alias routes for enrollment & verification status
-router.get('/enrollment/status', (req, res, next) => {
+router.get(['/enrollment/status', '/enrollment/status/'], (req, res, next) => {
   try {
     const enrollmentCtrl = require('../attendance-enrollment/attendance-enrollment.controller');
     return enrollmentCtrl.getMyStatus(req, res, next);

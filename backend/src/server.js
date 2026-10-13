@@ -236,6 +236,9 @@ app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 // ── API Routes ─────────────────────────────────────────────────
 const apiRouter = require('./routes/index');
 const messengerRoute = require('./modules/messenger/messenger.routes.js');
+const attendanceEnrollmentRoute = require('./modules/attendance-enrollment/attendance-enrollment.routes.js');
+app.use('/api/v1/attendance/enrollment', attendanceEnrollmentRoute);
+app.use('/api/v1/attendance-enrollment', attendanceEnrollmentRoute);
 app.use('/api/v1', apiRouter);
 app.use('/team', apiRouter);
 app.use('/messenger', messengerRoute);

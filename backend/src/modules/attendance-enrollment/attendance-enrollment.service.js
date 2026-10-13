@@ -53,7 +53,7 @@ const resolveEmployeeId = async (reqUser) => {
     } catch (e) {}
   }
 
-  // 2. If employee_id is already a valid UUID, return it
+  // 2. If employee_id is already a valid UUID, check and return it
   const empId = reqUser.employeeId || reqUser.employee_id;
   if (typeof empId === 'string' && empId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
     return empId;
@@ -71,6 +71,17 @@ const resolveEmployeeId = async (reqUser) => {
     } catch (e) {
       logger.error('Error resolving employee_code to employee_id:', e.message);
     }
+  }
+
+  // 4. Fallback lookup by email or phone
+  if (reqUser.email || reqUser.phone) {
+    try {
+      const { rows: [emp] } = await query(
+        `SELECT id FROM employees WHERE (email IS NOT NULL AND LOWER(email) = LOWER($1)) OR (phone IS NOT NULL AND phone = $2) LIMIT 1`,
+        [reqUser.email || '', reqUser.phone || '']
+      );
+      if (emp) return emp.id;
+    } catch (e) {}
   }
   
   return null;
@@ -94,11 +105,25 @@ const createEnrollmentSession = async ({ userId, employeeId, isReEnrollment = fa
     throw error;
   }
 
-  // Check employee existence
-  const { rows: [employee] } = await query(
-    `SELECT id, employee_id, full_name, designation, department, employee_status FROM employees WHERE id = $1`,
-    [targetEmpId]
-  );
+  // Resilient Employee Lookup (UUID, user_id, employee_id string code, candidate_id)
+  let employee = null;
+  const isUuid = typeof targetEmpId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetEmpId);
+
+  if (isUuid) {
+    const { rows: [foundEmp] } = await query(
+      `SELECT id, employee_id, full_name, designation, department, employee_status FROM employees WHERE id = $1 OR user_id = $1 LIMIT 1`,
+      [targetEmpId]
+    );
+    employee = foundEmp;
+  }
+
+  if (!employee && targetEmpId) {
+    const { rows: [foundEmpByCode] } = await query(
+      `SELECT id, employee_id, full_name, designation, department, employee_status FROM employees WHERE employee_id = $1 OR candidate_id::text = $1 LIMIT 1`,
+      [String(targetEmpId).trim()]
+    );
+    employee = foundEmpByCode;
+  }
 
   if (!employee) {
     const error = new Error('Employee record not found');
