@@ -163,10 +163,39 @@ const getAccountAuditHistory = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/v1/superadmin/accounts/bulk-status
+ * Bulk activate or deactivate employees, admins, or selected users
+ */
+const bulkUpdateAccountStatus = async (req, res, next) => {
+  try {
+    const { action, scope, userIds, roles, reason } = req.body;
+    if (!action) {
+      return error(res, 'Action (ACTIVATE or DEACTIVATE) is required.', 400);
+    }
+
+    const actorAdminId = req.user.id;
+    const result = await accountStatusService.bulkUpdateAccountStatus(
+      { action, scope, userIds, roles, reason },
+      actorAdminId,
+      req
+    );
+
+    return success(res, result, result.message);
+  } catch (err) {
+    logger.error('Error in bulk update account status:', err);
+    if (err.statusCode) {
+      return error(res, err.message, err.statusCode);
+    }
+    next(err);
+  }
+};
+
 module.exports = {
   listAccounts,
   activateAccount,
   deactivateAccount,
+  bulkUpdateAccountStatus,
   scheduleAccountStatus,
   cancelScheduledStatus,
   getAccountAuditHistory

@@ -35,6 +35,7 @@ router.get('/referral-analytics', ctrl.getReferralAnalytics);
 
 // Account Activation / Deactivation & Scheduled Lifecycle Management
 router.get('/accounts', accountCtrl.listAccounts);
+router.post('/accounts/bulk-status', accountCtrl.bulkUpdateAccountStatus);
 router.post('/accounts/activate', accountCtrl.activateAccount);
 router.post('/accounts/:id/activate', accountCtrl.activateAccount);
 router.post('/accounts/deactivate', accountCtrl.deactivateAccount);

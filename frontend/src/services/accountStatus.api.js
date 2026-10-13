@@ -19,6 +19,11 @@ export const deactivateAccount = async (userId, data = {}) => {
   return res.data;
 };
 
+export const bulkUpdateAccountStatus = async (data = {}) => {
+  const res = await api.post('/superadmin/accounts/bulk-status', data);
+  return res.data;
+};
+
 export const scheduleAccountStatus = async (userId, data) => {
   const res = await api.post(`/superadmin/accounts/${userId}/schedule`, data);
   return res.data;

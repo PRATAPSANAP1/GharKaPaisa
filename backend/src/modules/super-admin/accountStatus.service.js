@@ -620,6 +620,127 @@ async function processScheduledAccountTransitions() {
   }
 }
 
+/**
+ * Bulk update account status (activate or deactivate) for employees, admins, or selected users.
+ */
+async function bulkUpdateAccountStatus({ action, scope = 'ALL', userIds = [], roles = [], reason = '' } = {}, actorAdminId, reqContext = null) {
+  const normAction = String(action || '').trim().toUpperCase();
+  if (!['ACTIVATE', 'DEACTIVATE'].includes(normAction)) {
+    const err = new Error("Invalid action. Must be 'ACTIVATE' or 'DEACTIVATE'.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  await ensureAccountStatusSchema();
+
+  // Identify target users based on userIds, roles, or scope
+  let whereClauses = [];
+  let queryParams = [];
+
+  if (Array.isArray(userIds) && userIds.length > 0) {
+    queryParams.push(userIds);
+    whereClauses.push(`id::text = ANY($${queryParams.length}::text[])`);
+  } else if (Array.isArray(roles) && roles.length > 0) {
+    const upperRoles = roles.map(r => String(r).toUpperCase());
+    queryParams.push(upperRoles);
+    whereClauses.push(`UPPER(role) = ANY($${queryParams.length})`);
+  } else {
+    const normScope = String(scope || 'ALL').trim().toUpperCase();
+    if (normScope === 'EMPLOYEES' || normScope === 'EMPLOYEE') {
+      whereClauses.push(`UPPER(role) = 'EMPLOYEE'`);
+    } else if (normScope === 'ADMINS' || normScope === 'ADMIN') {
+      whereClauses.push(`UPPER(role) = 'ADMIN'`);
+    } else {
+      // ALL employees and admins
+      whereClauses.push(`UPPER(role) IN ('EMPLOYEE', 'ADMIN', 'HR', 'VIEWER', 'MODERATOR')`);
+    }
+  }
+
+  // If deactivating, protect the current actorAdminId and any SUPER_ADMINs
+  if (normAction === 'DEACTIVATE') {
+    if (actorAdminId) {
+      queryParams.push(String(actorAdminId));
+      whereClauses.push(`id::text != $${queryParams.length}`);
+    }
+    whereClauses.push(`UPPER(role) != 'SUPER_ADMIN'`);
+  }
+
+  const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+  const selectQuery = `SELECT id, email, role, full_name, status, is_active FROM users ${whereSql}`;
+  const { rows: targetUsers } = await query(selectQuery, queryParams);
+
+  if (targetUsers.length === 0) {
+    return {
+      success: true,
+      updatedCount: 0,
+      affectedUserIds: [],
+      message: 'No eligible accounts matched the requested criteria.'
+    };
+  }
+
+  const targetIds = targetUsers.map(u => u.id);
+
+  if (normAction === 'ACTIVATE') {
+    await query(`
+      UPDATE users SET
+        is_active = TRUE,
+        status = 'active',
+        activated_at = NOW(),
+        activated_by = $1,
+        deactivated_at = NULL,
+        deactivation_reason = NULL,
+        activation_scheduled_at = NULL,
+        deactivation_scheduled_at = NULL,
+        scheduled_status_action = NULL,
+        scheduled_by = NULL,
+        scheduled_reason = NULL,
+        updated_at = NOW()
+      WHERE id::text = ANY($2::text[])
+    `, [actorAdminId || null, targetIds]);
+  } else {
+    // DEACTIVATE
+    await query(`
+      UPDATE users SET
+        is_active = FALSE,
+        status = 'inactive',
+        deactivated_at = NOW(),
+        deactivated_by = $1,
+        deactivation_reason = $2,
+        activation_scheduled_at = NULL,
+        deactivation_scheduled_at = NULL,
+        scheduled_status_action = NULL,
+        scheduled_by = NULL,
+        scheduled_reason = NULL,
+        updated_at = NOW()
+      WHERE id::text = ANY($3::text[])
+    `, [actorAdminId || null, reason || 'Bulk account deactivation', targetIds]);
+
+    // Revoke refresh tokens
+    await query(`
+      UPDATE refresh_tokens 
+      SET revoked = true, revoked_at = NOW() 
+      WHERE user_id::text = ANY($1::text[]) AND revoked = false
+    `, [targetIds]);
+  }
+
+  // Log audit action
+  await logAction(reqContext || actorAdminId, `BULK_${normAction}_ACCOUNTS`, actorAdminId, {
+    action: normAction,
+    scope,
+    affectedCount: targetIds.length,
+    reason: reason || `Bulk ${normAction.toLowerCase()} applied by administrator`
+  });
+
+  const verb = normAction === 'ACTIVATE' ? 'activated' : 'deactivated';
+  return {
+    success: true,
+    action: normAction,
+    updatedCount: targetIds.length,
+    affectedUserIds: targetIds,
+    message: `Successfully ${verb} ${targetIds.length} account${targetIds.length === 1 ? '' : 's'}.`
+  };
+}
+
 module.exports = {
   ensureAccountStatusSchema,
   determineAccountStatus,
@@ -627,6 +748,7 @@ module.exports = {
   listAccounts,
   activateAccount,
   deactivateAccount,
+  bulkUpdateAccountStatus,
   cancelScheduledStatus,
   getAccountAuditHistory,
   processScheduledAccountTransitions

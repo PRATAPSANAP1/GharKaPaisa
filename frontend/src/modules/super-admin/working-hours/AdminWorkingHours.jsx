@@ -44,7 +44,8 @@ import {
 import {
   activateAccount,
   deactivateAccount,
-  scheduleAccountStatus
+  scheduleAccountStatus,
+  bulkUpdateAccountStatus
 } from '../../../services/accountStatus.api';
 
 const DAYS_OF_WEEK = [
@@ -145,6 +146,14 @@ export default function AdminWorkingHours() {
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [showPolicyModal, setShowPolicyModal] = useState(false);
   const [showStatusConfirmModal, setShowStatusConfirmModal] = useState(false);
+  const [showManageUsersModal, setShowManageUsersModal] = useState(false);
+  const [manageUsersSearch, setManageUsersSearch] = useState('');
+  const [manageUsersRoleFilter, setManageUsersRoleFilter] = useState('ALL');
+  const [manageUsersStatusFilter, setManageUsersStatusFilter] = useState('ALL');
+  const [manageUsersSelectedIds, setManageUsersSelectedIds] = useState([]);
+  const [manageUsersBulkScope, setManageUsersBulkScope] = useState('ALL');
+  const [manageUsersReason, setManageUsersReason] = useState('');
+  const [manageUsersConfirmAction, setManageUsersConfirmAction] = useState(null);
   const [openActionMenuId, setOpenActionMenuId] = useState(null);
 
   // Toast & Submitting state
@@ -549,6 +558,53 @@ export default function AdminWorkingHours() {
     }
   };
 
+  // Manage All Users Modal Handlers
+  const handleQuickToggleUserInModal = async (u) => {
+    const isCurrentlyActive = u.accountStatus === 'active' || u.status === 'Active';
+    const newStatus = isCurrentlyActive ? 'inactive' : 'active';
+    setSubmitting(true);
+    try {
+      if (newStatus === 'active') {
+        const res = await activateAccount(u.id, { reason: 'Direct activation from Manage All Users' });
+        if (res.success) {
+          showToast(`Account for ${u.user} activated`);
+        }
+      } else {
+        const res = await deactivateAccount(u.id, { reason: 'Direct deactivation from Manage All Users' });
+        if (res.success) {
+          showToast(`Account for ${u.user} deactivated`);
+        }
+      }
+      await loadData();
+    } catch (err) {
+      showToast(err.message || 'Status update failed', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleExecuteBulkStatusUpdate = async (action, scope, userIds = []) => {
+    setSubmitting(true);
+    try {
+      const res = await bulkUpdateAccountStatus({
+        action,
+        scope,
+        userIds: userIds.length > 0 ? userIds : undefined,
+        reason: manageUsersReason.trim() || undefined
+      });
+      if (res.success) {
+        showToast(res.message || `Successfully updated accounts to ${action}`);
+        setManageUsersConfirmAction(null);
+        setManageUsersSelectedIds([]);
+        await loadData();
+      }
+    } catch (err) {
+      showToast(err.message || 'Bulk status update failed', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // Extend Modal handlers
   const handleOpenExtendForUser = (user) => {
     setExtendForm({
@@ -777,6 +833,30 @@ export default function AdminWorkingHours() {
           >
             <Zap size={16} />
             <span>Extend Time</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setManageUsersSearch('');
+              setManageUsersRoleFilter('ALL');
+              setManageUsersStatusFilter('ALL');
+              setManageUsersSelectedIds([]);
+              setManageUsersBulkScope('ALL');
+              setManageUsersReason('');
+              setManageUsersConfirmAction(null);
+              setShowManageUsersModal(true);
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              padding: isMobile ? '9px 14px' : '10px 18px',
+              backgroundColor: '#7C3AED', color: '#FFFFFF', border: 'none', borderRadius: '10px',
+              fontWeight: 700, cursor: 'pointer', fontSize: '13.5px', flex: isMobile ? '1 1 140px' : 'none',
+              boxShadow: '0 4px 12px rgba(124, 58, 237, 0.25)', transition: 'background 0.2s'
+            }}
+            title="Manage active/inactive status for all employee and admin accounts"
+          >
+            <Users size={16} />
+            <span>Manage All Users</span>
           </button>
         </div>
       </div>
@@ -2311,6 +2391,477 @@ export default function AdminWorkingHours() {
           </div>
         </div>
       )}
+
+      {/* ================= MODAL: MANAGE ALL USERS (ACTIVE / INACTIVE STATUS) ================= */}
+      {showManageUsersModal && (() => {
+        const totalStaff = users.length;
+        const activeStaff = users.filter(u => u.accountStatus === 'active' || u.status === 'Active').length;
+        const inactiveStaff = users.filter(u => u.accountStatus === 'inactive' || u.status === 'Inactive').length;
+        const totalEmployees = users.filter(u => String(u.role).toUpperCase() === 'EMPLOYEE').length;
+        const totalAdmins = users.filter(u => String(u.role).toUpperCase() === 'ADMIN').length;
+
+        // Filtered users for table
+        const filteredModalUsers = users.filter(u => {
+          const q = manageUsersSearch.toLowerCase().trim();
+          const matchesSearch = !q ||
+            (u.displayUserId && u.displayUserId.toLowerCase().includes(q)) ||
+            (u.user && u.user.toLowerCase().includes(q)) ||
+            (u.email && u.email.toLowerCase().includes(q)) ||
+            (u.employeeId && u.employeeId.toLowerCase().includes(q));
+
+          const roleUpper = String(u.role || '').toUpperCase();
+          const matchesRole = manageUsersRoleFilter === 'ALL' || roleUpper === manageUsersRoleFilter;
+
+          const isUserActive = u.accountStatus === 'active' || u.status === 'Active';
+          const matchesStatus = manageUsersStatusFilter === 'ALL' ||
+            (manageUsersStatusFilter === 'ACTIVE' && isUserActive) ||
+            (manageUsersStatusFilter === 'INACTIVE' && !isUserActive);
+
+          return matchesSearch && matchesRole && matchesStatus;
+        });
+
+        // Current target label and count based on selected scope
+        let targetLabel = 'All Employees & Admins';
+        let targetCount = totalEmployees + totalAdmins;
+        if (manageUsersBulkScope === 'EMPLOYEES') {
+          targetLabel = 'All Employees';
+          targetCount = totalEmployees;
+        } else if (manageUsersBulkScope === 'ADMINS') {
+          targetLabel = 'All Admins';
+          targetCount = totalAdmins;
+        } else if (manageUsersBulkScope === 'SELECTED') {
+          targetLabel = `${manageUsersSelectedIds.length} Selected Accounts`;
+          targetCount = manageUsersSelectedIds.length;
+        }
+
+        const isAllSelected = filteredModalUsers.length > 0 &&
+          filteredModalUsers.every(u => manageUsersSelectedIds.includes(u.id));
+
+        const toggleSelectAll = () => {
+          if (isAllSelected) {
+            setManageUsersSelectedIds([]);
+          } else {
+            setManageUsersSelectedIds(filteredModalUsers.map(u => u.id));
+          }
+        };
+
+        const toggleSelectUser = (id) => {
+          if (manageUsersSelectedIds.includes(id)) {
+            setManageUsersSelectedIds(manageUsersSelectedIds.filter(x => x !== id));
+          } else {
+            setManageUsersSelectedIds([...manageUsersSelectedIds, id]);
+          }
+        };
+
+        return (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+          }}>
+            <div style={{
+              backgroundColor: '#FFFFFF', borderRadius: '20px', width: '100%', maxWidth: '880px',
+              maxHeight: '92vh', display: 'flex', flexDirection: 'column',
+              boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.3)', overflow: 'hidden'
+            }}>
+              {/* Modal Header */}
+              <div style={{
+                padding: '20px 26px', borderBottom: '1px solid #E2E8F0', display: 'flex',
+                justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '42px', height: '42px', borderRadius: '12px',
+                    backgroundColor: '#EDE9FE', color: '#7C3AED',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <Users size={22} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>
+                      Manage All Users (Account Status)
+                    </h3>
+                    <div style={{ fontSize: '12.5px', color: '#64748B', marginTop: '2px' }}>
+                      Make employee and admin accounts inactive or active in bulk or individually
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowManageUsersModal(false)}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer', color: '#64748B',
+                    padding: '6px', borderRadius: '8px', display: 'flex', alignItems: 'center'
+                  }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Modal Scrollable Body */}
+              <div style={{ padding: '22px 26px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                {/* Metric Summary Cards */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+                  gap: '12px'
+                }}>
+                  <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '12px' }}>
+                    <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>Total Staff</div>
+                    <div style={{ fontSize: '20px', fontWeight: 900, color: '#4F46E5', marginTop: '2px' }}>{totalStaff}</div>
+                    <div style={{ fontSize: '11px', color: '#94A3B8' }}>{totalEmployees} Emp · {totalAdmins} Admin</div>
+                  </div>
+                  <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '10px', padding: '12px' }}>
+                    <div style={{ fontSize: '11px', color: '#15803D', fontWeight: 700, textTransform: 'uppercase' }}>Active Accounts</div>
+                    <div style={{ fontSize: '20px', fontWeight: 900, color: '#16A34A', marginTop: '2px' }}>{activeStaff}</div>
+                    <div style={{ fontSize: '11px', color: '#16A34A' }}>Authorized & working</div>
+                  </div>
+                  <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '10px', padding: '12px' }}>
+                    <div style={{ fontSize: '11px', color: '#B91C1C', fontWeight: 700, textTransform: 'uppercase' }}>Inactive Accounts</div>
+                    <div style={{ fontSize: '20px', fontWeight: 900, color: '#DC2626', marginTop: '2px' }}>{inactiveStaff}</div>
+                    <div style={{ fontSize: '11px', color: '#DC2626' }}>Deactivated access</div>
+                  </div>
+                  <div style={{ background: '#FAF5FF', border: '1px solid #E9D5FF', borderRadius: '10px', padding: '12px' }}>
+                    <div style={{ fontSize: '11px', color: '#7E22CE', fontWeight: 700, textTransform: 'uppercase' }}>Selected</div>
+                    <div style={{ fontSize: '20px', fontWeight: 900, color: '#7C3AED', marginTop: '2px' }}>{manageUsersSelectedIds.length}</div>
+                    <div style={{ fontSize: '11px', color: '#7C3AED' }}>Checked for batch</div>
+                  </div>
+                </div>
+
+                {/* Bulk Status Control Card */}
+                <div style={{
+                  background: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: '14px',
+                  padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '14px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Power size={17} style={{ color: '#7C3AED' }} />
+                      <span style={{ fontSize: '14px', fontWeight: 800, color: '#1E293B' }}>
+                        Bulk Status Action (All Employees & Admins)
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#64748B' }}>
+                      Affects <strong>{targetCount}</strong> account{targetCount === 1 ? '' : 's'}
+                    </div>
+                  </div>
+
+                  {/* Target Scope Selection */}
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {[
+                      { key: 'ALL', label: 'All Employees & Admins', count: totalEmployees + totalAdmins },
+                      { key: 'EMPLOYEES', label: 'All Employees', count: totalEmployees },
+                      { key: 'ADMINS', label: 'All Admins', count: totalAdmins },
+                      ...(manageUsersSelectedIds.length > 0 ? [{ key: 'SELECTED', label: `Selected (${manageUsersSelectedIds.length})`, count: manageUsersSelectedIds.length }] : [])
+                    ].map(scopeItem => (
+                      <button
+                        key={scopeItem.key}
+                        type="button"
+                        onClick={() => setManageUsersBulkScope(scopeItem.key)}
+                        style={{
+                          padding: '6px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
+                          border: manageUsersBulkScope === scopeItem.key ? '1.5px solid #7C3AED' : '1px solid #CBD5E1',
+                          backgroundColor: manageUsersBulkScope === scopeItem.key ? '#EDE9FE' : '#FFFFFF',
+                          color: manageUsersBulkScope === scopeItem.key ? '#6D28D9' : '#475569',
+                          cursor: 'pointer', transition: 'all 0.15s'
+                        }}
+                      >
+                        {scopeItem.label} ({scopeItem.count})
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Optional Reason Input */}
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Optional reason: e.g. Weekend shutdown, Staff reactivation, System maintenance..."
+                      value={manageUsersReason}
+                      onChange={e => setManageUsersReason(e.target.value)}
+                      style={{
+                        width: '100%', padding: '8px 12px', borderRadius: '8px',
+                        border: '1px solid #CBD5E1', fontSize: '12.5px', boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+
+                  {/* Bulk Action Buttons or Confirmation Alert */}
+                  {manageUsersConfirmAction ? (
+                    <div style={{
+                      padding: '14px', borderRadius: '10px',
+                      backgroundColor: manageUsersConfirmAction.action === 'ACTIVATE' ? '#F0FDF4' : '#FEF2F2',
+                      border: `1.5px solid ${manageUsersConfirmAction.action === 'ACTIVATE' ? '#86EFAC' : '#FCA5A5'}`,
+                      display: 'flex', flexDirection: 'column', gap: '10px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <AlertCircle size={18} style={{ color: manageUsersConfirmAction.action === 'ACTIVATE' ? '#16A34A' : '#DC2626' }} />
+                        <span style={{ fontSize: '13px', fontWeight: 800, color: manageUsersConfirmAction.action === 'ACTIVATE' ? '#15803D' : '#991B1B' }}>
+                          Are you sure you want to {manageUsersConfirmAction.action === 'ACTIVATE' ? 'ACTIVATE' : 'DEACTIVATE'} {targetLabel}?
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#475569' }}>
+                        {manageUsersConfirmAction.action === 'ACTIVATE'
+                          ? `This will immediately mark ${targetCount} account(s) as ACTIVE and permit system access during operating hours.`
+                          : `This will immediately mark ${targetCount} account(s) as INACTIVE and revoke active sessions (Super Admin accounts are safely protected).`
+                        }
+                      </div>
+                      <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                        <button
+                          type="button"
+                          onClick={() => setManageUsersConfirmAction(null)}
+                          disabled={submitting}
+                          style={{
+                            padding: '6px 14px', borderRadius: '8px', border: '1px solid #CBD5E1',
+                            backgroundColor: '#FFFFFF', color: '#475569', fontSize: '12.5px', fontWeight: 600, cursor: 'pointer'
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleExecuteBulkStatusUpdate(
+                            manageUsersConfirmAction.action,
+                            manageUsersBulkScope,
+                            manageUsersBulkScope === 'SELECTED' ? manageUsersSelectedIds : []
+                          )}
+                          disabled={submitting}
+                          style={{
+                            padding: '6px 16px', borderRadius: '8px', border: 'none',
+                            backgroundColor: manageUsersConfirmAction.action === 'ACTIVATE' ? '#16A34A' : '#DC2626',
+                            color: '#FFFFFF', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer',
+                            boxShadow: manageUsersConfirmAction.action === 'ACTIVATE' ? '0 4px 12px rgba(22, 163, 74, 0.25)' : '0 4px 12px rgba(220, 38, 38, 0.25)'
+                          }}
+                        >
+                          {submitting ? 'Applying...' : `Yes, ${manageUsersConfirmAction.action === 'ACTIVATE' ? 'Activate All' : 'Deactivate All'}`}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => setManageUsersConfirmAction({ action: 'ACTIVATE', scope: manageUsersBulkScope })}
+                        disabled={submitting || targetCount === 0}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '7px',
+                          padding: '9px 16px', borderRadius: '8px', border: 'none',
+                          backgroundColor: '#16A34A', color: '#FFFFFF',
+                          fontWeight: 700, fontSize: '13px', cursor: targetCount === 0 ? 'not-allowed' : 'pointer',
+                          opacity: targetCount === 0 ? 0.6 : 1,
+                          boxShadow: '0 4px 12px rgba(22, 163, 74, 0.25)'
+                        }}
+                      >
+                        <CheckCircle2 size={16} />
+                        <span>Make {targetLabel} Active</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setManageUsersConfirmAction({ action: 'DEACTIVATE', scope: manageUsersBulkScope })}
+                        disabled={submitting || targetCount === 0}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '7px',
+                          padding: '9px 16px', borderRadius: '8px', border: 'none',
+                          backgroundColor: '#DC2626', color: '#FFFFFF',
+                          fontWeight: 700, fontSize: '13px', cursor: targetCount === 0 ? 'not-allowed' : 'pointer',
+                          opacity: targetCount === 0 ? 0.6 : 1,
+                          boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)'
+                        }}
+                      >
+                        <Power size={16} />
+                        <span>Make {targetLabel} Inactive</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Filter and Search Bar for User List */}
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ position: 'relative', flex: '1 1 240px', maxWidth: '360px' }}>
+                    <Search size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+                    <input
+                      type="text"
+                      placeholder="Search name, email, employee ID..."
+                      value={manageUsersSearch}
+                      onChange={e => setManageUsersSearch(e.target.value)}
+                      style={{
+                        width: '100%', padding: '8px 12px 8px 32px', borderRadius: '8px',
+                        border: '1px solid #CBD5E1', fontSize: '12.5px', boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    {/* Role Filter */}
+                    <div style={{ display: 'flex', gap: '4px', backgroundColor: '#F1F5F9', padding: '3px', borderRadius: '8px' }}>
+                      {['ALL', 'EMPLOYEE', 'ADMIN'].map(r => (
+                        <button
+                          key={r}
+                          type="button"
+                          onClick={() => setManageUsersRoleFilter(r)}
+                          style={{
+                            padding: '4px 10px', borderRadius: '6px', border: 'none', fontSize: '11.5px', fontWeight: 700,
+                            backgroundColor: manageUsersRoleFilter === r ? '#FFFFFF' : 'transparent',
+                            color: manageUsersRoleFilter === r ? '#1E293B' : '#64748B',
+                            boxShadow: manageUsersRoleFilter === r ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {r === 'ALL' ? 'All Roles' : r}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Status Filter */}
+                    <div style={{ display: 'flex', gap: '4px', backgroundColor: '#F1F5F9', padding: '3px', borderRadius: '8px' }}>
+                      {['ALL', 'ACTIVE', 'INACTIVE'].map(s => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setManageUsersStatusFilter(s)}
+                          style={{
+                            padding: '4px 10px', borderRadius: '6px', border: 'none', fontSize: '11.5px', fontWeight: 700,
+                            backgroundColor: manageUsersStatusFilter === s ? '#FFFFFF' : 'transparent',
+                            color: manageUsersStatusFilter === s ? '#1E293B' : '#64748B',
+                            boxShadow: manageUsersStatusFilter === s ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {s === 'ALL' ? 'All' : s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Individual Staff Table */}
+                <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden' }}>
+                  <div style={{
+                    display: 'grid', gridTemplateColumns: '40px 1.8fr 1.1fr 1fr 1.1fr 1.2fr',
+                    backgroundColor: '#F8FAFC', padding: '10px 14px', borderBottom: '1px solid #E2E8F0',
+                    fontSize: '11.5px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase'
+                  }}>
+                    <div>
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        onChange={toggleSelectAll}
+                        style={{ cursor: 'pointer' }}
+                        title="Select all shown accounts"
+                      />
+                    </div>
+                    <div>Staff Member</div>
+                    <div>Employee ID</div>
+                    <div>Role</div>
+                    <div>Status</div>
+                    <div style={{ textAlign: 'right' }}>Action</div>
+                  </div>
+
+                  <div style={{ maxHeight: '340px', overflowY: 'auto' }}>
+                    {filteredModalUsers.length === 0 ? (
+                      <div style={{ padding: '32px', textAlign: 'center', color: '#94A3B8', fontSize: '13px' }}>
+                        No accounts match your current filters.
+                      </div>
+                    ) : (
+                      filteredModalUsers.map(u => {
+                        const isUserActive = u.accountStatus === 'active' || u.status === 'Active';
+                        const isSelected = manageUsersSelectedIds.includes(u.id);
+                        const isSuperAdmin = String(u.role).toUpperCase() === 'SUPER_ADMIN';
+
+                        return (
+                          <div
+                            key={u.id}
+                            style={{
+                              display: 'grid', gridTemplateColumns: '40px 1.8fr 1.1fr 1fr 1.1fr 1.2fr',
+                              padding: '11px 14px', borderBottom: '1px solid #F1F5F9', alignItems: 'center',
+                              fontSize: '12.5px', backgroundColor: isSelected ? '#FAF5FF' : '#FFFFFF',
+                              transition: 'background 0.15s'
+                            }}
+                          >
+                            <div>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleSelectUser(u.id)}
+                                style={{ cursor: 'pointer' }}
+                              />
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 700, color: '#0F172A' }}>{u.user}</div>
+                              <div style={{ fontSize: '11px', color: '#64748B' }}>{u.email}</div>
+                            </div>
+                            <div style={{ fontFamily: 'monospace', fontWeight: 700, color: '#475569', fontSize: '11.5px' }}>
+                              {u.displayUserId || u.employeeId || '-'}
+                            </div>
+                            <div>
+                              <span style={{
+                                padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700,
+                                backgroundColor: String(u.role).toUpperCase() === 'ADMIN' ? '#E0E7FF' : String(u.role).toUpperCase() === 'EMPLOYEE' ? '#DCFCE7' : '#F1F5F9',
+                                color: String(u.role).toUpperCase() === 'ADMIN' ? '#4338CA' : String(u.role).toUpperCase() === 'EMPLOYEE' ? '#15803D' : '#475569'
+                              }}>
+                                {u.role || 'STAFF'}
+                              </span>
+                            </div>
+                            <div>
+                              <span style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                padding: '3px 9px', borderRadius: '6px', fontSize: '11px', fontWeight: 800,
+                                backgroundColor: isUserActive ? '#DCFCE7' : '#FEE2E2',
+                                color: isUserActive ? '#15803D' : '#B91C1C'
+                              }}>
+                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: isUserActive ? '#16A34A' : '#DC2626' }} />
+                                {isUserActive ? 'ACTIVE' : 'INACTIVE'}
+                              </span>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              {isSuperAdmin ? (
+                                <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>Protected</span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleQuickToggleUserInModal(u)}
+                                  disabled={submitting}
+                                  style={{
+                                    padding: '5px 12px', borderRadius: '7px', fontSize: '11.5px', fontWeight: 700,
+                                    border: isUserActive ? '1px solid #FCA5A5' : '1px solid #86EFAC',
+                                    backgroundColor: isUserActive ? '#FEF2F2' : '#F0FDF4',
+                                    color: isUserActive ? '#DC2626' : '#16A34A',
+                                    cursor: 'pointer', transition: 'all 0.15s'
+                                  }}
+                                  title={isUserActive ? 'Click to make inactive' : 'Click to make active'}
+                                >
+                                  {isUserActive ? 'Deactivate' : 'Activate'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div style={{
+                padding: '16px 26px', borderTop: '1px solid #E2E8F0', display: 'flex',
+                justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC'
+              }}>
+                <div style={{ fontSize: '12px', color: '#64748B' }}>
+                  Showing <strong>{filteredModalUsers.length}</strong> of <strong>{totalStaff}</strong> accounts
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowManageUsersModal(false)}
+                  style={{
+                    padding: '8px 20px', borderRadius: '8px', border: '1px solid #CBD5E1',
+                    backgroundColor: '#FFFFFF', color: '#334155', fontWeight: 700, fontSize: '13px', cursor: 'pointer'
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
