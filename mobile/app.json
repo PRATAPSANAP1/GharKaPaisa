@@ -5,7 +5,6 @@
     "scheme": "gharkapaisa",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "plugins": [
@@ -17,7 +16,8 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.gharkapaisa.app"
     },
     "android": {
       "package": "com.gharkapaisa.app",
@@ -25,6 +25,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "icon": "./assets/icon.png",
       "edgeToEdgeEnabled": true
     },
     "web": {
