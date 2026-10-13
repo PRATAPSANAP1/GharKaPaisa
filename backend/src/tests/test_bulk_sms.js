@@ -69,22 +69,28 @@ async function runTests() {
   assert.strictEqual(xlsxResult.duplicate_numbers, 1);
   console.log('✓ Test 4 passed: XLSX parsing verified');
 
-  // Test 5: Templates & Approval Check
-  console.log('Test 5: Testing templates listing and approval verification...');
+  // Test 5: Templates & Approval Check (Single Approved Template)
+  console.log('Test 5: Testing single approved template listing and verification...');
   const templates = await bulkSmsService.getTemplates();
-  assert(templates.length >= 3, 'Should have at least 3 seeded templates');
-  const hdfcTemplate = templates.find((t) => t.name.includes('HDFC'));
-  assert(hdfcTemplate, 'HDFC Pre-Approved Loan template must exist');
-  assert.strictEqual(hdfcTemplate.approval_status, 'APPROVED', 'Template must be APPROVED');
-  console.log('✓ Test 5 passed: Approved templates ready');
+  assert.strictEqual(templates.length, 1, 'Should have exactly 1 approved template');
+  const loanTemplate = templates[0];
+  assert(loanTemplate, 'Pre-Approved Credit Card Loan template must exist');
+  assert.strictEqual(loanTemplate.approval_status, 'APPROVED', 'Template must be APPROVED');
+  assert(loanTemplate.content.includes('##var1##'), 'Template must include ##var1##');
+  assert(loanTemplate.content.includes('##var2##'), 'Template must include ##var2##');
+  console.log('✓ Test 5 passed: Single approved template verified with ##var1## and ##var2##');
 
   // Test 6: Campaign Creation & Queue Dispatch
-  console.log('Test 6: Testing Campaign Creation and Async Queue Dispatch...');
+  console.log('Test 6: Testing Campaign Creation with custom var1 and var2...');
   const campaign = await bulkSmsService.createCampaign({
-    campaign_name: 'HDFC Loan Campaign - October 2026 Test',
-    template_id: hdfcTemplate.id,
+    campaign_name: 'Pre-Approved Credit Card Loan Campaign - Test',
+    template_id: loanTemplate.id,
     schedule_type: 'SEND_NOW',
     recipients: csvResult.valid_recipients,
+    custom_variables: {
+      var1: 'HDFC BANK',
+      var2: 'https://gharkapaisa.com/apply',
+    },
     file_name: 'customers_test.csv',
     file_size: csvContent.length,
     compliance_confirmed: true,

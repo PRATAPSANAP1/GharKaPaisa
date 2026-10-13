@@ -84,45 +84,32 @@ const migrateBulkSms = async () => {
     await query(`CREATE INDEX IF NOT EXISTS idx_bulk_sms_recipients_campaign ON bulk_sms_recipients(campaign_id, status)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_bulk_sms_recipients_mobile ON bulk_sms_recipients(normalized_mobile_number)`);
 
-    // 6. Seed Standard Approved Templates
+    // 6. Seed Standard Approved Template (Single template required)
     const defaultTemplates = [
       {
-        id: 'tpl-hdfc-loan-001',
-        name: 'HDFC Pre-Approved Loan',
+        id: 'tpl-preapproved-loan-001',
+        name: 'Pre-Approved Credit Card Loan Offer',
         provider: 'MSG91',
         provider_template_id: '6a8b2b479cac2288a3094b42',
         sender_id: 'GHARKP',
-        content: `Hello! Greetings from HDFC BANK.\n\nYou have a pre-approved loan on your credit card with instant disbursal in 10 seconds.\n\nHow much loan amount are you looking for?\n\nApply Here: https://gharkapaisa.com/apply\n\nYOHESA MARKETING CONSULTATION PRIVATE LIMITED`,
+        content: `Hello! Greetings from ##var1## You have a pre-approved loan on your credit card with instant disbursal in 10 seconds. How much loan amount are you looking for?\n\n[Apply here] ##var2##\n-YOHESA MARKETING CONSULTATION PRIVATE LIMITED\n-GharKaPaisa`,
         template_type: 'Promotional',
         approval_status: 'APPROVED',
-        variables: JSON.stringify(['customer_name', 'loan_amount', 'bank_name']),
+        variables: JSON.stringify(['var1', 'var2']),
         preview_url: 'https://gharkapaisa.com/apply',
       },
-      {
-        id: 'tpl-gkp-personal-002',
-        name: 'GharKaPaisa Instant Personal Loan',
-        provider: 'MSG91',
-        provider_template_id: '6a8b2ba19aad595e3402bb84',
-        sender_id: 'GHARKP',
-        content: `Dear {{customer_name}}, congratulations! You are eligible for an instant personal loan up to Rs. {{loan_amount}} at lowest interest rates from GharKaPaisa partner banks.\n\nCheck offer & apply: https://gharkapaisa.com/loans\n\nYOHESA MARKETING CONSULTATION PRIVATE LIMITED`,
-        template_type: 'Promotional',
-        approval_status: 'APPROVED',
-        variables: JSON.stringify(['customer_name', 'loan_amount']),
-        preview_url: 'https://gharkapaisa.com/loans',
-      },
-      {
-        id: 'tpl-cards-preapproved-003',
-        name: 'SBI & HDFC Credit Card Pre-Approved',
-        provider: 'MSG91',
-        provider_template_id: '6a8b2c5e05a2ec7fac0b3909',
-        sender_id: 'GHARKP',
-        content: `Hi {{customer_name}}, get Lifetime Free Credit Card with zero joining fee, instant approval & exclusive rewards.\n\nApply now: https://gharkapaisa.com/cards\n\nYOHESA MARKETING CONSULTATION PRIVATE LIMITED`,
-        template_type: 'Promotional',
-        approval_status: 'APPROVED',
-        variables: JSON.stringify(['customer_name']),
-        preview_url: 'https://gharkapaisa.com/cards',
-      },
     ];
+
+    // Cleanup legacy templates so only this approved template remains
+    try {
+      await query(`
+        DELETE FROM sms_templates 
+        WHERE id NOT IN ('tpl-preapproved-loan-001')
+          AND provider_template_id != '6a8b2b479cac2288a3094b42'
+      `);
+    } catch (cleanupErr) {
+      logger.warn('[Bulk SMS Migration] Legacy templates cleanup note:', cleanupErr.message);
+    }
 
     for (const t of defaultTemplates) {
       await query(

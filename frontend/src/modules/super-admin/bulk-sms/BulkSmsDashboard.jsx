@@ -93,11 +93,34 @@ export default function BulkSmsDashboard({ defaultTab }) {
   const [previewFilter, setPreviewFilter] = useState('ALL'); // ALL | Valid | Invalid | Duplicate
   const fileInputRef = useRef(null);
 
-  // Template Selection State
-  const [templates, setTemplates] = useState([]);
+// Single approved template per business requirements
+const SINGLE_APPROVED_TEMPLATE = {
+  id: 'tpl-preapproved-loan-001',
+  name: 'Pre-Approved Credit Card Loan Offer',
+  provider: 'MSG91',
+  provider_template_id: '6a8b2b479cac2288a3094b42',
+  sender_id: 'GHARKP',
+  content: `Hello! Greetings from ##var1## You have a pre-approved loan on your credit card with instant disbursal in 10 seconds. How much loan amount are you looking for?\n\n[Apply here] ##var2##\n-YOHESA MARKETING CONSULTATION PRIVATE LIMITED\n-GharKaPaisa`,
+  template_type: 'Promotional',
+  approval_status: 'APPROVED',
+  variables: ['var1', 'var2'],
+  preview_url: 'https://gharkapaisa.com/apply',
+  created_at: new Date('2026-10-01T10:00:00Z'),
+};
+
+  // Template Selection State - Strictly single approved template
+  const [templates, setTemplates] = useState([SINGLE_APPROVED_TEMPLATE]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [selectedTemplate, setSelectedTemplate] = useState(SINGLE_APPROVED_TEMPLATE);
   const [variableMappings, setVariableMappings] = useState({});
+
+  // Dynamic Variable Inputs (##var1## and ##var2##)
+  const [var1Value, setVar1Value] = useState('HDFC BANK');
+  const [var2Value, setVar2Value] = useState('https://gharkapaisa.com/apply');
+  const [var1Source, setVar1Source] = useState('custom'); // 'custom' | 'column'
+  const [var2Source, setVar2Source] = useState('custom'); // 'custom' | 'column'
+  const [var1Column, setVar1Column] = useState('');
+  const [var2Column, setVar2Column] = useState('');
 
   // Schedule State
   const [scheduleType, setScheduleType] = useState('SEND_NOW'); // SEND_NOW | SCHEDULE_LATER
@@ -126,21 +149,40 @@ export default function BulkSmsDashboard({ defaultTab }) {
 
   // Template Preview Modal
   const [previewingTemplate, setPreviewingTemplate] = useState(null);
+  const [modalTestVar1, setModalTestVar1] = useState('HDFC BANK');
+  const [modalTestVar2, setModalTestVar2] = useState('https://gharkapaisa.com/apply');
 
-  // ── Fetch Templates ─────────────────────────────────────────────────────────
+  // ── Fetch Templates (Ensure only the single approved template is exposed) ───
   const fetchTemplates = async () => {
     setLoadingTemplates(true);
     try {
       const res = await api.get('/admin/bulk-sms/templates');
-      if (res.data?.success && res.data?.data) {
-        setTemplates(res.data.data);
-        if (!selectedTemplate && res.data.data.length > 0) {
-          const approved = res.data.data.find((t) => t.approval_status === 'APPROVED');
-          if (approved) setSelectedTemplate(approved);
-        }
+      if (res.data?.success && Array.isArray(res.data?.data) && res.data.data.length > 0) {
+        const matched = res.data.data.find(
+          (t) => t.id === 'tpl-preapproved-loan-001' || t.content?.includes('##var1##') || t.content?.includes('pre-approved loan')
+        );
+        const tpl = matched || res.data.data[0] || SINGLE_APPROVED_TEMPLATE;
+        const normalized = {
+          ...tpl,
+          id: tpl.id || SINGLE_APPROVED_TEMPLATE.id,
+          name: tpl.name || SINGLE_APPROVED_TEMPLATE.name,
+          provider_template_id: tpl.provider_template_id || SINGLE_APPROVED_TEMPLATE.provider_template_id,
+          sender_id: tpl.sender_id || SINGLE_APPROVED_TEMPLATE.sender_id,
+          content: tpl.content?.includes('##var1##') ? tpl.content : SINGLE_APPROVED_TEMPLATE.content,
+          variables: ['var1', 'var2'],
+          approval_status: 'APPROVED',
+          template_type: 'Promotional',
+        };
+        setTemplates([normalized]);
+        setSelectedTemplate(normalized);
+      } else {
+        setTemplates([SINGLE_APPROVED_TEMPLATE]);
+        setSelectedTemplate(SINGLE_APPROVED_TEMPLATE);
       }
     } catch (err) {
-      console.warn('Failed to load templates:', err);
+      console.warn('Failed to load templates, using single approved template:', err);
+      setTemplates([SINGLE_APPROVED_TEMPLATE]);
+      setSelectedTemplate(SINGLE_APPROVED_TEMPLATE);
     } finally {
       setLoadingTemplates(false);
     }
@@ -234,22 +276,31 @@ export default function BulkSmsDashboard({ defaultTab }) {
     }
   };
 
-  // ── Real-Time Message Preview Interpolation ─────────────────────────────────
-  const renderMessageContent = () => {
-    if (!selectedTemplate) return 'Select a template to view preview.';
-    let text = selectedTemplate.content || '';
+  // ── Real-Time Message Preview Interpolation (##var1## and ##var2##) ─────────
+  const renderMessageContent = (customRecipient = null, customV1 = null, customV2 = null) => {
+    const tpl = selectedTemplate || SINGLE_APPROVED_TEMPLATE;
+    let text = tpl.content || SINGLE_APPROVED_TEMPLATE.content;
 
-    // Sample data from first valid recipient or sensible defaults
-    const sampleRec = uploadResult?.valid_recipients?.[0] || {};
+    // Sample data from first valid recipient or defaults
+    const sampleRec = customRecipient || uploadResult?.valid_recipients?.[0] || {};
     const sampleVars = sampleRec.variables || {};
 
-    const availableVars = selectedTemplate.variables || [];
-    availableVars.forEach((v) => {
-      const mappedCol = variableMappings[v] || v;
-      const sampleVal = sampleVars[mappedCol] || (v === 'customer_name' ? 'Rahul' : v === 'loan_amount' ? '5,00,000' : 'HDFC BANK');
-      const regex = new RegExp(`{{${v}}}`, 'g');
-      text = text.replace(regex, sampleVal);
-    });
+    const effectiveVar1 = customV1 !== null && customV1 !== undefined
+      ? customV1
+      : (var1Source === 'column' && var1Column && sampleVars[var1Column]
+          ? sampleVars[var1Column]
+          : (var1Value.trim() || '##var1##'));
+
+    const effectiveVar2 = customV2 !== null && customV2 !== undefined
+      ? customV2
+      : (var2Source === 'column' && var2Column && sampleVars[var2Column]
+          ? sampleVars[var2Column]
+          : (var2Value.trim() || '##var2##'));
+
+    text = text.replace(/##var1##/gi, effectiveVar1);
+    text = text.replace(/{{var1}}/gi, effectiveVar1);
+    text = text.replace(/##var2##/gi, effectiveVar2);
+    text = text.replace(/{{var2}}/gi, effectiveVar2);
 
     return text;
   };
@@ -297,13 +348,40 @@ export default function BulkSmsDashboard({ defaultTab }) {
     setIsSubmittingCampaign(true);
 
     try {
+      // Prepare recipients with var1 and var2 injected
+      const preparedRecipients = (uploadResult.valid_recipients || []).map((r) => {
+        const rowVars = r.variables || {};
+        const rVar1 = (var1Source === 'column' && var1Column && rowVars[var1Column])
+          ? String(rowVars[var1Column]).trim()
+          : String(var1Value || '').trim();
+
+        const rVar2 = (var2Source === 'column' && var2Column && rowVars[var2Column])
+          ? String(rowVars[var2Column]).trim()
+          : String(var2Value || '').trim();
+
+        return {
+          ...r,
+          variables: {
+            ...rowVars,
+            var1: rVar1,
+            var2: rVar2,
+            '##var1##': rVar1,
+            '##var2##': rVar2,
+          },
+        };
+      });
+
       const payload = {
         campaign_name: campaignName.trim(),
-        template_id: selectedTemplate.id,
-        sender_id: selectedTemplate.sender_id || 'GHARKP',
+        template_id: (selectedTemplate || SINGLE_APPROVED_TEMPLATE).id,
+        sender_id: (selectedTemplate || SINGLE_APPROVED_TEMPLATE).sender_id || 'GHARKP',
         schedule_type: scheduleType,
         scheduled_at: scheduledAt ? scheduledAt.toISOString() : null,
-        recipients: uploadResult.valid_recipients,
+        recipients: preparedRecipients,
+        custom_variables: {
+          var1: var1Value.trim(),
+          var2: var2Value.trim(),
+        },
         file_name: uploadResult.file_name,
         file_size: uploadResult.file_size,
         compliance_confirmed: true,
@@ -331,8 +409,13 @@ export default function BulkSmsDashboard({ defaultTab }) {
     setCampaignName('');
     setUploadedFile(null);
     setUploadResult(null);
-    setSelectedTemplate(templates.find((t) => t.approval_status === 'APPROVED') || null);
-    setVariableMappings({});
+    setSelectedTemplate(templates[0] || SINGLE_APPROVED_TEMPLATE);
+    setVar1Value('HDFC BANK');
+    setVar2Value('https://gharkapaisa.com/apply');
+    setVar1Source('custom');
+    setVar2Source('custom');
+    setVar1Column('');
+    setVar2Column('');
     setScheduleType('SEND_NOW');
     setScheduleDate('');
     setScheduleTime('');
@@ -1316,10 +1399,11 @@ export default function BulkSmsDashboard({ defaultTab }) {
               )}
 
               {/* ────────────────────────────────────────────────────────────── */}
-              {/* STEP 2: APPROVED SMS TEMPLATE SELECTION                       */}
+              {/* STEP 2: APPROVED SMS TEMPLATE & VARIABLE CONFIGURATION         */}
               {/* ────────────────────────────────────────────────────────────── */}
               {currentStep === 2 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  {/* Template Details Card */}
                   <div
                     style={{
                       backgroundColor: C.card,
@@ -1329,192 +1413,451 @@ export default function BulkSmsDashboard({ defaultTab }) {
                       boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
                     }}
                   >
-                    <div style={{ marginBottom: '18px' }}>
-                      <h3 style={{ fontSize: '16px', fontWeight: '600', color: C.text, margin: '0 0 4px' }}>
-                        Select Approved SMS Template
-                      </h3>
-                      <p style={{ fontSize: '13px', color: C.textMid, margin: 0 }}>
-                        Per Indian telecom regulations, only pre-registered DLT and approved MSG91 templates can be dispatched. Content is locked and cannot be edited.
-                      </p>
-                    </div>
-
-                    {/* Template Cards Grid */}
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-                        gap: '16px',
-                        marginBottom: '24px',
-                      }}
-                    >
-                      {templates.map((tpl) => {
-                        const isSelected = selectedTemplate?.id === tpl.id;
-                        const isApproved = tpl.approval_status === 'APPROVED';
-
-                        return (
-                          <div
-                            key={tpl.id}
-                            onClick={() => {
-                              if (isApproved) setSelectedTemplate(tpl);
-                            }}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <h3 style={{ fontSize: '17px', fontWeight: '700', color: C.text, margin: 0 }}>
+                            Approved SMS Template
+                          </h3>
+                          <span
                             style={{
-                              border: `2px solid ${isSelected ? '#4F46E5' : C.border}`,
+                              padding: '3px 10px',
                               borderRadius: '12px',
-                              padding: '18px',
-                              backgroundColor: isSelected
-                                ? 'rgba(79, 70, 229, 0.03)'
-                                : C.card,
-                              cursor: isApproved ? 'pointer' : 'not-allowed',
-                              opacity: isApproved ? 1 : 0.6,
-                              transition: 'all 0.2s ease',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              justifyContent: 'space-between',
+                              fontSize: '11px',
+                              fontWeight: '700',
+                              backgroundColor: '#ECFDF5',
+                              color: '#059669',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
                             }}
                           >
-                            <div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                                <h4 style={{ fontSize: '15px', fontWeight: '600', color: C.text, margin: 0 }}>
-                                  {tpl.name}
-                                </h4>
-                                <span
-                                  style={{
-                                    padding: '3px 8px',
-                                    borderRadius: '10px',
-                                    fontSize: '11px',
-                                    fontWeight: '700',
-                                    backgroundColor: isApproved ? '#ECFDF5' : '#FEF3C7',
-                                    color: isApproved ? '#059669' : '#B45309',
-                                  }}
-                                >
-                                  {tpl.approval_status}
-                                </span>
-                              </div>
+                            <FaCheck size={10} /> DLT APPROVED
+                          </span>
+                        </div>
+                        <p style={{ fontSize: '13px', color: C.textMid, margin: 0 }}>
+                          Per Indian telecom regulations, only this pre-registered TRAI/DLT and MSG91 template is approved for broadcast.
+                        </p>
+                      </div>
 
-                              <div style={{ fontSize: '12px', color: C.textMid, marginBottom: '6px' }}>
-                                Sender ID: <strong>{tpl.sender_id || 'GHARKP'}</strong>
-                              </div>
-                              <div style={{ fontSize: '12px', color: C.textMid, marginBottom: '12px' }}>
-                                MSG91 Template ID: <span style={{ fontFamily: 'monospace' }}>{tpl.provider_template_id}</span>
-                              </div>
-
-                              <div
-                                style={{
-                                  fontSize: '12px',
-                                  color: C.text,
-                                  backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-                                  padding: '10px',
-                                  borderRadius: '6px',
-                                  marginBottom: '14px',
-                                  maxHeight: '100px',
-                                  overflowY: 'auto',
-                                  whiteSpace: 'pre-line',
-                                  lineHeight: '1.4',
-                                }}
-                              >
-                                {tpl.content}
-                              </div>
-                            </div>
-
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span
-                                style={{
-                                  fontSize: '11px',
-                                  padding: '2px 8px',
-                                  borderRadius: '6px',
-                                  backgroundColor: isDark ? '#374151' : '#F3F4F6',
-                                  color: C.textMid,
-                                }}
-                              >
-                                {tpl.template_type || 'Promotional'}
-                              </span>
-
-                              <button
-                                type="button"
-                                disabled={!isApproved}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (isApproved) setSelectedTemplate(tpl);
-                                }}
-                                style={{
-                                  padding: '6px 14px',
-                                  borderRadius: '6px',
-                                  backgroundColor: isSelected ? '#4F46E5' : 'transparent',
-                                  color: isSelected ? '#FFFFFF' : '#4F46E5',
-                                  border: isSelected ? 'none' : '1px solid #4F46E5',
-                                  fontSize: '12px',
-                                  fontWeight: '600',
-                                  cursor: isApproved ? 'pointer' : 'not-allowed',
-                                }}
-                              >
-                                {isSelected ? 'Selected' : 'Use Template'}
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <span
+                          style={{
+                            fontSize: '12px',
+                            padding: '4px 10px',
+                            borderRadius: '8px',
+                            backgroundColor: isDark ? '#1F2937' : '#EEF2FF',
+                            color: '#4F46E5',
+                            fontWeight: '600',
+                            border: '1px solid rgba(79, 70, 229, 0.2)',
+                          }}
+                        >
+                          Sender ID: <strong>{selectedTemplate?.sender_id || 'GHARKP'}</strong>
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '12px',
+                            padding: '4px 10px',
+                            borderRadius: '8px',
+                            backgroundColor: isDark ? '#1F2937' : '#F3F4F6',
+                            color: C.textMid,
+                            fontFamily: 'monospace',
+                            border: `1px solid ${C.border}`,
+                          }}
+                        >
+                          MSG91 ID: {selectedTemplate?.provider_template_id || '6a8b2b479cac2288a3094b42'}
+                        </span>
+                      </div>
                     </div>
 
-                    {/* Template Variable Mapping UI */}
-                    {selectedTemplate && selectedTemplate.variables && selectedTemplate.variables.length > 0 && (
+                    {/* Template Master Preview Box with Variable Badges */}
+                    <div
+                      style={{
+                        backgroundColor: isDark ? '#111827' : '#F8FAFC',
+                        borderRadius: '10px',
+                        border: `1px solid ${C.border}`,
+                        padding: '16px 20px',
+                        marginBottom: '24px',
+                        lineHeight: '1.6',
+                        fontSize: '13px',
+                        color: C.text,
+                      }}
+                    >
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+                        Template Master Body (DLT Registered Text):
+                      </div>
+                      <div style={{ whiteSpace: 'pre-line', fontFamily: 'Inter, sans-serif' }}>
+                        Hello! Greetings from <span style={{ backgroundColor: '#DBEAFE', color: '#1E40AF', padding: '2px 8px', borderRadius: '6px', fontWeight: '700', fontFamily: 'monospace' }}>##var1##</span> You have a pre-approved loan on your credit card with instant disbursal in 10 seconds. How much loan amount are you looking for?
+                        {'\n\n'}
+                        [Apply here] <span style={{ backgroundColor: '#DCFCE7', color: '#166534', padding: '2px 8px', borderRadius: '6px', fontWeight: '700', fontFamily: 'monospace' }}>##var2##</span>
+                        {'\n'}
+                        -YOHESA MARKETING CONSULTATION PRIVATE LIMITED
+                        {'\n'}
+                        -GharKaPaisa
+                      </div>
+                    </div>
+
+                    {/* ── ENTER VAR 1 & VAR 2 CONFIGURATION ── */}
+                    <div
+                      style={{
+                        backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
+                        borderRadius: '12px',
+                        border: `1px solid ${C.border}`,
+                        padding: '20px',
+                      }}
+                    >
+                      <div style={{ marginBottom: '16px' }}>
+                        <h4 style={{ fontSize: '15px', fontWeight: '700', color: C.text, margin: '0 0 4px' }}>
+                          Enter Var 1 & Var 2 Values
+                        </h4>
+                        <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>
+                          Specify the variable values to substitute into the message for this campaign:
+                        </p>
+                      </div>
+
                       <div
                         style={{
-                          borderTop: `1px solid ${C.border}`,
-                          paddingTop: '20px',
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                          gap: '18px',
+                          marginBottom: '20px',
                         }}
                       >
-                        <h4 style={{ fontSize: '14px', fontWeight: '600', color: C.text, margin: '0 0 10px' }}>
-                          Map Template Variables
-                        </h4>
-                        <p style={{ fontSize: '12px', color: C.textMid, margin: '0 0 14px' }}>
-                          Align variables in the approved message with the headers from your uploaded file:
-                        </p>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
-                          {selectedTemplate.variables.map((variable) => (
-                            <div key={variable} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {/* ── VAR 1 INPUT CARD ── */}
+                        <div
+                          style={{
+                            backgroundColor: C.card,
+                            borderRadius: '10px',
+                            border: '1px solid #BFDBFE',
+                            padding: '16px',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <span
                                 style={{
-                                  fontSize: '13px',
-                                  fontWeight: '600',
-                                  color: '#4F46E5',
-                                  minWidth: '130px',
+                                  backgroundColor: '#DBEAFE',
+                                  color: '#1E40AF',
+                                  fontSize: '11px',
+                                  fontWeight: '800',
+                                  padding: '2px 8px',
+                                  borderRadius: '6px',
                                   fontFamily: 'monospace',
                                 }}
                               >
-                                {`{{${variable}}}`}
+                                ##var1##
                               </span>
-                              <span style={{ color: C.textMid }}>→</span>
-                              <select
-                                value={variableMappings[variable] || ''}
-                                onChange={(e) =>
-                                  setVariableMappings({
-                                    ...variableMappings,
-                                    [variable]: e.target.value,
-                                  })
-                                }
+                              <strong style={{ fontSize: '13px', color: C.text }}>Greeting / Brand Name</strong>
+                            </div>
+
+                            {uploadResult?.columns?.length > 0 && (
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setVar1Source('custom')}
+                                  style={{
+                                    fontSize: '11px',
+                                    padding: '3px 8px',
+                                    borderRadius: '5px',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    backgroundColor: var1Source === 'custom' ? '#2563EB' : 'transparent',
+                                    color: var1Source === 'custom' ? '#FFFFFF' : C.textMid,
+                                    fontWeight: '600',
+                                  }}
+                                >
+                                  Custom
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setVar1Source('column')}
+                                  style={{
+                                    fontSize: '11px',
+                                    padding: '3px 8px',
+                                    borderRadius: '5px',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    backgroundColor: var1Source === 'column' ? '#2563EB' : 'transparent',
+                                    color: var1Source === 'column' ? '#FFFFFF' : C.textMid,
+                                    fontWeight: '600',
+                                  }}
+                                >
+                                  File Column
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          {var1Source === 'custom' ? (
+                            <div>
+                              <label
+                                htmlFor="var1-input"
+                                style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: C.text, marginBottom: '6px' }}
+                              >
+                                Enter Var 1 Value <span style={{ color: '#EF4444' }}>*</span>
+                              </label>
+                              <input
+                                id="var1-input"
+                                type="text"
+                                placeholder="e.g. HDFC BANK or GharKaPaisa"
+                                value={var1Value}
+                                onChange={(e) => setVar1Value(e.target.value)}
                                 style={{
-                                  flex: 1,
-                                  padding: '8px 12px',
-                                  borderRadius: '6px',
+                                  width: '100%',
+                                  padding: '10px 14px',
+                                  borderRadius: '8px',
                                   border: `1px solid ${C.border}`,
-                                  backgroundColor: C.card,
+                                  backgroundColor: C.inputBg,
                                   color: C.text,
                                   fontSize: '13px',
+                                  outline: 'none',
+                                  boxSizing: 'border-box',
+                                }}
+                              />
+                              <div style={{ fontSize: '11px', color: C.textMid, marginTop: '6px' }}>
+                                Replaces <strong>##var1##</strong> in &quot;Hello! Greetings from <strong>{var1Value || '##var1##'}</strong>&quot;
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <label
+                                htmlFor="var1-col-select"
+                                style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: C.text, marginBottom: '6px' }}
+                              >
+                                Map Var 1 from Column <span style={{ color: '#EF4444' }}>*</span>
+                              </label>
+                              <select
+                                id="var1-col-select"
+                                value={var1Column}
+                                onChange={(e) => setVar1Column(e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  padding: '10px 14px',
+                                  borderRadius: '8px',
+                                  border: `1px solid ${C.border}`,
+                                  backgroundColor: C.inputBg,
+                                  color: C.text,
+                                  fontSize: '13px',
+                                  outline: 'none',
+                                  boxSizing: 'border-box',
                                 }}
                               >
-                                <option value="">Auto-Detect ({variable})</option>
+                                <option value="">-- Choose file column --</option>
                                 {(uploadResult?.columns || []).map((col) => (
                                   <option key={col} value={col}>
                                     {col}
                                   </option>
                                 ))}
                               </select>
+                              <div style={{ fontSize: '11px', color: C.textMid, marginTop: '6px' }}>
+                                Fallback value if empty in row:{' '}
+                                <input
+                                  type="text"
+                                  value={var1Value}
+                                  onChange={(e) => setVar1Value(e.target.value)}
+                                  placeholder="Default fallback"
+                                  style={{
+                                    marginTop: '4px',
+                                    width: '100%',
+                                    padding: '6px 10px',
+                                    borderRadius: '6px',
+                                    border: `1px solid ${C.border}`,
+                                    backgroundColor: C.inputBg,
+                                    color: C.text,
+                                    fontSize: '12px',
+                                    boxSizing: 'border-box',
+                                  }}
+                                />
+                              </div>
                             </div>
-                          ))}
+                          )}
+                        </div>
+
+                        {/* ── VAR 2 INPUT CARD ── */}
+                        <div
+                          style={{
+                            backgroundColor: C.card,
+                            borderRadius: '10px',
+                            border: '1px solid #BBF7D0',
+                            padding: '16px',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span
+                                style={{
+                                  backgroundColor: '#DCFCE7',
+                                  color: '#166534',
+                                  fontSize: '11px',
+                                  fontWeight: '800',
+                                  padding: '2px 8px',
+                                  borderRadius: '6px',
+                                  fontFamily: 'monospace',
+                                }}
+                              >
+                                ##var2##
+                              </span>
+                              <strong style={{ fontSize: '13px', color: C.text }}>Apply Link / URL</strong>
+                            </div>
+
+                            {uploadResult?.columns?.length > 0 && (
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setVar2Source('custom')}
+                                  style={{
+                                    fontSize: '11px',
+                                    padding: '3px 8px',
+                                    borderRadius: '5px',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    backgroundColor: var2Source === 'custom' ? '#16A34A' : 'transparent',
+                                    color: var2Source === 'custom' ? '#FFFFFF' : C.textMid,
+                                    fontWeight: '600',
+                                  }}
+                                >
+                                  Custom
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setVar2Source('column')}
+                                  style={{
+                                    fontSize: '11px',
+                                    padding: '3px 8px',
+                                    borderRadius: '5px',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    backgroundColor: var2Source === 'column' ? '#16A34A' : 'transparent',
+                                    color: var2Source === 'column' ? '#FFFFFF' : C.textMid,
+                                    fontWeight: '600',
+                                  }}
+                                >
+                                  File Column
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          {var2Source === 'custom' ? (
+                            <div>
+                              <label
+                                htmlFor="var2-input"
+                                style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: C.text, marginBottom: '6px' }}
+                              >
+                                Enter Var 2 Value <span style={{ color: '#EF4444' }}>*</span>
+                              </label>
+                              <input
+                                id="var2-input"
+                                type="text"
+                                placeholder="e.g. https://gharkapaisa.com/apply"
+                                value={var2Value}
+                                onChange={(e) => setVar2Value(e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  padding: '10px 14px',
+                                  borderRadius: '8px',
+                                  border: `1px solid ${C.border}`,
+                                  backgroundColor: C.inputBg,
+                                  color: C.text,
+                                  fontSize: '13px',
+                                  outline: 'none',
+                                  boxSizing: 'border-box',
+                                }}
+                              />
+                              <div style={{ fontSize: '11px', color: C.textMid, marginTop: '6px' }}>
+                                Replaces <strong>##var2##</strong> in &quot;[Apply here] <strong>{var2Value || '##var2##'}</strong>&quot;
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <label
+                                htmlFor="var2-col-select"
+                                style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: C.text, marginBottom: '6px' }}
+                              >
+                                Map Var 2 from Column <span style={{ color: '#EF4444' }}>*</span>
+                              </label>
+                              <select
+                                id="var2-col-select"
+                                value={var2Column}
+                                onChange={(e) => setVar2Column(e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  padding: '10px 14px',
+                                  borderRadius: '8px',
+                                  border: `1px solid ${C.border}`,
+                                  backgroundColor: C.inputBg,
+                                  color: C.text,
+                                  fontSize: '13px',
+                                  outline: 'none',
+                                  boxSizing: 'border-box',
+                                }}
+                              >
+                                <option value="">-- Choose file column --</option>
+                                {(uploadResult?.columns || []).map((col) => (
+                                  <option key={col} value={col}>
+                                    {col}
+                                  </option>
+                                ))}
+                              </select>
+                              <div style={{ fontSize: '11px', color: C.textMid, marginTop: '6px' }}>
+                                Fallback value if empty in row:{' '}
+                                <input
+                                  type="text"
+                                  value={var2Value}
+                                  onChange={(e) => setVar2Value(e.target.value)}
+                                  placeholder="Default fallback URL"
+                                  style={{
+                                    marginTop: '4px',
+                                    width: '100%',
+                                    padding: '6px 10px',
+                                    borderRadius: '6px',
+                                    border: `1px solid ${C.border}`,
+                                    backgroundColor: C.inputBg,
+                                    color: C.text,
+                                    fontSize: '12px',
+                                    boxSizing: 'border-box',
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
-                    )}
+
+                      {/* ── LIVE PREVIEW WITH ENTERED VALUES ── */}
+                      <div
+                        style={{
+                          backgroundColor: C.card,
+                          borderRadius: '10px',
+                          border: `1px solid ${C.border}`,
+                          padding: '16px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: '700', color: C.text, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            Live Rendered Message Preview:
+                          </span>
+                          <span style={{ fontSize: '12px', color: '#4F46E5', fontWeight: '600' }}>
+                            {renderMessageContent().length} characters • {Math.ceil(renderMessageContent().length / 160)} SMS segment(s)
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '13px',
+                            color: C.text,
+                            backgroundColor: isDark ? '#111827' : '#F1F5F9',
+                            padding: '14px',
+                            borderRadius: '8px',
+                            lineHeight: '1.5',
+                            whiteSpace: 'pre-line',
+                          }}
+                        >
+                          {renderMessageContent()}
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Navigation Buttons */}
@@ -1691,6 +2034,54 @@ export default function BulkSmsDashboard({ defaultTab }) {
                         {selectedTemplate?.sender_id}), and approved URLs are locked. Modifications at send time are
                         strictly blocked to comply with TRAI regulations.
                       </div>
+                    </div>
+
+                    {/* Active Variable Values Summary Strip */}
+                    <div
+                      style={{
+                        marginTop: '16px',
+                        backgroundColor: isDark ? '#1F2937' : '#F8FAFC',
+                        borderRadius: '10px',
+                        border: `1px solid ${C.border}`,
+                        padding: '14px 18px',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '12px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+                        <div>
+                          <span style={{ fontSize: '11px', color: C.textMid, display: 'block' }}>Var 1 (##var1##)</span>
+                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#2563EB' }}>
+                            {var1Source === 'column' ? `File Column (${var1Column || 'None'})` : var1Value}
+                          </span>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '11px', color: C.textMid, display: 'block' }}>Var 2 (##var2##)</span>
+                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#16A34A', wordBreak: 'break-all' }}>
+                            {var2Source === 'column' ? `File Column (${var2Column || 'None'})` : var2Value}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setCurrentStep(2)}
+                        style={{
+                          fontSize: '12px',
+                          color: '#4F46E5',
+                          backgroundColor: 'rgba(79, 70, 229, 0.08)',
+                          border: 'none',
+                          padding: '6px 14px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontWeight: '600',
+                        }}
+                      >
+                        Edit Var 1 / Var 2
+                      </button>
                     </div>
                   </div>
 
@@ -2023,10 +2414,66 @@ export default function BulkSmsDashboard({ defaultTab }) {
                       </div>
 
                       <div>
+                        <span style={{ fontSize: '12px', color: C.textMid }}>Var 1 (##var1##)</span>
+                        <div style={{ fontSize: '14px', fontWeight: '700', color: '#2563EB', marginTop: '2px', wordBreak: 'break-word' }}>
+                          {var1Source === 'column' ? `Mapped from "${var1Column}" (Fallback: ${var1Value})` : var1Value}
+                        </div>
+                      </div>
+
+                      <div>
+                        <span style={{ fontSize: '12px', color: C.textMid }}>Var 2 (##var2##)</span>
+                        <div style={{ fontSize: '14px', fontWeight: '700', color: '#16A34A', marginTop: '2px', wordBreak: 'break-word' }}>
+                          {var2Source === 'column' ? `Mapped from "${var2Column}" (Fallback: ${var2Value})` : var2Value}
+                        </div>
+                      </div>
+
+                      <div>
                         <span style={{ fontSize: '12px', color: C.textMid }}>Schedule Mode</span>
                         <div style={{ fontSize: '14px', fontWeight: '600', color: C.text, marginTop: '2px' }}>
                           {scheduleType === 'SEND_NOW' ? 'Send Immediately' : `${scheduleDate} at ${scheduleTime} (IST)`}
                         </div>
+                      </div>
+                    </div>
+
+                    {/* Final Rendered Message Preview Box */}
+                    <div
+                      style={{
+                        backgroundColor: isDark ? '#111827' : '#F8FAFC',
+                        borderRadius: '10px',
+                        border: `1px solid ${C.border}`,
+                        padding: '16px 20px',
+                        marginBottom: '24px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '700', color: C.text, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          Final Outgoing Message Preview:
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentStep(2)}
+                          style={{
+                            fontSize: '11px',
+                            color: '#4F46E5',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            textDecoration: 'underline',
+                          }}
+                        >
+                          Edit Var 1 / Var 2 Values
+                        </button>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '13px',
+                          color: C.text,
+                          lineHeight: '1.5',
+                          whiteSpace: 'pre-line',
+                        }}
+                      >
+                        {renderMessageContent()}
                       </div>
                     </div>
 
@@ -2433,6 +2880,7 @@ export default function BulkSmsDashboard({ defaultTab }) {
                     <th style={{ padding: '12px 16px', textAlign: 'left', color: C.textMid }}>Template Name</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', color: C.textMid }}>Sender ID</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', color: C.textMid }}>MSG91 Template ID</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: C.textMid }}>Variables</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', color: C.textMid }}>Type</th>
                     <th style={{ padding: '12px 16px', textAlign: 'center', color: C.textMid }}>Approval Status</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', color: C.textMid }}>Created Date</th>
@@ -2448,6 +2896,14 @@ export default function BulkSmsDashboard({ defaultTab }) {
                       </td>
                       <td style={{ padding: '14px 16px', fontFamily: 'monospace', color: C.textMid }}>
                         {t.provider_template_id}
+                      </td>
+                      <td style={{ padding: '14px 16px', fontFamily: 'monospace' }}>
+                        <span style={{ backgroundColor: '#DBEAFE', color: '#1E40AF', padding: '2px 6px', borderRadius: '4px', fontSize: '11px', marginRight: '4px' }}>
+                          ##var1##
+                        </span>
+                        <span style={{ backgroundColor: '#DCFCE7', color: '#166534', padding: '2px 6px', borderRadius: '4px', fontSize: '11px' }}>
+                          ##var2##
+                        </span>
                       </td>
                       <td style={{ padding: '14px 16px', color: C.textMid }}>{t.template_type || 'Promotional'}</td>
                       <td style={{ padding: '14px 16px', textAlign: 'center' }}>
@@ -2481,7 +2937,11 @@ export default function BulkSmsDashboard({ defaultTab }) {
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                           <button
                             type="button"
-                            onClick={() => setPreviewingTemplate(t)}
+                            onClick={() => {
+                              setModalTestVar1(var1Value || 'HDFC BANK');
+                              setModalTestVar2(var2Value || 'https://gharkapaisa.com/apply');
+                              setPreviewingTemplate(t);
+                            }}
                             style={{
                               padding: '5px 12px',
                               borderRadius: '6px',
@@ -2490,16 +2950,17 @@ export default function BulkSmsDashboard({ defaultTab }) {
                               color: C.text,
                               fontSize: '12px',
                               cursor: 'pointer',
+                              fontWeight: '600',
                             }}
                           >
-                            Preview
+                            Preview & Test Variables
                           </button>
                           <button
                             type="button"
                             onClick={() => {
                               setSelectedTemplate(t);
                               setActiveTab('create');
-                              setCurrentStep(1);
+                              setCurrentStep(2);
                             }}
                             style={{
                               padding: '5px 12px',
@@ -2833,19 +3294,89 @@ export default function BulkSmsDashboard({ defaultTab }) {
               </button>
             </div>
 
+            {/* Interactive Test Inputs for Var 1 and Var 2 */}
             <div
               style={{
                 backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
                 padding: '16px',
-                borderRadius: '12px',
-                fontSize: '13px',
-                color: C.text,
-                lineHeight: '1.5',
-                whiteSpace: 'pre-line',
+                borderRadius: '10px',
                 border: `1px solid ${C.border}`,
               }}
             >
-              {previewingTemplate.content}
+              <div style={{ fontSize: '12px', fontWeight: '700', color: C.text, marginBottom: '10px' }}>
+                Test Variable Values (Live Preview):
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                <div>
+                  <label htmlFor="test-modal-var1" style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: C.textMid, marginBottom: '4px' }}>
+                    Enter Var 1 Value (##var1##):
+                  </label>
+                  <input
+                    id="test-modal-var1"
+                    type="text"
+                    value={modalTestVar1}
+                    onChange={(e) => setModalTestVar1(e.target.value)}
+                    placeholder="e.g. HDFC BANK"
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: `1px solid ${C.border}`,
+                      backgroundColor: C.card,
+                      color: C.text,
+                      fontSize: '12px',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="test-modal-var2" style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: C.textMid, marginBottom: '4px' }}>
+                    Enter Var 2 Value (##var2##):
+                  </label>
+                  <input
+                    id="test-modal-var2"
+                    type="text"
+                    value={modalTestVar2}
+                    onChange={(e) => setModalTestVar2(e.target.value)}
+                    placeholder="e.g. https://gharkapaisa.com/apply"
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: `1px solid ${C.border}`,
+                      backgroundColor: C.card,
+                      color: C.text,
+                      fontSize: '12px',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Rendered SMS Preview with test values */}
+            <div>
+              <div style={{ fontSize: '11px', fontWeight: '700', color: C.textMid, textTransform: 'uppercase', marginBottom: '6px' }}>
+                Rendered SMS Body:
+              </div>
+              <div
+                style={{
+                  backgroundColor: isDark ? '#111827' : '#F1F5F9',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  color: C.text,
+                  lineHeight: '1.5',
+                  whiteSpace: 'pre-line',
+                  border: `1px solid ${C.border}`,
+                }}
+              >
+                {previewingTemplate.content
+                  .replace(/##var1##/gi, modalTestVar1 || '##var1##')
+                  .replace(/{{var1}}/gi, modalTestVar1 || '##var1##')
+                  .replace(/##var2##/gi, modalTestVar2 || '##var2##')
+                  .replace(/{{var2}}/gi, modalTestVar2 || '##var2##')}
+              </div>
             </div>
 
             {previewingTemplate.preview_url && (
@@ -2874,9 +3405,11 @@ export default function BulkSmsDashboard({ defaultTab }) {
                 type="button"
                 onClick={() => {
                   setSelectedTemplate(previewingTemplate);
+                  setVar1Value(modalTestVar1);
+                  setVar2Value(modalTestVar2);
                   setPreviewingTemplate(null);
                   setActiveTab('create');
-                  setCurrentStep(1);
+                  setCurrentStep(2);
                 }}
                 style={{
                   padding: '8px 20px',
@@ -2889,7 +3422,7 @@ export default function BulkSmsDashboard({ defaultTab }) {
                   cursor: 'pointer',
                 }}
               >
-                Use Template
+                Use Template with These Values
               </button>
             </div>
           </div>

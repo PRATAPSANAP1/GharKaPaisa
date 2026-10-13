@@ -34,59 +34,20 @@ const ensureBulkSmsTables = async () => {
   return ensuringPromise;
 };
 
-// Seed default approved templates
+// Seed default approved template (Single template required per business rule)
 const DEFAULT_TEMPLATES = [
   {
-    id: 'tpl-hdfc-loan-001',
-    name: 'HDFC Pre-Approved Loan',
+    id: 'tpl-preapproved-loan-001',
+    name: 'Pre-Approved Credit Card Loan Offer',
     provider: 'MSG91',
     provider_template_id: '6a8b2b479cac2288a3094b42',
     sender_id: 'GHARKP',
-    content: `Hello! Greetings from HDFC BANK.\n\nYou have a pre-approved loan on your credit card with instant disbursal in 10 seconds.\n\nHow much loan amount are you looking for?\n\nApply Here: https://gharkapaisa.com/apply\n\nYOHESA MARKETING CONSULTATION PRIVATE LIMITED`,
+    content: `Hello! Greetings from ##var1## You have a pre-approved loan on your credit card with instant disbursal in 10 seconds. How much loan amount are you looking for?\n\n[Apply here] ##var2##\n-YOHESA MARKETING CONSULTATION PRIVATE LIMITED\n-GharKaPaisa`,
     template_type: 'Promotional',
     approval_status: 'APPROVED',
-    variables: ['customer_name', 'loan_amount', 'bank_name'],
+    variables: ['var1', 'var2'],
     preview_url: 'https://gharkapaisa.com/apply',
-    created_at: new Date('2026-09-01T10:00:00Z'),
-  },
-  {
-    id: 'tpl-gkp-personal-002',
-    name: 'GharKaPaisa Instant Personal Loan',
-    provider: 'MSG91',
-    provider_template_id: '6a8b2ba19aad595e3402bb84',
-    sender_id: 'GHARKP',
-    content: `Dear {{customer_name}}, congratulations! You are eligible for an instant personal loan up to Rs. {{loan_amount}} at lowest interest rates from GharKaPaisa partner banks.\n\nCheck offer & apply: https://gharkapaisa.com/loans\n\nYOHESA MARKETING CONSULTATION PRIVATE LIMITED`,
-    template_type: 'Promotional',
-    approval_status: 'APPROVED',
-    variables: ['customer_name', 'loan_amount'],
-    preview_url: 'https://gharkapaisa.com/loans',
-    created_at: new Date('2026-09-10T10:00:00Z'),
-  },
-  {
-    id: 'tpl-cards-preapproved-003',
-    name: 'SBI & HDFC Credit Card Pre-Approved',
-    provider: 'MSG91',
-    provider_template_id: '6a8b2c5e05a2ec7fac0b3909',
-    sender_id: 'GHARKP',
-    content: `Hi {{customer_name}}, get Lifetime Free Credit Card with zero joining fee, instant approval & exclusive rewards.\n\nApply now: https://gharkapaisa.com/cards\n\nYOHESA MARKETING CONSULTATION PRIVATE LIMITED`,
-    template_type: 'Promotional',
-    approval_status: 'APPROVED',
-    variables: ['customer_name'],
-    preview_url: 'https://gharkapaisa.com/cards',
-    created_at: new Date('2026-09-15T10:00:00Z'),
-  },
-  {
-    id: 'tpl-hdfc-kyc-pending-004',
-    name: 'Pre-Approved KYC Verification Notice',
-    provider: 'MSG91',
-    provider_template_id: '6a8b2d119cbf443198f1234a',
-    sender_id: 'GHARKP',
-    content: `Dear {{customer_name}}, your loan application requires quick Aadhaar/PAN verification to proceed with disbursal. Complete verification here: https://gharkapaisa.com/kyc\n\nYOHESA MARKETING CONSULTATION PRIVATE LIMITED`,
-    template_type: 'Transactional',
-    approval_status: 'APPROVED',
-    variables: ['customer_name'],
-    preview_url: 'https://gharkapaisa.com/kyc',
-    created_at: new Date('2026-09-20T10:00:00Z'),
+    created_at: new Date('2026-10-01T10:00:00Z'),
   },
 ];
 
@@ -328,7 +289,11 @@ const getTemplates = async () => {
         SELECT id, name, provider, provider_template_id, sender_id, content,
                template_type, approval_status, variables, preview_url, created_at
         FROM sms_templates
+        WHERE id = 'tpl-preapproved-loan-001' 
+           OR provider_template_id = '6a8b2b479cac2288a3094b42'
+           OR content LIKE '%##var1##%'
         ORDER BY created_at DESC
+        LIMIT 1
       `);
       if (res.rows && res.rows.length > 0) {
         return res.rows;
@@ -342,7 +307,11 @@ const getTemplates = async () => {
             SELECT id, name, provider, provider_template_id, sender_id, content,
                    template_type, approval_status, variables, preview_url, created_at
             FROM sms_templates
+            WHERE id = 'tpl-preapproved-loan-001' 
+               OR provider_template_id = '6a8b2b479cac2288a3094b42'
+               OR content LIKE '%##var1##%'
             ORDER BY created_at DESC
+            LIMIT 1
           `);
           if (retryRes.rows && retryRes.rows.length > 0) return retryRes.rows;
         } catch (retryErr) {}
@@ -370,7 +339,7 @@ const getTemplateById = async (templateId) => {
       logger.warn(`[Bulk-SMS] Database getTemplateById fallback: ${err.message}`);
     }
   }
-  return inMemoryStore.templates.get(templateId) || null;
+  return inMemoryStore.templates.get(templateId) || inMemoryStore.templates.get('tpl-preapproved-loan-001') || DEFAULT_TEMPLATES[0];
 };
 
 /**
@@ -443,6 +412,7 @@ const createCampaign = async ({
   schedule_type = 'SEND_NOW',
   scheduled_at = null,
   recipients = [],
+  custom_variables = {},
   file_name = 'upload.xlsx',
   file_size = 0,
   userId = null,
@@ -497,20 +467,31 @@ const createCampaign = async ({
     updated_at: new Date(),
   };
 
-  const recipientRecords = recipients.map((r, idx) => ({
-    id: `rec-${campaignId}-${idx + 1}`,
-    campaign_id: campaignId,
-    mobile_number: r.mobile_number,
-    normalized_mobile_number: r.normalized_mobile_number || `91${r.mobile_number}`,
-    recipient_name: r.recipient_name || '',
-    status: 'QUEUED',
-    variables: r.variables || {},
-    msg91_message_id: null,
-    sent_at: null,
-    delivered_at: null,
-    failure_reason: null,
-    created_at: new Date(),
-  }));
+  const recipientRecords = recipients.map((r, idx) => {
+    const rVars = r.variables || {};
+    const finalVar1 = rVars.var1 || rVars['##var1##'] || custom_variables?.var1 || '';
+    const finalVar2 = rVars.var2 || rVars['##var2##'] || custom_variables?.var2 || '';
+    return {
+      id: `rec-${campaignId}-${idx + 1}`,
+      campaign_id: campaignId,
+      mobile_number: r.mobile_number,
+      normalized_mobile_number: r.normalized_mobile_number || `91${r.mobile_number}`,
+      recipient_name: r.recipient_name || '',
+      status: 'QUEUED',
+      variables: {
+        ...rVars,
+        var1: finalVar1,
+        var2: finalVar2,
+        '##var1##': finalVar1,
+        '##var2##': finalVar2,
+      },
+      msg91_message_id: null,
+      sent_at: null,
+      delivered_at: null,
+      failure_reason: null,
+      created_at: new Date(),
+    };
+  });
 
   // Persist into memory store
   inMemoryStore.campaigns.set(campaignId, campaignRecord);
@@ -589,10 +570,15 @@ const processCampaignQueueAsync = async (campaignId, template, recipientList) =>
   for (let i = 0; i < recipientList.length; i += batchSize) {
     const batch = recipientList.slice(i, i + batchSize);
 
-    const payloadRecipients = batch.map((r) => ({
-      mobiles: r.normalized_mobile_number,
-      ...r.variables,
-    }));
+    const payloadRecipients = batch.map((r) => {
+      const vars = r.variables || {};
+      return {
+        mobiles: r.normalized_mobile_number,
+        ...vars,
+        var1: vars.var1 || vars['##var1##'] || '',
+        var2: vars.var2 || vars['##var2##'] || '',
+      };
+    });
 
     try {
       const response = await sendBatchViaFlow(
