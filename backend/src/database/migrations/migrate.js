@@ -5031,6 +5031,14 @@ const migrate = async () => {
     logger.error('HDFC Curing Designations migration error note:', hdfcCuringErr.message);
   }
 
+  // Account Activation & Deactivation Lifecycle Migration
+  try {
+    const { migrateAccountActivationLifecycle } = require('./migrate_account_activation_lifecycle');
+    await migrateAccountActivationLifecycle();
+  } catch (accountLifecycleErr) {
+    logger.error('Account Activation Lifecycle migration error note:', accountLifecycleErr.message);
+  }
+
   if (require.main === module) {
     process.exit(0);
   }

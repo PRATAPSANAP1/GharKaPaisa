@@ -490,6 +490,18 @@ const startServer = async () => {
       };
       runAnnouncementScheduler();
       setInterval(runAnnouncementScheduler, 60 * 1000);
+
+      // Initialize Account Activation/Deactivation Lifecycle Scheduler (runs every minute and on startup)
+      const runAccountScheduler = async () => {
+        try {
+          const { processAccountStatusScheduler } = require('./jobs/accountScheduler.job.js');
+          await processAccountStatusScheduler();
+        } catch (err) {
+          logger.error('Account Scheduler Job error:', err.message);
+        }
+      };
+      runAccountScheduler();
+      setInterval(runAccountScheduler, 60 * 1000);
     });
   } catch (err) {
     logger.error('Failed to start server due to database connectivity issue:', err);

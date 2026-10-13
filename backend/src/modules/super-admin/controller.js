@@ -347,6 +347,9 @@ const listAdmins = async (req, res, next) => {
       params.push(roleFilter);
     }
 
+    const { ensureAccountStatusSchema, determineAccountStatus, getWorkingHoursSummary } = require('./accountStatus.service');
+    await ensureAccountStatusSchema();
+
     const { rows: admins } = await query(`
       SELECT 
         id as _id, 
@@ -359,6 +362,17 @@ const listAdmins = async (req, res, next) => {
         department, 
         designation, 
         is_active as "isActive", 
+        is_active,
+        deactivated_at,
+        deactivated_by,
+        deactivation_reason,
+        activated_at,
+        activated_by,
+        activation_scheduled_at,
+        deactivation_scheduled_at,
+        scheduled_status_action,
+        scheduled_by,
+        scheduled_reason,
         COALESCE((to_jsonb(users)->>'has_loc_eoc')::boolean, FALSE) as has_loc_eoc,
         created_by as "createdBy", 
         created_at as "createdAt"
@@ -399,19 +413,25 @@ const listAdmins = async (req, res, next) => {
       if (!adminCategoryMap[a.admin_id][cat]) adminCategoryMap[a.admin_id][cat] = [];
       adminCategoryMap[a.admin_id][cat].push(a.bank_id);
     });
-    const result = admins.map(a => {
+    const result = await Promise.all(admins.map(async a => {
       const assigned = adminBankMap[a._id] || [];
       const hasLocEoc = Boolean(a.has_loc_eoc) || assigned.some(b => b.is_loc_eoc);
+      const accountStatus = determineAccountStatus(a);
+      const whSummary = await getWorkingHoursSummary(a);
+
       return {
         ...a,
         id: a._id,
+        account_status: accountStatus,
+        is_active: a.is_active !== false,
+        working_hours: whSummary,
         has_loc_eoc: hasLocEoc,
         hasLocEoc: hasLocEoc,
         assigned_banks: assigned,
         category_assignments: adminCategoryMap[a._id] || { credit_card: [], loc_eoc: [] },
         bank_ids: adminBankIdMap[a._id] || []
       };
-    });
+    }));
     return success(res, result);
   } catch (err) {
     next(err);
@@ -746,13 +766,16 @@ const blockUser = async (req, res, next) => {
     const newStatus = block ? 'suspended' : 'active';
     const actionName = block ? 'BLOCK_USER' : 'UNBLOCK_USER';
 
-    // 2. Update status in PostgreSQL
+    // 2. Update status and is_active in PostgreSQL
     await query(
-      `UPDATE users SET status = $1::user_status, updated_at = NOW() WHERE id = $2`,
-      [newStatus, targetUser.id]
+      `UPDATE users SET status = $1::user_status, is_active = $2, updated_at = NOW() WHERE id = $3`,
+      [newStatus, !block, targetUser.id]
     );
 
-    // 3. Removed Firebase token revocation
+    // 3. Revoke active refresh tokens if blocked
+    if (block) {
+      await query(`UPDATE refresh_tokens SET revoked = true, revoked_at = NOW() WHERE user_id = $1`, [targetUser.id]);
+    }
 
     // 4. Log to audit logs
     await logAction(req, actionName, targetUser.id, { email: targetUser.email, role: targetUser.role });

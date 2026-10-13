@@ -10,6 +10,7 @@ const notifCtrl = require('../notifications/controller.js');
 const productCtrl = require('../products/controller.js');
 const reportCtrl = require('../reports/controller.js');
 const workingHoursCtrl = require('./workingHours.controller.js');
+const accountCtrl = require('./accountStatus.controller.js');
 
 // Require authentication and super_admin authorization globally for this router
 router.use(jwtAuth);
@@ -31,6 +32,16 @@ router.post('/unlock-user', ctrl.unlockUser);
 router.post('/update-partner-status', ctrl.updatePartnerStatus);
 router.get('/audit-logs', ctrl.getAuditLogs);
 router.get('/referral-analytics', ctrl.getReferralAnalytics);
+
+// Account Activation / Deactivation & Scheduled Lifecycle Management
+router.get('/accounts', accountCtrl.listAccounts);
+router.post('/accounts/activate', accountCtrl.activateAccount);
+router.post('/accounts/:id/activate', accountCtrl.activateAccount);
+router.post('/accounts/deactivate', accountCtrl.deactivateAccount);
+router.post('/accounts/:id/deactivate', accountCtrl.deactivateAccount);
+router.post('/accounts/:id/schedule', accountCtrl.scheduleAccountStatus);
+router.post('/accounts/:id/cancel-schedule', accountCtrl.cancelScheduledStatus);
+router.get('/accounts/:id/audit-history', accountCtrl.getAccountAuditHistory);
 
 // Working Hours Management
 router.get('/working-hours', workingHoursCtrl.getWorkingHoursConfig);

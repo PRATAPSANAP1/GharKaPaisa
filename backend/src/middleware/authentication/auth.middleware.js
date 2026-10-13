@@ -51,6 +51,7 @@ const syncUser = async (req, res, next) => {
       return unauthorized(res, 'User no longer exists');
     }
 
+    if (user.is_active === false || user.status === 'inactive') return forbidden(res, 'Account deactivated. Contact administrator.');
     if (user.status === 'suspended') return forbidden(res, 'Account suspended. Contact support.');
     if (user.status === 'blocked') return forbidden(res, 'Account blocked. Contact support.');
 

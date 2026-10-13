@@ -470,6 +470,7 @@ const login = async (req, res, next) => {
     if (isLocked(user)) return error(res, 'Account is temporarily locked. Try again later.', 423);
 
 
+    if (user.is_active === false || user.status === 'inactive') return error(res, 'Your account has been deactivated. Please contact administrator.', 403);
     if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
     if (user.status === 'blocked') return error(res, 'Your account has been blocked by the administrator. Please contact support.', 403);
 
@@ -631,6 +632,7 @@ const loginWithMsg91 = async (req, res, next) => {
 
     if (!user) { await security.recordFailedLogin(null, req, 'unknown_account'); return error(res, 'No account found with this mobile number', 401); }
     if (isLocked(user)) return error(res, 'Account is temporarily locked. Try again later.', 423);
+    if (user.is_active === false || user.status === 'inactive') return error(res, 'Your account has been deactivated. Please contact administrator.', 403);
     if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
     if (user.status === 'blocked') return error(res, 'Your account has been blocked by the administrator. Please contact support.', 403);
 
@@ -715,7 +717,7 @@ const refresh = async (req, res, next) => {
 
     // Check if token exists, is not expired, and is not revoked
     const { rows: [tokenRecord] } = await query(`
-      SELECT rt.*, u.email, u.mobile, u.role 
+      SELECT rt.*, u.email, u.mobile, u.role, u.is_active, u.status 
       FROM refresh_tokens rt
       JOIN users u ON u.id = rt.user_id
       WHERE rt.token_hash = $1 AND rt.revoked = false AND rt.expires_at > NOW()
@@ -724,6 +726,12 @@ const refresh = async (req, res, next) => {
     if (!tokenRecord) {
       clearRefreshTokenCookie(res);
       return error(res, 'Invalid or expired refresh token', 401);
+    }
+
+    if (tokenRecord.is_active === false || ['inactive', 'suspended', 'blocked'].includes(String(tokenRecord.status || '').toLowerCase())) {
+      await query(`UPDATE refresh_tokens SET revoked = true, revoked_at = NOW() WHERE user_id = $1`, [tokenRecord.user_id]);
+      clearRefreshTokenCookie(res);
+      return error(res, 'Your account has been deactivated. Please contact administrator.', 403);
     }
 
     // Revoke the old refresh token (Rotation)
@@ -1211,6 +1219,7 @@ const loginPassword = async (req, res, next) => {
     }
 
 
+    if (user.is_active === false || user.status === 'inactive') return error(res, 'Your account has been deactivated. Please contact administrator.', 403);
     if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
     if (user.status === 'blocked') return error(res, 'Your account has been blocked by the administrator. Please contact support.', 403);
 
