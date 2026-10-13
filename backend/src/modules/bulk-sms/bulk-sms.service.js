@@ -40,9 +40,9 @@ const DEFAULT_TEMPLATES = [
     id: 'tpl-preapproved-loan-001',
     name: 'Pre-Approved Credit Card Loan Offer',
     provider: 'MSG91',
-    provider_template_id: '6a8b2b479cac2288a3094b42',
+    provider_template_id: process.env.MSG91_BULK_SMS_TEMPLATE_ID || '6acdf0660b357ef1f10a6343',
     sender_id: 'GHARKP',
-    content: `Hello! Greetings from ##var1## You have a pre-approved loan on your credit card with instant disbursal in 10 seconds. How much loan amount are you looking for?\n\n[Apply here] ##var2##\n-YOHESA MARKETING CONSULTATION PRIVATE LIMITED\n-GharKaPaisa`,
+    content: `Hello! Greetings from ##var1##\n\nYou have a pre-approved loan on your credit card with instant disbursal in 10 seconds.\n\nHow much loan amount are you looking for?\n\n[Apply here] ##var2##\n-YOHESA MARKETING CONSULTATION PRIVATE LIMITED\n-GharKaPaisa`,
     template_type: 'Promotional',
     approval_status: 'APPROVED',
     variables: ['var1', 'var2'],
@@ -783,7 +783,7 @@ const getCampaignRecipients = async (campaignId, { page = 1, limit = 50, status 
   return {
     recipients: paged.map((r) => ({
       ...r,
-      masked_mobile: maskMobileNumber(r.mobile_number),
+      masked_mobile: r.mobile_number, // show full number
     })),
     pagination: {
       page: Number(page),
@@ -837,14 +837,13 @@ const exportCampaignCsv = async (campaignId) => {
   const rows = [headers.join(',')];
 
   recipients.forEach((r, idx) => {
-    const masked = maskMobileNumber(r.mobile_number);
     const sentAt = r.sent_at ? new Date(r.sent_at).toISOString() : '';
     const deliveredAt = r.delivered_at ? new Date(r.delivered_at).toISOString() : '';
     const safeReason = (r.failure_reason || '').replace(/"/g, '""');
 
     rows.push([
       idx + 1,
-      masked,
+      r.mobile_number, // full number
       `"${r.recipient_name || ''}"`,
       r.status,
       r.msg91_message_id || 'N/A',
