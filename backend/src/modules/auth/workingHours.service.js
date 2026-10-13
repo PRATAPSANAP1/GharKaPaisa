@@ -220,7 +220,8 @@ async function resolvePolicyForUser(user, dayName) {
         isEnabled: pol.is_enabled,
         isWorking: daySched.is_working !== false,
         startTime: daySched.start_time || '09:30 AM',
-        endTime: daySched.end_time || '08:00 PM'
+        endTime: daySched.end_time || '08:00 PM',
+        scheduleConfig: schedConfig
       };
     }
 

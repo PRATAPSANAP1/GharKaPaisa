@@ -14,6 +14,8 @@ const getWorkingHoursConfig = async (req, res, next) => {
     const { dateStr, dayName } = getKolkataTimeInfo();
     const { resolvePolicyForUser } = require('../auth/workingHours.service');
 
+    const { determineAccountStatus, activateAccount, deactivateAccount } = require('./accountStatus.service');
+
     // 1. Fetch global/default config
     const { rows: globalRows } = await query(`
       SELECT * FROM admin_working_hours 
@@ -21,20 +23,21 @@ const getWorkingHoursConfig = async (req, res, next) => {
       LIMIT 1
     `);
     const defaultConfig = globalRows[0] || {
-      start_time: '09:30 AM',
-      end_time: '08:00 PM',
+      start_time: '09:00 AM',
+      end_time: '06:00 PM',
       timezone: 'Asia/Kolkata',
       is_enabled: true
     };
 
-    // 2. Fetch all admin/operational users
+    // 2. Fetch all users across all roles (Admin, Employee, Partner, Viewer, Moderator, etc.)
     const { rows: users } = await query(`
       SELECT 
         u.id, u.full_name, u.email, u.mobile, u.role, u.designation, u.status, u.employee_id,
+        u.is_active, u.activation_scheduled_at, u.deactivation_scheduled_at,
         wh.start_time, wh.end_time, wh.is_enabled as user_is_enabled, wh.id as working_hour_id
       FROM users u
       LEFT JOIN admin_working_hours wh ON wh.user_id = u.id
-      WHERE u.role IN ('ADMIN', 'EMPLOYEE', 'HR', 'SUPER_ADMIN')
+      WHERE u.role IS NOT NULL
       ORDER BY u.created_at DESC
     `);
 
@@ -65,9 +68,30 @@ const getWorkingHoursConfig = async (req, res, next) => {
     // Clean up any corrupt legacy 10:00 AM rows in admin_working_hours
     await query(`
       UPDATE admin_working_hours 
-      SET end_time = '08:00 PM' 
+      SET end_time = '06:00 PM' 
       WHERE UPPER(end_time) IN ('10:00 AM', '10:00AM', '10:00')
     `).catch(() => {});
+
+    const dayShortMap = {
+      monday: 'Mon',
+      tuesday: 'Tue',
+      wednesday: 'Wed',
+      thursday: 'Thu',
+      friday: 'Fri',
+      saturday: 'Sat',
+      sunday: 'Sun'
+    };
+    const daysOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+    const rolePrefixMap = {
+      ADMIN: 'ADMIN',
+      SUPER_ADMIN: 'ADMIN',
+      EMPLOYEE: 'EMP',
+      PARTNER: 'PART',
+      VIEWER: 'VIEW',
+      MODERATOR: 'MOD',
+      HR: 'HR'
+    };
 
     // Combine users with effective parameters
     const userList = await Promise.all(users.map(async u => {
@@ -76,12 +100,12 @@ const getWorkingHoursConfig = async (req, res, next) => {
       
       const policyRes = await resolvePolicyForUser(u, dayName);
 
-      let startTime = u.start_time || policyRes.startTime || defaultConfig.start_time || '09:30 AM';
-      let baseEndTime = u.end_time || policyRes.endTime || defaultConfig.end_time || '08:00 PM';
+      let startTime = u.start_time || policyRes.startTime || defaultConfig.start_time || '09:00 AM';
+      let baseEndTime = u.end_time || policyRes.endTime || defaultConfig.end_time || '06:00 PM';
 
       // Fix invalid 10:00 AM or < 1 hr shift error in baseEndTime
       if (timeToMinutes(baseEndTime) <= timeToMinutes(startTime) + 60) {
-        baseEndTime = defaultConfig.end_time || '08:00 PM';
+        baseEndTime = defaultConfig.end_time || '06:00 PM';
       }
 
       const globalExtension = extensionsToday.find(e => e.apply_to === 'ALL');
@@ -106,21 +130,50 @@ const getWorkingHoursConfig = async (req, res, next) => {
         ? u.user_is_enabled 
         : defaultConfig.is_enabled;
 
+      // Determine weekly working days
+      let weeklyWorkingDays = [];
+      if (policyRes.scheduleConfig && typeof policyRes.scheduleConfig === 'object') {
+        daysOrder.forEach(dayKey => {
+          const d = policyRes.scheduleConfig[dayKey];
+          if (d && d.is_working !== false) {
+            weeklyWorkingDays.push(dayShortMap[dayKey]);
+          }
+        });
+      }
+      if (weeklyWorkingDays.length === 0) {
+        weeklyWorkingDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+      }
+
+      // Format display user ID like PM-ADMIN-0001, PM-EMP-0001, PM-PART-0003
+      const roleUpper = String(u.role || '').toUpperCase();
+      const prefix = rolePrefixMap[roleUpper] || (roleUpper.slice(0, 4) || 'USER');
+      const numPart = String(u.employee_id || u.id || '').replace(/\D/g, '') || String(u.id);
+      const displayUserId = (u.employee_id && u.employee_id.startsWith('PM-'))
+        ? u.employee_id
+        : `PM-${prefix}-${String(numPart).slice(-4).padStart(4, '0')}`;
+
+      // Derive account status: 'active', 'inactive', 'scheduled'
+      const accountStatus = determineAccountStatus(u);
+
       return {
         id: u.id,
+        displayUserId,
         user: u.full_name || u.email,
         email: u.email,
         mobile: u.mobile,
-        designation: u.designation || 'Operation Staff',
+        designation: u.designation || 'Staff',
         role: u.role,
-        employeeId: u.employee_id,
+        employeeId: displayUserId,
         bank: bankDisplay,
         startTime,
         endTime: baseEndTime,
         effectiveStartTime,
         effectiveEndTime,
-        status: isEnabled ? 'Active' : 'Disabled',
+        weeklyWorkingDays,
+        accountStatus, // 'active', 'inactive', 'scheduled'
+        status: accountStatus === 'inactive' ? 'Inactive' : accountStatus === 'scheduled' ? 'Scheduled' : 'Active',
         isEnabled,
+        isActive: accountStatus === 'active',
         isExempt,
         activeExtension: activeExt ? {
           id: activeExt.id,
@@ -159,7 +212,13 @@ const getWorkingHoursConfig = async (req, res, next) => {
     `);
     const distinctDesignations = desigRows.map(r => r.designation);
 
-    const distinctRoles = ['ADMIN', 'EMPLOYEE', 'HR', 'SUPER_ADMIN', 'PARTNER', 'TEAM_MEMBER'];
+    const { rows: roleRows } = await query(`
+      SELECT DISTINCT role FROM users WHERE role IS NOT NULL AND TRIM(role) != '' ORDER BY role ASC
+    `);
+    const distinctRoles = Array.from(new Set([
+      'ADMIN', 'EMPLOYEE', 'PARTNER', 'VIEWER', 'MODERATOR', 'HR', 'SUPER_ADMIN',
+      ...roleRows.map(r => r.role)
+    ]));
 
     return success(res, {
       defaultConfig,
@@ -179,11 +238,12 @@ const getWorkingHoursConfig = async (req, res, next) => {
 /**
  * PUT /api/v1/superadmin/working-hours
  * Update base working hours for specific user, designation, or global default.
+ * Also handles weeklyWorkingDays schedule and accountStatus (active/inactive).
  */
 const updateWorkingHours = async (req, res, next) => {
   try {
     await ensureWorkingHoursTables();
-    const { userId, designation, startTime, endTime, isEnabled, isGlobal } = req.body;
+    const { userId, designation, startTime, endTime, isEnabled, isGlobal, weeklyWorkingDays, accountStatus } = req.body;
 
     if (!startTime || !endTime) {
       return error(res, 'startTime and endTime are required', 400);
@@ -191,13 +251,29 @@ const updateWorkingHours = async (req, res, next) => {
 
     let targetType = 'GLOBAL';
     let targetLabel = 'All Users (Default)';
-    let oldConfigStr = '09:30 AM - 08:00 PM';
+    let oldConfigStr = '09:00 AM - 06:00 PM';
+
+    const dayShortToKey = {
+      Mon: 'monday', Tue: 'tuesday', Wed: 'wednesday', Thu: 'thursday',
+      Fri: 'friday', Sat: 'saturday', Sun: 'sunday'
+    };
+    const schedConfig = {};
+    ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].forEach(k => {
+      const isWorkingDay = Array.isArray(weeklyWorkingDays)
+        ? weeklyWorkingDays.some(w => (dayShortToKey[w] || w.toLowerCase()) === k)
+        : (k !== 'sunday');
+      schedConfig[k] = {
+        is_working: isWorkingDay,
+        start_time: startTime,
+        end_time: endTime
+      };
+    });
 
     if (userId) {
       targetType = 'USER';
       const { rows: [u] } = await query(`SELECT full_name, email, designation FROM users WHERE id::text = $1`, [userId]);
       if (!u) return notFound(res, 'Target user not found');
-      targetLabel = `${u.full_name || u.email} (${u.designation || 'Admin'})`;
+      targetLabel = `${u.full_name || u.email} (${u.designation || 'Staff'})`;
 
       const { rows: [existing] } = await query(`SELECT * FROM admin_working_hours WHERE user_id = $1`, [userId]);
       if (existing) {
@@ -212,6 +288,66 @@ const updateWorkingHours = async (req, res, next) => {
           INSERT INTO admin_working_hours (user_id, start_time, end_time, is_enabled, created_by)
           VALUES ($1, $2, $3, $4, $5)
         `, [userId, startTime, endTime, isEnabled !== false, req.user.id]);
+      }
+
+      // Sync schedule policy if weeklyWorkingDays provided
+      if (Array.isArray(weeklyWorkingDays) && weeklyWorkingDays.length > 0) {
+        const { rows: [existingPol] } = await query(`
+          SELECT id FROM admin_working_hour_policies 
+          WHERE scope_type = 'USER' AND (user_id = $1 OR $1 = ANY(user_ids))
+          LIMIT 1
+        `, [userId]);
+
+        let polId = null;
+        if (existingPol) {
+          polId = existingPol.id;
+          await query(`
+            UPDATE admin_working_hour_policies
+            SET schedule_config = $1::jsonb, is_enabled = $2, updated_at = NOW()
+            WHERE id = $3
+          `, [JSON.stringify(schedConfig), isEnabled !== false, polId]);
+        } else {
+          const { rows: [newPol] } = await query(`
+            INSERT INTO admin_working_hour_policies (name, scope_type, user_id, user_ids, schedule_config, is_enabled, priority, created_by)
+            VALUES ($1, 'USER', $2, ARRAY[$2]::uuid[], $3::jsonb, $4, 100, $5)
+            RETURNING id
+          `, [`User Schedule - ${targetLabel}`, userId, JSON.stringify(schedConfig), isEnabled !== false, req.user.id]);
+          polId = newPol ? newPol.id : null;
+        }
+
+        if (polId) {
+          const days = [
+            { day: 'MONDAY', num: 1, key: 'monday' },
+            { day: 'TUESDAY', num: 2, key: 'tuesday' },
+            { day: 'WEDNESDAY', num: 3, key: 'wednesday' },
+            { day: 'THURSDAY', num: 4, key: 'thursday' },
+            { day: 'FRIDAY', num: 5, key: 'friday' },
+            { day: 'SATURDAY', num: 6, key: 'saturday' },
+            { day: 'SUNDAY', num: 7, key: 'sunday' }
+          ];
+          for (const d of days) {
+            const item = schedConfig[d.key];
+            await query(`
+              INSERT INTO admin_working_hour_schedule_days (policy_id, day_of_week, day_number, is_working, start_time, end_time)
+              VALUES ($1, $2, $3, $4, $5, $6)
+              ON CONFLICT (policy_id, day_of_week) DO UPDATE SET
+                is_working = EXCLUDED.is_working,
+                start_time = EXCLUDED.start_time,
+                end_time = EXCLUDED.end_time,
+                updated_at = NOW()
+            `, [polId, d.day, d.num, item.is_working !== false, item.start_time, item.end_time]);
+          }
+        }
+      }
+
+      // Sync account status if specified
+      if (accountStatus) {
+        const { activateAccount, deactivateAccount } = require('./accountStatus.service');
+        if (accountStatus === 'active') {
+          await activateAccount(userId, req.user.id, { reason: 'Updated via working hours panel' }, req).catch(e => logger.warn(e.message));
+        } else if (accountStatus === 'inactive') {
+          await deactivateAccount(userId, req.user.id, { reason: 'Updated via working hours panel' }, req).catch(e => logger.warn(e.message));
+        }
       }
     } else if (designation) {
       targetType = 'DESIGNATION';
@@ -248,6 +384,53 @@ const updateWorkingHours = async (req, res, next) => {
           VALUES (NULL, NULL, $1, $2, $3, $4)
         `, [startTime, endTime, isEnabled !== false, req.user.id]);
       }
+
+      // Sync global schedule policy
+      if (Array.isArray(weeklyWorkingDays) && weeklyWorkingDays.length > 0) {
+        const { rows: [existingGlobalPol] } = await query(`
+          SELECT id FROM admin_working_hour_policies WHERE scope_type = 'GLOBAL' LIMIT 1
+        `);
+        let globalPolId = null;
+        if (existingGlobalPol) {
+          globalPolId = existingGlobalPol.id;
+          await query(`
+            UPDATE admin_working_hour_policies
+            SET schedule_config = $1::jsonb, is_enabled = $2, updated_at = NOW()
+            WHERE id = $3
+          `, [JSON.stringify(schedConfig), isEnabled !== false, globalPolId]);
+        } else {
+          const { rows: [newGlobalPol] } = await query(`
+            INSERT INTO admin_working_hour_policies (name, scope_type, schedule_config, is_enabled, priority, created_by)
+            VALUES ('Global Organization Schedule', 'GLOBAL', $1::jsonb, $2, 10, $3)
+            RETURNING id
+          `, [JSON.stringify(schedConfig), isEnabled !== false, req.user.id]);
+          globalPolId = newGlobalPol ? newGlobalPol.id : null;
+        }
+
+        if (globalPolId) {
+          const days = [
+            { day: 'MONDAY', num: 1, key: 'monday' },
+            { day: 'TUESDAY', num: 2, key: 'tuesday' },
+            { day: 'WEDNESDAY', num: 3, key: 'wednesday' },
+            { day: 'THURSDAY', num: 4, key: 'thursday' },
+            { day: 'FRIDAY', num: 5, key: 'friday' },
+            { day: 'SATURDAY', num: 6, key: 'saturday' },
+            { day: 'SUNDAY', num: 7, key: 'sunday' }
+          ];
+          for (const d of days) {
+            const item = schedConfig[d.key];
+            await query(`
+              INSERT INTO admin_working_hour_schedule_days (policy_id, day_of_week, day_number, is_working, start_time, end_time)
+              VALUES ($1, $2, $3, $4, $5, $6)
+              ON CONFLICT (policy_id, day_of_week) DO UPDATE SET
+                is_working = EXCLUDED.is_working,
+                start_time = EXCLUDED.start_time,
+                end_time = EXCLUDED.end_time,
+                updated_at = NOW()
+            `, [globalPolId, d.day, d.num, item.is_working !== false, item.start_time, item.end_time]);
+          }
+        }
+      }
     }
 
     // Record audit log
@@ -256,6 +439,8 @@ const updateWorkingHours = async (req, res, next) => {
       targetType,
       oldWorkingHours: oldConfigStr,
       newWorkingHours: `${startTime} - ${endTime}`,
+      weeklyWorkingDays: weeklyWorkingDays || undefined,
+      accountStatus: accountStatus || undefined,
       isEnabled: isEnabled !== false,
       changedBy: req.user.full_name || req.user.email || 'Super Admin'
     });
