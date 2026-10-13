@@ -90,9 +90,9 @@ const migrateBulkSms = async () => {
         id: 'tpl-preapproved-loan-001',
         name: 'Pre-Approved Credit Card Loan Offer',
         provider: 'MSG91',
-        provider_template_id: '6a8b2b479cac2288a3094b42',
+        provider_template_id: process.env.MSG91_BULK_SMS_TEMPLATE_ID || '6acdf0660b357ef1f10a6343',
         sender_id: 'GHARKP',
-        content: `Hello! Greetings from ##var1## You have a pre-approved loan on your credit card with instant disbursal in 10 seconds. How much loan amount are you looking for?\n\n[Apply here] ##var2##\n-YOHESA MARKETING CONSULTATION PRIVATE LIMITED\n-GharKaPaisa`,
+        content: `Hello! Greetings from ##var1##\n\nYou have a pre-approved loan on your credit card with instant disbursal in 10 seconds.\n\nHow much loan amount are you looking for?\n\n[Apply here] ##var2##\n-YOHESA MARKETING CONSULTATION PRIVATE LIMITED\n-GharKaPaisa`,
         template_type: 'Promotional',
         approval_status: 'APPROVED',
         variables: JSON.stringify(['var1', 'var2']),
@@ -100,13 +100,29 @@ const migrateBulkSms = async () => {
       },
     ];
 
+    const correctTemplateId = process.env.MSG91_BULK_SMS_TEMPLATE_ID || '6acdf0660b357ef1f10a6343';
+
+    // Force-update any existing old template rows to the correct template ID & content
+    try {
+      await query(`
+        UPDATE sms_templates
+        SET provider_template_id = $1,
+            content = $2,
+            updated_at = NOW()
+        WHERE id = 'tpl-preapproved-loan-001'
+          AND provider_template_id != $1
+      `, [correctTemplateId, defaultTemplates[0].content]);
+    } catch (updateErr) {
+      logger.warn('[Bulk SMS Migration] Template ID update note:', updateErr.message);
+    }
+
     // Cleanup legacy templates so only this approved template remains
     try {
       await query(`
         DELETE FROM sms_templates 
         WHERE id NOT IN ('tpl-preapproved-loan-001')
-          AND provider_template_id != '6a8b2b479cac2288a3094b42'
-      `);
+          AND provider_template_id NOT IN ($1)
+      `, [correctTemplateId]);
     } catch (cleanupErr) {
       logger.warn('[Bulk SMS Migration] Legacy templates cleanup note:', cleanupErr.message);
     }
@@ -116,7 +132,8 @@ const migrateBulkSms = async () => {
         `INSERT INTO sms_templates (
           id, name, provider, provider_template_id, sender_id, content, template_type, approval_status, variables, preview_url
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        ON CONFLICT (provider_template_id) DO UPDATE SET
+        ON CONFLICT (id) DO UPDATE SET
+          provider_template_id = EXCLUDED.provider_template_id,
           name = EXCLUDED.name,
           content = EXCLUDED.content,
           sender_id = EXCLUDED.sender_id,
