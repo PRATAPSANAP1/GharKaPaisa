@@ -213,7 +213,7 @@ const getWorkingHoursConfig = async (req, res, next) => {
     const distinctDesignations = desigRows.map(r => r.designation);
 
     const { rows: roleRows } = await query(`
-      SELECT DISTINCT role FROM users WHERE role IS NOT NULL AND TRIM(role) != '' ORDER BY role ASC
+      SELECT DISTINCT role::text as role FROM users WHERE role IS NOT NULL AND TRIM(role::text) != '' ORDER BY role::text ASC
     `);
     const distinctRoles = Array.from(new Set([
       'ADMIN', 'EMPLOYEE', 'PARTNER', 'VIEWER', 'MODERATOR', 'HR', 'SUPER_ADMIN',
