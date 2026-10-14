@@ -1801,7 +1801,8 @@ const listApplications = async (req, res, next) => {
       )`;
       const processFilter = ` AND (LOWER(COALESCE(combined.process_type, combined.process_by, 'lead_punching')) IN ('lead_punching', 'partner_punch', 'punching', 'punch_only', 'digital_punching') OR LOWER(COALESCE(combined.process_type, combined.process_by, '')) LIKE '%punch%')`;
       const dispatchFilter = ` AND (COALESCE(combined.dispatch_status, '') = '' OR LOWER(COALESCE(combined.dispatch_status, 'none')) IN ('none', 'na', 'n/a'))`;
-      salesExecFilterSQL = ` ${baseBankAccessFilterSQL} AND ${tataExclusionFilter}${processFilter}${dispatchFilter}`;
+      const claimFilter = ` AND (combined.sales_claimed_by IS NULL OR combined.sales_claimed_by = '' OR combined.sales_claimed_by = '${req.user.id}')`;
+      salesExecFilterSQL = ` ${baseBankAccessFilterSQL} AND ${tataExclusionFilter}${processFilter}${dispatchFilter}${claimFilter}`;
     }
 
     const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
@@ -2056,6 +2057,10 @@ const listApplications = async (req, res, next) => {
           (to_jsonb(a)->>'final_status_operator_code') as final_status_operator_code,
           NULLIF(to_jsonb(a)->>'last_operated_at', '')::timestamptz as last_operated_at,
           COALESCE(NULLIF(to_jsonb(a)->>'last_operator_name', ''), NULLIF(to_jsonb(a)->>'last_operator_code', ''), 'Not Assigned') as currently_working_by,
+          COALESCE(to_jsonb(a)->>'sales_claimed_by', to_jsonb(pad)->>'sales_claimed_by', '') as sales_claimed_by,
+          COALESCE(to_jsonb(a)->>'sales_claimed_by_name', to_jsonb(pad)->>'sales_claimed_by_name', '') as sales_claimed_by_name,
+          COALESCE(to_jsonb(a)->>'sales_claimed_by_code', to_jsonb(pad)->>'sales_claimed_by_code', '') as sales_claimed_by_code,
+          NULLIF(COALESCE(to_jsonb(a)->>'sales_claimed_at', to_jsonb(pad)->>'sales_claimed_at', ''), '')::timestamptz as sales_claimed_at,
           a.submitted_at,
           a.approved_at,
           a.approved_by,
@@ -2230,7 +2235,8 @@ const listApplications = async (req, res, next) => {
         COALESCE(NULLIF(to_jsonb(a)->>'decline_description', ''), NULLIF(to_jsonb(pad)->>'decline_description', '')) as decline_description,
         COALESCE(NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as curing_designation,
         COALESCE(NULLIF(to_jsonb(a)->>'primary_decline_code', ''), NULLIF(to_jsonb(pad)->>'primary_decline_code', ''), NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as primary_decline_code,
-        COALESCE(NULLIF(to_jsonb(a)->>'secondary_decline_code', ''), NULLIF(to_jsonb(pad)->>'secondary_decline_code', '')) as secondary_decline_code
+        COALESCE(NULLIF(to_jsonb(a)->>'secondary_decline_code', ''), NULLIF(to_jsonb(pad)->>'secondary_decline_code', '')) as secondary_decline_code,
+        COALESCE(to_jsonb(a)->>'sales_claimed_by', to_jsonb(pad)->>'sales_claimed_by', '') as sales_claimed_by
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
@@ -2297,7 +2303,8 @@ const listApplications = async (req, res, next) => {
         COALESCE(NULLIF(to_jsonb(a)->>'decline_description', ''), NULLIF(to_jsonb(pad)->>'decline_description', '')) as decline_description,
         COALESCE(NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as curing_designation,
         COALESCE(NULLIF(to_jsonb(a)->>'primary_decline_code', ''), NULLIF(to_jsonb(pad)->>'primary_decline_code', ''), NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as primary_decline_code,
-        COALESCE(NULLIF(to_jsonb(a)->>'secondary_decline_code', ''), NULLIF(to_jsonb(pad)->>'secondary_decline_code', '')) as secondary_decline_code
+        COALESCE(NULLIF(to_jsonb(a)->>'secondary_decline_code', ''), NULLIF(to_jsonb(pad)->>'secondary_decline_code', '')) as secondary_decline_code,
+        COALESCE(to_jsonb(a)->>'sales_claimed_by', to_jsonb(pad)->>'sales_claimed_by', '') as sales_claimed_by
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
@@ -3848,7 +3855,7 @@ const exportApplicationsCSV = async (req, res, next) => {
     const userDesignation = (req.user?.designation || '').toUpperCase();
     const userId = req.user?.id;
 
-    const isAdminOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
+    const isAdminOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_OPERATOR', 'ADMINISTRATIVE SALES OPERATOR'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE_SALES_OPERATOR', 'ADMINISTRATIVE SALES OPERATOR'].includes(userDesignation);
     const isEmployeeRole = userRole === 'EMPLOYEE';
     const hideCustomerMobile = isAdminOperator || isEmployeeRole;
 
@@ -3918,10 +3925,18 @@ const exportApplicationsCSV = async (req, res, next) => {
       whereClause = whereClause ? `${whereClause} AND ${typeFilter}` : `WHERE ${typeFilter}`;
     }
 
+    const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation);
+    if (isSalesExecUser && userId) {
+      const claimFilter = `(combined.sales_claimed_by IS NULL OR combined.sales_claimed_by = '' OR combined.sales_claimed_by = '${userId}')`;
+      whereClause = whereClause ? `${whereClause} AND ${claimFilter}` : `WHERE ${claimFilter}`;
+    }
+
     const { rows } = await query(`
       SELECT * FROM (
         SELECT 
           a.app_number,
+          COALESCE(to_jsonb(a)->>'sales_claimed_by', to_jsonb(pad)->>'sales_claimed_by', '') as sales_claimed_by,
+          COALESCE(to_jsonb(a)->>'sales_claimed_by_name', to_jsonb(pad)->>'sales_claimed_by_name', '') as sales_claimed_by_name,
           COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
           COALESCE(NULLIF(a.mobile, ''), NULLIF(pad.mobile, ''), NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
           c.email as customer_email,
@@ -6452,6 +6467,170 @@ const getApplicationOperatorHistory = async (req, res, next) => {
   }
 };
 
+// POST /applications/:id/claim-request — Claim application by Administrative Sales Operator
+const claimApplicationRequest = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    const { id } = req.params;
+    const userId = req.user.id;
+    const userName = req.user.full_name || req.user.name || 'Sales Operator';
+    const userCode = req.user.user_code || req.user.employee_id || req.user.emp_code || '';
+    const userRole = (req.user.role || '').toUpperCase();
+    const userDesignation = (req.user.designation || '').toUpperCase();
+
+    // Verify operator permission:
+    // Administrative Sales Operator / Sales Executive, or Admin / Super Admin
+    const isSalesUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
+    const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(userRole);
+
+    if (!isSalesUser && !isAdmin) {
+      await client.query('ROLLBACK');
+      return error(res, 'Only Administrative Sales Operators or Administrators can claim an application request', 403);
+    }
+
+    // Row-lock application for concurrency protection
+    const { rows: [app] } = await client.query(`
+      SELECT a.*,
+        COALESCE(to_jsonb(a)->>'sales_claimed_by', to_jsonb(pad)->>'sales_claimed_by', '') as existing_claimed_by,
+        COALESCE(to_jsonb(a)->>'sales_claimed_by_name', to_jsonb(pad)->>'sales_claimed_by_name', '') as existing_claimed_by_name
+      FROM applications a 
+      LEFT JOIN physical_application_details pad ON pad.application_id = a.id
+      WHERE a.id::text = $1 OR a.app_number = $1
+      FOR UPDATE OF a
+    `, [id]);
+
+    if (!app) {
+      await client.query('ROLLBACK');
+      return error(res, 'Application not found', 404);
+    }
+
+    const currentClaimedBy = app.sales_claimed_by || app.existing_claimed_by || '';
+
+    // If claimed by another operator, reject with 409 Conflict
+    if (currentClaimedBy && currentClaimedBy !== userId && !isAdmin) {
+      await client.query('ROLLBACK');
+      const claimantName = app.sales_claimed_by_name || app.existing_claimed_by_name || 'another Administrative Sales Operator';
+      return res.status(409).json({
+        success: false,
+        message: `This application has already been claimed by ${claimantName}.`,
+        claimed_by: currentClaimedBy,
+        claimed_by_name: claimantName,
+        claimed_at: app.sales_claimed_at
+      });
+    }
+
+    // If already claimed by this user, return idempotent success
+    if (currentClaimedBy === userId) {
+      await client.query('ROLLBACK');
+      return success(res, {
+        application_id: app.id,
+        sales_claimed_by: userId,
+        sales_claimed_by_name: app.sales_claimed_by_name || userName,
+        sales_claimed_by_code: app.sales_claimed_by_code || userCode,
+        sales_claimed_at: app.sales_claimed_at
+      }, 'Application is already claimed by you.');
+    }
+
+    const claimedAt = new Date().toISOString();
+
+    // Update application
+    await client.query(`
+      UPDATE applications 
+      SET 
+        sales_claimed_by = $1,
+        sales_claimed_by_name = $2,
+        sales_claimed_by_code = $3,
+        sales_claimed_at = $4,
+        updated_at = NOW()
+      WHERE id = $5
+    `, [userId, userName, userCode, claimedAt, app.id]);
+
+    // Also update physical application details if exists
+    await client.query(`
+      UPDATE physical_application_details
+      SET 
+        sales_claimed_by = $1,
+        sales_claimed_by_name = $2,
+        sales_claimed_by_code = $3,
+        sales_claimed_at = $4,
+        updated_at = NOW()
+      WHERE application_id = $5
+    `, [userId, userName, userCode, claimedAt, app.id]).catch(() => {});
+
+    // Insert timeline record
+    await client.query(`
+      INSERT INTO application_timeline (
+        application_id, 
+        event_type, 
+        title, 
+        description, 
+        performed_by, 
+        created_at
+      )
+      VALUES ($1, $2, $3, $4, $5, NOW())
+    `, [
+      app.id,
+      'SALES_OPERATOR_CLAIM',
+      'Claimed by Sales Operator',
+      `Application claimed by ${userName} (${userCode || userDesignation || 'Sales Operator'})`,
+      userId
+    ]).catch(err => logger.warn('Timeline insert non-fatal warn:', err.message));
+
+    // Also record in operator history
+    try {
+      await ensureOperatorHistoryTable();
+      await client.query(`
+        INSERT INTO application_operator_history (
+          application_id,
+          operator_id,
+          operator_name,
+          operator_role,
+          operator_designation,
+          operator_code,
+          action_type,
+          field_changes,
+          notes,
+          created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+      `, [
+        app.id,
+        userId,
+        userName,
+        userRole,
+        userDesignation,
+        userCode,
+        'CLAIM_REQUEST',
+        JSON.stringify({ sales_claimed_by: userId, sales_claimed_by_name: userName }),
+        `Claimed by ${userName}`,
+      ]).catch(() => {});
+    } catch (e) {}
+
+    // Audit log
+    await logAction(req, 'CLAIM_APPLICATION_REQUEST', app.id, {
+      app_number: app.app_number,
+      sales_claimed_by: userId,
+      sales_claimed_by_name: userName,
+      sales_claimed_by_code: userCode
+    }).catch(() => {});
+
+    await client.query('COMMIT');
+
+    return success(res, {
+      application_id: app.id,
+      sales_claimed_by: userId,
+      sales_claimed_by_name: userName,
+      sales_claimed_by_code: userCode,
+      sales_claimed_at: claimedAt
+    }, 'Application successfully claimed.');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   submitApplication,
   submitPublicApplication,
@@ -6496,7 +6675,8 @@ module.exports = {
   updateRemarkOperatorApplication,
   getRemarkOperatorDashboard,
   getApplicationOperatorHistory,
-  normalizeAssignmentCategory
+  normalizeAssignmentCategory,
+  claimApplicationRequest
 };
 
 

@@ -5039,6 +5039,14 @@ const migrate = async () => {
     logger.error('Account Activation Lifecycle migration error note:', accountLifecycleErr.message);
   }
 
+  // Administrative Sales Operator Claim Migration
+  try {
+    const { migrateSalesOperatorClaim } = require('./migrate_sales_operator_claim');
+    await migrateSalesOperatorClaim();
+  } catch (claimErr) {
+    logger.error('Sales Operator Claim migration error note:', claimErr.message);
+  }
+
   if (require.main === module) {
     process.exit(0);
   }

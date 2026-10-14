@@ -3,7 +3,7 @@ import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import AdminDocumentVerificationModal from '../../admin/reports/AdminDocumentVerificationModal';
 import ExportApplicationsModal from '../../../components/Admin/ExportApplicationsModal';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, Zap, Loader2, UserCheck, CheckCircle2 } from 'lucide-react';
 import { 
   MdSearch, MdFilterList, MdCheckCircle, MdBlock, 
   MdCompareArrows, MdHistory, MdFileDownload, MdClose,
@@ -71,6 +71,7 @@ export default function ManageApplications() {
   const [limit, setLimit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [claimingId, setClaimingId] = useState(null);
 
   // ── FILTER STATES ──
   const [search, setSearch] = useState('');
@@ -351,6 +352,38 @@ export default function ManageApplications() {
     setVerifyModalApp(app);
     setVerifyModalTab(tab);
     setActionMenuAppId(null);
+  };
+
+  const handleClaimRequest = async (app) => {
+    if (!app?.id) return;
+    const confirmMsg = `Do you want to claim Application #${app.app_number || app.id}? Once claimed, it will be assigned to your account and hidden from other Administrative Sales Operators.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      setClaimingId(app.id);
+      const res = await api.post(`/applications/${app.id}/claim-request`);
+      if (res.data?.success) {
+        alert(`Application #${app.app_number || app.id} claimed successfully!`);
+        setApplications(prev => prev.map(item => item.id === app.id ? {
+          ...item,
+          sales_claimed_by: user?.id,
+          sales_claimed_by_name: user?.full_name || user?.name || 'Sales Operator',
+          sales_claimed_by_code: user?.user_code || user?.employee_id || '',
+          sales_claimed_at: new Date().toISOString()
+        } : item));
+      } else {
+        alert(res.data?.message || 'Failed to claim application.');
+      }
+    } catch (err) {
+      console.error('Error claiming application:', err);
+      const errMsg = err?.response?.data?.message || err?.message || 'Failed to claim application.';
+      alert(errMsg);
+      if (err?.response?.status === 409) {
+        fetchApplications();
+      }
+    } finally {
+      setClaimingId(null);
+    }
   };
 
   // Add Remark / Note
@@ -942,6 +975,11 @@ export default function ManageApplications() {
                         <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>
                           {app.created_at ? new Date(app.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
                         </div>
+                        {app.sales_claimed_by && (
+                          <div style={{ marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 6px', borderRadius: '4px', background: app.sales_claimed_by === user?.id ? '#DCFCE7' : '#E0F2FE', color: app.sales_claimed_by === user?.id ? '#166534' : '#0369A1', fontSize: '10.5px', fontWeight: 800 }}>
+                            <span>{app.sales_claimed_by === user?.id ? '⚡ Claimed by You' : `👤 Claimed: ${app.sales_claimed_by_name || 'Operator'}`}</span>
+                          </div>
+                        )}
                       </td>
 
                       {/* Remark Operator simplified view */}
@@ -1014,7 +1052,53 @@ export default function ManageApplications() {
                       {/* Actions: PAN Check / Remark Review OR Review Button + 3-Dots Menu */}
                       <td style={{ padding: '14px 16px', textAlign: 'right', position: 'relative' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
-                          {isPanCheckerUser || isRemarkOperatorUser || isFinalStatusOperatorUser || isQuerableOperatorUser ? (
+                          {isSalesExecUser ? (
+                            <>
+                              {!app.sales_claimed_by ? (
+                                <button
+                                  onClick={() => handleClaimRequest(app)}
+                                  disabled={claimingId === app.id}
+                                  style={{ background: "#0284c7", border: "none", color: "#ffffff", padding: "6px 12px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 800, cursor: claimingId === app.id ? "not-allowed" : "pointer", display: "inline-flex", alignItems: "center", gap: "5px", boxShadow: "0 2px 6px rgba(2, 132, 199, 0.35)", whiteSpace: "nowrap" }}
+                                  title="Claim this application to work on it exclusively"
+                                >
+                                  {claimingId === app.id ? (
+                                    <>
+                                      <Loader2 size={12} style={{ animation: "spin 1s linear infinite" }} /> Claiming...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Zap size={13} fill="#ffffff" /> Claim Request
+                                    </>
+                                  )}
+                                </button>
+                              ) : app.sales_claimed_by === user?.id ? (
+                                <span
+                                  style={{ background: "#16a34a15", border: "1px solid #16a34a40", color: "#16a34a", padding: "5px 9px", borderRadius: "6px", fontSize: "11px", fontWeight: 800, display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}
+                                  title={`Claimed by you on ${app.sales_claimed_at ? new Date(app.sales_claimed_at).toLocaleString() : ''}`}
+                                >
+                                  <CheckCircle2 size={12} /> Claimed by You
+                                </span>
+                              ) : (
+                                <span
+                                  style={{ background: "#64748b15", border: "1px solid #64748b40", color: "#64748b", padding: "5px 9px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}
+                                >
+                                  <UserCheck size={12} /> Claimed
+                                </span>
+                              )}
+                              <button
+                                onClick={() => handleOpen360Drawer(app, 'overview')}
+                                style={{ padding: '6px 12px', borderRadius: '8px', background: C.teal, color: '#fff', fontSize: '12px', fontWeight: 800, border: 'none', cursor: 'pointer' }}
+                              >
+                                Review
+                              </button>
+                              <button
+                                onClick={() => setActionMenuAppId(isMenuOpen ? null : app.id)}
+                                style={{ width: '32px', height: '32px', borderRadius: '8px', background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                              >
+                                <MdMoreVert size={18} />
+                              </button>
+                            </>
+                          ) : isPanCheckerUser || isRemarkOperatorUser || isFinalStatusOperatorUser || isQuerableOperatorUser ? (
                             <button
                               onClick={() => {
                                 setVerifyModalApp(app);
@@ -1026,6 +1110,14 @@ export default function ManageApplications() {
                             </button>
                           ) : (
                             <>
+                              {app.sales_claimed_by && (
+                                <span
+                                  style={{ background: "#0284c715", border: "1px solid #0284c740", color: "#0284c7", padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}
+                                  title={`Claimed by ${app.sales_claimed_by_name || 'Sales Operator'} (${app.sales_claimed_by_code || ''})`}
+                                >
+                                  <UserCheck size={12} /> {app.sales_claimed_by_name ? app.sales_claimed_by_name.split(' ')[0] : 'Claimed'}
+                                </span>
+                              )}
                               <button
                                 onClick={() => handleOpen360Drawer(app, 'overview')}
                                 style={{ padding: '6px 12px', borderRadius: '8px', background: C.teal, color: '#fff', fontSize: '12px', fontWeight: 800, border: 'none', cursor: 'pointer' }}

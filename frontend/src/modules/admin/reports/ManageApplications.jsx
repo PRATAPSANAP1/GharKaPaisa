@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { Icons } from "../../../components/Icon/PartnerIcons";
-import { FileText, FileEdit, Building2, Clock, Search, CheckCircle2, Sparkles, XCircle, Layers, Eye, Download, ShieldCheck } from 'lucide-react';
+import { FileText, FileEdit, Building2, Clock, Search, CheckCircle2, Sparkles, XCircle, Layers, Eye, Download, ShieldCheck, Zap, Loader2, UserCheck } from 'lucide-react';
 import {
   MdSearch, MdFilterList, MdDownload, MdAdd, MdHourglassEmpty, MdTrackChanges,
   MdCheckCircle, MdCancel, MdChevronLeft, MdChevronRight, MdClose, MdMoreVert,
@@ -27,8 +27,8 @@ export default function ManageApplications() {
   const userRole = (user?.role || '').toUpperCase();
   const userDesignation = (user?.designation || '').toUpperCase();
   const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN';
-  const isAdministrativeOperatorUser = ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
-  const isSalesExecUser = (['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userRole)) && !isAdministrativeOperatorUser;
+  const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
+  const isAdministrativeOperatorUser = (['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userRole)) && !isSalesExecUser;
   const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
   const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
   const isQdOperatorUser = ['QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER'].includes(userDesignation) || ['QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER'].includes(userRole);
@@ -90,6 +90,7 @@ export default function ManageApplications() {
 
   // Table row 3-dots action menu
   const [actionMenuAppId, setActionMenuAppId] = useState(null);
+  const [claimingId, setClaimingId] = useState(null);
 
   // Agent Lookup lists
   const [partnersList, setPartnersList] = useState([]);
@@ -415,6 +416,38 @@ export default function ManageApplications() {
       alert(err.response?.data?.message || "Failed to verify application.");
     } finally {
       setSubmittingApprove(false);
+    }
+  };
+
+  const handleClaimRequest = async (app) => {
+    if (!app?.id) return;
+    const confirmMsg = `Do you want to claim Application #${app.app_number || app.id}? Once claimed, it will be assigned to your account and hidden from other Administrative Sales Operators.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      setClaimingId(app.id);
+      const res = await api.post(`/applications/${app.id}/claim-request`);
+      if (res.data?.success) {
+        alert(`Application #${app.app_number || app.id} claimed successfully!`);
+        setApps(prev => prev.map(item => item.id === app.id ? {
+          ...item,
+          sales_claimed_by: user?.id,
+          sales_claimed_by_name: user?.full_name || user?.name || 'Sales Operator',
+          sales_claimed_by_code: user?.user_code || user?.employee_id || '',
+          sales_claimed_at: new Date().toISOString()
+        } : item));
+      } else {
+        alert(res.data?.message || 'Failed to claim application.');
+      }
+    } catch (err) {
+      console.error('Error claiming application:', err);
+      const errMsg = err?.response?.data?.message || err?.message || 'Failed to claim application.';
+      alert(errMsg);
+      if (err?.response?.status === 409) {
+        fetchApplications();
+      }
+    } finally {
+      setClaimingId(null);
     }
   };
 
@@ -1133,6 +1166,11 @@ export default function ManageApplications() {
                         <div style={{ marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 6px', borderRadius: '4px', background: '#FEF3C7', color: '#92400E', fontSize: '10.5px', fontWeight: 800 }}>
                           <span>🔄 Updates: {app.update_count ?? 1}</span>
                         </div>
+                        {app.sales_claimed_by && (
+                          <div style={{ marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 6px', borderRadius: '4px', background: app.sales_claimed_by === user?.id ? '#DCFCE7' : '#E0F2FE', color: app.sales_claimed_by === user?.id ? '#166534' : '#0369A1', fontSize: '10.5px', fontWeight: 800 }}>
+                            <span>{app.sales_claimed_by === user?.id ? '⚡ Claimed by You' : `👤 Claimed: ${app.sales_claimed_by_name || 'Operator'}`}</span>
+                          </div>
+                        )}
                       </td>
 
                       {/* Customer Info */}
@@ -1281,8 +1319,64 @@ export default function ManageApplications() {
                                 <FileEdit size={12} /> Remark
                               </button>
                             </>
+                          ) : isSalesExecUser ? (
+                            <>
+                              {!app.sales_claimed_by ? (
+                                <button
+                                  onClick={() => handleClaimRequest(app)}
+                                  disabled={claimingId === app.id}
+                                  style={{ background: "#0284c7", border: "none", color: "#ffffff", padding: "6px 12px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 800, cursor: claimingId === app.id ? "not-allowed" : "pointer", display: "inline-flex", alignItems: "center", gap: "5px", boxShadow: "0 2px 6px rgba(2, 132, 199, 0.35)", whiteSpace: "nowrap" }}
+                                  title="Claim this application to work on it exclusively"
+                                >
+                                  {claimingId === app.id ? (
+                                    <>
+                                      <Loader2 size={12} style={{ animation: "spin 1s linear infinite" }} /> Claiming...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Zap size={13} fill="#ffffff" /> Claim Request
+                                    </>
+                                  )}
+                                </button>
+                              ) : app.sales_claimed_by === user?.id ? (
+                                <span
+                                  style={{ background: "#16a34a15", border: "1px solid #16a34a40", color: "#16a34a", padding: "5px 9px", borderRadius: "6px", fontSize: "11px", fontWeight: 800, display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}
+                                  title={`Claimed by you on ${app.sales_claimed_at ? new Date(app.sales_claimed_at).toLocaleString() : ''}`}
+                                >
+                                  <CheckCircle2 size={12} /> Claimed by You
+                                </span>
+                              ) : (
+                                <span
+                                  style={{ background: "#64748b15", border: "1px solid #64748b40", color: "#64748b", padding: "5px 9px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}
+                                >
+                                  <UserCheck size={12} /> Claimed
+                                </span>
+                              )}
+                              <button
+                                onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }}
+                                style={{ background: "#2563eb15", border: "1px solid #2563eb40", color: "#2563eb", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                title="Open Quick Details (QD) Form"
+                              >
+                                <FileText size={12} /> QD Form
+                              </button>
+                              <button
+                                onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }}
+                                style={{ background: "#ea580c15", border: "1px solid #ea580c40", color: "#ea580c", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: 'center', gap: "4px" }}
+                                title="Open Bank Remark Form"
+                              >
+                                <FileEdit size={12} /> Remark Form
+                              </button>
+                            </>
                           ) : (
                             <>
+                              {app.sales_claimed_by && (
+                                <span
+                                  style={{ background: "#0284c715", border: "1px solid #0284c740", color: "#0284c7", padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}
+                                  title={`Claimed by ${app.sales_claimed_by_name || 'Sales Operator'} (${app.sales_claimed_by_code || ''})`}
+                                >
+                                  <UserCheck size={11} /> {app.sales_claimed_by_name ? app.sales_claimed_by_name.split(' ')[0] : 'Claimed'}
+                                </span>
+                              )}
                               {isOpsHeadOrSuperAdmin && (
                                 <button
                                   onClick={() => handleViewDetails(app)}
