@@ -386,6 +386,14 @@ const startServer = async () => {
       logger.warn('Bulk SMS auto migration note:', smsErr.message);
     }
 
+    // Always ensure Sales Operator Claim columns exist on boot
+    try {
+      const { migrateSalesOperatorClaim } = require('./database/migrations/migrate_sales_operator_claim.js');
+      await migrateSalesOperatorClaim();
+    } catch (claimErr) {
+      logger.warn('Sales Operator Claim auto migration note:', claimErr.message);
+    }
+
     // Initialize scheduled CRON jobs
     const { initReportJobs } = require('./jobs/report.job.js');
     initReportJobs();

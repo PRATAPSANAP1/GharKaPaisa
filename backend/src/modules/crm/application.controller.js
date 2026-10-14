@@ -6467,8 +6467,21 @@ const getApplicationOperatorHistory = async (req, res, next) => {
   }
 };
 
+let salesClaimColumnsEnsured = false;
+const ensureSalesClaimColumns = async () => {
+  if (salesClaimColumnsEnsured) return;
+  try {
+    const { migrateSalesOperatorClaim } = require('../../database/migrations/migrate_sales_operator_claim');
+    await migrateSalesOperatorClaim();
+    salesClaimColumnsEnsured = true;
+  } catch (err) {
+    logger.warn('Defensive ensure sales claim columns note:', err.message);
+  }
+};
+
 // POST /applications/:id/claim-request — Claim application by Administrative Sales Operator
 const claimApplicationRequest = async (req, res, next) => {
+  await ensureSalesClaimColumns();
   const client = await getClient();
   try {
     await client.query('BEGIN');
