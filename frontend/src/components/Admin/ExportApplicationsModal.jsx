@@ -4,7 +4,7 @@ import { useAuthStore } from '../../app/store/authStore';
 import { Download, Calendar, Filter, X, Check, FileText, Clock, History, CalendarDays, BarChart2, Edit3, Globe } from 'lucide-react';
 import api from '../../services/api';
 
-export default function ExportApplicationsModal({ isOpen, onClose, defaultApplications = [] }) {
+export default function ExportApplicationsModal({ isOpen, onClose, defaultApplications = [], initialBank = 'all' }) {
   const { C, isDark } = useTheme();
   const user = useAuthStore((state) => state.user);
   const userRole = (user?.role || user?.user_role || '').toUpperCase();
@@ -35,7 +35,22 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
   const [fromDate, setFromDate] = useState(getTodayStr());
   const [toDate, setToDate] = useState(getTodayStr());
   const [statusFilter, setStatusFilter] = useState('all');
+  const [bankFilter, setBankFilter] = useState(initialBank || 'all');
   const [exporting, setExporting] = useState(false);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setBankFilter(initialBank || 'all');
+    }
+  }, [isOpen, initialBank]);
+
+  const isHdfcSelected = (bankFilter || '').toLowerCase().includes('hdfc');
+
+  const dynamicBankNames = Array.from(new Set(
+    (Array.isArray(defaultApplications) ? defaultApplications : [])
+      .map(a => a.bank_name || a.bank || '')
+      .filter(Boolean)
+  )).sort();
 
   if (!isOpen) return null;
 
@@ -91,6 +106,10 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
           queryParams.status = statusFilter;
         }
 
+        if (bankFilter !== 'all') {
+          queryParams.bank = bankFilter;
+        }
+
         const res = await api.get('/applications', { params: queryParams });
         if (res.data?.success && Array.isArray(res.data?.data)) {
           filtered = res.data.data;
@@ -128,8 +147,17 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
         });
       }
 
+      if (bankFilter !== 'all' && filtered.length > 0) {
+        const bFilterLower = bankFilter.toLowerCase();
+        filtered = (Array.isArray(filtered) ? filtered : []).filter(app => {
+          const bName = `${app.bank_name || ''} ${app.bank_code || ''} ${app.bank || ''} ${app.product_name || ''}`.toLowerCase();
+          return bName.includes(bFilterLower);
+        });
+      }
+
       if (filtered.length === 0) {
-        alert(`No applications found for the selected period (${period === 'custom' ? `${fromDate} to ${toDate}` : period}).`);
+        const bankNotice = bankFilter !== 'all' ? ` for ${bankFilter.toUpperCase()}` : '';
+        alert(`No applications found${bankNotice} for the selected period (${period === 'custom' ? `${fromDate} to ${toDate}` : period}).`);
         setExporting(false);
         return;
       }
@@ -324,11 +352,76 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
         { header: 'Created Date', getVal: a => a.created_at ? new Date(a.created_at).toLocaleDateString('en-IN') : 'N/A' }
       );
 
+      // 33-column HDFC GharKaPaisa dump format
+      const HDFC_COL_DEFS = [
+        { header: 'Application no', getVal: a => a.app_number || a.application_no || a.id || '' },
+        { header: 'Customer name', getVal: a => a.customer_name || a.full_name || a.pan_name || 'N/A' },
+        { header: 'Mobile number', getVal: a => {
+            const rawMob = a.customer_mobile || a.mobile || a.phone || a.aadhaar_linked_mobile || '';
+            if (!rawMob) return 'N/A';
+            return hideCustomerMobile ? maskMobileNumber(rawMob) : String(rawMob).trim();
+          }
+        },
+        { header: 'Email ID', getVal: a => a.customer_email || a.email || a.personal_email || 'N/A' },
+        { header: 'Pan no', getVal: a => {
+            const rawPan = a.pan_number || a.pan || '';
+            if (!rawPan || String(rawPan).trim() === '' || String(rawPan).toUpperCase() === 'N/A' || String(rawPan).toUpperCase() === 'NA') return 'NA';
+            const cleanPan = String(rawPan).trim().toUpperCase();
+            if (isAdminOperator || isEmployeeRole) {
+              return cleanPan.length >= 6 ? 'XXXXXX' + cleanPan.slice(6) : 'XXXXXX';
+            }
+            return cleanPan;
+          }
+        },
+        { header: 'City', getVal: a => a.city || a.physical_details?.city || 'N/A' },
+        { header: 'State', getVal: a => a.state || a.physical_details?.state || 'N/A' },
+        { header: 'Pincode', getVal: a => a.pincode || a.physical_details?.pincode || 'N/A' },
+        { header: 'Product name', getVal: a => a.product_name || a.product || 'N/A' },
+        { header: 'Bank name', getVal: a => a.bank_name || a.bank || 'HDFC Bank' },
+        { header: 'Process type', getVal: a => (a.process_type || a.process_by || 'Direct Link').replace(/_/g, ' ') },
+        { header: 'Reference/ code', getVal: a => a.emp_code || a.Partner_code || a.partner_code || a.referrer_code || a.submitted_by_name || 'N/A' },
+        { header: 'Status', getVal: a => (a.status || 'pending').replace(/_/g, ' ') },
+        { header: 'Incentive amount', getVal: a => a.incentive_amount ?? a.commission_amount ?? 0 },
+        { header: 'Bank application no', getVal: a => {
+            const raw = a.bank_application_number || a.bank_ref_number || a.physical_details?.bank_application_number || a.physical_details?.bank_ref_number || '';
+            const sysAppNo = a.app_number || '';
+            return (!raw || String(raw).trim() === '' || String(raw).trim() === String(sysAppNo).trim() || String(raw).toUpperCase() === 'N/A' || String(raw).toUpperCase() === 'NA') ? 'NA' : String(raw).trim();
+          }
+        },
+        { header: 'Ipa STAGE', getVal: a => a.ipa_stage || a.physical_details?.ipa_stage || a.iqa_stage || a.physical_details?.iqa_stage || 'NA' },
+        { header: 'Soft approval stage', getVal: a => a.soft_approval_stage || a.soft_approval_status || a.physical_details?.soft_approval_stage || a.physical_details?.soft_approval_status || 'NA' },
+        { header: 'KYC stage', getVal: a => a.kyc_stage || a.vkyc_stage || a.vkyc_status || a.physical_details?.kyc_stage || a.physical_details?.vkyc_stage || 'NA' },
+        { header: 'KYC link', getVal: a => {
+            const rawUrl = a.vkyc_url || a.physical_details?.vkyc_url || a.kyc_link || a.physical_details?.kyc_link || '';
+            return (rawUrl && String(rawUrl).trim() !== '' && String(rawUrl).toUpperCase() !== 'N/A') ? String(rawUrl).trim() : 'NA';
+          }
+        },
+        { header: 'Dispatch status', getVal: a => a.dispatch_status || a.physical_details?.dispatch_status || 'NA' },
+        { header: 'Final status form bank', getVal: a => a.final_status || a.physical_details?.final_status || a.bank_current_lead_status || a.physical_details?.bank_current_lead_status || 'NA' },
+        { header: 'Final card approval', getVal: a => a.final_card_approval || a.card_approval_stage || a.card_approval_status || a.digital_card_issued || a.card_activation_stage || a.physical_details?.final_card_approval || a.physical_details?.card_approval_stage || 'NA' },
+        { header: 'User remark', getVal: a => a.user_remark || a.notes || a.user_notes || a.operational_remarks || a.physical_details?.user_remark || 'NA' },
+        { header: 'Bank remark', getVal: a => a.bank_remark || a.physical_details?.bank_remark || 'NA' },
+        { header: 'Cureble stage', getVal: a => a.cureble_stage || a.curable_stage || a.queryable_remark || a.physical_details?.cureble_stage || a.physical_details?.queryable_remark || 'NA' },
+        { header: 'Primary code', getVal: a => a.primary_code || a.decline_code || a.physical_details?.primary_code || a.physical_details?.decline_code || 'NA' },
+        { header: 'Secondary code', getVal: a => a.secondary_code || a.physical_details?.secondary_code || 'NA' },
+        { header: 'Cureble type', getVal: a => a.cureble_type || a.curable_type || a.digital_remark || a.physical_details?.cureble_type || a.physical_details?.digital_remark || 'NA' },
+        { header: 'Cureble operator code', getVal: a => a.cureble_operator_code || a.curable_operator_code || a.curable_executive || a.physical_details?.cureble_operator_code || 'NA' },
+        { header: 'Salas operator code', getVal: a => a.salas_operator_code || a.sales_operator_code || a.queryable_sales_remark || a.physical_details?.sales_operator_code || a.physical_details?.salas_operator_code || 'NA' },
+        { header: 'Remark opretor code', getVal: a => a.remark_opretor_code || a.remark_operator_code || a.last_operator_code || a.physical_details?.remark_operator_code || a.physical_details?.remark_opretor_code || 'NA' },
+        { header: 'Decline reason', getVal: a => a.decline_reason || a.decline_remark || a.offer_decline_reason || a.physical_details?.decline_reason || a.physical_details?.decline_remark || 'NA' },
+        { header: 'Crested date', getVal: a => (a.created_at || a.createdAt || a.application_date) ? new Date(a.created_at || a.createdAt || a.application_date).toLocaleDateString('en-IN') : 'N/A' }
+      ];
+
+      const activeColDefs = isHdfcSelected ? HDFC_COL_DEFS : colDefs;
+      const downloadFileName = isHdfcSelected
+        ? `hdfc_gharkapaisa_dump_${period}${period === 'all' ? '' : `_${fromDate}_to_${toDate}`}.csv`
+        : `applications_report_${period}_${fromDate}_to_${toDate}.csv`;
+
       // Generate CSV string with UTF-8 BOM
-      const csvLines = [colDefs.map(c => `"${c.header.replace(/"/g, '""')}"`).join(',')];
+      const csvLines = [activeColDefs.map(c => `"${c.header.replace(/"/g, '""')}"`).join(',')];
 
       filtered.forEach(a => {
-        const rowVals = colDefs.map(c => {
+        const rowVals = activeColDefs.map(c => {
           const val = c.getVal(a);
           return `"${String(val ?? '').replace(/"/g, '""')}"`;
         });
@@ -340,7 +433,7 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
-      link.setAttribute('download', `applications_report_${period}_${fromDate}_to_${toDate}.csv`);
+      link.setAttribute('download', downloadFileName);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -454,6 +547,63 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
             </div>
           )}
 
+          {/* Bank Filter */}
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span>Bank Filter / Dump Format</span>
+              {isHdfcSelected && (
+                <span style={{ color: '#2563eb', fontSize: '11px', fontWeight: 900, textTransform: 'none', background: '#dbeafe', padding: '2px 8px', borderRadius: '6px' }}>
+                  HDFC 33-Column Dump
+                </span>
+              )}
+            </label>
+            <select
+              value={bankFilter}
+              onChange={(e) => setBankFilter(e.target.value)}
+              style={{
+                width: '100%', padding: '10px 14px', borderRadius: '10px',
+                border: `1px solid ${isHdfcSelected ? '#3b82f6' : C.border}`,
+                background: isHdfcSelected ? (isDark ? '#1e293b' : '#f0f9ff') : C.bg,
+                color: C.text, fontSize: '13px', fontWeight: 700
+              }}
+            >
+              <option value="all">All Banks (Standard Dump)</option>
+              <option value="hdfc">HDFC Bank (Hdfc gharkapaisa dump format)</option>
+              <option value="sbi">State Bank of India (SBI)</option>
+              <option value="axis">Axis Bank</option>
+              <option value="icici">ICICI Bank</option>
+              <option value="idfc">IDFC First Bank</option>
+              <option value="kotak">Kotak Mahindra Bank</option>
+              {dynamicBankNames
+                .filter(b => !['all', 'hdfc', 'sbi', 'axis', 'icici', 'idfc', 'kotak'].some(k => b.toLowerCase().includes(k)))
+                .map(b => (
+                  <option key={b} value={b}>{b}</option>
+                ))
+              }
+            </select>
+          </div>
+
+          {/* HDFC Dump Format Notification */}
+          {isHdfcSelected && (
+            <div style={{
+              background: isDark ? 'rgba(37, 99, 235, 0.15)' : '#eff6ff',
+              border: '1px solid #3b82f6',
+              borderRadius: '12px',
+              padding: '12px 14px',
+              display: 'flex',
+              gap: '10px',
+              alignItems: 'flex-start'
+            }}>
+              <Check size={18} color="#2563eb" style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div style={{ fontSize: '12px', color: isDark ? '#93c5fd' : '#1e40af', lineHeight: 1.4 }}>
+                <strong style={{ display: 'block', fontSize: '12.5px', marginBottom: '2px', color: isDark ? '#bfdbfe' : '#1e3a8a' }}>
+                  Hdfc gharkapaisa dump format Active (33 Columns)
+                </strong>
+                Export file will contain the exact 33 bank audit headers: Application no, Customer name, Mobile number, Email ID, Pan no, City, State, Pincode, Product name, Bank name, Process type, Reference/ code, Status, Incentive amount, Bank application no, Ipa STAGE, Soft approval stage, KYC stage, KYC link, Dispatch status, Final status form bank, Final card approval, User remark, Bank remark, Cureble stage, Primary code, Secondary code, Cureble type, Cureble operator code, Salas operator code, Remark opretor code, Decline reason, Crested date.
+              </div>
+            </div>
+          )}
+
           {/* Status Filter */}
           <div>
             <label style={{ fontSize: '12px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
@@ -484,12 +634,12 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
               disabled={exporting}
               style={{
                 flex: 2, padding: '12px', borderRadius: '12px', border: 'none',
-                background: C.primary, color: '#fff', fontWeight: 900, fontSize: '14px',
+                background: isHdfcSelected ? '#2563eb' : C.primary, color: '#fff', fontWeight: 900, fontSize: '14px',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                boxShadow: `0 4px 14px ${C.primary}40`
+                boxShadow: isHdfcSelected ? '0 4px 14px rgba(37, 99, 235, 0.4)' : `0 4px 14px ${C.primary}40`
               }}
             >
-              <Download size={16} /> {exporting ? 'Generating CSV...' : 'Download CSV Report'}
+              <Download size={16} /> {exporting ? 'Generating CSV...' : (isHdfcSelected ? 'Download HDFC Dump CSV (33 Cols)' : 'Download CSV Report')}
             </button>
           </div>
         </div>

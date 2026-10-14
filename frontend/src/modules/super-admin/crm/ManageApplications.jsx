@@ -225,6 +225,13 @@ export default function ManageApplications() {
             (a.employee_id && String(a.employee_id).toLowerCase().includes(pf))
           );
         }
+        if (bankFilter !== 'all') {
+          const bf = bankFilter.toLowerCase();
+          list = (Array.isArray(list) ? list : []).filter(a => {
+            const bName = `${a.bank_name || ''} ${a.bank_code || ''} ${a.bank || ''} ${a.product_name || ''}`.toLowerCase();
+            return bName.includes(bf);
+          });
+        }
         const total = res.data.pagination?.total || list.length;
         const computedPages = Math.max(1, Math.ceil(total / limit));
         setApplications(list);
@@ -768,11 +775,22 @@ export default function ManageApplications() {
                   onChange={e => { setBankFilter(e.target.value); setPage(1); }}
                 >
                   <option value="all">All Banks</option>
-                  {banksList.map(b => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} {b.short_code ? `(${b.short_code})` : ''}
-                    </option>
-                  ))}
+                  {banksList.length > 0 ? (
+                    banksList.map(b => (
+                      <option key={b.id} value={b.short_code ? b.short_code.toLowerCase() : b.id}>
+                        {b.name} {b.short_code ? `(${b.short_code})` : ''}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="hdfc">HDFC Bank</option>
+                      <option value="sbi">State Bank of India (SBI)</option>
+                      <option value="axis">Axis Bank</option>
+                      <option value="icici">ICICI Bank</option>
+                      <option value="idfc">IDFC First Bank</option>
+                      <option value="kotak">Kotak Mahindra Bank</option>
+                    </>
+                  )}
                 </select>
               </div>
 
@@ -1457,6 +1475,8 @@ export default function ManageApplications() {
         <ExportApplicationsModal
           isOpen={isExportModalOpen}
           onClose={() => setIsExportModalOpen(false)}
+          defaultApplications={applications}
+          initialBank={bankFilter}
         />
       )}
 

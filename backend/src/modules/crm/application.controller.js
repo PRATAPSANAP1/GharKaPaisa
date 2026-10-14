@@ -1583,8 +1583,63 @@ const manualCommission = async (req, res, next) => {
 const isUuid = (str) => typeof str === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
 
 const ensureApplicationStageColumns = async () => {
-  // No-op: CRM schema columns are maintained via startup migrations
-  return;
+  if (stageColumnsEnsured) return;
+  try {
+    await query(`
+      ALTER TABLE applications 
+      ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS remark_status VARCHAR(20) DEFAULT 'PENDING',
+      ADD COLUMN IF NOT EXISTS remark_updated BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS remark_updated_by UUID,
+      ADD COLUMN IF NOT EXISTS remark_updated_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no',
+      ADD COLUMN IF NOT EXISTS bank_current_lead_status VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS approved_by UUID,
+      ADD COLUMN IF NOT EXISTS sales_operator_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS backend_remark TEXT,
+      ADD COLUMN IF NOT EXISTS cureble_stage VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS primary_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS secondary_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS cureble_type VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS cureble_operator_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS final_card_approval VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS soft_approval_stage VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS salas_operator_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS remark_opretor_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS user_remark TEXT
+    `).catch(() => {});
+    await query(`
+      ALTER TABLE physical_application_details
+      ADD COLUMN IF NOT EXISTS sales_operator_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS backend_remark TEXT,
+      ADD COLUMN IF NOT EXISTS cureble_stage VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS primary_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS secondary_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS cureble_type VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS cureble_operator_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS final_card_approval VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS queryable_remark VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS queryable_sales_remark TEXT,
+      ADD COLUMN IF NOT EXISTS digital_remark VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS decline_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS decline_remark TEXT,
+      ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS soft_approval_stage VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS salas_operator_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS remark_opretor_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS user_remark TEXT
+    `).catch(() => {});
+    stageColumnsEnsured = true;
+  } catch (err) {
+    // Ignore error if schema alter is locked or non-fatal
+  }
 };
 
 const listApplications = async (req, res, next) => {
@@ -2023,11 +2078,12 @@ const listApplications = async (req, res, next) => {
           COALESCE((SELECT COUNT(*) FROM application_timeline WHERE application_id = a.id), 1)::int as update_count,
           COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number,
           COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, ''), NULLIF(a.bank_application_number, ''), NULLIF(pad.bank_application_number, '')) as bank_ref_number,
-          (to_jsonb(a)->>'ipa_stage') as ipa_stage,
-          (to_jsonb(a)->>'kyc_stage') as kyc_stage,
+          COALESCE(NULLIF(to_jsonb(a)->>'ipa_stage', ''), NULLIF(to_jsonb(pad)->>'ipa_stage', ''), NULLIF(a.iqa_stage, ''), NULLIF(pad.iqa_stage, '')) as ipa_stage,
+          COALESCE(NULLIF(to_jsonb(a)->>'kyc_stage', ''), NULLIF(to_jsonb(pad)->>'kyc_stage', ''), NULLIF(a.vkyc_stage, ''), NULLIF(a.vkyc_status, ''), NULLIF(pad.vkyc_stage, '')) as kyc_stage,
           (to_jsonb(a)->>'card_approval_stage') as card_approval_stage,
           (to_jsonb(a)->>'digital_card_issued') as digital_card_issued,
           COALESCE(NULLIF(a.appcode_status, ''), NULLIF(pad.appcode_status, '')) as appcode_status,
+          COALESCE(NULLIF(to_jsonb(a)->>'soft_approval_stage', ''), NULLIF(to_jsonb(pad)->>'soft_approval_stage', ''), NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, '')) as soft_approval_stage,
           COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, '')) as soft_approval_status,
           COALESCE(NULLIF(a.iqa_stage, ''), NULLIF(pad.iqa_stage, '')) as iqa_stage,
           COALESCE(NULLIF(a.vkyc_stage, ''), NULLIF(a.vkyc_status, ''), NULLIF(pad.vkyc_stage, '')) as vkyc_stage,
@@ -2035,7 +2091,7 @@ const listApplications = async (req, res, next) => {
           COALESCE(NULLIF(a.vkyc_url, ''), NULLIF(pad.vkyc_url, '')) as vkyc_url,
           COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status,
           COALESCE(NULLIF(a.bank_remark, ''), NULLIF(pad.bank_remark, '')) as bank_remark,
-          COALESCE(a.user_remark, a.notes) as user_remark,
+          COALESCE(NULLIF(to_jsonb(a)->>'user_remark', ''), NULLIF(to_jsonb(pad)->>'user_remark', ''), a.user_remark, a.notes, a.operational_remarks) as user_remark,
           COALESCE(a.user_remark, a.notes) as notes,
           COALESCE(NULLIF(a.final_status, ''), NULLIF(pad.final_status, '')) as final_status,
           COALESCE(NULLIF(a.app_file_generated, ''), NULLIF(pad.app_file_generated, '')) as app_file_generated,
@@ -2114,10 +2170,19 @@ const listApplications = async (req, res, next) => {
           COALESCE(NULLIF(to_jsonb(a)->>'requery_date', ''), NULLIF(to_jsonb(pad)->>'requery_date', '')) as requery_date,
           COALESCE(NULLIF(to_jsonb(a)->>'remark_status', ''), 'PENDING') as remark_status,
           COALESCE(to_jsonb(a)->>'assigned_to', to_jsonb(pad)->>'assigned_to') as assigned_to,
-          COALESCE(NULLIF(to_jsonb(a)->>'sales_operator_code', ''), NULLIF(to_jsonb(pad)->>'sales_operator_code', '')) as sales_operator_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'sales_operator_code', ''), NULLIF(to_jsonb(pad)->>'sales_operator_code', ''), NULLIF(to_jsonb(a)->>'salas_operator_code', ''), NULLIF(to_jsonb(pad)->>'salas_operator_code', '')) as sales_operator_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'sales_operator_code', ''), NULLIF(to_jsonb(pad)->>'sales_operator_code', ''), NULLIF(to_jsonb(a)->>'salas_operator_code', ''), NULLIF(to_jsonb(pad)->>'salas_operator_code', '')) as salas_operator_code,
           COALESCE(NULLIF(to_jsonb(a)->>'pan_checker_code', ''), NULLIF(to_jsonb(pad)->>'pan_checker_code', '')) as pan_checker_code,
-          COALESCE(NULLIF(to_jsonb(a)->>'remark_operator_code', ''), NULLIF(to_jsonb(pad)->>'remark_operator_code', '')) as remark_operator_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'remark_operator_code', ''), NULLIF(to_jsonb(pad)->>'remark_operator_code', ''), NULLIF(to_jsonb(a)->>'remark_opretor_code', ''), NULLIF(to_jsonb(pad)->>'remark_opretor_code', '')) as remark_operator_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'remark_operator_code', ''), NULLIF(to_jsonb(pad)->>'remark_operator_code', ''), NULLIF(to_jsonb(a)->>'remark_opretor_code', ''), NULLIF(to_jsonb(pad)->>'remark_opretor_code', '')) as remark_opretor_code,
           COALESCE(NULLIF(to_jsonb(a)->>'backend_remark', ''), NULLIF(to_jsonb(pad)->>'backend_remark', '')) as backend_remark,
+          COALESCE(NULLIF(to_jsonb(a)->>'cureble_stage', ''), NULLIF(to_jsonb(pad)->>'cureble_stage', ''), NULLIF(to_jsonb(a)->>'queryable_remark', ''), NULLIF(to_jsonb(pad)->>'queryable_remark', ''), NULLIF(to_jsonb(a)->>'curable_stage', ''), NULLIF(to_jsonb(pad)->>'curable_stage', '')) as cureble_stage,
+          COALESCE(NULLIF(to_jsonb(a)->>'primary_code', ''), NULLIF(to_jsonb(pad)->>'primary_code', ''), NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as primary_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'secondary_code', ''), NULLIF(to_jsonb(pad)->>'secondary_code', '')) as secondary_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'cureble_type', ''), NULLIF(to_jsonb(pad)->>'cureble_type', ''), NULLIF(to_jsonb(a)->>'digital_remark', ''), NULLIF(to_jsonb(pad)->>'digital_remark', ''), NULLIF(to_jsonb(a)->>'curable_type', ''), NULLIF(to_jsonb(pad)->>'curable_type', '')) as cureble_type,
+          COALESCE(NULLIF(to_jsonb(a)->>'cureble_operator_code', ''), NULLIF(to_jsonb(pad)->>'cureble_operator_code', ''), NULLIF(to_jsonb(a)->>'curable_executive', ''), NULLIF(to_jsonb(pad)->>'curable_executive', '')) as cureble_operator_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'final_card_approval', ''), NULLIF(to_jsonb(pad)->>'final_card_approval', ''), NULLIF(to_jsonb(a)->>'card_approval_stage', ''), NULLIF(to_jsonb(pad)->>'card_approval_stage', ''), NULLIF(to_jsonb(a)->>'digital_card_issued', ''), NULLIF(to_jsonb(pad)->>'digital_card_issued', '')) as final_card_approval,
+          COALESCE(a.commission_amount, 0) as incentive_amount,
           COALESCE(NULLIF(to_jsonb(a)->>'remark_updated', '')::boolean, FALSE) as remark_updated,
           NULLIF(to_jsonb(a)->>'remark_updated_by', '')::uuid as remark_updated_by,
           NULLIF(to_jsonb(a)->>'remark_updated_at', '')::timestamptz as remark_updated_at
@@ -3970,6 +4035,18 @@ const exportApplicationsCSV = async (req, res, next) => {
           COALESCE(NULLIF(to_jsonb(a)->>'sales_operator_code', ''), NULLIF(to_jsonb(pad)->>'sales_operator_code', '')) as sales_operator_code,
           COALESCE(NULLIF(to_jsonb(a)->>'pan_checker_code', ''), NULLIF(to_jsonb(pad)->>'pan_checker_code', '')) as pan_checker_code,
           COALESCE(NULLIF(to_jsonb(a)->>'remark_operator_code', ''), NULLIF(to_jsonb(pad)->>'remark_operator_code', '')) as remark_operator_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'ipa_stage', ''), NULLIF(to_jsonb(pad)->>'ipa_stage', ''), NULLIF(a.iqa_stage, ''), NULLIF(pad.iqa_stage, '')) as ipa_stage,
+          COALESCE(NULLIF(to_jsonb(a)->>'soft_approval_stage', ''), NULLIF(to_jsonb(pad)->>'soft_approval_stage', ''), NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, '')) as soft_approval_stage,
+          COALESCE(NULLIF(to_jsonb(a)->>'kyc_stage', ''), NULLIF(to_jsonb(pad)->>'kyc_stage', ''), NULLIF(a.vkyc_stage, ''), NULLIF(a.vkyc_status, ''), NULLIF(pad.vkyc_stage, '')) as kyc_stage,
+          COALESCE(NULLIF(to_jsonb(a)->>'final_card_approval', ''), NULLIF(to_jsonb(pad)->>'final_card_approval', ''), NULLIF(to_jsonb(a)->>'card_approval_stage', ''), NULLIF(to_jsonb(pad)->>'card_approval_stage', ''), NULLIF(to_jsonb(a)->>'digital_card_issued', ''), NULLIF(to_jsonb(pad)->>'digital_card_issued', '')) as final_card_approval,
+          COALESCE(NULLIF(to_jsonb(a)->>'user_remark', ''), NULLIF(to_jsonb(pad)->>'user_remark', ''), NULLIF(to_jsonb(a)->>'notes', ''), NULLIF(a.operational_remarks, '')) as user_remark,
+          COALESCE(NULLIF(to_jsonb(a)->>'cureble_stage', ''), NULLIF(to_jsonb(pad)->>'cureble_stage', ''), NULLIF(to_jsonb(a)->>'queryable_remark', ''), NULLIF(to_jsonb(pad)->>'queryable_remark', ''), NULLIF(to_jsonb(a)->>'curable_stage', ''), NULLIF(to_jsonb(pad)->>'curable_stage', '')) as cureble_stage,
+          COALESCE(NULLIF(to_jsonb(a)->>'primary_code', ''), NULLIF(to_jsonb(pad)->>'primary_code', ''), NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as primary_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'secondary_code', ''), NULLIF(to_jsonb(pad)->>'secondary_code', '')) as secondary_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'cureble_type', ''), NULLIF(to_jsonb(pad)->>'cureble_type', ''), NULLIF(to_jsonb(a)->>'digital_remark', ''), NULLIF(to_jsonb(pad)->>'digital_remark', ''), NULLIF(to_jsonb(a)->>'curable_type', ''), NULLIF(to_jsonb(pad)->>'curable_type', '')) as cureble_type,
+          COALESCE(NULLIF(to_jsonb(a)->>'cureble_operator_code', ''), NULLIF(to_jsonb(pad)->>'cureble_operator_code', ''), NULLIF(to_jsonb(a)->>'curable_executive', ''), NULLIF(to_jsonb(pad)->>'curable_executive', '')) as cureble_operator_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'salas_operator_code', ''), NULLIF(to_jsonb(pad)->>'salas_operator_code', ''), NULLIF(to_jsonb(a)->>'sales_operator_code', ''), NULLIF(to_jsonb(pad)->>'sales_operator_code', '')) as salas_operator_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'remark_opretor_code', ''), NULLIF(to_jsonb(pad)->>'remark_opretor_code', ''), NULLIF(to_jsonb(a)->>'remark_operator_code', ''), NULLIF(to_jsonb(pad)->>'remark_operator_code', '')) as remark_opretor_code,
           a.created_at,
           a.partner_id,
           a.submitted_by
@@ -4019,6 +4096,18 @@ const exportApplicationsCSV = async (req, res, next) => {
           NULL as sales_operator_code,
           NULL as pan_checker_code,
           NULL as remark_operator_code,
+          NULL as ipa_stage,
+          NULL as soft_approval_stage,
+          NULL as kyc_stage,
+          NULL as final_card_approval,
+          NULL as user_remark,
+          NULL as cureble_stage,
+          NULL as primary_code,
+          NULL as secondary_code,
+          NULL as cureble_type,
+          NULL as cureble_operator_code,
+          NULL as salas_operator_code,
+          NULL as remark_opretor_code,
           l.created_at,
           l.partner_id,
           COALESCE(l.created_by, c.created_by) as submitted_by
@@ -4095,6 +4184,102 @@ const exportApplicationsCSV = async (req, res, next) => {
       if (sysAppNo && String(bankAppNo).trim() === String(sysAppNo).trim()) return 'NA';
       return String(bankAppNo).trim();
     };
+
+    const requestedBank = (req.query.bank || '').toLowerCase();
+    const isHdfcExport = requestedBank.includes('hdfc') || (req.query.format || '').toLowerCase() === 'hdfc';
+
+    if (isHdfcExport) {
+      const hdfcHeaders = [
+        'Application no',
+        'Customer name',
+        'Mobile number',
+        'Email ID',
+        'Pan no',
+        'City',
+        'State',
+        'Pincode',
+        'Product name',
+        'Bank name',
+        'Process type',
+        'Reference/ code',
+        'Status',
+        'Incentive amount',
+        'Bank application no',
+        'Ipa STAGE',
+        'Soft approval stage',
+        'KYC stage',
+        'KYC link',
+        'Dispatch status',
+        'Final status form bank',
+        'Final card approval',
+        'User remark',
+        'Bank remark',
+        'Cureble stage',
+        'Primary code',
+        'Secondary code',
+        'Cureble type',
+        'Cureble operator code',
+        'Salas operator code',
+        'Remark opretor code',
+        'Decline reason',
+        'Crested date'
+      ];
+
+      const hdfcLines = [hdfcHeaders.join(',')];
+      const hdfcRows = rows.filter(r => (r.bank_name || '').toLowerCase().includes('hdfc') || (r.product_name || '').toLowerCase().includes('hdfc'));
+
+      for (const row of hdfcRows) {
+        const mobVal = hideCustomerMobile ? 'REDACTED' : (row.customer_mobile || '');
+        const panVal = formatPanNumber(row.pan_number);
+        const bankAppNoVal = formatBankAppNumber(row.bank_application_number, row.app_number);
+        const vkycLink = (row.vkyc_url && String(row.vkyc_url).trim() !== '' && String(row.vkyc_url).toUpperCase() !== 'N/A') ? row.vkyc_url : 'NA';
+        const finalStatus = (row.final_status && String(row.final_status).trim() !== '' && String(row.final_status).toUpperCase() !== 'N/A') ? String(row.final_status).replace(/"/g, '""') : (row.bank_current_lead_status || 'NA');
+        const userRemark = (row.user_remark && String(row.user_remark).trim() !== '' && String(row.user_remark).toUpperCase() !== 'N/A') ? String(row.user_remark).replace(/"/g, '""') : 'NA';
+        const bankRemark = (row.bank_remark && String(row.bank_remark).trim() !== '' && String(row.bank_remark).toUpperCase() !== 'N/A') ? String(row.bank_remark).replace(/"/g, '""') : 'NA';
+        const declineReason = (row.decline_reason && String(row.decline_reason).trim() !== '' && String(row.decline_reason).toUpperCase() !== 'N/A') ? String(row.decline_reason).replace(/"/g, '""') : 'NA';
+
+        const rowValues = [
+          `"${(row.app_number || '').replace(/"/g, '""')}"`,
+          `"${(row.customer_name || 'N/A').replace(/"/g, '""')}"`,
+          `"${mobVal}"`,
+          `"${(row.customer_email || 'N/A').replace(/"/g, '""')}"`,
+          `"${panVal.replace(/"/g, '""')}"`,
+          `"${(row.city || 'N/A').replace(/"/g, '""')}"`,
+          `"${(row.state || 'N/A').replace(/"/g, '""')}"`,
+          `"${(row.pincode || 'N/A').replace(/"/g, '""')}"`,
+          `"${(row.product_name || 'N/A').replace(/"/g, '""')}"`,
+          `"${(row.bank_name || 'HDFC Bank').replace(/"/g, '""')}"`,
+          `"${(row.process_by || 'Direct Link').replace(/_/g, ' ').replace(/"/g, '""')}"`,
+          `"${(row.submitted_by_name || 'N/A').replace(/"/g, '""')}"`,
+          `"${(row.status || 'pending').replace(/_/g, ' ').replace(/"/g, '""')}"`,
+          `"${row.commission_amount || 0}"`,
+          `"${bankAppNoVal.replace(/"/g, '""')}"`,
+          `"${(row.ipa_stage || 'NA').replace(/"/g, '""')}"`,
+          `"${(row.soft_approval_stage || row.soft_approval_status || 'NA').replace(/"/g, '""')}"`,
+          `"${(row.kyc_stage || row.vkyc_stage || 'NA').replace(/"/g, '""')}"`,
+          `"${vkycLink.replace(/"/g, '""')}"`,
+          `"${(row.dispatch_status || 'NA').replace(/"/g, '""')}"`,
+          `"${finalStatus.replace(/"/g, '""')}"`,
+          `"${(row.final_card_approval || 'NA').replace(/"/g, '""')}"`,
+          `"${userRemark}"`,
+          `"${bankRemark}"`,
+          `"${(row.cureble_stage || 'NA').replace(/"/g, '""')}"`,
+          `"${(row.primary_code || 'NA').replace(/"/g, '""')}"`,
+          `"${(row.secondary_code || 'NA').replace(/"/g, '""')}"`,
+          `"${(row.cureble_type || 'NA').replace(/"/g, '""')}"`,
+          `"${(row.cureble_operator_code || 'NA').replace(/"/g, '""')}"`,
+          `"${(row.salas_operator_code || row.sales_operator_code || 'NA').replace(/"/g, '""')}"`,
+          `"${(row.remark_opretor_code || row.remark_operator_code || 'NA').replace(/"/g, '""')}"`,
+          `"${declineReason}"`,
+          `"${row.created_at ? new Date(row.created_at).toLocaleDateString('en-IN') : 'N/A'}"`
+        ];
+        hdfcLines.push(rowValues.join(','));
+      }
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=hdfc_gharkapaisa_dump_${Date.now()}.csv`);
+      return res.send(hdfcLines.join('\n'));
+    }
 
     for (const row of rows) {
       const mobVal = hideCustomerMobile ? 'REDACTED' : (row.customer_mobile || '');
