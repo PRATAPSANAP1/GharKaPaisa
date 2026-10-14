@@ -11,7 +11,7 @@ const { logAction } = require('../admin/audit.service.js');
 const { processTeamOverrideCommission } = require('../team/team.service.js');
 const { getBankApplyLinkBackend } = require('./lead.controller');
 const { sendEmail, sendLeadApplicationCreatedEmail } = require('../../services/email/email.service');
-const { getHdfcCuringDesignation, getHdfcDeclineCodeInfo } = require('../../constants/hdfcDeclineCodes');
+const { getHdfcCuringDesignation, getHdfcDeclineCodeInfo, HDFC_DECLINE_CODES, CURING_DESIGNATIONS } = require('../../constants/hdfcDeclineCodes');
 
 // Helper to determine strictly if an application belongs to HDFC Bank Credit Card (and not LOC/EOC)
 const isHdfcCreditCardApp = (app, pRow) => {
@@ -1884,17 +1884,45 @@ const listApplications = async (req, res, next) => {
 
     let curableOperatorFilterSQL = '';
     if (isCurableOperatorUser && req.user?.id) {
-      const physicalCodesSQL = "('41', '15R', '82', '86N', '141', '14', '14R', '426', '15', '16D', '15W', '431', '3F', '429', '417', '424', '882', '425', '52', '884', '414', '151', '34A', '35', '16R', '427')";
-      const digitalCodesSQL = "('86D', '412', '413', '415', '420', '32', '824', '823', '15S', '86I', '86C', 'EM1', '14S', '37E', '8', '86F', '86E')";
-      const emailCodesSQL = "('418', '142', '152', '92', '06A', '91', '422', '86L')";
+      const physicalCodesList = HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.PHYSICAL_CURABLE).map(c => `'${c.code.toUpperCase()}'`);
+      const digitalCodesList = HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.DIGITAL_CURABLE).map(c => `'${c.code.toUpperCase()}'`);
+      const emailCodesList = HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.EMAIL_CURABLE).map(c => `'${c.code.toUpperCase()}'`);
+
+      const physicalCodesSQL = `(${physicalCodesList.join(', ')})`;
+      const digitalCodesSQL = `(${digitalCodesList.join(', ')})`;
+      const emailCodesSQL = `(${emailCodesList.join(', ')})`;
 
       let curableCondition = '';
       if (isPhysicalCurableUser) {
-        curableCondition = `(UPPER(TRIM(COALESCE(combined.curing_designation, ''))) = 'PHYSICAL_CURABLE' OR UPPER(TRIM(COALESCE(combined.decline_code, ''))) IN ${physicalCodesSQL})`;
+        curableCondition = `(
+          UPPER(TRIM(COALESCE(combined.decline_code, ''))) IN ${physicalCodesSQL}
+          OR (
+            UPPER(TRIM(COALESCE(combined.decline_code, ''))) NOT IN ${digitalCodesSQL}
+            AND UPPER(TRIM(COALESCE(combined.decline_code, ''))) NOT IN ${emailCodesSQL}
+            AND UPPER(TRIM(COALESCE(combined.decline_code, ''))) != 'NONE'
+            AND REPLACE(UPPER(TRIM(COALESCE(combined.curing_designation, ''))), ' ', '_') IN ('PHYSICAL_CURABLE', 'PHYSICAL_CURABLE_OPERATOR')
+          )
+        )`;
       } else if (isDigitalCurableUser) {
-        curableCondition = `(UPPER(TRIM(COALESCE(combined.curing_designation, ''))) = 'DIGITAL_CURABLE' OR UPPER(TRIM(COALESCE(combined.decline_code, ''))) IN ${digitalCodesSQL})`;
+        curableCondition = `(
+          UPPER(TRIM(COALESCE(combined.decline_code, ''))) IN ${digitalCodesSQL}
+          OR (
+            UPPER(TRIM(COALESCE(combined.decline_code, ''))) NOT IN ${physicalCodesSQL}
+            AND UPPER(TRIM(COALESCE(combined.decline_code, ''))) NOT IN ${emailCodesSQL}
+            AND UPPER(TRIM(COALESCE(combined.decline_code, ''))) != 'NONE'
+            AND REPLACE(UPPER(TRIM(COALESCE(combined.curing_designation, ''))), ' ', '_') IN ('DIGITAL_CURABLE', 'DIGITAL_CURABLE_OPERATOR')
+          )
+        )`;
       } else if (isEmailCurableUser) {
-        curableCondition = `(UPPER(TRIM(COALESCE(combined.curing_designation, ''))) = 'EMAIL_CURABLE' OR UPPER(TRIM(COALESCE(combined.decline_code, ''))) IN ${emailCodesSQL})`;
+        curableCondition = `(
+          UPPER(TRIM(COALESCE(combined.decline_code, ''))) IN ${emailCodesSQL}
+          OR (
+            UPPER(TRIM(COALESCE(combined.decline_code, ''))) NOT IN ${physicalCodesSQL}
+            AND UPPER(TRIM(COALESCE(combined.decline_code, ''))) NOT IN ${digitalCodesSQL}
+            AND UPPER(TRIM(COALESCE(combined.decline_code, ''))) != 'NONE'
+            AND REPLACE(UPPER(TRIM(COALESCE(combined.curing_designation, ''))), ' ', '_') IN ('EMAIL_CURABLE', 'EMAIL_CURABLE_OPERATOR')
+          )
+        )`;
       }
 
       const hdfcBankScopeSQL = `(
@@ -1903,18 +1931,7 @@ const listApplications = async (req, res, next) => {
         AND LOWER(COALESCE(combined.bank_code, '')) NOT LIKE '%tata%'
       )`;
 
-      const rejectedCondition = `(
-        LOWER(TRIM(COALESCE(combined.status, ''))) IN ('rejected', 'declined', 'decline', 'technical_error')
-        OR LOWER(TRIM(COALESCE(combined.status, ''))) LIKE '%reject%'
-        OR LOWER(TRIM(COALESCE(combined.status, ''))) LIKE '%decline%'
-        OR LOWER(TRIM(COALESCE(combined.final_status, ''))) IN ('rejected', 'declined', 'decline', 'technical_error')
-        OR LOWER(TRIM(COALESCE(combined.final_status, ''))) LIKE '%reject%'
-        OR LOWER(TRIM(COALESCE(combined.final_status, ''))) LIKE '%decline%'
-        OR LOWER(TRIM(COALESCE(combined.bank_current_lead_status, ''))) LIKE '%reject%'
-        OR LOWER(TRIM(COALESCE(combined.bank_current_lead_status, ''))) LIKE '%decline%'
-      )`;
-
-      curableOperatorFilterSQL = ` AND ${creditCardAppSQL} AND ${hdfcBankScopeSQL} AND ${rejectedCondition} AND ${curableCondition}`;
+      curableOperatorFilterSQL = ` AND ${creditCardAppSQL} AND ${hdfcBankScopeSQL} AND ${curableCondition}`;
     }
 
     if (!isPartnerOrTeam && !isSuperAdmin && req.user?.id) {
@@ -1972,6 +1989,7 @@ const listApplications = async (req, res, next) => {
           OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'
           OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%reject%'
           OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%decline%'
+          OR (combined.decline_code IS NOT NULL AND TRIM(combined.decline_code) != '' AND UPPER(TRIM(combined.decline_code)) != 'NONE')
         )
         AND NOT (
           combined.status IN ('cancelled', 'cancel', 'canceled')
@@ -1981,7 +1999,11 @@ const listApplications = async (req, res, next) => {
           OR LOWER(COALESCE(combined.bank_current_lead_status, '')) LIKE '%cancel%'
         )
       ))
-      OR ($2 = 'declined' AND (combined.status IN ('declined', 'decline') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'))
+      OR ($2 = 'declined' AND (
+        combined.status IN ('declined', 'decline')
+        OR LOWER(COALESCE(combined.final_status, '')) LIKE '%decline%'
+        OR (combined.decline_code IS NOT NULL AND TRIM(combined.decline_code) != '' AND UPPER(TRIM(combined.decline_code)) != 'NONE')
+      ))
       OR ($2 = 'cancelled' AND (combined.status IN ('cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'))
     )`;
 
@@ -2616,6 +2638,9 @@ const getApplication = async (req, res, next) => {
       if (!isClean(app.iqa_stage) && pd.iqa_stage) app.iqa_stage = pd.iqa_stage;
       if (!isClean(app.dispatch_status) && pd.dispatch_status) app.dispatch_status = pd.dispatch_status;
       if (!isClean(app.final_status) && pd.final_status) app.final_status = pd.final_status;
+      if (!isClean(app.decline_code) && pd.decline_code) app.decline_code = pd.decline_code;
+      if (!isClean(app.decline_description) && pd.decline_description) app.decline_description = pd.decline_description;
+      if (!isClean(app.curing_designation) && pd.curing_designation) app.curing_designation = pd.curing_designation;
       if (!isClean(app.ipa_stage) && pd.ipa_stage) app.ipa_stage = pd.ipa_stage;
       if (!isClean(app.kyc_stage) && pd.kyc_stage) app.kyc_stage = pd.kyc_stage;
       if (!isClean(app.card_approval_stage) && pd.card_approval_stage) app.card_approval_stage = pd.card_approval_stage;
@@ -4611,13 +4636,17 @@ const updateApplicationDetails = async (req, res, next) => {
     if (effectiveDeclineCode !== undefined || derivedCuringDesignation !== undefined) {
       try {
         await client.query('SAVEPOINT curing_sp');
+        const isNone = !effectiveDeclineCode || String(effectiveDeclineCode).trim().toUpperCase() === 'NONE';
+        const codeToSet = isNone ? 'None' : String(effectiveDeclineCode).trim();
+        const descToSet = isNone ? 'None' : (derivedDeclineDesc || null);
+        const curingToSet = isNone ? null : (derivedCuringDesignation || null);
         await client.query(`
           UPDATE applications SET
-            decline_code = COALESCE(NULLIF($1, ''), decline_code),
-            decline_description = COALESCE(NULLIF($2, ''), decline_description),
-            curing_designation = COALESCE(NULLIF($3, ''), curing_designation)
+            decline_code = $1,
+            decline_description = $2,
+            curing_designation = $3
           WHERE id = $4
-        `, [effectiveDeclineCode || null, derivedDeclineDesc || null, derivedCuringDesignation || null, app.id]);
+        `, [codeToSet, descToSet, curingToSet, app.id]);
         await client.query('RELEASE SAVEPOINT curing_sp');
       } catch (curingErr) {
         await client.query('ROLLBACK TO SAVEPOINT curing_sp').catch(() => {});
@@ -4896,20 +4925,24 @@ const updateApplicationDetails = async (req, res, next) => {
     if (effectiveDeclineCode !== undefined || derivedCuringDesignation !== undefined) {
       try {
         await client.query('SAVEPOINT pad_curing_sp');
+        const isNone = !effectiveDeclineCode || String(effectiveDeclineCode).trim().toUpperCase() === 'NONE';
+        const codeToSet = isNone ? 'None' : String(effectiveDeclineCode).trim();
+        const descToSet = isNone ? 'None' : (derivedDeclineDesc || null);
+        const curingToSet = isNone ? null : (derivedCuringDesignation || null);
         await client.query(`
           UPDATE physical_application_details SET
-            decline_code = COALESCE(NULLIF($1, ''), decline_code),
-            decline_description = COALESCE(NULLIF($2, ''), decline_description),
-            curing_designation = COALESCE(NULLIF($3, ''), curing_designation)
+            decline_code = $1,
+            decline_description = $2,
+            curing_designation = $3
           WHERE application_id = $4
-        `, [effectiveDeclineCode || null, derivedDeclineDesc || null, derivedCuringDesignation || null, app.id]);
+        `, [codeToSet, descToSet, curingToSet, app.id]);
         await client.query(`
           UPDATE applications SET
-            decline_code = COALESCE(NULLIF($1, ''), decline_code),
-            decline_description = COALESCE(NULLIF($2, ''), decline_description),
-            curing_designation = COALESCE(NULLIF($3, ''), curing_designation)
+            decline_code = $1,
+            decline_description = $2,
+            curing_designation = $3
           WHERE id = $4
-        `, [effectiveDeclineCode || null, derivedDeclineDesc || null, derivedCuringDesignation || null, app.id]);
+        `, [codeToSet, descToSet, curingToSet, app.id]);
         await client.query('RELEASE SAVEPOINT pad_curing_sp');
       } catch (curingErr) {
         await client.query('ROLLBACK TO SAVEPOINT pad_curing_sp').catch(() => {});
@@ -6073,30 +6106,47 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
       if (isPhysicalCurable || isDigitalCurable || isEmailCurable) {
         const statusStr = (app.status || '').toLowerCase();
         const finalStatusStr = (app.final_status || '').toLowerCase();
-        const isRejected = statusStr.includes('reject') || statusStr.includes('decline') || finalStatusStr.includes('reject') || finalStatusStr.includes('decline');
+        const hasDeclineCode = Boolean(app.decline_code && String(app.decline_code).trim() !== '' && String(app.decline_code).trim().toUpperCase() !== 'NONE');
+        const isRejected = statusStr.includes('reject') || statusStr.includes('decline') || finalStatusStr.includes('reject') || finalStatusStr.includes('decline') || hasDeclineCode;
         if (!isRejected) {
           await client.query('ROLLBACK');
-          return forbidden(res, 'Curable Operators can only access rejected or declined applications.');
+          return forbidden(res, 'Curable Operators can only access declined or curable applications.');
         }
 
         const appDeclineCode = (app.decline_code || '').trim().toUpperCase();
-        const appCuringDesig = (app.curing_designation || '').trim().toUpperCase();
+        const appCuringDesig = (app.curing_designation || '').trim().toUpperCase().replace(/ /g, '_');
+
+        const physicalCodes = HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.PHYSICAL_CURABLE).map(c => c.code.toUpperCase());
+        const digitalCodes = HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.DIGITAL_CURABLE).map(c => c.code.toUpperCase());
+        const emailCodes = HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.EMAIL_CURABLE).map(c => c.code.toUpperCase());
 
         if (isPhysicalCurable) {
-          const physicalCodes = ['41', '15R', '82', '86N', '141', '14', '14R', '426', '15', '16D', '15W', '431', '3F', '429', '417', '424', '882', '425', '52', '884', '414', '151', '34A', '35', '16R', '427'];
-          if (appCuringDesig !== 'PHYSICAL_CURABLE' && !physicalCodes.includes(appDeclineCode)) {
+          if (appDeclineCode && appDeclineCode !== 'NONE') {
+            if (!physicalCodes.includes(appDeclineCode)) {
+              await client.query('ROLLBACK');
+              return forbidden(res, 'This application is not allocated to Physical Curable team.');
+            }
+          } else if (!appCuringDesig.startsWith('PHYSICAL_CURABLE')) {
             await client.query('ROLLBACK');
             return forbidden(res, 'This application is not allocated to Physical Curable team.');
           }
         } else if (isDigitalCurable) {
-          const digitalCodes = ['86D', '412', '413', '415', '420', '32', '824', '823', '15S', '86I', '86C', 'EM1', '14S', '37E', '8', '86F', '86E'];
-          if (appCuringDesig !== 'DIGITAL_CURABLE' && !digitalCodes.includes(appDeclineCode)) {
+          if (appDeclineCode && appDeclineCode !== 'NONE') {
+            if (!digitalCodes.includes(appDeclineCode)) {
+              await client.query('ROLLBACK');
+              return forbidden(res, 'This application is not allocated to Digital Curable team.');
+            }
+          } else if (!appCuringDesig.startsWith('DIGITAL_CURABLE')) {
             await client.query('ROLLBACK');
             return forbidden(res, 'This application is not allocated to Digital Curable team.');
           }
         } else if (isEmailCurable) {
-          const emailCodes = ['418', '142', '152', '92', '06A', '91', '422', '86L'];
-          if (appCuringDesig !== 'EMAIL_CURABLE' && !emailCodes.includes(appDeclineCode)) {
+          if (appDeclineCode && appDeclineCode !== 'NONE') {
+            if (!emailCodes.includes(appDeclineCode)) {
+              await client.query('ROLLBACK');
+              return forbidden(res, 'This application is not allocated to Email Curable team.');
+            }
+          } else if (!appCuringDesig.startsWith('EMAIL_CURABLE')) {
             await client.query('ROLLBACK');
             return forbidden(res, 'This application is not allocated to Email Curable team.');
           }

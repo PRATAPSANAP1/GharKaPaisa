@@ -54,7 +54,7 @@ export default function ManageApplications() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(25);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState(() => (isQuerableOperatorUser || isCurableOperatorUser) ? 'rejected' : "");
+  const [status, setStatus] = useState(() => isQuerableOperatorUser ? 'rejected' : "");
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -420,6 +420,11 @@ export default function ManageApplications() {
 
   const STATUS_TABS = isQuerableOperatorUser ? [
     { id: 'rejected', label: 'Assigned Bank Rejected Cases', color: '#ef4444', bg: '#ef444415' }
+  ] : isCurableOperatorUser ? [
+    { id: '', label: 'All Curable Applications', color: C.primary, bg: `${C.primary}15` },
+    { id: 'operational_verified', label: 'Operational Verified', color: '#8b5cf6', bg: '#8b5cf615' },
+    { id: 'rejected', label: 'Declined / Rejected', color: '#ef4444', bg: '#ef444415' },
+    { id: 'approved', label: 'Cured & Approved', color: '#10b981', bg: '#10b98115' },
   ] : [
     { id: '', label: 'All Applications', color: C.primary, bg: `${C.primary}15` },
     { id: 'pending', label: 'Pending', color: '#f59e0b', bg: '#f59e0b15' },
