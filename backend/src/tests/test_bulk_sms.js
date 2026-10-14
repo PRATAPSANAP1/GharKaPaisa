@@ -88,7 +88,7 @@ async function runTests() {
     schedule_type: 'SEND_NOW',
     recipients: csvResult.valid_recipients,
     custom_variables: {
-      var1: 'HDFC BANK',
+      var1: 'GharKaPaisa',
       var2: 'https://gharkapaisa.com/apply',
     },
     file_name: 'customers_test.csv',

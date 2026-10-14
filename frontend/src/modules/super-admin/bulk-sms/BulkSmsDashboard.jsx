@@ -98,7 +98,7 @@ const SINGLE_APPROVED_TEMPLATE = {
   id: 'tpl-preapproved-loan-001',
   name: 'Pre-Approved Credit Card Loan Offer',
   provider: 'MSG91',
-  provider_template_id: '6a8b2b479cac2288a3094b42',
+  provider_template_id: '6acdf0660b357ef1f10a6343',
   sender_id: 'GHARKP',
   content: `Hello! Greetings from ##var1## You have a pre-approved loan on your credit card with instant disbursal in 10 seconds. How much loan amount are you looking for?\n\n[Apply here] ##var2##\n-YOHESA MARKETING CONSULTATION PRIVATE LIMITED\n-GharKaPaisa`,
   template_type: 'Promotional',
@@ -115,7 +115,7 @@ const SINGLE_APPROVED_TEMPLATE = {
   const [variableMappings, setVariableMappings] = useState({});
 
   // Dynamic Variable Inputs (##var1## and ##var2##)
-  const [var1Value, setVar1Value] = useState('HDFC BANK');
+  const [var1Value, setVar1Value] = useState('GharKaPaisa');
   const [var2Value, setVar2Value] = useState('https://gharkapaisa.com/apply');
   const [var1Source, setVar1Source] = useState('custom'); // 'custom' | 'column'
   const [var2Source, setVar2Source] = useState('custom'); // 'custom' | 'column'
@@ -149,7 +149,7 @@ const SINGLE_APPROVED_TEMPLATE = {
 
   // Template Preview Modal
   const [previewingTemplate, setPreviewingTemplate] = useState(null);
-  const [modalTestVar1, setModalTestVar1] = useState('HDFC BANK');
+  const [modalTestVar1, setModalTestVar1] = useState('GharKaPaisa');
   const [modalTestVar2, setModalTestVar2] = useState('https://gharkapaisa.com/apply');
 
   // ── Fetch Templates (Ensure only the single approved template is exposed) ───
@@ -410,7 +410,7 @@ const SINGLE_APPROVED_TEMPLATE = {
     setUploadedFile(null);
     setUploadResult(null);
     setSelectedTemplate(templates[0] || SINGLE_APPROVED_TEMPLATE);
-    setVar1Value('HDFC BANK');
+    setVar1Value('GharKaPaisa');
     setVar2Value('https://gharkapaisa.com/apply');
     setVar1Source('custom');
     setVar2Source('custom');
@@ -1465,7 +1465,7 @@ const SINGLE_APPROVED_TEMPLATE = {
                             border: `1px solid ${C.border}`,
                           }}
                         >
-                          MSG91 ID: {selectedTemplate?.provider_template_id || '6a8b2b479cac2288a3094b42'}
+                          MSG91 ID: {selectedTemplate?.provider_template_id || '6acdf0660b357ef1f10a6343'}
                         </span>
                       </div>
                     </div>
@@ -1600,7 +1600,7 @@ const SINGLE_APPROVED_TEMPLATE = {
                               <input
                                 id="var1-input"
                                 type="text"
-                                placeholder="e.g. HDFC BANK or GharKaPaisa"
+                                placeholder="e.g. GharKaPaisa"
                                 value={var1Value}
                                 onChange={(e) => setVar1Value(e.target.value)}
                                 style={{
@@ -2938,7 +2938,7 @@ const SINGLE_APPROVED_TEMPLATE = {
                           <button
                             type="button"
                             onClick={() => {
-                              setModalTestVar1(var1Value || 'HDFC BANK');
+                              setModalTestVar1(var1Value || 'GharKaPaisa');
                               setModalTestVar2(var2Value || 'https://gharkapaisa.com/apply');
                               setPreviewingTemplate(t);
                             }}
@@ -3316,7 +3316,7 @@ const SINGLE_APPROVED_TEMPLATE = {
                     type="text"
                     value={modalTestVar1}
                     onChange={(e) => setModalTestVar1(e.target.value)}
-                    placeholder="e.g. HDFC BANK"
+                    placeholder="e.g. GharKaPaisa"
                     style={{
                       width: '100%',
                       padding: '8px 12px',

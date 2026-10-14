@@ -285,16 +285,17 @@ const getTemplates = async () => {
   if (!shouldSkipDb()) {
     await ensureBulkSmsTables();
     try {
+      const activeTemplateId = process.env.MSG91_BULK_SMS_TEMPLATE_ID || '6acdf0660b357ef1f10a6343';
       const res = await query(`
         SELECT id, name, provider, provider_template_id, sender_id, content,
                template_type, approval_status, variables, preview_url, created_at
         FROM sms_templates
         WHERE id = 'tpl-preapproved-loan-001' 
-           OR provider_template_id = '6a8b2b479cac2288a3094b42'
+           OR provider_template_id = $1
            OR content LIKE '%##var1##%'
         ORDER BY created_at DESC
         LIMIT 1
-      `);
+      `, [activeTemplateId]);
       if (res.rows && res.rows.length > 0) {
         return res.rows;
       }
@@ -303,16 +304,17 @@ const getTemplates = async () => {
         tablesEnsured = false;
         await ensureBulkSmsTables();
         try {
+          const activeTemplateId = process.env.MSG91_BULK_SMS_TEMPLATE_ID || '6acdf0660b357ef1f10a6343';
           const retryRes = await query(`
             SELECT id, name, provider, provider_template_id, sender_id, content,
                    template_type, approval_status, variables, preview_url, created_at
             FROM sms_templates
             WHERE id = 'tpl-preapproved-loan-001' 
-               OR provider_template_id = '6a8b2b479cac2288a3094b42'
+               OR provider_template_id = $1
                OR content LIKE '%##var1##%'
             ORDER BY created_at DESC
             LIMIT 1
-          `);
+          `, [activeTemplateId]);
           if (retryRes.rows && retryRes.rows.length > 0) return retryRes.rows;
         } catch (retryErr) {}
       }
@@ -856,6 +858,32 @@ const exportCampaignCsv = async (campaignId) => {
   return rows.join('\n');
 };
 
+/**
+ * Trigger immediate queue dispatch for a campaign (e.g. from Send Now)
+ */
+const triggerCampaignSendNow = async (campaignId) => {
+  const campaign = await getCampaignDetails(campaignId);
+  if (!campaign) {
+    throw new Error('Campaign not found');
+  }
+  if (campaign.status === 'COMPLETED' || campaign.status === 'PROCESSING') {
+    throw new Error(`Campaign is already ${campaign.status.toLowerCase()}.`);
+  }
+
+  campaign.status = 'QUEUED';
+  campaign.started_at = new Date();
+
+  const template = await getTemplateById(campaign.template_id);
+  const recipientData = await getCampaignRecipients(campaignId, { limit: 100000 });
+  const recipientList = recipientData.recipients || [];
+
+  processCampaignQueueAsync(campaign.id, template, recipientList).catch((qErr) => {
+    logger.error(`[Bulk-SMS-Queue] Trigger send now error: ${qErr.message}`);
+  });
+
+  return campaign;
+};
+
 module.exports = {
   cleanAndValidateMobile,
   parseRecipientFile,
@@ -863,6 +891,8 @@ module.exports = {
   getTemplateById,
   createTemplate,
   createCampaign,
+  processCampaignQueueAsync,
+  triggerCampaignSendNow,
   getCampaignStats,
   listCampaigns,
   getCampaignDetails,
@@ -870,3 +900,4 @@ module.exports = {
   getCampaignReport,
   exportCampaignCsv,
 };
+

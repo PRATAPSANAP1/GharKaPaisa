@@ -87,17 +87,21 @@ const sendBatchViaFlow = async (templateId, recipients = [], senderId = msg91Sen
     const data = res.data;
     logger.info(`[MSG91-FLOW] Batch dispatched: ${JSON.stringify(data)}`);
 
-    const isSuccess = data && (data.type === 'success' || data.status === 'success' || !data.hasError);
+    const isSuccess = Boolean(
+      data &&
+      data.type !== 'error' &&
+      (data.type === 'success' || data.status === 'success' || data.hasError === false)
+    );
 
     return {
       success: isSuccess,
       simulated: false,
-      messageId: data.request_id || data.message || `MSG91_${Date.now()}`,
+      messageId: isSuccess ? (data.request_id || data.message || `MSG91_${Date.now()}`) : null,
       providerResponse: data,
       recipients: recipients.map((r) => ({
         mobile: r.mobiles,
         status: isSuccess ? 'SENT' : 'FAILED',
-        message_id: data.request_id || `MSG91_${Date.now()}`,
+        message_id: isSuccess ? (data.request_id || `MSG91_${Date.now()}`) : null,
         failure_reason: isSuccess ? null : (data.message || 'Provider rejected request'),
       })),
     };

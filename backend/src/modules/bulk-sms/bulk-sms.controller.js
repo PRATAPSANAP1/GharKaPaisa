@@ -329,16 +329,7 @@ const exportCampaignReport = async (req, res) => {
  */
 const triggerSendNow = async (req, res) => {
   try {
-    const campaign = await bulkSmsService.getCampaignDetails(req.params.id);
-    if (!campaign) {
-      return res.status(404).json({ success: false, message: 'Campaign not found' });
-    }
-    if (campaign.status === 'COMPLETED' || campaign.status === 'PROCESSING') {
-      return res.status(400).json({ success: false, message: `Campaign is already ${campaign.status.toLowerCase()}.` });
-    }
-
-    campaign.status = 'QUEUED';
-    campaign.started_at = new Date();
+    const campaign = await bulkSmsService.triggerCampaignSendNow(req.params.id);
 
     await logAction(req, 'BULK_SMS_CAMPAIGN_SENT_NOW', req.params.id, {
       campaign_name: campaign.campaign_name,
