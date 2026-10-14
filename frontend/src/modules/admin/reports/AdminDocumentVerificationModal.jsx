@@ -460,6 +460,10 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const isCreditCard = isCreditCardApplication(application);
   const isSbiCreditCard = isSbi && isCreditCard;
   const isHdfcCreditCard = isHdfcBank && isCreditCard;
+  const isLocOrEoc = isLocOrEocApplication(application);
+  const isEoc = isEocApplication(application);
+  const isLoc = isLocApplication(application);
+  const isHdfcCcApp = (isHdfcBank || isTataCobrandHdfc) && isCreditCard && !isLocOrEoc;
 
   const resolveBankRefNo = (rawRef, sysNo) => {
     const s = sanitizeVal(rawRef);
@@ -485,7 +489,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const [cardApprovalStage, setCardApprovalStage] = useState(sanitizeVal(application?.card_approval_stage) || sanitizeVal(application?.physical_details?.card_approval_stage) || 'None');
   const [digitalCardIssued, setDigitalCardIssued] = useState(sanitizeVal(application?.digital_card_issued) || sanitizeVal(application?.physical_details?.digital_card_issued) || 'None');
   const [cardActivationStage, setCardActivationStage] = useState(sanitizeVal(application?.card_activation_stage) || sanitizeVal(application?.physical_details?.card_activation_stage) || 'None');
-  const [declineCode, setDeclineCode] = useState(sanitizeVal(application?.decline_code) || sanitizeVal(application?.physical_details?.decline_code) || '');
+  const [declineCode, setDeclineCode] = useState(sanitizeVal(application?.decline_code) || sanitizeVal(application?.physical_details?.decline_code) || (isHdfcCcApp ? 'None' : ''));
   const [declineRemark, setDeclineRemark] = useState(sanitizeVal(application?.decline_remark) || sanitizeVal(application?.physical_details?.decline_remark) || '');
   const [queryableRemark, setQueryableRemark] = useState(sanitizeVal(application?.queryable_remark) || sanitizeVal(application?.physical_details?.queryable_remark) || 'None');
   const [queryableSalesRemark, setQueryableSalesRemark] = useState(sanitizeVal(application?.queryable_sales_remark) || sanitizeVal(application?.physical_details?.queryable_sales_remark) || '');
@@ -507,9 +511,6 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const [appFileGenerated, setAppFileGenerated] = useState(sanitizeVal(application?.app_file_generated) || sanitizeVal(application?.appfile_generated) || sanitizeVal(application?.physical_details?.app_file_generated) || 'None');
   const [declineReason, setDeclineReason] = useState(sanitizeVal(application?.decline_reason) || sanitizeVal(application?.physical_details?.decline_reason));
   const [eligibleReQd, setEligibleReQd] = useState(sanitizeVal(application?.eligible_reqd) || sanitizeVal(application?.physical_details?.eligible_reqd) || 'No');
-  const isLocOrEoc = isLocOrEocApplication(application);
-  const isEoc = isEocApplication(application);
-  const isLoc = isLocApplication(application);
 
   // Final Form 3 Fields for LOC and EOC
   const [finalBankStage, setFinalBankStage] = useState(resolveFinalBankStage(application?.final_bank_stage || application?.physical_details?.final_bank_stage));
@@ -727,7 +728,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         setCardApprovalStage(sanitizeVal(app.card_approval_stage) || sanitizeVal(pd.card_approval_stage) || 'None');
         setDigitalCardIssued(sanitizeVal(app.digital_card_issued) || sanitizeVal(pd.digital_card_issued) || 'None');
         setCardActivationStage(sanitizeVal(app.card_activation_stage) || sanitizeVal(pd.card_activation_stage) || 'None');
-        setDeclineCode(sanitizeVal(app.decline_code) || sanitizeVal(pd.decline_code) || '');
+        setDeclineCode(sanitizeVal(app.decline_code) || sanitizeVal(pd.decline_code) || (isHdfcCcApp ? 'None' : ''));
         setDeclineRemark(sanitizeVal(app.decline_remark) || sanitizeVal(pd.decline_remark) || '');
         setQueryableRemark(sanitizeVal(app.queryable_remark) || sanitizeVal(pd.queryable_remark) || 'None');
         setQueryableSalesRemark(sanitizeVal(app.queryable_sales_remark) || sanitizeVal(pd.queryable_sales_remark) || '');
@@ -863,10 +864,10 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           card_approval_stage: cardApprovalStage || 'None',
           digital_card_issued: digitalCardIssued || 'None',
           card_activation_stage: cardActivationStage || 'None',
-          decline_code: declineCode || undefined,
-          decline_description: getHdfcDeclineCodeInfo(declineCode)?.type || declineRemark || undefined,
+          decline_code: declineCode || (isHdfcCcApp ? 'None' : undefined),
+          decline_description: getHdfcDeclineCodeInfo(declineCode)?.type || (declineCode === 'None' ? 'None' : (declineRemark || undefined)),
           curing_designation: getHdfcCuringDesignation(declineCode) || undefined,
-          decline_remark: declineRemark || undefined,
+          decline_remark: declineRemark || (declineCode === 'CIBIL decline' ? 'CIBIL decline' : undefined),
           queryable_remark: queryableRemark || 'None',
           queryable_sales_remark: queryableSalesRemark || undefined,
           digital_remark: digitalRemark || 'None',
@@ -967,8 +968,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           const isDeclineSelected = String(finalStatus || '').toLowerCase().includes('decline') || 
                                     String(finalStatus || '').toLowerCase().includes('reject') || 
                                     String(targetStatus || '').toLowerCase() === 'rejected';
-          if (isDeclineSelected && (!declineCode || !String(declineCode).trim())) {
-            alert('Please select an HDFC Decline Code when updating status to Decline.');
+          if (isDeclineSelected && (!declineCode || !String(declineCode).trim() || String(declineCode).trim().toLowerCase() === 'none')) {
+            alert('Please select an HDFC Decline Code or CIBIL decline when updating status to Decline.');
             setActionLoading(false);
             return;
           }
@@ -981,10 +982,10 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           card_approval_stage: cardApprovalStage,
           digital_card_issued: digitalCardIssued,
           card_activation_stage: cardActivationStage,
-          decline_code: declineCode || undefined,
-          decline_description: getHdfcDeclineCodeInfo(declineCode)?.type || declineRemark || declineReason || undefined,
+          decline_code: declineCode || (isHdfcCcApp ? 'None' : undefined),
+          decline_description: getHdfcDeclineCodeInfo(declineCode)?.type || (declineCode === 'None' ? 'None' : (declineRemark || declineReason || undefined)),
           curing_designation: getHdfcCuringDesignation(declineCode) || undefined,
-          decline_remark: declineRemark,
+          decline_remark: declineRemark || (declineCode === 'CIBIL decline' ? 'CIBIL decline' : undefined),
           queryable_remark: queryableRemark,
           queryable_sales_remark: queryableSalesRemark,
           digital_remark: digitalRemark,
@@ -3176,7 +3177,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                       {(String(cardApprovalStage || '').toLowerCase().includes('decline') || String(finalStatus || '').toLowerCase().includes('decline') || String(finalStatus || '').toLowerCase().includes('reject')) && (
                         <>
                           {/* 1. DECLINE CODE */}
-                          {(isHdfcBank || isTataCobrandHdfc) ? (
+                          {isHdfcCcApp ? (
                             <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                               <div>
                                 <label style={{ fontSize: '12px', fontWeight: 800, color: '#dc2626', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', textTransform: 'uppercase' }}>
@@ -3184,14 +3185,18 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                                 </label>
                                 <select
                                   disabled={!canEditRemark}
-                                  value={declineCode || ''}
+                                  value={declineCode || 'None'}
                                   onChange={(e) => {
                                     const selectedCode = e.target.value;
                                     setDeclineCode(selectedCode);
-                                    const info = getHdfcDeclineCodeInfo(selectedCode);
-                                    if (info?.type) {
-                                      setDeclineRemark(info.type);
-                                      if (!declineReason) setDeclineReason(info.type);
+                                    if (selectedCode === 'None' || selectedCode === '') {
+                                      setDeclineRemark('');
+                                    } else {
+                                      const info = getHdfcDeclineCodeInfo(selectedCode);
+                                      if (info?.type) {
+                                        setDeclineRemark(info.type);
+                                        if (!declineReason) setDeclineReason(info.type);
+                                      }
                                     }
                                   }}
                                   style={{
@@ -3205,7 +3210,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                                     color: '#1e293b'
                                   }}
                                 >
-                                  <option value="">-- Select HDFC Decline Code ({HDFC_DECLINE_CODES.length} Codes) --</option>
+                                  <option value="None">None</option>
+                                  <option value="CIBIL decline">CIBIL decline</option>
                                   <optgroup label="Physical Curable (26 Codes)">
                                     {HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.PHYSICAL_CURABLE).map(c => (
                                       <option key={c.code} value={c.code}>
@@ -3227,20 +3233,30 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                                       </option>
                                     ))}
                                   </optgroup>
+                                  {declineCode && !['None', 'CIBIL decline', ...HDFC_DECLINE_CODES.map(c => c.code)].includes(declineCode) && (
+                                    <option value={declineCode}>{declineCode}</option>
+                                  )}
                                 </select>
                               </div>
 
                               {/* READ-ONLY ALLOCATED CURING TEAM BANNER */}
-                              {declineCode && (() => {
+                              {declineCode && declineCode !== 'None' && (() => {
                                 const codeInfo = getHdfcDeclineCodeInfo(declineCode);
                                 const curingDesig = codeInfo?.designation || getHdfcCuringDesignation(declineCode);
-                                const badgeInfo = CURING_DESIGNATION_BADGES[curingDesig] || {
+                                const isCibil = String(declineCode).trim().toUpperCase() === 'CIBIL DECLINE';
+                                const badgeInfo = CURING_DESIGNATION_BADGES[curingDesig] || (isCibil ? {
+                                  bg: '#fef2f2',
+                                  border: '#fca5a5',
+                                  text: '#991b1b',
+                                  pillBg: '#dc2626',
+                                  label: 'Non-Curable (CIBIL Decline)'
+                                } : {
                                   bg: '#f1f5f9',
                                   border: '#cbd5e1',
                                   text: '#475569',
                                   pillBg: '#64748b',
                                   label: 'Unassigned Curing'
-                                };
+                                });
 
                                 return (
                                   <div style={{
@@ -3279,7 +3295,11 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                                       Description: {codeInfo?.type || declineRemark || '—'}
                                     </div>
                                     <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
-                                      ℹ️ Application will automatically route to <strong>{badgeInfo.label}</strong> operators in the Admin panel.
+                                      {isCibil ? (
+                                        <span>ℹ️ Application is marked as <strong>CIBIL Decline</strong> and does not route to curing operators.</span>
+                                      ) : (
+                                        <span>ℹ️ Application will automatically route to <strong>{badgeInfo.label}</strong> operators in the Admin panel.</span>
+                                      )}
                                     </div>
                                   </div>
                                 );
@@ -3989,7 +4009,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   )}
 
                   {/* 🏦 HDFC DECLINE CODE (ONLY FOR HDFC BANK CREDIT CARD IN FINAL FORM WHEN STATUS IS DECLINE) */}
-                  {(isHdfcBank || isTataCobrandHdfc) && (String(finalStatus || '').toLowerCase().includes('decline') || String(finalStatus || '').toLowerCase().includes('reject')) && (
+                  {isHdfcCcApp && (String(finalStatus || '').toLowerCase().includes('decline') || String(finalStatus || '').toLowerCase().includes('reject')) && (
                     <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '12px', background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '12px', padding: '16px' }}>
                       <div>
                         <label style={{ fontSize: '12px', fontWeight: 800, color: '#dc2626', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', textTransform: 'uppercase' }}>
@@ -3997,14 +4017,18 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         </label>
                         <select
                           disabled={!canEditFinal}
-                          value={declineCode || ''}
+                          value={declineCode || 'None'}
                           onChange={(e) => {
                             const selectedCode = e.target.value;
                             setDeclineCode(selectedCode);
-                            const info = getHdfcDeclineCodeInfo(selectedCode);
-                            if (info?.type) {
-                              setDeclineRemark(info.type);
-                              setDeclineReason(info.type);
+                            if (selectedCode === 'None' || selectedCode === '') {
+                              setDeclineRemark('');
+                            } else {
+                              const info = getHdfcDeclineCodeInfo(selectedCode);
+                              if (info?.type) {
+                                setDeclineRemark(info.type);
+                                setDeclineReason(info.type);
+                              }
                             }
                           }}
                           style={{
@@ -4018,7 +4042,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                             color: '#1e293b'
                           }}
                         >
-                          <option value="">-- Select HDFC Decline Code ({HDFC_DECLINE_CODES.length} Codes) * --</option>
+                          <option value="None">None</option>
+                          <option value="CIBIL decline">CIBIL decline</option>
                           <optgroup label="Physical Curable (26 Codes)">
                             {HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.PHYSICAL_CURABLE).map(c => (
                               <option key={c.code} value={c.code}>
@@ -4040,20 +4065,30 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                               </option>
                             ))}
                           </optgroup>
+                          {declineCode && !['None', 'CIBIL decline', ...HDFC_DECLINE_CODES.map(c => c.code)].includes(declineCode) && (
+                            <option value={declineCode}>{declineCode}</option>
+                          )}
                         </select>
                       </div>
 
                       {/* READ-ONLY ALLOCATED CURING TEAM BANNER */}
-                      {declineCode && (() => {
+                      {declineCode && declineCode !== 'None' && (() => {
                         const codeInfo = getHdfcDeclineCodeInfo(declineCode);
                         const curingDesig = codeInfo?.designation || getHdfcCuringDesignation(declineCode);
-                        const badgeInfo = CURING_DESIGNATION_BADGES[curingDesig] || {
+                        const isCibil = String(declineCode).trim().toUpperCase() === 'CIBIL DECLINE';
+                        const badgeInfo = CURING_DESIGNATION_BADGES[curingDesig] || (isCibil ? {
+                          bg: '#fef2f2',
+                          border: '#fca5a5',
+                          text: '#991b1b',
+                          pillBg: '#dc2626',
+                          label: 'Non-Curable (CIBIL Decline)'
+                        } : {
                           bg: '#f1f5f9',
                           border: '#cbd5e1',
                           text: '#475569',
                           pillBg: '#64748b',
                           label: 'Unassigned Curing'
-                        };
+                        });
 
                         return (
                           <div style={{
@@ -4094,7 +4129,11 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                               Description: {codeInfo?.type || declineRemark || declineReason || '—'}
                             </div>
                             <div style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 600 }}>
-                              ℹ️ Application will automatically route to <strong>{badgeInfo.label}</strong> operators in the Admin panel.
+                              {isCibil ? (
+                                <span>ℹ️ Application is declined due to <strong>CIBIL Bureau guidelines</strong> and does not route to curing operators.</span>
+                              ) : (
+                                <span>ℹ️ Application will automatically route to <strong>{badgeInfo.label}</strong> operators in the Admin panel.</span>
+                              )}
                             </div>
                           </div>
                         );

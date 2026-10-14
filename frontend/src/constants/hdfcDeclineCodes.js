@@ -111,6 +111,30 @@ HDFC_DECLINE_CODES.forEach(item => {
   };
 });
 
+// Special decline options
+export const HDFC_SPECIAL_DECLINE_OPTIONS = [
+  { code: 'None', type: 'None', label: 'None' },
+  { code: 'CIBIL decline', type: 'CIBIL decline', label: 'CIBIL decline' },
+];
+
+HDFC_DECLINE_CODES_MAP['NONE'] = {
+  code: 'None',
+  type: 'None',
+  description: 'None',
+  designation: null,
+  designationLabel: 'None',
+  label: 'None',
+};
+
+HDFC_DECLINE_CODES_MAP['CIBIL DECLINE'] = {
+  code: 'CIBIL decline',
+  type: 'CIBIL decline',
+  description: 'CIBIL decline',
+  designation: null,
+  designationLabel: 'Non-Curable',
+  label: 'CIBIL decline',
+};
+
 /**
  * Get curing designation for an HDFC decline code
  * @param {string} code 

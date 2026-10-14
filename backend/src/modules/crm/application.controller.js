@@ -4320,14 +4320,24 @@ const updateApplicationDetails = async (req, res, next) => {
     let derivedDeclineDesc = effectiveDeclineDescInput;
 
     if (effectiveDeclineCode) {
-      const declineInfo = getHdfcDeclineCodeInfo(effectiveDeclineCode);
-      if (declineInfo) {
-        effectiveDeclineCode = declineInfo.code;
-        derivedCuringDesignation = declineInfo.designation;
-        derivedDeclineDesc = derivedDeclineDesc || declineInfo.description;
-      } else if (isHdfcCC) {
-        await client.query('ROLLBACK');
-        return error(res, `Invalid HDFC decline code: "${effectiveDeclineCode}". Please select a valid decline code from the list.`, 400);
+      if (String(effectiveDeclineCode).trim().toUpperCase() === 'NONE') {
+        effectiveDeclineCode = 'None';
+        derivedCuringDesignation = null;
+        derivedDeclineDesc = 'None';
+        if (isHdfcCC && isDeclinedStatus && String(final_status || '').toLowerCase() === 'decline') {
+          await client.query('ROLLBACK');
+          return error(res, 'Please select a valid decline code (such as CIBIL decline or an HDFC decline code) when marking final approval status as Decline for HDFC Credit Card.', 400);
+        }
+      } else {
+        const declineInfo = getHdfcDeclineCodeInfo(effectiveDeclineCode);
+        if (declineInfo) {
+          effectiveDeclineCode = declineInfo.code;
+          derivedCuringDesignation = declineInfo.designation;
+          derivedDeclineDesc = derivedDeclineDesc || declineInfo.description || declineInfo.type;
+        } else if (isHdfcCC) {
+          await client.query('ROLLBACK');
+          return error(res, `Invalid HDFC decline code: "${effectiveDeclineCode}". Please select a valid decline code from the list.`, 400);
+        }
       }
     } else if (isHdfcCC && isDeclinedStatus && String(final_status || '').toLowerCase() === 'decline') {
       await client.query('ROLLBACK');

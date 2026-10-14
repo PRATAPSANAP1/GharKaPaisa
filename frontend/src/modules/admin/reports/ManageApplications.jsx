@@ -1204,7 +1204,7 @@ export default function ManageApplications() {
                                 );
                               })()}
                             </div>
-                            {app.decline_code && (
+                            {app.decline_code && app.decline_code !== 'None' && (
                               <div style={{ fontSize: '10.5px', color: '#dc2626', fontWeight: 700 }}>
                                 Decline Code: <strong>{app.decline_code}</strong>
                               </div>
@@ -1725,7 +1725,7 @@ export default function ManageApplications() {
                           </button>
                         </strong></div>
                         <div><span style={{ color: C.textLight }}>Final Status from Bank:</span> <strong style={{ color: C.text }}>{appDetail.final_status || 'pending'}</strong></div>
-                        {appDetail.decline_code && (
+                        {appDetail.decline_code && appDetail.decline_code !== 'None' && (
                           <div>
                             <span style={{ color: C.textLight }}>Decline Code:</span>{' '}
                             <strong style={{ color: '#dc2626', fontFamily: 'monospace' }}>
