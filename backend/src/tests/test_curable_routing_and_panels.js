@@ -73,8 +73,8 @@ function matchesCurableOperatorPanel(application, operatorDesignation) {
   const isHdfc = bankName.includes('hdfc') && !bankName.includes('tata');
   if (!isHdfc) return false;
 
-  const appCode = (application.decline_code || '').trim().toUpperCase();
-  const appDesig = (application.curing_designation || '').trim().toUpperCase().replace(/ /g, '_');
+  const appCode = (application.primary_decline_code || application.decline_code || '').trim().toUpperCase();
+  const appDesig = (application.primary_curing_designation || application.curing_designation || '').trim().toUpperCase().replace(/ /g, '_');
 
   if (isPhysical) {
     return (
@@ -242,15 +242,14 @@ function checkCurableOperatorAccess(userDesignation, app) {
 
   const statusStr = (app.status || '').toLowerCase();
   const finalStatusStr = (app.final_status || '').toLowerCase();
-  const hasDeclineCode = Boolean(app.decline_code && String(app.decline_code).trim() !== '' && String(app.decline_code).trim().toUpperCase() !== 'NONE');
+  const appDeclineCode = (app.primary_decline_code || app.decline_code || '').trim().toUpperCase();
+  const appCuringDesig = (app.primary_curing_designation || app.curing_designation || '').trim().toUpperCase().replace(/ /g, '_');
+  const hasDeclineCode = Boolean(appDeclineCode && appDeclineCode !== 'NONE');
   const isRejected = statusStr.includes('reject') || statusStr.includes('decline') || finalStatusStr.includes('reject') || finalStatusStr.includes('decline') || hasDeclineCode;
 
   if (!isRejected) {
     return { allowed: false, reason: 'Not a curable/rejected application' };
   }
-
-  const appDeclineCode = (app.decline_code || '').trim().toUpperCase();
-  const appCuringDesig = (app.curing_designation || '').trim().toUpperCase().replace(/ /g, '_');
 
   if (isPhysical) {
     if (appDeclineCode && appDeclineCode !== 'NONE') {
@@ -288,6 +287,66 @@ assert.strictEqual(checkCurableOperatorAccess('Digital Curable Operator', curabl
 assert.strictEqual(checkCurableOperatorAccess('Email Curable Operator', curableAppOperationalVerified).allowed, false);
 console.log('✓ Physical Curable Operator is authorized to update operational_verified curable applications; other operators are denied.');
 
+// ── Test 6: Verify HDFC Credit Card Final Form Dual Decline Code Routing ──
+console.log('\nTest 6: Verify HDFC Credit Card Final Form dual decline codes (Primary vs Secondary)');
+
+// Case 6A: Primary Decline Code = '41' (Physical Curable) and Secondary Decline Code = '86D' (Digital Curable)
+// The primary code MUST govern routing: app must show in Physical Curable Operator panel, NOT Digital Curable.
+const appPrimaryPhysicalSecondaryDigital = {
+  ...baseHdfcApp,
+  id: 'app-dual-01',
+  status: 'rejected',
+  final_status: 'Declined',
+  primary_decline_code: '41',
+  primary_curing_designation: 'PHYSICAL_CURABLE',
+  secondary_decline_code: '86D',
+  secondary_curing_designation: 'DIGITAL_CURABLE',
+  decline_code: '41',
+  curing_designation: 'PHYSICAL_CURABLE'
+};
+
+assert.strictEqual(matchesCurableOperatorPanel(appPrimaryPhysicalSecondaryDigital, 'Physical Curable Operator'), true, 'Primary code 41 must show in Physical Curable panel');
+assert.strictEqual(matchesCurableOperatorPanel(appPrimaryPhysicalSecondaryDigital, 'Digital Curable Operator'), false, 'Secondary code 86D must not route to Digital Curable panel');
+assert.strictEqual(matchesCurableOperatorPanel(appPrimaryPhysicalSecondaryDigital, 'Email Curable Operator'), false, 'Must not show in Email Curable panel');
+console.log('✓ Case 6A: Primary Physical Curable code (41) routes strictly to Physical Curable Operator panel despite secondary Digital code (86D).');
+
+// Case 6B: Primary Decline Code = '86D' (Digital Curable) and Secondary Decline Code = '41' (Physical Curable)
+const appPrimaryDigitalSecondaryPhysical = {
+  ...baseHdfcApp,
+  id: 'app-dual-02',
+  status: 'rejected',
+  final_status: 'Declined',
+  primary_decline_code: '86D',
+  primary_curing_designation: 'DIGITAL_CURABLE',
+  secondary_decline_code: '41',
+  secondary_curing_designation: 'PHYSICAL_CURABLE',
+  decline_code: '86D',
+  curing_designation: 'DIGITAL_CURABLE'
+};
+
+assert.strictEqual(matchesCurableOperatorPanel(appPrimaryDigitalSecondaryPhysical, 'Digital Curable Operator'), true, 'Primary code 86D must show in Digital Curable panel');
+assert.strictEqual(matchesCurableOperatorPanel(appPrimaryDigitalSecondaryPhysical, 'Physical Curable Operator'), false, 'Secondary code 41 must not route to Physical Curable panel');
+console.log('✓ Case 6B: Primary Digital Curable code (86D) routes strictly to Digital Curable Operator panel.');
+
+// Case 6C: Primary Decline Code = 'CIBIL decline' (Non-curable) with secondary Physical code
+const appPrimaryCibilSecondaryPhysical = {
+  ...baseHdfcApp,
+  id: 'app-dual-03',
+  status: 'rejected',
+  final_status: 'Declined',
+  primary_decline_code: 'CIBIL decline',
+  primary_curing_designation: null,
+  secondary_decline_code: '41',
+  secondary_curing_designation: 'PHYSICAL_CURABLE',
+  decline_code: 'CIBIL decline',
+  curing_designation: null
+};
+
+assert.strictEqual(matchesCurableOperatorPanel(appPrimaryCibilSecondaryPhysical, 'Physical Curable Operator'), false, 'CIBIL primary must not route to Physical Curable panel');
+assert.strictEqual(matchesCurableOperatorPanel(appPrimaryCibilSecondaryPhysical, 'Digital Curable Operator'), false);
+assert.strictEqual(matchesCurableOperatorPanel(appPrimaryCibilSecondaryPhysical, 'Email Curable Operator'), false);
+console.log('✓ Case 6C: Primary CIBIL decline does not route to any Curable Operator panel.');
+
 console.log('\n========================================');
-console.log('✓ All 5 Curable Routing & Panel Tests Passed!');
+console.log('✓ All 6 Curable Routing & Panel Tests Passed!');
 console.log('========================================\n');

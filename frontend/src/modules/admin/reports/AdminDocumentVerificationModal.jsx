@@ -489,8 +489,13 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const [cardApprovalStage, setCardApprovalStage] = useState(sanitizeVal(application?.card_approval_stage) || sanitizeVal(application?.physical_details?.card_approval_stage) || 'None');
   const [digitalCardIssued, setDigitalCardIssued] = useState(sanitizeVal(application?.digital_card_issued) || sanitizeVal(application?.physical_details?.digital_card_issued) || 'None');
   const [cardActivationStage, setCardActivationStage] = useState(sanitizeVal(application?.card_activation_stage) || sanitizeVal(application?.physical_details?.card_activation_stage) || 'None');
-  const [declineCode, setDeclineCode] = useState(sanitizeVal(application?.decline_code) || sanitizeVal(application?.physical_details?.decline_code) || (isHdfcCcApp ? 'None' : ''));
+  const initialPrimaryDecline = sanitizeVal(application?.primary_decline_code) || sanitizeVal(application?.physical_details?.primary_decline_code) || sanitizeVal(application?.decline_code) || sanitizeVal(application?.physical_details?.decline_code) || (isHdfcCcApp ? 'None' : '');
+  const initialSecondaryDecline = sanitizeVal(application?.secondary_decline_code) || sanitizeVal(application?.physical_details?.secondary_decline_code) || 'None';
+  const [primaryDeclineCode, setPrimaryDeclineCode] = useState(initialPrimaryDecline);
+  const [secondaryDeclineCode, setSecondaryDeclineCode] = useState(initialSecondaryDecline);
+  const [declineCode, setDeclineCode] = useState(initialPrimaryDecline);
   const [declineRemark, setDeclineRemark] = useState(sanitizeVal(application?.decline_remark) || sanitizeVal(application?.physical_details?.decline_remark) || '');
+  const [secondaryDeclineRemark, setSecondaryDeclineRemark] = useState(sanitizeVal(application?.secondary_decline_description) || sanitizeVal(application?.physical_details?.secondary_decline_description) || '');
   const [queryableRemark, setQueryableRemark] = useState(sanitizeVal(application?.queryable_remark) || sanitizeVal(application?.physical_details?.queryable_remark) || 'None');
   const [queryableSalesRemark, setQueryableSalesRemark] = useState(sanitizeVal(application?.queryable_sales_remark) || sanitizeVal(application?.physical_details?.queryable_sales_remark) || '');
   const [digitalRemark, setDigitalRemark] = useState(sanitizeVal(application?.digital_remark) || sanitizeVal(application?.physical_details?.digital_remark) || 'None');
@@ -728,8 +733,13 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         setCardApprovalStage(sanitizeVal(app.card_approval_stage) || sanitizeVal(pd.card_approval_stage) || 'None');
         setDigitalCardIssued(sanitizeVal(app.digital_card_issued) || sanitizeVal(pd.digital_card_issued) || 'None');
         setCardActivationStage(sanitizeVal(app.card_activation_stage) || sanitizeVal(pd.card_activation_stage) || 'None');
-        setDeclineCode(sanitizeVal(app.decline_code) || sanitizeVal(pd.decline_code) || (isHdfcCcApp ? 'None' : ''));
-        setDeclineRemark(sanitizeVal(app.decline_remark) || sanitizeVal(pd.decline_remark) || '');
+        const fetchedPrimaryDecline = sanitizeVal(app.primary_decline_code) || sanitizeVal(pd.primary_decline_code) || sanitizeVal(app.decline_code) || sanitizeVal(pd.decline_code) || (isHdfcCcApp ? 'None' : '');
+        const fetchedSecondaryDecline = sanitizeVal(app.secondary_decline_code) || sanitizeVal(pd.secondary_decline_code) || 'None';
+        setPrimaryDeclineCode(fetchedPrimaryDecline);
+        setSecondaryDeclineCode(fetchedSecondaryDecline);
+        setDeclineCode(fetchedPrimaryDecline);
+        setDeclineRemark(sanitizeVal(app.decline_remark) || sanitizeVal(pd.decline_remark) || sanitizeVal(app.decline_description) || sanitizeVal(pd.decline_description) || '');
+        setSecondaryDeclineRemark(sanitizeVal(app.secondary_decline_description) || sanitizeVal(pd.secondary_decline_description) || '');
         setQueryableRemark(sanitizeVal(app.queryable_remark) || sanitizeVal(pd.queryable_remark) || 'None');
         setQueryableSalesRemark(sanitizeVal(app.queryable_sales_remark) || sanitizeVal(pd.queryable_sales_remark) || '');
         setDigitalRemark(sanitizeVal(app.digital_remark) || sanitizeVal(pd.digital_remark) || 'None');
@@ -968,12 +978,20 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           const isDeclineSelected = String(finalStatus || '').toLowerCase().includes('decline') || 
                                     String(finalStatus || '').toLowerCase().includes('reject') || 
                                     String(targetStatus || '').toLowerCase() === 'rejected';
-          if (isDeclineSelected && (!declineCode || !String(declineCode).trim() || String(declineCode).trim().toLowerCase() === 'none')) {
-            alert('Please select an HDFC Decline Code or CIBIL decline when updating status to Decline.');
+          const effPrimary = primaryDeclineCode || declineCode;
+          if (isDeclineSelected && (!effPrimary || !String(effPrimary).trim() || String(effPrimary).trim().toLowerCase() === 'none')) {
+            alert('Please select a Primary Decline Code (or CIBIL decline) when updating status to Decline for HDFC Credit Card.');
             setActionLoading(false);
             return;
           }
         }
+
+        const effPrimaryCode = primaryDeclineCode || declineCode || (isHdfcCcApp ? 'None' : undefined);
+        const effSecondaryCode = secondaryDeclineCode && secondaryDeclineCode !== 'None' ? secondaryDeclineCode : (isHdfcCcApp ? 'None' : undefined);
+        const primaryCodeInfo = getHdfcDeclineCodeInfo(effPrimaryCode);
+        const secondaryCodeInfo = getHdfcDeclineCodeInfo(effSecondaryCode);
+        const primaryCuringDesig = getHdfcCuringDesignation(effPrimaryCode);
+        const secondaryCuringDesig = getHdfcCuringDesignation(effSecondaryCode);
 
         payload = {
           ...payload,
@@ -982,10 +1000,16 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           card_approval_stage: cardApprovalStage,
           digital_card_issued: digitalCardIssued,
           card_activation_stage: cardActivationStage,
-          decline_code: declineCode || (isHdfcCcApp ? 'None' : undefined),
-          decline_description: getHdfcDeclineCodeInfo(declineCode)?.type || (declineCode === 'None' ? 'None' : (declineRemark || declineReason || undefined)),
-          curing_designation: getHdfcCuringDesignation(declineCode) || undefined,
-          decline_remark: declineRemark || (declineCode === 'CIBIL decline' ? 'CIBIL decline' : undefined),
+          decline_code: effPrimaryCode,
+          decline_description: primaryCodeInfo?.type || (effPrimaryCode === 'None' ? 'None' : (declineRemark || declineReason || undefined)),
+          curing_designation: primaryCuringDesig || undefined,
+          primary_decline_code: effPrimaryCode,
+          primary_decline_description: primaryCodeInfo?.type || (effPrimaryCode === 'None' ? 'None' : (declineRemark || declineReason || undefined)),
+          primary_curing_designation: primaryCuringDesig || undefined,
+          secondary_decline_code: effSecondaryCode || undefined,
+          secondary_decline_description: secondaryCodeInfo?.type || (effSecondaryCode === 'None' ? 'None' : (secondaryDeclineRemark || undefined)),
+          secondary_curing_designation: secondaryCuringDesig || undefined,
+          decline_remark: declineRemark || (effPrimaryCode === 'CIBIL decline' ? 'CIBIL decline' : undefined),
           queryable_remark: queryableRemark,
           queryable_sales_remark: queryableSalesRemark,
           digital_remark: digitalRemark,
@@ -4010,72 +4034,139 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
 
                   {/* 🏦 HDFC DECLINE CODE (ONLY FOR HDFC BANK CREDIT CARD IN FINAL FORM WHEN STATUS IS DECLINE) */}
                   {isHdfcCcApp && (String(finalStatus || '').toLowerCase().includes('decline') || String(finalStatus || '').toLowerCase().includes('reject')) && (
-                    <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '12px', background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '12px', padding: '16px' }}>
-                      <div>
-                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#dc2626', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', textTransform: 'uppercase' }}>
-                          <AlertTriangle size={15} /> DECLINE CODE (HDFC CREDIT CARD) *
-                        </label>
-                        <select
-                          disabled={!canEditFinal}
-                          value={declineCode || 'None'}
-                          onChange={(e) => {
-                            const selectedCode = e.target.value;
-                            setDeclineCode(selectedCode);
-                            if (selectedCode === 'None' || selectedCode === '') {
-                              setDeclineRemark('');
-                            } else {
-                              const info = getHdfcDeclineCodeInfo(selectedCode);
-                              if (info?.type) {
-                                setDeclineRemark(info.type);
-                                setDeclineReason(info.type);
+                    <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '14px', background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '12px', padding: '16px' }}>
+                      
+                      {/* DUAL DECLINE CODE SELECTORS: 1. PRIMARY DECLINE CODE & 2. SECONDARY DECLINE CODE */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
+                        {/* 1. PRIMARY DECLINE CODE */}
+                        <div>
+                          <label style={{ fontSize: '12px', fontWeight: 800, color: '#dc2626', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', textTransform: 'uppercase' }}>
+                            <AlertTriangle size={15} /> 1. PRIMARY DECLINE CODE (HDFC CREDIT CARD) *
+                          </label>
+                          <select
+                            disabled={!canEditFinal}
+                            value={primaryDeclineCode || declineCode || 'None'}
+                            onChange={(e) => {
+                              const selectedCode = e.target.value;
+                              setPrimaryDeclineCode(selectedCode);
+                              setDeclineCode(selectedCode);
+                              if (selectedCode === 'None' || selectedCode === '') {
+                                setDeclineRemark('');
+                              } else {
+                                const info = getHdfcDeclineCodeInfo(selectedCode);
+                                if (info?.type) {
+                                  setDeclineRemark(info.type);
+                                  setDeclineReason(info.type);
+                                }
                               }
-                            }
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '11px 14px',
-                            borderRadius: '8px',
-                            border: '1.5px solid #ef4444',
-                            fontSize: '13px',
-                            background: !canEditFinal ? '#f8fafc' : '#ffffff',
-                            fontWeight: 700,
-                            color: '#1e293b'
-                          }}
-                        >
-                          <option value="None">None</option>
-                          <option value="CIBIL decline">CIBIL decline</option>
-                          <optgroup label="Physical Curable (26 Codes)">
-                            {HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.PHYSICAL_CURABLE).map(c => (
-                              <option key={c.code} value={c.code}>
-                                {c.code} - {c.type}
-                              </option>
-                            ))}
-                          </optgroup>
-                          <optgroup label="Digital Curable (17 Codes)">
-                            {HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.DIGITAL_CURABLE).map(c => (
-                              <option key={c.code} value={c.code}>
-                                {c.code} - {c.type}
-                              </option>
-                            ))}
-                          </optgroup>
-                          <optgroup label="Email Curable (8 Codes)">
-                            {HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.EMAIL_CURABLE).map(c => (
-                              <option key={c.code} value={c.code}>
-                                {c.code} - {c.type}
-                              </option>
-                            ))}
-                          </optgroup>
-                          {declineCode && !['None', 'CIBIL decline', ...HDFC_DECLINE_CODES.map(c => c.code)].includes(declineCode) && (
-                            <option value={declineCode}>{declineCode}</option>
-                          )}
-                        </select>
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '11px 14px',
+                              borderRadius: '8px',
+                              border: '1.5px solid #ef4444',
+                              fontSize: '13px',
+                              background: !canEditFinal ? '#f8fafc' : '#ffffff',
+                              fontWeight: 700,
+                              color: '#1e293b'
+                            }}
+                          >
+                            <option value="None">None</option>
+                            <option value="CIBIL decline">CIBIL decline</option>
+                            <optgroup label="Physical Curable (26 Codes)">
+                              {HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.PHYSICAL_CURABLE).map(c => (
+                                <option key={c.code} value={c.code}>
+                                  {c.code} - {c.type}
+                                </option>
+                              ))}
+                            </optgroup>
+                            <optgroup label="Digital Curable (17 Codes)">
+                              {HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.DIGITAL_CURABLE).map(c => (
+                                <option key={c.code} value={c.code}>
+                                  {c.code} - {c.type}
+                                </option>
+                              ))}
+                            </optgroup>
+                            <optgroup label="Email Curable (8 Codes)">
+                              {HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.EMAIL_CURABLE).map(c => (
+                                <option key={c.code} value={c.code}>
+                                  {c.code} - {c.type}
+                                </option>
+                              ))}
+                            </optgroup>
+                            {primaryDeclineCode && !['None', 'CIBIL decline', ...HDFC_DECLINE_CODES.map(c => c.code)].includes(primaryDeclineCode) && (
+                              <option value={primaryDeclineCode}>{primaryDeclineCode}</option>
+                            )}
+                          </select>
+                        </div>
+
+                        {/* 2. SECONDARY DECLINE CODE */}
+                        <div>
+                          <label style={{ fontSize: '12px', fontWeight: 800, color: '#475569', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', textTransform: 'uppercase' }}>
+                            2. SECONDARY DECLINE CODE (HDFC CREDIT CARD) (OPTIONAL)
+                          </label>
+                          <select
+                            disabled={!canEditFinal}
+                            value={secondaryDeclineCode || 'None'}
+                            onChange={(e) => {
+                              const selectedCode = e.target.value;
+                              setSecondaryDeclineCode(selectedCode);
+                              if (selectedCode === 'None' || selectedCode === '') {
+                                setSecondaryDeclineRemark('');
+                              } else {
+                                const info = getHdfcDeclineCodeInfo(selectedCode);
+                                if (info?.type) {
+                                  setSecondaryDeclineRemark(info.type);
+                                }
+                              }
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '11px 14px',
+                              borderRadius: '8px',
+                              border: '1.5px solid #cbd5e1',
+                              fontSize: '13px',
+                              background: !canEditFinal ? '#f8fafc' : '#ffffff',
+                              fontWeight: 700,
+                              color: '#1e293b'
+                            }}
+                          >
+                            <option value="None">None</option>
+                            <option value="CIBIL decline">CIBIL decline</option>
+                            <optgroup label="Physical Curable (26 Codes)">
+                              {HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.PHYSICAL_CURABLE).map(c => (
+                                <option key={c.code} value={c.code}>
+                                  {c.code} - {c.type}
+                                </option>
+                              ))}
+                            </optgroup>
+                            <optgroup label="Digital Curable (17 Codes)">
+                              {HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.DIGITAL_CURABLE).map(c => (
+                                <option key={c.code} value={c.code}>
+                                  {c.code} - {c.type}
+                                </option>
+                              ))}
+                            </optgroup>
+                            <optgroup label="Email Curable (8 Codes)">
+                              {HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.EMAIL_CURABLE).map(c => (
+                                <option key={c.code} value={c.code}>
+                                  {c.code} - {c.type}
+                                </option>
+                              ))}
+                            </optgroup>
+                            {secondaryDeclineCode && !['None', 'CIBIL decline', ...HDFC_DECLINE_CODES.map(c => c.code)].includes(secondaryDeclineCode) && (
+                              <option value={secondaryDeclineCode}>{secondaryDeclineCode}</option>
+                            )}
+                          </select>
+                        </div>
                       </div>
 
-                      {/* READ-ONLY ALLOCATED CURING TEAM BANNER */}
-                      {declineCode && declineCode !== 'None' && (() => {
-                        const codeInfo = getHdfcDeclineCodeInfo(declineCode);
-                        const curingDesig = codeInfo?.designation || getHdfcCuringDesignation(declineCode);
-                        const isCibil = String(declineCode).trim().toUpperCase() === 'CIBIL DECLINE';
+                      {/* READ-ONLY ALLOCATED CURING TEAM BANNER (GOVERNED BY PRIMARY DECLINE CODE) */}
+                      {(primaryDeclineCode || declineCode) && (primaryDeclineCode || declineCode) !== 'None' && (() => {
+                        const effectiveCode = primaryDeclineCode || declineCode;
+                        const codeInfo = getHdfcDeclineCodeInfo(effectiveCode);
+                        const curingDesig = codeInfo?.designation || getHdfcCuringDesignation(effectiveCode);
+                        const isCibil = String(effectiveCode).trim().toUpperCase() === 'CIBIL DECLINE';
                         const badgeInfo = CURING_DESIGNATION_BADGES[curingDesig] || (isCibil ? {
                           bg: '#fef2f2',
                           border: '#fca5a5',
@@ -4089,6 +4180,9 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           pillBg: '#64748b',
                           label: 'Unassigned Curing'
                         });
+
+                        const secInfo = secondaryDeclineCode && secondaryDeclineCode !== 'None' ? getHdfcDeclineCodeInfo(secondaryDeclineCode) : null;
+                        const secDesig = secInfo?.designation || getHdfcCuringDesignation(secondaryDeclineCode);
 
                         return (
                           <div style={{
@@ -4122,38 +4216,66 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                                 </span>
                               </div>
                               <span style={{ fontSize: '12px', fontWeight: 800, color: '#64748b' }}>
-                                Code: <strong style={{ color: badgeInfo.text, fontFamily: 'monospace', fontSize: '13px' }}>{declineCode}</strong>
+                                Primary Code: <strong style={{ color: badgeInfo.text, fontFamily: 'monospace', fontSize: '13px' }}>{effectiveCode}</strong>
                               </span>
                             </div>
                             <div style={{ fontSize: '13px', fontWeight: 700, color: badgeInfo.text }}>
-                              Description: {codeInfo?.type || declineRemark || declineReason || '—'}
+                              Primary Description: {codeInfo?.type || declineRemark || declineReason || '—'}
                             </div>
+                            {secInfo && (
+                              <div style={{ fontSize: '12.5px', fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                <span>Secondary Code: <strong style={{ fontFamily: 'monospace', color: '#1e293b' }}>{secondaryDeclineCode}</strong> ({secInfo.type || secondaryDeclineRemark})</span>
+                                {secDesig && (
+                                  <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: '#e2e8f0', color: '#334155', fontWeight: 700 }}>
+                                    {secInfo.designationLabel || secDesig}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                             <div style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 600 }}>
                               {isCibil ? (
                                 <span>ℹ️ Application is declined due to <strong>CIBIL Bureau guidelines</strong> and does not route to curing operators.</span>
+                              ) : curingDesig === CURING_DESIGNATIONS.PHYSICAL_CURABLE ? (
+                                <span>ℹ️ Primary code is Physical Curable: Application will automatically display in the <strong>Physical Curable Operator</strong> panel in the Admin panel.</span>
                               ) : (
-                                <span>ℹ️ Application will automatically route to <strong>{badgeInfo.label}</strong> operators in the Admin panel.</span>
+                                <span>ℹ️ Application will automatically route to <strong>{badgeInfo.label}</strong> operators in the Admin panel based on the Primary Decline Code.</span>
                               )}
                             </div>
                           </div>
                         );
                       })()}
 
-                      <div>
-                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#dc2626', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                          DECLINE REASON / REMARK
-                        </label>
-                        <input
-                          type="text"
-                          disabled={!canEditFinal}
-                          value={declineRemark || declineReason || ''}
-                          onChange={(e) => {
-                            setDeclineRemark(e.target.value);
-                            setDeclineReason(e.target.value);
-                          }}
-                          placeholder="Enter decline description or reason"
-                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff' }}
-                        />
+                      {/* DECLINE REASON / REMARK FIELDS */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
+                        <div>
+                          <label style={{ fontSize: '12px', fontWeight: 800, color: '#dc2626', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                            PRIMARY DECLINE REASON / REMARK
+                          </label>
+                          <input
+                            type="text"
+                            disabled={!canEditFinal}
+                            value={declineRemark || declineReason || ''}
+                            onChange={(e) => {
+                              setDeclineRemark(e.target.value);
+                              setDeclineReason(e.target.value);
+                            }}
+                            placeholder="Enter primary decline description or reason"
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff' }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '12px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                            SECONDARY DECLINE REASON / REMARK (OPTIONAL)
+                          </label>
+                          <input
+                            type="text"
+                            disabled={!canEditFinal}
+                            value={secondaryDeclineRemark || ''}
+                            onChange={(e) => setSecondaryDeclineRemark(e.target.value)}
+                            placeholder="Enter secondary decline description or remark"
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff' }}
+                          />
+                        </div>
                       </div>
                     </div>
                   )}

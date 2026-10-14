@@ -1895,32 +1895,32 @@ const listApplications = async (req, res, next) => {
       let curableCondition = '';
       if (isPhysicalCurableUser) {
         curableCondition = `(
-          UPPER(TRIM(COALESCE(combined.decline_code, ''))) IN ${physicalCodesSQL}
+          UPPER(TRIM(COALESCE(combined.primary_decline_code, combined.decline_code, ''))) IN ${physicalCodesSQL}
           OR (
-            UPPER(TRIM(COALESCE(combined.decline_code, ''))) NOT IN ${digitalCodesSQL}
-            AND UPPER(TRIM(COALESCE(combined.decline_code, ''))) NOT IN ${emailCodesSQL}
-            AND UPPER(TRIM(COALESCE(combined.decline_code, ''))) != 'NONE'
-            AND REPLACE(UPPER(TRIM(COALESCE(combined.curing_designation, ''))), ' ', '_') IN ('PHYSICAL_CURABLE', 'PHYSICAL_CURABLE_OPERATOR')
+            UPPER(TRIM(COALESCE(combined.primary_decline_code, combined.decline_code, ''))) NOT IN ${digitalCodesSQL}
+            AND UPPER(TRIM(COALESCE(combined.primary_decline_code, combined.decline_code, ''))) NOT IN ${emailCodesSQL}
+            AND UPPER(TRIM(COALESCE(combined.primary_decline_code, combined.decline_code, ''))) != 'NONE'
+            AND REPLACE(UPPER(TRIM(COALESCE(combined.primary_curing_designation, combined.curing_designation, ''))), ' ', '_') IN ('PHYSICAL_CURABLE', 'PHYSICAL_CURABLE_OPERATOR')
           )
         )`;
       } else if (isDigitalCurableUser) {
         curableCondition = `(
-          UPPER(TRIM(COALESCE(combined.decline_code, ''))) IN ${digitalCodesSQL}
+          UPPER(TRIM(COALESCE(combined.primary_decline_code, combined.decline_code, ''))) IN ${digitalCodesSQL}
           OR (
-            UPPER(TRIM(COALESCE(combined.decline_code, ''))) NOT IN ${physicalCodesSQL}
-            AND UPPER(TRIM(COALESCE(combined.decline_code, ''))) NOT IN ${emailCodesSQL}
-            AND UPPER(TRIM(COALESCE(combined.decline_code, ''))) != 'NONE'
-            AND REPLACE(UPPER(TRIM(COALESCE(combined.curing_designation, ''))), ' ', '_') IN ('DIGITAL_CURABLE', 'DIGITAL_CURABLE_OPERATOR')
+            UPPER(TRIM(COALESCE(combined.primary_decline_code, combined.decline_code, ''))) NOT IN ${physicalCodesSQL}
+            AND UPPER(TRIM(COALESCE(combined.primary_decline_code, combined.decline_code, ''))) NOT IN ${emailCodesSQL}
+            AND UPPER(TRIM(COALESCE(combined.primary_decline_code, combined.decline_code, ''))) != 'NONE'
+            AND REPLACE(UPPER(TRIM(COALESCE(combined.primary_curing_designation, combined.curing_designation, ''))), ' ', '_') IN ('DIGITAL_CURABLE', 'DIGITAL_CURABLE_OPERATOR')
           )
         )`;
       } else if (isEmailCurableUser) {
         curableCondition = `(
-          UPPER(TRIM(COALESCE(combined.decline_code, ''))) IN ${emailCodesSQL}
+          UPPER(TRIM(COALESCE(combined.primary_decline_code, combined.decline_code, ''))) IN ${emailCodesSQL}
           OR (
-            UPPER(TRIM(COALESCE(combined.decline_code, ''))) NOT IN ${physicalCodesSQL}
-            AND UPPER(TRIM(COALESCE(combined.decline_code, ''))) NOT IN ${digitalCodesSQL}
-            AND UPPER(TRIM(COALESCE(combined.decline_code, ''))) != 'NONE'
-            AND REPLACE(UPPER(TRIM(COALESCE(combined.curing_designation, ''))), ' ', '_') IN ('EMAIL_CURABLE', 'EMAIL_CURABLE_OPERATOR')
+            UPPER(TRIM(COALESCE(combined.primary_decline_code, combined.decline_code, ''))) NOT IN ${physicalCodesSQL}
+            AND UPPER(TRIM(COALESCE(combined.primary_decline_code, combined.decline_code, ''))) NOT IN ${digitalCodesSQL}
+            AND UPPER(TRIM(COALESCE(combined.primary_decline_code, combined.decline_code, ''))) != 'NONE'
+            AND REPLACE(UPPER(TRIM(COALESCE(combined.primary_curing_designation, combined.curing_designation, ''))), ' ', '_') IN ('EMAIL_CURABLE', 'EMAIL_CURABLE_OPERATOR')
           )
         )`;
       }
@@ -2043,6 +2043,12 @@ const listApplications = async (req, res, next) => {
           COALESCE(NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as decline_code,
           COALESCE(NULLIF(to_jsonb(a)->>'decline_description', ''), NULLIF(to_jsonb(pad)->>'decline_description', '')) as decline_description,
           COALESCE(NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as curing_designation,
+          COALESCE(NULLIF(to_jsonb(a)->>'primary_decline_code', ''), NULLIF(to_jsonb(pad)->>'primary_decline_code', ''), NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as primary_decline_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'primary_decline_description', ''), NULLIF(to_jsonb(pad)->>'primary_decline_description', ''), NULLIF(to_jsonb(a)->>'decline_description', ''), NULLIF(to_jsonb(pad)->>'decline_description', '')) as primary_decline_description,
+          COALESCE(NULLIF(to_jsonb(a)->>'primary_curing_designation', ''), NULLIF(to_jsonb(pad)->>'primary_curing_designation', ''), NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as primary_curing_designation,
+          COALESCE(NULLIF(to_jsonb(a)->>'secondary_decline_code', ''), NULLIF(to_jsonb(pad)->>'secondary_decline_code', '')) as secondary_decline_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'secondary_decline_description', ''), NULLIF(to_jsonb(pad)->>'secondary_decline_description', '')) as secondary_decline_description,
+          COALESCE(NULLIF(to_jsonb(a)->>'secondary_curing_designation', ''), NULLIF(to_jsonb(pad)->>'secondary_curing_designation', '')) as secondary_curing_designation,
           (to_jsonb(a)->>'last_operator_name') as last_operator_name,
           (to_jsonb(a)->>'last_operator_role') as last_operator_role,
           (to_jsonb(a)->>'last_operator_designation') as last_operator_designation,
@@ -2222,7 +2228,9 @@ const listApplications = async (req, res, next) => {
         COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, ''), NULLIF(to_jsonb(pad)->>'decline_reason', '')) as decline_reason,
         COALESCE(NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as decline_code,
         COALESCE(NULLIF(to_jsonb(a)->>'decline_description', ''), NULLIF(to_jsonb(pad)->>'decline_description', '')) as decline_description,
-        COALESCE(NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as curing_designation
+        COALESCE(NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as curing_designation,
+        COALESCE(NULLIF(to_jsonb(a)->>'primary_decline_code', ''), NULLIF(to_jsonb(pad)->>'primary_decline_code', ''), NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as primary_decline_code,
+        COALESCE(NULLIF(to_jsonb(a)->>'secondary_decline_code', ''), NULLIF(to_jsonb(pad)->>'secondary_decline_code', '')) as secondary_decline_code
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
@@ -2287,7 +2295,9 @@ const listApplications = async (req, res, next) => {
         COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, ''), NULLIF(to_jsonb(pad)->>'decline_reason', '')) as decline_reason,
         COALESCE(NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as decline_code,
         COALESCE(NULLIF(to_jsonb(a)->>'decline_description', ''), NULLIF(to_jsonb(pad)->>'decline_description', '')) as decline_description,
-        COALESCE(NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as curing_designation
+        COALESCE(NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as curing_designation,
+        COALESCE(NULLIF(to_jsonb(a)->>'primary_decline_code', ''), NULLIF(to_jsonb(pad)->>'primary_decline_code', ''), NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as primary_decline_code,
+        COALESCE(NULLIF(to_jsonb(a)->>'secondary_decline_code', ''), NULLIF(to_jsonb(pad)->>'secondary_decline_code', '')) as secondary_decline_code
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
@@ -2641,6 +2651,18 @@ const getApplication = async (req, res, next) => {
       if (!isClean(app.decline_code) && pd.decline_code) app.decline_code = pd.decline_code;
       if (!isClean(app.decline_description) && pd.decline_description) app.decline_description = pd.decline_description;
       if (!isClean(app.curing_designation) && pd.curing_designation) app.curing_designation = pd.curing_designation;
+      if (!isClean(app.primary_decline_code) && (pd.primary_decline_code || pd.decline_code || app.decline_code)) {
+        app.primary_decline_code = pd.primary_decline_code || pd.decline_code || app.decline_code;
+      }
+      if (!isClean(app.primary_decline_description) && (pd.primary_decline_description || pd.decline_description || app.decline_description)) {
+        app.primary_decline_description = pd.primary_decline_description || pd.decline_description || app.decline_description;
+      }
+      if (!isClean(app.primary_curing_designation) && (pd.primary_curing_designation || pd.curing_designation || app.curing_designation)) {
+        app.primary_curing_designation = pd.primary_curing_designation || pd.curing_designation || app.curing_designation;
+      }
+      if (!isClean(app.secondary_decline_code) && pd.secondary_decline_code) app.secondary_decline_code = pd.secondary_decline_code;
+      if (!isClean(app.secondary_decline_description) && pd.secondary_decline_description) app.secondary_decline_description = pd.secondary_decline_description;
+      if (!isClean(app.secondary_curing_designation) && pd.secondary_curing_designation) app.secondary_curing_designation = pd.secondary_curing_designation;
       if (!isClean(app.ipa_stage) && pd.ipa_stage) app.ipa_stage = pd.ipa_stage;
       if (!isClean(app.kyc_stage) && pd.kyc_stage) app.kyc_stage = pd.kyc_stage;
       if (!isClean(app.card_approval_stage) && pd.card_approval_stage) app.card_approval_stage = pd.card_approval_stage;
@@ -4326,8 +4348,33 @@ const updateApplicationDetails = async (req, res, next) => {
     const employerToSave = employer || company_name || null;
     const parsedDob = parseDobToIso(dob);
 
-    const effectiveDeclineCodeInput = (decline_code !== undefined && decline_code !== null) ? String(decline_code).trim() : (req.body.decline_code ? String(req.body.decline_code).trim() : undefined);
-    const effectiveDeclineDescInput = (decline_description !== undefined && decline_description !== null) ? String(decline_description).trim() : (req.body.decline_description ? String(req.body.decline_description).trim() : undefined);
+    // Support dual decline codes: primary_decline_code (governs curable routing) and secondary_decline_code
+    const rawPrimaryDeclineCode = req.body.primary_decline_code !== undefined ? req.body.primary_decline_code : decline_code;
+    const rawSecondaryDeclineCode = req.body.secondary_decline_code !== undefined ? req.body.secondary_decline_code : undefined;
+    const rawPrimaryDeclineDesc = req.body.primary_decline_description !== undefined ? req.body.primary_decline_description : decline_description;
+    const rawSecondaryDeclineDesc = req.body.secondary_decline_description !== undefined ? req.body.secondary_decline_description : undefined;
+
+    const effectiveDeclineCodeInput = (rawPrimaryDeclineCode !== undefined && rawPrimaryDeclineCode !== null) ? String(rawPrimaryDeclineCode).trim() : (req.body.decline_code ? String(req.body.decline_code).trim() : undefined);
+    const effectiveDeclineDescInput = (rawPrimaryDeclineDesc !== undefined && rawPrimaryDeclineDesc !== null) ? String(rawPrimaryDeclineDesc).trim() : (req.body.decline_description ? String(req.body.decline_description).trim() : undefined);
+
+    let effectiveSecondaryDeclineCode = (rawSecondaryDeclineCode !== undefined && rawSecondaryDeclineCode !== null) ? String(rawSecondaryDeclineCode).trim() : undefined;
+    let derivedSecondaryCuringDesignation = undefined;
+    let derivedSecondaryDeclineDesc = (rawSecondaryDeclineDesc !== undefined && rawSecondaryDeclineDesc !== null) ? String(rawSecondaryDeclineDesc).trim() : undefined;
+
+    if (effectiveSecondaryDeclineCode !== undefined) {
+      if (effectiveSecondaryDeclineCode.toUpperCase() === 'NONE' || effectiveSecondaryDeclineCode === '') {
+        effectiveSecondaryDeclineCode = 'None';
+        derivedSecondaryCuringDesignation = null;
+        derivedSecondaryDeclineDesc = 'None';
+      } else {
+        const secInfo = getHdfcDeclineCodeInfo(effectiveSecondaryDeclineCode);
+        if (secInfo) {
+          effectiveSecondaryDeclineCode = secInfo.code;
+          derivedSecondaryCuringDesignation = secInfo.designation;
+          derivedSecondaryDeclineDesc = derivedSecondaryDeclineDesc || secInfo.description || secInfo.type;
+        }
+      }
+    }
 
     let pRow = null;
     if (app && app.product_id) {
@@ -4368,7 +4415,7 @@ const updateApplicationDetails = async (req, res, next) => {
         derivedDeclineDesc = 'None';
         if (isHdfcCC && isDeclinedStatus && String(final_status || '').toLowerCase() === 'decline') {
           await client.query('ROLLBACK');
-          return error(res, 'Please select a valid decline code (such as CIBIL decline or an HDFC decline code) when marking final approval status as Decline for HDFC Credit Card.', 400);
+          return error(res, 'Please select a valid Primary decline code (such as CIBIL decline or an HDFC decline code) when marking final approval status as Decline for HDFC Credit Card.', 400);
         }
       } else {
         const declineInfo = getHdfcDeclineCodeInfo(effectiveDeclineCode);
@@ -4378,12 +4425,12 @@ const updateApplicationDetails = async (req, res, next) => {
           derivedDeclineDesc = derivedDeclineDesc || declineInfo.description || declineInfo.type;
         } else if (isHdfcCC) {
           await client.query('ROLLBACK');
-          return error(res, `Invalid HDFC decline code: "${effectiveDeclineCode}". Please select a valid decline code from the list.`, 400);
+          return error(res, `Invalid HDFC Primary decline code: "${effectiveDeclineCode}". Please select a valid decline code from the list.`, 400);
         }
       }
     } else if (isHdfcCC && isDeclinedStatus && String(final_status || '').toLowerCase() === 'decline') {
       await client.query('ROLLBACK');
-      return error(res, 'Decline code is required when marking final approval status as Decline for HDFC Credit Card.', 400);
+      return error(res, 'Primary decline code is required when marking final approval status as Decline for HDFC Credit Card.', 400);
     }
 
     if (isLeadOnly) {
@@ -4633,20 +4680,44 @@ const updateApplicationDetails = async (req, res, next) => {
       }
     }
 
-    if (effectiveDeclineCode !== undefined || derivedCuringDesignation !== undefined) {
+    if (effectiveDeclineCode !== undefined || derivedCuringDesignation !== undefined || effectiveSecondaryDeclineCode !== undefined) {
       try {
         await client.query('SAVEPOINT curing_sp');
+        await client.query(`
+          ALTER TABLE applications 
+            ADD COLUMN IF NOT EXISTS decline_code VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS decline_description TEXT,
+            ADD COLUMN IF NOT EXISTS curing_designation VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS primary_decline_code VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS primary_decline_description TEXT,
+            ADD COLUMN IF NOT EXISTS primary_curing_designation VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS secondary_decline_code VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS secondary_decline_description TEXT,
+            ADD COLUMN IF NOT EXISTS secondary_curing_designation VARCHAR(100)
+        `);
         const isNone = !effectiveDeclineCode || String(effectiveDeclineCode).trim().toUpperCase() === 'NONE';
         const codeToSet = isNone ? 'None' : String(effectiveDeclineCode).trim();
         const descToSet = isNone ? 'None' : (derivedDeclineDesc || null);
         const curingToSet = isNone ? null : (derivedCuringDesignation || null);
+
+        const isSecNone = !effectiveSecondaryDeclineCode || String(effectiveSecondaryDeclineCode).trim().toUpperCase() === 'NONE';
+        const secCodeToSet = effectiveSecondaryDeclineCode !== undefined ? (isSecNone ? 'None' : String(effectiveSecondaryDeclineCode).trim()) : null;
+        const secDescToSet = effectiveSecondaryDeclineCode !== undefined ? (isSecNone ? 'None' : (derivedSecondaryDeclineDesc || null)) : null;
+        const secCuringToSet = effectiveSecondaryDeclineCode !== undefined ? (isSecNone ? null : (derivedSecondaryCuringDesignation || null)) : null;
+
         await client.query(`
           UPDATE applications SET
             decline_code = $1,
             decline_description = $2,
-            curing_designation = $3
-          WHERE id = $4
-        `, [codeToSet, descToSet, curingToSet, app.id]);
+            curing_designation = $3,
+            primary_decline_code = $1,
+            primary_decline_description = $2,
+            primary_curing_designation = $3,
+            secondary_decline_code = CASE WHEN $4::text IS NOT NULL THEN $4 ELSE secondary_decline_code END,
+            secondary_decline_description = CASE WHEN $4::text IS NOT NULL THEN $5 ELSE secondary_decline_description END,
+            secondary_curing_designation = CASE WHEN $4::text IS NOT NULL THEN $6 ELSE secondary_curing_designation END
+          WHERE id = $7
+        `, [codeToSet, descToSet, curingToSet, secCodeToSet, secDescToSet, secCuringToSet, app.id]);
         await client.query('RELEASE SAVEPOINT curing_sp');
       } catch (curingErr) {
         await client.query('ROLLBACK TO SAVEPOINT curing_sp').catch(() => {});
@@ -4922,27 +4993,57 @@ const updateApplicationDetails = async (req, res, next) => {
       console.error('Failed to upsert physical_application_details:', physErr.message || physErr);
     }
 
-    if (effectiveDeclineCode !== undefined || derivedCuringDesignation !== undefined) {
+    if (effectiveDeclineCode !== undefined || derivedCuringDesignation !== undefined || effectiveSecondaryDeclineCode !== undefined) {
       try {
         await client.query('SAVEPOINT pad_curing_sp');
+        await client.query(`
+          ALTER TABLE physical_application_details 
+            ADD COLUMN IF NOT EXISTS decline_code VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS decline_description TEXT,
+            ADD COLUMN IF NOT EXISTS curing_designation VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS primary_decline_code VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS primary_decline_description TEXT,
+            ADD COLUMN IF NOT EXISTS primary_curing_designation VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS secondary_decline_code VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS secondary_decline_description TEXT,
+            ADD COLUMN IF NOT EXISTS secondary_curing_designation VARCHAR(100)
+        `);
         const isNone = !effectiveDeclineCode || String(effectiveDeclineCode).trim().toUpperCase() === 'NONE';
         const codeToSet = isNone ? 'None' : String(effectiveDeclineCode).trim();
         const descToSet = isNone ? 'None' : (derivedDeclineDesc || null);
         const curingToSet = isNone ? null : (derivedCuringDesignation || null);
+
+        const isSecNone = !effectiveSecondaryDeclineCode || String(effectiveSecondaryDeclineCode).trim().toUpperCase() === 'NONE';
+        const secCodeToSet = effectiveSecondaryDeclineCode !== undefined ? (isSecNone ? 'None' : String(effectiveSecondaryDeclineCode).trim()) : null;
+        const secDescToSet = effectiveSecondaryDeclineCode !== undefined ? (isSecNone ? 'None' : (derivedSecondaryDeclineDesc || null)) : null;
+        const secCuringToSet = effectiveSecondaryDeclineCode !== undefined ? (isSecNone ? null : (derivedSecondaryCuringDesignation || null)) : null;
+
         await client.query(`
           UPDATE physical_application_details SET
             decline_code = $1,
             decline_description = $2,
-            curing_designation = $3
-          WHERE application_id = $4
-        `, [codeToSet, descToSet, curingToSet, app.id]);
+            curing_designation = $3,
+            primary_decline_code = $1,
+            primary_decline_description = $2,
+            primary_curing_designation = $3,
+            secondary_decline_code = CASE WHEN $4::text IS NOT NULL THEN $4 ELSE secondary_decline_code END,
+            secondary_decline_description = CASE WHEN $4::text IS NOT NULL THEN $5 ELSE secondary_decline_description END,
+            secondary_curing_designation = CASE WHEN $4::text IS NOT NULL THEN $6 ELSE secondary_curing_designation END
+          WHERE application_id = $7
+        `, [codeToSet, descToSet, curingToSet, secCodeToSet, secDescToSet, secCuringToSet, app.id]);
         await client.query(`
           UPDATE applications SET
             decline_code = $1,
             decline_description = $2,
-            curing_designation = $3
-          WHERE id = $4
-        `, [codeToSet, descToSet, curingToSet, app.id]);
+            curing_designation = $3,
+            primary_decline_code = $1,
+            primary_decline_description = $2,
+            primary_curing_designation = $3,
+            secondary_decline_code = CASE WHEN $4::text IS NOT NULL THEN $4 ELSE secondary_decline_code END,
+            secondary_decline_description = CASE WHEN $4::text IS NOT NULL THEN $5 ELSE secondary_decline_description END,
+            secondary_curing_designation = CASE WHEN $4::text IS NOT NULL THEN $6 ELSE secondary_curing_designation END
+          WHERE id = $7
+        `, [codeToSet, descToSet, curingToSet, secCodeToSet, secDescToSet, secCuringToSet, app.id]);
         await client.query('RELEASE SAVEPOINT pad_curing_sp');
       } catch (curingErr) {
         await client.query('ROLLBACK TO SAVEPOINT pad_curing_sp').catch(() => {});
@@ -6106,47 +6207,46 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
       if (isPhysicalCurable || isDigitalCurable || isEmailCurable) {
         const statusStr = (app.status || '').toLowerCase();
         const finalStatusStr = (app.final_status || '').toLowerCase();
-        const hasDeclineCode = Boolean(app.decline_code && String(app.decline_code).trim() !== '' && String(app.decline_code).trim().toUpperCase() !== 'NONE');
+        const appPrimaryDeclineCode = (app.primary_decline_code || app.decline_code || '').trim().toUpperCase();
+        const appPrimaryCuringDesig = (app.primary_curing_designation || app.curing_designation || '').trim().toUpperCase().replace(/ /g, '_');
+        const hasDeclineCode = Boolean(appPrimaryDeclineCode && appPrimaryDeclineCode !== 'NONE');
         const isRejected = statusStr.includes('reject') || statusStr.includes('decline') || finalStatusStr.includes('reject') || finalStatusStr.includes('decline') || hasDeclineCode;
         if (!isRejected) {
           await client.query('ROLLBACK');
           return forbidden(res, 'Curable Operators can only access declined or curable applications.');
         }
 
-        const appDeclineCode = (app.decline_code || '').trim().toUpperCase();
-        const appCuringDesig = (app.curing_designation || '').trim().toUpperCase().replace(/ /g, '_');
-
         const physicalCodes = HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.PHYSICAL_CURABLE).map(c => c.code.toUpperCase());
         const digitalCodes = HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.DIGITAL_CURABLE).map(c => c.code.toUpperCase());
         const emailCodes = HDFC_DECLINE_CODES.filter(c => c.designation === CURING_DESIGNATIONS.EMAIL_CURABLE).map(c => c.code.toUpperCase());
 
         if (isPhysicalCurable) {
-          if (appDeclineCode && appDeclineCode !== 'NONE') {
-            if (!physicalCodes.includes(appDeclineCode)) {
+          if (appPrimaryDeclineCode && appPrimaryDeclineCode !== 'NONE') {
+            if (!physicalCodes.includes(appPrimaryDeclineCode)) {
               await client.query('ROLLBACK');
               return forbidden(res, 'This application is not allocated to Physical Curable team.');
             }
-          } else if (!appCuringDesig.startsWith('PHYSICAL_CURABLE')) {
+          } else if (!appPrimaryCuringDesig.startsWith('PHYSICAL_CURABLE')) {
             await client.query('ROLLBACK');
             return forbidden(res, 'This application is not allocated to Physical Curable team.');
           }
         } else if (isDigitalCurable) {
-          if (appDeclineCode && appDeclineCode !== 'NONE') {
-            if (!digitalCodes.includes(appDeclineCode)) {
+          if (appPrimaryDeclineCode && appPrimaryDeclineCode !== 'NONE') {
+            if (!digitalCodes.includes(appPrimaryDeclineCode)) {
               await client.query('ROLLBACK');
               return forbidden(res, 'This application is not allocated to Digital Curable team.');
             }
-          } else if (!appCuringDesig.startsWith('DIGITAL_CURABLE')) {
+          } else if (!appPrimaryCuringDesig.startsWith('DIGITAL_CURABLE')) {
             await client.query('ROLLBACK');
             return forbidden(res, 'This application is not allocated to Digital Curable team.');
           }
         } else if (isEmailCurable) {
-          if (appDeclineCode && appDeclineCode !== 'NONE') {
-            if (!emailCodes.includes(appDeclineCode)) {
+          if (appPrimaryDeclineCode && appPrimaryDeclineCode !== 'NONE') {
+            if (!emailCodes.includes(appPrimaryDeclineCode)) {
               await client.query('ROLLBACK');
               return forbidden(res, 'This application is not allocated to Email Curable team.');
             }
-          } else if (!appCuringDesig.startsWith('EMAIL_CURABLE')) {
+          } else if (!appPrimaryCuringDesig.startsWith('EMAIL_CURABLE')) {
             await client.query('ROLLBACK');
             return forbidden(res, 'This application is not allocated to Email Curable team.');
           }
