@@ -3324,6 +3324,23 @@ const submitPartnerApplication = async (req, res, next) => {
     const trimmedEmail = email ? String(email).trim() : null;
     const cleanPan = (pan_number || pan || '').toString().trim().toUpperCase() || null;
 
+    const bankName = String(product.bank_name || product.bank_code || '').toUpperCase();
+    const isHdfcBank = product.bank_id === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' || bankName.includes('HDFC') || String(product.name || '').toUpperCase().includes('HDFC');
+    const prodCat = String(product.category || '').toLowerCase();
+    const isLocEoc = ['loc', 'eoc', 'loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loan_on_card', 'card_on_loan'].includes(prodCat);
+    const isOtherCat = prodCat.includes('loan') || prodCat.includes('insurance');
+    const isHdfcCreditCard = isHdfcBank && !isLocEoc && !isOtherCat;
+
+    if (!is_draft && isHdfcCreditCard && process_type === 'lead_punching') {
+      if (!cleanPan || !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(cleanPan)) {
+        await client.query('ROLLBACK');
+        return error(res, 'Please enter a valid 10-character PAN Card number (e.g. ABCDE1234F) for HDFC Credit Card applications.', 400);
+      }
+    } else if (!is_draft && cleanPan && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(cleanPan)) {
+      await client.query('ROLLBACK');
+      return error(res, 'Please enter a valid 10-character PAN Card number (e.g. ABCDE1234F).', 400);
+    }
+
     // Resolve canonical process_by and source metadata
     let processByVal = 'lead_punching';
     let sourceVal = 'partner_portal';

@@ -320,6 +320,19 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
     (String(selectedProduct?.bank_name || selectedProduct?.bank_code || selectedProduct?.name || '').toUpperCase().includes('TATA') &&
      String(selectedProduct?.bank_name || selectedProduct?.bank_code || selectedProduct?.name || '').toUpperCase().includes('HDFC'));
 
+  const selectedProdCat = String(selectedProduct?.category || '').toLowerCase();
+  const isLocEoc = ['loc', 'eoc', 'loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loan_on_card', 'card_on_loan'].includes(selectedProdCat);
+  const isOtherCat = selectedProdCat.includes('loan') || selectedProdCat.includes('insurance');
+  const isCreditCardProduct = !isLocEoc && !isOtherCat;
+
+  const isHdfcCreditCard = (
+    isHdfcBankProduct ||
+    selectedProduct?.bank_id === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' ||
+    String(selectedProduct?.bank_name || '').toUpperCase().includes('HDFC') ||
+    String(selectedProduct?.bank_code || '').toUpperCase().includes('HDFC') ||
+    String(selectedProduct?.name || '').toUpperCase().includes('HDFC')
+  ) && isCreditCardProduct;
+
   const handleSubmitLead = async (e) => {
     if (e) e.preventDefault();
 
@@ -338,6 +351,13 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
         errors.pincode = "Please enter a valid 6-digit Pincode.";
       } else if (!isSbiPincodeValid(pincode.trim())) {
         errors.pincode = "You can't add lead for this pincode";
+      }
+    }
+
+    if (isHdfcCreditCard && processType === 'lead_punching') {
+      const cleanPan = panNumber.trim().toUpperCase();
+      if (!cleanPan || !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(cleanPan)) {
+        errors.panNumber = "Please enter a valid 10-character PAN Card number (e.g. ABCDE1234F).";
       }
     }
 
@@ -1818,6 +1838,36 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                   {formErrors.mobile && <span style={{ fontSize: '11.5px', color: C.red, marginTop: '4px', display: 'block' }}>{formErrors.mobile}</span>}
                 </div>
 
+                {/* Pan Card Field (Shown below Mobile Number ONLY when product is HDFC in Credit Card category AND process by is lead punching only) */}
+                {isHdfcCreditCard && processType === 'lead_punching' && (
+                  <div>
+                    <label style={S.label}>Pan Card *</label>
+                    <input
+                      type="text"
+                      placeholder="Enter 10-digit PAN (e.g. ABCDE1234F)"
+                      maxLength={10}
+                      value={panNumber}
+                      onChange={(e) => {
+                        setPanNumber(e.target.value.toUpperCase());
+                        setFormErrors(prev => ({ ...prev, panNumber: null }));
+                      }}
+                      style={{
+                        ...S.input,
+                        height: '44px',
+                        fontSize: '14px',
+                        textTransform: 'uppercase',
+                        fontFamily: 'monospace',
+                        borderColor: formErrors.panNumber ? C.red : C.border
+                      }}
+                    />
+                    {formErrors.panNumber && (
+                      <span style={{ fontSize: '11.5px', color: C.red, marginTop: '4px', display: 'block' }}>
+                        {formErrors.panNumber}
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 {/* PAN Card & Pincode Fields (Shown when product bank is SBI) */}
                 {isSbiProduct && (
                   <>
@@ -1924,7 +1974,10 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                             name="processType"
                             value="lead_punching"
                             checked={processType === 'lead_punching'}
-                            onChange={(e) => setProcessType(e.target.value)}
+                            onChange={(e) => {
+                              setProcessType(e.target.value);
+                              setFormErrors(prev => ({ ...prev, panNumber: null }));
+                            }}
                             style={{ marginTop: '2px', accentColor: C.primary }}
                           />
                           <div>
@@ -1952,7 +2005,10 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                         name="processType"
                         value="linked_share"
                         checked={processType === 'linked_share'}
-                        onChange={(e) => setProcessType(e.target.value)}
+                        onChange={(e) => {
+                          setProcessType(e.target.value);
+                          setFormErrors(prev => ({ ...prev, panNumber: null }));
+                        }}
                         style={{ marginTop: '2px', accentColor: C.primary }}
                       />
                       <div>
@@ -1977,7 +2033,10 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                         name="processType"
                         value="direct_bank"
                         checked={processType === 'direct_bank'}
-                        onChange={(e) => setProcessType(e.target.value)}
+                        onChange={(e) => {
+                          setProcessType(e.target.value);
+                          setFormErrors(prev => ({ ...prev, panNumber: null }));
+                        }}
                         style={{ marginTop: '2px', accentColor: C.primary }}
                       />
                       <div>
@@ -2003,7 +2062,10 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                           name="processType"
                           value="co_browsing"
                           checked={processType === 'co_browsing'}
-                          onChange={(e) => setProcessType(e.target.value)}
+                          onChange={(e) => {
+                            setProcessType(e.target.value);
+                            setFormErrors(prev => ({ ...prev, panNumber: null }));
+                          }}
                           style={{ marginTop: '2px', accentColor: C.primary }}
                         />
                         <div>
@@ -2030,7 +2092,10 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                           name="processType"
                           value="physical_process"
                           checked={processType === 'physical_process'}
-                          onChange={(e) => setProcessType(e.target.value)}
+                          onChange={(e) => {
+                            setProcessType(e.target.value);
+                            setFormErrors(prev => ({ ...prev, panNumber: null }));
+                          }}
                           style={{ marginTop: '2px', accentColor: C.primary }}
                         />
                         <div>

@@ -268,7 +268,8 @@ const createLead = async (req, res, next) => {
       mobile, email,
       monthly_salary, monthly_income,
       company_name, pincode, city, state,
-      business_type, process_type, source, priority
+      business_type, process_type, source, priority,
+      pan, pan_number
     } = req.body;
 
     const targetProductId = product_id || productId;
@@ -277,6 +278,7 @@ const createLead = async (req, res, next) => {
     const trimmedEmail = email ? String(email).trim() : '';
     const targetCity = city || '';
     const targetProcess = process_type || 'lead_punching';
+    const cleanPan = (pan_number || pan || '').toString().trim().toUpperCase() || null;
 
     if (!targetProductId || !targetName || !trimmedMobile) {
       return error(res, 'Product ID, Customer Name, and Mobile Number are required', 400);
@@ -321,7 +323,7 @@ const createLead = async (req, res, next) => {
     // 2. Validate Product & SBI Pincode Eligibility
     const { rows: [product] } = await query(`
       SELECT
-        p.id, p.name, p.is_active, p.bank_id,
+        p.id, p.name, p.is_active, p.bank_id, p.category, p.sub_category,
         p.partner_url, p.public_url, p.application_url, p.apply_url, p.redirect_url,
         b.name AS bank_name, b.short_code AS bank_code
       FROM products p
@@ -337,6 +339,22 @@ const createLead = async (req, res, next) => {
       if (!pincode || !isSbiPincodeValid(pincode)) {
         return error(res, "You can't add lead for this pincode", 400);
       }
+    }
+
+    // HDFC Credit Card PAN Number Validation
+    const bankName = String(product.bank_name || product.bank_code || '').toUpperCase();
+    const isHdfcBank = product.bank_id === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' || bankName.includes('HDFC') || String(product.name || '').toUpperCase().includes('HDFC');
+    const prodCat = String(product.category || '').toLowerCase();
+    const isLocEoc = ['loc', 'eoc', 'loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loan_on_card', 'card_on_loan'].includes(prodCat);
+    const isOtherCat = prodCat.includes('loan') || prodCat.includes('insurance');
+    const isHdfcCreditCard = isHdfcBank && !isLocEoc && !isOtherCat;
+
+    if (isHdfcCreditCard && targetProcess === 'lead_punching') {
+      if (!cleanPan || !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(cleanPan)) {
+        return error(res, 'Please enter a valid 10-character PAN Card number (e.g. ABCDE1234F) for HDFC Credit Card applications.', 400);
+      }
+    } else if (cleanPan && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(cleanPan)) {
+      return error(res, 'Please enter a valid 10-character PAN Card number (e.g. ABCDE1234F).', 400);
     }
 
     // 3. 30-Day Duplicate Check (Applications & Confirmed Leads)
@@ -380,9 +398,9 @@ const createLead = async (req, res, next) => {
     const incomeVal = monthly_salary || monthly_income ? parseFloat(monthly_salary || monthly_income) : null;
     const { rows: [customer] } = await query(`
       INSERT INTO customers (
-        full_name, mobile, email, monthly_income, employer, pincode, city, state, created_by
+        full_name, mobile, email, monthly_income, employer, pincode, city, state, pan_number, created_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       ON CONFLICT (mobile) DO UPDATE
       SET full_name = EXCLUDED.full_name,
           email = COALESCE(EXCLUDED.email, customers.email),
@@ -391,9 +409,10 @@ const createLead = async (req, res, next) => {
           pincode = COALESCE(EXCLUDED.pincode, customers.pincode),
           city = COALESCE(EXCLUDED.city, customers.city),
           state = COALESCE(EXCLUDED.state, customers.state),
+          pan_number = COALESCE(EXCLUDED.pan_number, customers.pan_number),
           updated_at = NOW()
       RETURNING id
-    `, [targetName.trim(), trimmedMobile, trimmedEmail || null, incomeVal, company_name || null, pincode || null, targetCity || null, state || null, req.user.id]);
+    `, [targetName.trim(), trimmedMobile, trimmedEmail || null, incomeVal, company_name || null, pincode || null, targetCity || null, state || null, cleanPan, req.user.id]);
 
     // 5. Handle Process-Specific Workflow
     const leadNum = 'LEAD-' + Date.now().toString(36).toUpperCase();
@@ -650,21 +669,31 @@ const createLead = async (req, res, next) => {
     const { rows: [lead] } = await query(`
       INSERT INTO leads (
         lead_number, partner_id, parent_partner_id, created_by, customer_id,
-        product_id, customer_name, mobile, city, status, process_type, process_by,
+        product_id, customer_name, customer_mobile, mobile, pan_number, city, status, process_type, process_by,
         otp_verified, source, priority, pipeline_stage
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'lead_punching', 'punching', TRUE, $10, $11, 'pan_check')
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10, 'pending', 'lead_punching', 'punching', TRUE, $11, $12, 'pan_check')
       RETURNING *
     `, [
       leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
-      targetProductId, targetName.trim(), trimmedMobile, targetCity, source || 'partner', priority || 'medium'
+      targetProductId, targetName.trim(), trimmedMobile, cleanPan, targetCity, source || 'partner', priority || 'medium'
     ]);
 
     const { rows: [app] } = await query(`
-      INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, agree_terms, submitted_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'lead_punching', TRUE, NOW())
+      INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, pan_number, agree_terms, submitted_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'lead_punching', $9, TRUE, NOW())
       RETURNING *
-    `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0]);
+    `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0, cleanPan]);
+
+    if (app?.id) {
+      await query(`
+        INSERT INTO physical_application_details (application_id, full_name, mobile, email, pan_number, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+        ON CONFLICT (application_id) DO UPDATE SET
+          pan_number = COALESCE(EXCLUDED.pan_number, physical_application_details.pan_number),
+          updated_at = NOW()
+      `, [app.id, targetName.trim(), trimmedMobile, trimmedEmail || null, cleanPan]).catch(() => {});
+    }
 
     await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
     notifyPartnerLeadCreated(app.app_number || appNum, 'lead_punching');

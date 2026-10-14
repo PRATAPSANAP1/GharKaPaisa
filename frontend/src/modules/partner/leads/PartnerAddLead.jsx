@@ -99,12 +99,13 @@ export default function PartnerAddLead() {
 
   // Persist form state across page reload
   const { clearPersistedDraft } = useFormPersistence('partner_add_lead', {
-    selectedProductId, customerName, mobile, email, monthlySalary,
+    selectedProductId, customerName, mobile, pan, email, monthlySalary,
     companyName, pincode, city, stateName, businessType, processType
   }, {
     selectedProductId: setSelectedProductId,
     customerName: setCustomerName,
     mobile: setMobile,
+    pan: setPan,
     email: setEmail,
     monthlySalary: setMonthlySalary,
     companyName: setCompanyName,
@@ -189,6 +190,17 @@ export default function PartnerAddLead() {
 
     const selectedProd = products.find(p => p.id === selectedProductId);
     const isSbiSelected = isSbiProductOrBank(selectedProd?.bank_name, selectedProd?.name, selectedProd?.bank_code);
+    const isHdfcSelected = selectedProd && (
+      selectedProd.bank_id === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' ||
+      String(selectedProd.bank_name || '').toUpperCase().includes('HDFC') ||
+      String(selectedProd.bank_code || '').toUpperCase().includes('HDFC') ||
+      String(selectedProd.name || '').toUpperCase().includes('HDFC')
+    );
+    const prodCat = String(selectedProd?.category || '').toLowerCase();
+    const isLocEoc = ['loc', 'eoc', 'loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loan_on_card', 'card_on_loan'].includes(prodCat);
+    const isOtherCat = prodCat.includes('loan') || prodCat.includes('insurance');
+    const isHdfcCreditCardSelected = isHdfcSelected && !isLocEoc && !isOtherCat;
+    const isPanRequired = isSbiSelected || (isHdfcCreditCardSelected && processType === 'lead_punching');
 
     if (!selectedProductId) {
       newErrors.selectedProductId = 'Please select a product/card.';
@@ -203,9 +215,9 @@ export default function PartnerAddLead() {
       }
     }
     
-    if (isSbiSelected || pan.trim()) {
+    if (isPanRequired || pan.trim()) {
       const panClean = pan.trim().toUpperCase();
-      if (isSbiSelected && (!panClean || !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panClean))) {
+      if (isPanRequired && (!panClean || !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panClean))) {
         newErrors.pan = 'Please enter a valid 10-character PAN Card number (e.g. ABCDE1234F).';
       } else if (panClean && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panClean)) {
         newErrors.pan = 'Please enter a valid 10-character PAN Card number.';
@@ -908,45 +920,61 @@ export default function PartnerAddLead() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div>
-              <label style={S.label}>
-                PAN Card Number {isSbiSelected ? '*' : '(Optional)'}
-              </label>
-              <input
-                type="text"
-                maxLength={10}
-                placeholder="Enter 10-digit PAN (e.g. ABCDE1234F)"
-                value={pan}
-                onChange={(e) => {
-                  setPan(e.target.value.toUpperCase());
-                  setErrors(prev => ({ ...prev, pan: null }));
-                }}
-                style={{ ...S.input, height: '42px', fontSize: '13px', fontFamily: 'monospace', fontWeight: 700, textTransform: 'uppercase', borderColor: errors.pan ? C.red : C.border }}
-              />
-              {errors.pan && <span style={{ fontSize: '11px', color: C.red, marginTop: '2px', display: 'block' }}>{errors.pan}</span>}
-            </div>
+          {(() => {
+            const currentProd = products.find(p => p.id === selectedProductId);
+            const isSbiCur = isSbiProductOrBank(currentProd?.bank_name, currentProd?.name, currentProd?.bank_code);
+            const isHdfcCur = currentProd && (
+              currentProd.bank_id === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' ||
+              String(currentProd.bank_name || '').toUpperCase().includes('HDFC') ||
+              String(currentProd.bank_code || '').toUpperCase().includes('HDFC') ||
+              String(currentProd.name || '').toUpperCase().includes('HDFC')
+            );
+            const curCat = String(currentProd?.category || '').toLowerCase();
+            const curIsLocEoc = ['loc', 'eoc', 'loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loan_on_card', 'card_on_loan'].includes(curCat);
+            const curIsOther = curCat.includes('loan') || curCat.includes('insurance');
+            const isHdfcCcCur = isHdfcCur && !curIsLocEoc && !curIsOther;
+            const isPanFieldRequired = isSbiCur || (isHdfcCcCur && processType === 'lead_punching');
 
-            <div>
-              <label style={S.label}>
-                Enter Pincode *
-                {pincodeLoading && <span style={{ fontSize: '11px', color: C.primary, marginLeft: '6px' }}>Searching location...</span>}
-              </label>
-              <PincodeAutoComplete
-                value={pincode}
-                onChange={(val) => handlePincodeChange(val)}
-                onSelect={({ pincode: pin, city: cName }) => {
-                  handlePincodeChange(pin);
-                  if (cName) setCity(cName);
-                }}
-                isSbiOnly={isSbiSelected}
-                placeholder="Enter 6-digit Pincode"
-                error={errors.pincode}
-                C={C}
-              />
-            </div>
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={S.label}>
+                    PAN Card Number {isPanFieldRequired ? '*' : '(Optional)'}
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={10}
+                    placeholder="Enter 10-digit PAN (e.g. ABCDE1234F)"
+                    value={pan}
+                    onChange={(e) => {
+                      setPan(e.target.value.toUpperCase());
+                      setErrors(prev => ({ ...prev, pan: null }));
+                    }}
+                    style={{ ...S.input, height: '42px', fontSize: '13px', fontFamily: 'monospace', fontWeight: 700, textTransform: 'uppercase', borderColor: errors.pan ? C.red : C.border }}
+                  />
+                  {errors.pan && <span style={{ fontSize: '11px', color: C.red, marginTop: '2px', display: 'block' }}>{errors.pan}</span>}
+                </div>
 
-            {isSbiSelected && (
+                <div>
+                  <label style={S.label}>
+                    Enter Pincode *
+                    {pincodeLoading && <span style={{ fontSize: '11px', color: C.primary, marginLeft: '6px' }}>Searching location...</span>}
+                  </label>
+                  <PincodeAutoComplete
+                    value={pincode}
+                    onChange={(val) => handlePincodeChange(val)}
+                    onSelect={({ pincode: pin, city: cName }) => {
+                      handlePincodeChange(pin);
+                      if (cName) setCity(cName);
+                    }}
+                    isSbiOnly={isSbiCur}
+                    placeholder="Enter 6-digit Pincode"
+                    error={errors.pincode}
+                    C={C}
+                  />
+                </div>
+
+                {isSbiCur && (
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={S.label}>Negative Area (S8 Location Check)</label>
                 <select
@@ -976,8 +1004,10 @@ export default function PartnerAddLead() {
                   </optgroup>
                 </select>
               </div>
-            )}
-          </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* ADDITIONAL FIELDS FOR LEAD PUNCHING */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>

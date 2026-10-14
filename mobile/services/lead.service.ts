@@ -24,6 +24,8 @@ export interface CreateLeadPayload {
   process_type?: string;
   monthly_salary?: string | number;
   company_name?: string;
+  pan?: string;
+  pan_number?: string;
   priority?: string;
 }
 

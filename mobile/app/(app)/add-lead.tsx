@@ -28,6 +28,7 @@ export default function AddLeadScreen() {
   // Form State
   const [customerName, setCustomerName] = useState<string>('');
   const [mobile, setMobile] = useState<string>('');
+  const [pan, setPan] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [productId, setProductId] = useState<string>('');
   const [city, setCity] = useState<string>('');
@@ -76,6 +77,26 @@ export default function AddLeadScreen() {
       setErrorMessage('Please select a product');
       return;
     }
+    // Check if selected product is HDFC Credit Card
+    const selectedProd = products.find((p: any) => (p.id || p.product_id) === productId);
+    const bankName = String(selectedProd?.bank_name || selectedProd?.bank_code || '').toUpperCase();
+    const prodName = String(selectedProd?.name || selectedProd?.product_name || '').toUpperCase();
+    const prodCat = String(selectedProd?.category || '').toLowerCase();
+    const isLocEoc = ['loc', 'eoc', 'loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loan_on_card', 'card_on_loan'].includes(prodCat);
+    const isOtherCat = prodCat.includes('loan') || prodCat.includes('insurance');
+    const isHdfcCreditCard = (
+      selectedProd?.bank_id === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' ||
+      bankName.includes('HDFC') ||
+      prodName.includes('HDFC')
+    ) && !isLocEoc && !isOtherCat;
+
+    if (isHdfcCreditCard) {
+      const cleanPan = pan.trim().toUpperCase();
+      if (!cleanPan || !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(cleanPan)) {
+        setErrorMessage('Please enter a valid 10-character PAN number (e.g. ABCDE1234F)');
+        return;
+      }
+    }
 
     try {
       setSubmitting(true);
@@ -85,6 +106,8 @@ export default function AddLeadScreen() {
         product_id: productId,
         customer_name: customerName.trim(),
         mobile: cleanMobile,
+        pan: pan.trim().toUpperCase() || undefined,
+        pan_number: pan.trim().toUpperCase() || undefined,
         email: email.trim() || undefined,
         city: city.trim() || undefined,
         monthly_salary: monthlySalary ? Number(monthlySalary) : undefined,
@@ -172,6 +195,35 @@ export default function AddLeadScreen() {
           value={mobile}
           onChangeText={setMobile}
         />
+
+        {(() => {
+          const selectedProd = products.find((p: any) => (p.id || p.product_id) === productId);
+          const bankName = String(selectedProd?.bank_name || selectedProd?.bank_code || '').toUpperCase();
+          const prodName = String(selectedProd?.name || selectedProd?.product_name || '').toUpperCase();
+          const prodCat = String(selectedProd?.category || '').toLowerCase();
+          const isLocEoc = ['loc', 'eoc', 'loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loan_on_card', 'card_on_loan'].includes(prodCat);
+          const isOtherCat = prodCat.includes('loan') || prodCat.includes('insurance');
+          const isHdfcCreditCard = (
+            selectedProd?.bank_id === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' ||
+            bankName.includes('HDFC') ||
+            prodName.includes('HDFC')
+          ) && !isLocEoc && !isOtherCat;
+
+          if (!isHdfcCreditCard) return null;
+          return (
+            <>
+              <Text style={styles.inputLabel}>PAN Number *</Text>
+              <TextInput
+                style={[styles.textInput, { fontFamily: 'monospace', fontWeight: 'bold' }]}
+                placeholder="e.g. ABCDE1234F"
+                autoCapitalize="characters"
+                maxLength={10}
+                value={pan}
+                onChangeText={(text) => setPan(text.toUpperCase())}
+              />
+            </>
+          );
+        })()}
 
         <Text style={styles.inputLabel}>Email Address (Optional)</Text>
         <TextInput
