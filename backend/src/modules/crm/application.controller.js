@@ -4299,7 +4299,7 @@ const exportApplicationsCSV = async (req, res, next) => {
         'Salas operator code',
         'Remark opretor code',
         'Decline reason',
-        'Crested date'
+        'Created date'
       ];
 
       const formatCsvField = (val) => {
