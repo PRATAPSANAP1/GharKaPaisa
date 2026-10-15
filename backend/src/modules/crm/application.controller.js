@@ -4246,6 +4246,9 @@ const exportApplicationsCSV = async (req, res, next) => {
 
     const requestedBank = (req.query.bank || req.query.bank_id || '').toLowerCase();
     let isHdfcExport = requestedBank.includes('hdfc') || (req.query.format || '').toLowerCase() === 'hdfc';
+    if (!isHdfcExport && (requestedBank === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' || requestedBank === '1eacfa67-1187-48c7-adde-8a6edcfe9969')) {
+      isHdfcExport = true;
+    }
     if (!isHdfcExport && isUuid(requestedBank)) {
       try {
         const { rows: bRows } = await query(`SELECT name, short_code FROM banks WHERE id = $1 LIMIT 1`, [requestedBank]);
@@ -4254,6 +4257,12 @@ const exportApplicationsCSV = async (req, res, next) => {
           if (bName.includes('hdfc')) isHdfcExport = true;
         }
       } catch (e) {}
+    }
+    if (!isHdfcExport && ['PHYSICAL_CURABLE', 'DIGITAL_CURABLE', 'EMAIL_CURABLE', 'PHYSICAL CURABLE', 'DIGITAL CURABLE', 'EMAIL CURABLE'].some(r => userRole.includes(r) || userDesignation.includes(r))) {
+      isHdfcExport = true;
+    }
+    if (!isHdfcExport && rows.length > 0 && rows.every(r => (r.bank_name || '').toLowerCase().includes('hdfc') || (r.product_name || '').toLowerCase().includes('hdfc'))) {
+      isHdfcExport = true;
     }
 
     if (isHdfcExport) {
@@ -4325,7 +4334,7 @@ const exportApplicationsCSV = async (req, res, next) => {
           formatCsvField((row.process_by || 'Direct Link').replace(/_/g, ' ')),
           formatCsvField(row.submitted_by_name || 'N/A'),
           formatCsvField((row.status || 'pending').replace(/_/g, ' ')),
-          formatCsvField(row.commission_amount || 0),
+          formatCsvField(row.incentive_amount ?? row.commission_amount ?? 0),
           formatCsvField(bankAppNoVal),
           formatCsvField(row.ipa_stage || 'NA'),
           formatCsvField(row.soft_approval_stage || row.soft_approval_status || 'NA'),

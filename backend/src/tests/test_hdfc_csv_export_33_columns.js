@@ -362,20 +362,50 @@ assert.strictEqual(maskedRow[2], '9876******', `Mobile number must be masked (go
 assert.strictEqual(maskedRow[4], 'XXXXXX234F', `PAN number must be masked (got ${maskedRow[4]})`);
 console.log('✔ Masking permissions verified for Mobile (9876******) and PAN (XXXXXX234F)');
 
-// 7. Test Bank Resolution Helper
-console.log('\n--- TEST 6: Bank Resolution Function Validation ---');
+// 7. Test Bank Resolution Helper & Canonical UUIDs
+console.log('\n--- TEST 6: Bank Resolution & Canonical UUID Validation ---');
+const KNOWN_HDFC_UUIDS = [
+  'f0b5742d-f04d-4a91-b162-6009ddf6e345',
+  '1eacfa67-1187-48c7-adde-8a6edcfe9969'
+];
+
 const banksList = [
   { id: '11111111-2222-3333-4444-555555555555', name: 'HDFC Bank', short_code: null },
   { id: '22222222-3333-4444-5555-666666666666', name: 'State Bank of India', short_code: 'SBI' }
 ];
 
-const resolveIsHdfc = (bVal) => {
+const isHdfcApp = (app) => {
+  if (!app) return false;
+  const bId = String(app.bank_id || '').toLowerCase();
+  if (KNOWN_HDFC_UUIDS.includes(bId)) return true;
+  const bName = `${app.bank_name || ''} ${app.bank || ''} ${app.bank_code || ''} ${app.product_name || ''} ${app.product || ''}`.toLowerCase();
+  return bName.includes('hdfc');
+};
+
+const checkIsAllHdfcApplications = (list) => {
+  if (!Array.isArray(list) || list.length === 0) return false;
+  return list.every(isHdfcApp);
+};
+
+const resolveIsHdfc = (bVal, bList = banksList, defaultApps = []) => {
   if (!bVal || bVal === 'all') return false;
   const lower = String(bVal).toLowerCase().trim();
-  if (lower === 'hdfc' || lower.includes('hdfc')) return true;
-  if (Array.isArray(banksList) && banksList.length > 0) {
-    const match = banksList.find(b => String(b.id || b.bank_id).toLowerCase() === lower);
+  if (lower === 'hdfc' || lower.includes('hdfc') || KNOWN_HDFC_UUIDS.includes(lower)) return true;
+  if (Array.isArray(bList) && bList.length > 0) {
+    const match = bList.find(b => {
+      const id = String(b.id || b.bank_id || b._id || '').toLowerCase();
+      return id === lower;
+    });
     if (match && `${match.name || ''} ${match.bank_name || ''} ${match.short_code || ''}`.toLowerCase().includes('hdfc')) {
+      return true;
+    }
+  }
+  if (Array.isArray(defaultApps) && defaultApps.length > 0) {
+    const match = defaultApps.find(a => {
+      const bId = String(a.bank_id || a.bank || '').toLowerCase();
+      return bId === lower;
+    });
+    if (match && isHdfcApp(match)) {
       return true;
     }
   }
@@ -384,12 +414,39 @@ const resolveIsHdfc = (bVal) => {
 
 assert.strictEqual(resolveIsHdfc('hdfc'), true, "'hdfc' must resolve to true");
 assert.strictEqual(resolveIsHdfc('HDFC Bank'), true, "'HDFC Bank' must resolve to true");
-assert.strictEqual(resolveIsHdfc('11111111-2222-3333-4444-555555555555'), true, "HDFC bank UUID must resolve to true");
+assert.strictEqual(resolveIsHdfc('11111111-2222-3333-4444-555555555555'), true, "HDFC bank UUID from list must resolve to true");
+assert.strictEqual(resolveIsHdfc('f0b5742d-f04d-4a91-b162-6009ddf6e345', []), true, "Canonical HDFC UUID 1 must resolve to true even if banksList is empty");
+assert.strictEqual(resolveIsHdfc('1eacfa67-1187-48c7-adde-8a6edcfe9969', []), true, "Canonical HDFC UUID 2 must resolve to true even if banksList is empty");
 assert.strictEqual(resolveIsHdfc('all'), false, "'all' must resolve to false");
 assert.strictEqual(resolveIsHdfc('sbi'), false, "'sbi' must resolve to false");
 assert.strictEqual(resolveIsHdfc('22222222-3333-4444-5555-666666666666'), false, "SBI bank UUID must resolve to false");
 console.log('✔ Bank resolution accurately identifies HDFC across string codes, bank names, and UUIDs while leaving other banks untouched');
 
+// 8. Test Data-based Auto-activation when bankFilter === 'all'
+console.log('\n--- TEST 7: Data-based Auto-activation and Operator Queue Validation ---');
+const hdfcOnlyDataset = [
+  { bank_name: 'HDFC Bank', product_name: 'Millennia Card' },
+  { bank_id: 'f0b5742d-f04d-4a91-b162-6009ddf6e345', product_name: 'Regalia Gold' }
+];
+
+const mixedDataset = [
+  { bank_name: 'HDFC Bank', product_name: 'Millennia Card' },
+  { bank_name: 'State Bank of India', product_name: 'SBI SimplyCLICK' }
+];
+
+assert.strictEqual(checkIsAllHdfcApplications(hdfcOnlyDataset), true, "All-HDFC dataset must be detected");
+assert.strictEqual(checkIsAllHdfcApplications(mixedDataset), false, "Mixed dataset must not be flagged as all-HDFC");
+
+const checkCurableOp = (role, desig) => ['PHYSICAL CURABLE', 'PHYSICAL_CURABLE', 'DIGITAL CURABLE', 'DIGITAL_CURABLE', 'EMAIL CURABLE', 'EMAIL_CURABLE'].some(r =>
+  (role || '').toUpperCase().includes(r) || (desig || '').toUpperCase().includes(r)
+);
+
+assert.strictEqual(checkCurableOp('PHYSICAL_CURABLE_OPERATOR', ''), true, "Physical Curable operator must be detected");
+assert.strictEqual(checkCurableOp('', 'DIGITAL CURABLE'), true, "Digital Curable designation must be detected");
+assert.strictEqual(checkCurableOp('PARTNER', 'AGENT'), false, "Standard partner/agent must not trigger curable auto-detection");
+
+console.log('✔ Data auto-activation and operator queue detection work properly');
+
 console.log('\n========================================');
-console.log('🎉 ALL 6 TEST SUITES PASSED SUCCESSFULLY!');
+console.log('🎉 ALL 7 TEST SUITES PASSED SUCCESSFULLY!');
 console.log('========================================');

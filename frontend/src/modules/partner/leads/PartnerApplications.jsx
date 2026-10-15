@@ -2494,6 +2494,8 @@ export default function PartnerApplications() {
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
         defaultApplications={applications}
+        initialBank="all"
+        banksList={user?.assigned_banks || user?.permissions?.assigned_banks || []}
       />
 
       {/* ═══ MODAL 6: SHARE APPLICATION DETAIL LINK MODAL ═══ */}

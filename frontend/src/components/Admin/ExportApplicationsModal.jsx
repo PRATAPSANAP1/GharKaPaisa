@@ -35,41 +35,67 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
   const [fromDate, setFromDate] = useState(getTodayStr());
   const [toDate, setToDate] = useState(getTodayStr());
   const [statusFilter, setStatusFilter] = useState('all');
-  const [bankFilter, setBankFilter] = useState(initialBank || 'all');
-  const [exporting, setExporting] = useState(false);
+  const KNOWN_HDFC_UUIDS = [
+    'f0b5742d-f04d-4a91-b162-6009ddf6e345',
+    '1eacfa67-1187-48c7-adde-8a6edcfe9969'
+  ];
+
+  const isHdfcApp = (app) => {
+    if (!app) return false;
+    const bId = String(app.bank_id || '').toLowerCase();
+    if (KNOWN_HDFC_UUIDS.includes(bId)) return true;
+    const bName = `${app.bank_name || ''} ${app.bank || ''} ${app.bank_code || ''} ${app.product_name || ''} ${app.product || ''}`.toLowerCase();
+    return bName.includes('hdfc');
+  };
+
+  const checkIsAllHdfcApplications = (list) => {
+    if (!Array.isArray(list) || list.length === 0) return false;
+    return list.every(isHdfcApp);
+  };
+
+  const isHdfcCurableOperator = ['PHYSICAL CURABLE', 'PHYSICAL_CURABLE', 'DIGITAL CURABLE', 'DIGITAL_CURABLE', 'EMAIL CURABLE', 'EMAIL_CURABLE'].some(r =>
+    userRole.includes(r) || userDesignation.includes(r)
+  );
 
   const resolveIsHdfc = (bVal) => {
     if (!bVal || bVal === 'all') return false;
     const lower = String(bVal).toLowerCase().trim();
-    if (lower === 'hdfc' || lower.includes('hdfc')) return true;
+    if (lower === 'hdfc' || lower.includes('hdfc') || KNOWN_HDFC_UUIDS.includes(lower)) return true;
     if (Array.isArray(banksList) && banksList.length > 0) {
-      const match = banksList.find(b => String(b.id || b.bank_id).toLowerCase() === lower);
+      const match = banksList.find(b => {
+        const id = String(b.id || b.bank_id || b._id || '').toLowerCase();
+        return id === lower;
+      });
       if (match && `${match.name || ''} ${match.bank_name || ''} ${match.short_code || ''}`.toLowerCase().includes('hdfc')) {
         return true;
       }
     }
     if (Array.isArray(defaultApplications) && defaultApplications.length > 0) {
-      const match = defaultApplications.find(a => String(a.bank_id || a.bank).toLowerCase() === lower);
-      if (match && `${match.bank_name || ''} ${match.bank || ''} ${match.bank_code || ''}`.toLowerCase().includes('hdfc')) {
+      const match = defaultApplications.find(a => {
+        const bId = String(a.bank_id || a.bank || '').toLowerCase();
+        return bId === lower;
+      });
+      if (match && isHdfcApp(match)) {
         return true;
       }
     }
     return false;
   };
 
-  const prevIsOpen = React.useRef(isOpen);
-  const isInitialMount = React.useRef(true);
+  const [bankFilter, setBankFilter] = useState(() => {
+    const isInitHdfc = resolveIsHdfc(initialBank) || checkIsAllHdfcApplications(defaultApplications) || isHdfcCurableOperator;
+    return isInitHdfc ? 'hdfc' : (initialBank || 'all');
+  });
+  const [exporting, setExporting] = useState(false);
 
   React.useEffect(() => {
-    if (isOpen && (!prevIsOpen.current || isInitialMount.current)) {
-      isInitialMount.current = false;
-      const isInitHdfc = resolveIsHdfc(initialBank);
+    if (isOpen) {
+      const isInitHdfc = resolveIsHdfc(initialBank) || checkIsAllHdfcApplications(defaultApplications) || isHdfcCurableOperator;
       setBankFilter(isInitHdfc ? 'hdfc' : (initialBank || 'all'));
     }
-    prevIsOpen.current = isOpen;
-  }, [isOpen]);
+  }, [isOpen, initialBank, banksList, defaultApplications]);
 
-  const isHdfcSelected = resolveIsHdfc(bankFilter);
+  const isHdfcSelected = resolveIsHdfc(bankFilter) || (bankFilter === 'all' && (checkIsAllHdfcApplications(defaultApplications) || isHdfcCurableOperator));
 
   const dynamicBankNames = Array.from(new Set(
     (Array.isArray(defaultApplications) ? defaultApplications : [])
@@ -131,8 +157,10 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
           queryParams.status = statusFilter;
         }
 
-        if (bankFilter !== 'all') {
-          queryParams.bank = isHdfcSelected ? 'hdfc' : bankFilter;
+        if (isHdfcSelected || resolveIsHdfc(bankFilter) || resolveIsHdfc(initialBank)) {
+          queryParams.bank = 'hdfc';
+        } else if (bankFilter !== 'all') {
+          queryParams.bank = bankFilter;
         }
 
         const res = await api.get('/applications', { params: queryParams });
@@ -173,11 +201,8 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
       }
 
       if (bankFilter !== 'all' && filtered.length > 0) {
-        if (isHdfcSelected) {
-          filtered = (Array.isArray(filtered) ? filtered : []).filter(app => {
-            const bName = `${app.bank_name || ''} ${app.bank_code || ''} ${app.bank || ''} ${app.product_name || ''}`.toLowerCase();
-            return bName.includes('hdfc');
-          });
+        if (isHdfcSelected || resolveIsHdfc(bankFilter)) {
+          filtered = (Array.isArray(filtered) ? filtered : []).filter(isHdfcApp);
         } else {
           const bFilterLower = bankFilter.toLowerCase();
           filtered = (Array.isArray(filtered) ? filtered : []).filter(app => {
@@ -444,8 +469,14 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
         { header: 'Crested date', getVal: a => (a.created_at || a.createdAt || a.application_date) ? new Date(a.created_at || a.createdAt || a.application_date).toLocaleDateString('en-IN') : 'N/A' }
       ];
 
-      const activeColDefs = isHdfcSelected ? HDFC_COL_DEFS : colDefs;
-      const downloadFileName = isHdfcSelected
+      const isFinalHdfcDump = isHdfcSelected ||
+        resolveIsHdfc(bankFilter) ||
+        resolveIsHdfc(initialBank) ||
+        (filtered.length > 0 && checkIsAllHdfcApplications(filtered)) ||
+        (defaultApplications.length > 0 && checkIsAllHdfcApplications(defaultApplications));
+
+      const activeColDefs = isFinalHdfcDump ? HDFC_COL_DEFS : colDefs;
+      const downloadFileName = isFinalHdfcDump
         ? `hdfc_gharkapaisa_dump_${period}${period === 'all' ? '' : `_${fromDate}_to_${toDate}`}.csv`
         : `applications_report_${period}_${fromDate}_to_${toDate}.csv`;
 
