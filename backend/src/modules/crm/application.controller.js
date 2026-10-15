@@ -2391,7 +2391,11 @@ const listApplications = async (req, res, next) => {
         COALESCE(NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as curing_designation,
         COALESCE(NULLIF(to_jsonb(a)->>'primary_decline_code', ''), NULLIF(to_jsonb(pad)->>'primary_decline_code', ''), NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as primary_decline_code,
         COALESCE(NULLIF(to_jsonb(a)->>'secondary_decline_code', ''), NULLIF(to_jsonb(pad)->>'secondary_decline_code', '')) as secondary_decline_code,
-        COALESCE(to_jsonb(a)->>'sales_claimed_by', to_jsonb(pad)->>'sales_claimed_by', '') as sales_claimed_by
+        COALESCE(to_jsonb(a)->>'sales_claimed_by', to_jsonb(pad)->>'sales_claimed_by', '') as sales_claimed_by,
+        NULLIF(to_jsonb(a)->>'assigned_to_user_id', '')::uuid as assigned_to_user_id,
+        NULLIF(to_jsonb(a)->>'assigned_to_employee_id', '')::uuid as assigned_to_employee_id,
+        NULLIF(to_jsonb(a)->>'assigned_by_user_id', '')::uuid as assigned_by_user_id,
+        NULLIF(to_jsonb(a)->>'assigned_by_employee_id', '')::uuid as assigned_by_employee_id
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
