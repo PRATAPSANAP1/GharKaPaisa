@@ -1709,7 +1709,10 @@ const listApplications = async (req, res, next) => {
     let targetBankId = bank_id || req.query.bank;
     if (targetBankId && !isUuid(targetBankId) && targetBankId !== 'all') {
       try {
-        const { rows: bRows } = await query(`SELECT id FROM banks WHERE LOWER(short_code) = LOWER($1) OR LOWER(name) = LOWER($1) LIMIT 1`, [targetBankId.trim()]);
+        const { rows: bRows } = await query(
+          `SELECT id FROM banks WHERE LOWER(short_code) = LOWER($1) OR LOWER(name) = LOWER($1) OR LOWER(name) LIKE '%' || LOWER($1) || '%' OR LOWER(short_code) LIKE '%' || LOWER($1) || '%' LIMIT 1`,
+          [targetBankId.trim()]
+        );
         if (bRows.length > 0) targetBankId = bRows[0].id;
       } catch (bErr) {}
     }
@@ -4241,8 +4244,17 @@ const exportApplicationsCSV = async (req, res, next) => {
       return String(bankAppNo).trim();
     };
 
-    const requestedBank = (req.query.bank || '').toLowerCase();
-    const isHdfcExport = requestedBank.includes('hdfc') || (req.query.format || '').toLowerCase() === 'hdfc';
+    const requestedBank = (req.query.bank || req.query.bank_id || '').toLowerCase();
+    let isHdfcExport = requestedBank.includes('hdfc') || (req.query.format || '').toLowerCase() === 'hdfc';
+    if (!isHdfcExport && isUuid(requestedBank)) {
+      try {
+        const { rows: bRows } = await query(`SELECT name, short_code FROM banks WHERE id = $1 LIMIT 1`, [requestedBank]);
+        if (bRows.length > 0) {
+          const bName = `${bRows[0].name || ''} ${bRows[0].short_code || ''}`.toLowerCase();
+          if (bName.includes('hdfc')) isHdfcExport = true;
+        }
+      } catch (e) {}
+    }
 
     if (isHdfcExport) {
       const hdfcHeaders = [
@@ -4261,7 +4273,7 @@ const exportApplicationsCSV = async (req, res, next) => {
         'Status',
         'Incentive amount',
         'Bank application no',
-        'Ipa STAGE',
+        'IPA STAGE',
         'Soft approval stage',
         'KYC stage',
         'KYC link',
@@ -4281,53 +4293,58 @@ const exportApplicationsCSV = async (req, res, next) => {
         'Crested date'
       ];
 
-      const hdfcLines = [hdfcHeaders.join(',')];
+      const formatCsvField = (val) => {
+        if (val === null || val === undefined) return '""';
+        return `"${String(val).replace(/[\r\n]+/g, ' ').replace(/"/g, '""')}"`;
+      };
+
+      const hdfcLines = [hdfcHeaders.map(formatCsvField).join(',')];
       const hdfcRows = rows.filter(r => (r.bank_name || '').toLowerCase().includes('hdfc') || (r.product_name || '').toLowerCase().includes('hdfc'));
 
-      for (const row of hdfcRows) {
+      for (const row of (hdfcRows.length > 0 ? hdfcRows : rows)) {
         const mobVal = hideCustomerMobile ? 'REDACTED' : (row.customer_mobile || '');
         const panVal = formatPanNumber(row.pan_number);
         const bankAppNoVal = formatBankAppNumber(row.bank_application_number, row.app_number);
         const vkycLink = (row.vkyc_url && String(row.vkyc_url).trim() !== '' && String(row.vkyc_url).toUpperCase() !== 'N/A') ? row.vkyc_url : 'NA';
-        const finalStatus = (row.final_status && String(row.final_status).trim() !== '' && String(row.final_status).toUpperCase() !== 'N/A') ? String(row.final_status).replace(/"/g, '""') : (row.bank_current_lead_status || 'NA');
-        const userRemark = (row.user_remark && String(row.user_remark).trim() !== '' && String(row.user_remark).toUpperCase() !== 'N/A') ? String(row.user_remark).replace(/"/g, '""') : 'NA';
-        const bankRemark = (row.bank_remark && String(row.bank_remark).trim() !== '' && String(row.bank_remark).toUpperCase() !== 'N/A') ? String(row.bank_remark).replace(/"/g, '""') : 'NA';
-        const declineReason = (row.decline_reason && String(row.decline_reason).trim() !== '' && String(row.decline_reason).toUpperCase() !== 'N/A') ? String(row.decline_reason).replace(/"/g, '""') : 'NA';
+        const finalStatus = (row.final_status && String(row.final_status).trim() !== '' && String(row.final_status).toUpperCase() !== 'N/A') ? row.final_status : (row.bank_current_lead_status || 'NA');
+        const userRemark = (row.user_remark && String(row.user_remark).trim() !== '' && String(row.user_remark).toUpperCase() !== 'N/A') ? row.user_remark : 'NA';
+        const bankRemark = (row.bank_remark && String(row.bank_remark).trim() !== '' && String(row.bank_remark).toUpperCase() !== 'N/A') ? row.bank_remark : 'NA';
+        const declineReason = (row.decline_reason && String(row.decline_reason).trim() !== '' && String(row.decline_reason).toUpperCase() !== 'N/A') ? row.decline_reason : 'NA';
 
         const rowValues = [
-          `"${(row.app_number || '').replace(/"/g, '""')}"`,
-          `"${(row.customer_name || 'N/A').replace(/"/g, '""')}"`,
-          `"${mobVal}"`,
-          `"${(row.customer_email || 'N/A').replace(/"/g, '""')}"`,
-          `"${panVal.replace(/"/g, '""')}"`,
-          `"${(row.city || 'N/A').replace(/"/g, '""')}"`,
-          `"${(row.state || 'N/A').replace(/"/g, '""')}"`,
-          `"${(row.pincode || 'N/A').replace(/"/g, '""')}"`,
-          `"${(row.product_name || 'N/A').replace(/"/g, '""')}"`,
-          `"${(row.bank_name || 'HDFC Bank').replace(/"/g, '""')}"`,
-          `"${(row.process_by || 'Direct Link').replace(/_/g, ' ').replace(/"/g, '""')}"`,
-          `"${(row.submitted_by_name || 'N/A').replace(/"/g, '""')}"`,
-          `"${(row.status || 'pending').replace(/_/g, ' ').replace(/"/g, '""')}"`,
-          `"${row.commission_amount || 0}"`,
-          `"${bankAppNoVal.replace(/"/g, '""')}"`,
-          `"${(row.ipa_stage || 'NA').replace(/"/g, '""')}"`,
-          `"${(row.soft_approval_stage || row.soft_approval_status || 'NA').replace(/"/g, '""')}"`,
-          `"${(row.kyc_stage || row.vkyc_stage || 'NA').replace(/"/g, '""')}"`,
-          `"${vkycLink.replace(/"/g, '""')}"`,
-          `"${(row.dispatch_status || 'NA').replace(/"/g, '""')}"`,
-          `"${finalStatus.replace(/"/g, '""')}"`,
-          `"${(row.final_card_approval || 'NA').replace(/"/g, '""')}"`,
-          `"${userRemark}"`,
-          `"${bankRemark}"`,
-          `"${(row.cureble_stage || 'NA').replace(/"/g, '""')}"`,
-          `"${(row.primary_code || 'NA').replace(/"/g, '""')}"`,
-          `"${(row.secondary_code || 'NA').replace(/"/g, '""')}"`,
-          `"${(row.cureble_type || 'NA').replace(/"/g, '""')}"`,
-          `"${(row.cureble_operator_code || 'NA').replace(/"/g, '""')}"`,
-          `"${(row.salas_operator_code || row.sales_operator_code || 'NA').replace(/"/g, '""')}"`,
-          `"${(row.remark_opretor_code || row.remark_operator_code || 'NA').replace(/"/g, '""')}"`,
-          `"${declineReason}"`,
-          `"${row.created_at ? new Date(row.created_at).toLocaleDateString('en-IN') : 'N/A'}"`
+          formatCsvField(row.app_number || ''),
+          formatCsvField(row.customer_name || 'N/A'),
+          formatCsvField(mobVal),
+          formatCsvField(row.customer_email || 'N/A'),
+          formatCsvField(panVal),
+          formatCsvField(row.city || 'N/A'),
+          formatCsvField(row.state || 'N/A'),
+          formatCsvField(row.pincode || 'N/A'),
+          formatCsvField(row.product_name || 'N/A'),
+          formatCsvField(row.bank_name || 'HDFC Bank'),
+          formatCsvField((row.process_by || 'Direct Link').replace(/_/g, ' ')),
+          formatCsvField(row.submitted_by_name || 'N/A'),
+          formatCsvField((row.status || 'pending').replace(/_/g, ' ')),
+          formatCsvField(row.commission_amount || 0),
+          formatCsvField(bankAppNoVal),
+          formatCsvField(row.ipa_stage || 'NA'),
+          formatCsvField(row.soft_approval_stage || row.soft_approval_status || 'NA'),
+          formatCsvField(row.kyc_stage || row.vkyc_stage || 'NA'),
+          formatCsvField(vkycLink),
+          formatCsvField(row.dispatch_status || 'NA'),
+          formatCsvField(finalStatus),
+          formatCsvField(row.final_card_approval || 'NA'),
+          formatCsvField(userRemark),
+          formatCsvField(bankRemark),
+          formatCsvField(row.cureble_stage || 'NA'),
+          formatCsvField(row.primary_code || 'NA'),
+          formatCsvField(row.secondary_code || 'NA'),
+          formatCsvField(row.cureble_type || 'NA'),
+          formatCsvField(row.cureble_operator_code || 'NA'),
+          formatCsvField(row.salas_operator_code || row.sales_operator_code || 'NA'),
+          formatCsvField(row.remark_opretor_code || row.remark_operator_code || 'NA'),
+          formatCsvField(declineReason),
+          formatCsvField(row.created_at ? new Date(row.created_at).toLocaleDateString('en-IN') : 'N/A')
         ];
         hdfcLines.push(rowValues.join(','));
       }

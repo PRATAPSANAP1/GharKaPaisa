@@ -1914,6 +1914,8 @@ export default function ManageApplications() {
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
         defaultApplications={apps}
+        initialBank={bankFilter}
+        banksList={banksList.length > 0 ? banksList : assignedList}
       />
     </div>
   );

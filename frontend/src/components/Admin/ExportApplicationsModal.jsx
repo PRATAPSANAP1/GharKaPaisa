@@ -4,7 +4,7 @@ import { useAuthStore } from '../../app/store/authStore';
 import { Download, Calendar, Filter, X, Check, FileText, Clock, History, CalendarDays, BarChart2, Edit3, Globe } from 'lucide-react';
 import api from '../../services/api';
 
-export default function ExportApplicationsModal({ isOpen, onClose, defaultApplications = [], initialBank = 'all' }) {
+export default function ExportApplicationsModal({ isOpen, onClose, defaultApplications = [], initialBank = 'all', banksList = [] }) {
   const { C, isDark } = useTheme();
   const user = useAuthStore((state) => state.user);
   const userRole = (user?.role || user?.user_role || '').toUpperCase();
@@ -38,13 +38,38 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
   const [bankFilter, setBankFilter] = useState(initialBank || 'all');
   const [exporting, setExporting] = useState(false);
 
-  React.useEffect(() => {
-    if (isOpen) {
-      setBankFilter(initialBank || 'all');
+  const resolveIsHdfc = (bVal) => {
+    if (!bVal || bVal === 'all') return false;
+    const lower = String(bVal).toLowerCase().trim();
+    if (lower === 'hdfc' || lower.includes('hdfc')) return true;
+    if (Array.isArray(banksList) && banksList.length > 0) {
+      const match = banksList.find(b => String(b.id || b.bank_id).toLowerCase() === lower);
+      if (match && `${match.name || ''} ${match.bank_name || ''} ${match.short_code || ''}`.toLowerCase().includes('hdfc')) {
+        return true;
+      }
     }
-  }, [isOpen, initialBank]);
+    if (Array.isArray(defaultApplications) && defaultApplications.length > 0) {
+      const match = defaultApplications.find(a => String(a.bank_id || a.bank).toLowerCase() === lower);
+      if (match && `${match.bank_name || ''} ${match.bank || ''} ${match.bank_code || ''}`.toLowerCase().includes('hdfc')) {
+        return true;
+      }
+    }
+    return false;
+  };
 
-  const isHdfcSelected = (bankFilter || '').toLowerCase().includes('hdfc');
+  const prevIsOpen = React.useRef(isOpen);
+  const isInitialMount = React.useRef(true);
+
+  React.useEffect(() => {
+    if (isOpen && (!prevIsOpen.current || isInitialMount.current)) {
+      isInitialMount.current = false;
+      const isInitHdfc = resolveIsHdfc(initialBank);
+      setBankFilter(isInitHdfc ? 'hdfc' : (initialBank || 'all'));
+    }
+    prevIsOpen.current = isOpen;
+  }, [isOpen]);
+
+  const isHdfcSelected = resolveIsHdfc(bankFilter);
 
   const dynamicBankNames = Array.from(new Set(
     (Array.isArray(defaultApplications) ? defaultApplications : [])
@@ -107,7 +132,7 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
         }
 
         if (bankFilter !== 'all') {
-          queryParams.bank = bankFilter;
+          queryParams.bank = isHdfcSelected ? 'hdfc' : bankFilter;
         }
 
         const res = await api.get('/applications', { params: queryParams });
@@ -148,11 +173,18 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
       }
 
       if (bankFilter !== 'all' && filtered.length > 0) {
-        const bFilterLower = bankFilter.toLowerCase();
-        filtered = (Array.isArray(filtered) ? filtered : []).filter(app => {
-          const bName = `${app.bank_name || ''} ${app.bank_code || ''} ${app.bank || ''} ${app.product_name || ''}`.toLowerCase();
-          return bName.includes(bFilterLower);
-        });
+        if (isHdfcSelected) {
+          filtered = (Array.isArray(filtered) ? filtered : []).filter(app => {
+            const bName = `${app.bank_name || ''} ${app.bank_code || ''} ${app.bank || ''} ${app.product_name || ''}`.toLowerCase();
+            return bName.includes('hdfc');
+          });
+        } else {
+          const bFilterLower = bankFilter.toLowerCase();
+          filtered = (Array.isArray(filtered) ? filtered : []).filter(app => {
+            const bName = `${app.bank_name || ''} ${app.bank_code || ''} ${app.bank || ''} ${app.product_name || ''}`.toLowerCase();
+            return bName.includes(bFilterLower) || (app.bank_id && String(app.bank_id).toLowerCase() === bFilterLower);
+          });
+        }
       }
 
       if (filtered.length === 0) {
@@ -388,7 +420,7 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
             return (!raw || String(raw).trim() === '' || String(raw).trim() === String(sysAppNo).trim() || String(raw).toUpperCase() === 'N/A' || String(raw).toUpperCase() === 'NA') ? 'NA' : String(raw).trim();
           }
         },
-        { header: 'Ipa STAGE', getVal: a => a.ipa_stage || a.physical_details?.ipa_stage || a.iqa_stage || a.physical_details?.iqa_stage || 'NA' },
+        { header: 'IPA STAGE', getVal: a => a.ipa_stage || a.physical_details?.ipa_stage || a.iqa_stage || a.physical_details?.iqa_stage || 'NA' },
         { header: 'Soft approval stage', getVal: a => a.soft_approval_stage || a.soft_approval_status || a.physical_details?.soft_approval_stage || a.physical_details?.soft_approval_status || 'NA' },
         { header: 'KYC stage', getVal: a => a.kyc_stage || a.vkyc_stage || a.vkyc_status || a.physical_details?.kyc_stage || a.physical_details?.vkyc_stage || 'NA' },
         { header: 'KYC link', getVal: a => {
@@ -417,14 +449,17 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
         ? `hdfc_gharkapaisa_dump_${period}${period === 'all' ? '' : `_${fromDate}_to_${toDate}`}.csv`
         : `applications_report_${period}_${fromDate}_to_${toDate}.csv`;
 
+      const formatCsvVal = (val) => {
+        if (val === null || val === undefined) return '""';
+        const str = String(val).replace(/[\r\n]+/g, ' ').replace(/"/g, '""');
+        return `"${str}"`;
+      };
+
       // Generate CSV string with UTF-8 BOM
       const csvLines = [activeColDefs.map(c => `"${c.header.replace(/"/g, '""')}"`).join(',')];
 
       filtered.forEach(a => {
-        const rowVals = activeColDefs.map(c => {
-          const val = c.getVal(a);
-          return `"${String(val ?? '').replace(/"/g, '""')}"`;
-        });
+        const rowVals = activeColDefs.map(c => formatCsvVal(c.getVal(a)));
         csvLines.push(rowVals.join(','));
       });
 
@@ -558,7 +593,7 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
               )}
             </label>
             <select
-              value={bankFilter}
+              value={isHdfcSelected ? 'hdfc' : bankFilter}
               onChange={(e) => setBankFilter(e.target.value)}
               style={{
                 width: '100%', padding: '10px 14px', borderRadius: '10px',
@@ -599,7 +634,7 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
                 <strong style={{ display: 'block', fontSize: '12.5px', marginBottom: '2px', color: isDark ? '#bfdbfe' : '#1e3a8a' }}>
                   Hdfc gharkapaisa dump format Active (33 Columns)
                 </strong>
-                Export file will contain the exact 33 bank audit headers: Application no, Customer name, Mobile number, Email ID, Pan no, City, State, Pincode, Product name, Bank name, Process type, Reference/ code, Status, Incentive amount, Bank application no, Ipa STAGE, Soft approval stage, KYC stage, KYC link, Dispatch status, Final status form bank, Final card approval, User remark, Bank remark, Cureble stage, Primary code, Secondary code, Cureble type, Cureble operator code, Salas operator code, Remark opretor code, Decline reason, Crested date.
+                Export file will contain the exact 33 bank audit headers: Application no, Customer name, Mobile number, Email ID, Pan no, City, State, Pincode, Product name, Bank name, Process type, Reference/ code, Status, Incentive amount, Bank application no, IPA STAGE, Soft approval stage, KYC stage, KYC link, Dispatch status, Final status form bank, Final card approval, User remark, Bank remark, Cureble stage, Primary code, Secondary code, Cureble type, Cureble operator code, Salas operator code, Remark opretor code, Decline reason, Crested date.
               </div>
             </div>
           )}

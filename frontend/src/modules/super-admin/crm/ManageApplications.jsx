@@ -1524,6 +1524,7 @@ export default function ManageApplications() {
           onClose={() => setIsExportModalOpen(false)}
           defaultApplications={applications}
           initialBank={bankFilter}
+          banksList={banksList}
         />
       )}
 
