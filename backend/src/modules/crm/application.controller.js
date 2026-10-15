@@ -1845,6 +1845,23 @@ const listApplications = async (req, res, next) => {
 
     let salesExecFilterSQL = '';
     if (isSalesExecUser && req.user?.id) {
+      const sbiBankMatchSQL = `(
+        (LOWER(COALESCE(combined.bank_code, '')) = 'sbi' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%sbi%')
+        AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%tata%'
+        AND LOWER(COALESCE(combined.bank_code, '')) NOT LIKE '%tata%'
+      )`;
+      const hdfcBankMatchSQL = `(
+        (LOWER(COALESCE(combined.bank_code, '')) = 'hdfc' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%hdfc%')
+        AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%tata%'
+        AND LOWER(COALESCE(combined.bank_code, '')) NOT LIKE '%tata%'
+      )`;
+
+      const baseBankAccessClean = (baseBankAccessFilterSQL || '').replace(/^\s*AND\s*/i, '').trim();
+      const hasValidBaseBank = baseBankAccessClean && baseBankAccessClean !== '1=0';
+      const salesBankScopeSQL = hasValidBaseBank
+        ? ` AND (${baseBankAccessClean} OR ${sbiBankMatchSQL})`
+        : ` AND (${hdfcBankMatchSQL} OR ${sbiBankMatchSQL})`;
+
       const tataExclusionFilter = `NOT (
         (LOWER(COALESCE(combined.bank_name, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%tata%')
         AND NOT EXISTS (
@@ -1854,10 +1871,16 @@ const listApplications = async (req, res, next) => {
           AND (LOWER(b.name) LIKE '%tata%' OR LOWER(b.short_code) LIKE '%tata%')
         )
       )`;
-      const processFilter = ` AND (LOWER(COALESCE(combined.process_type, combined.process_by, 'lead_punching')) IN ('lead_punching', 'partner_punch', 'punching', 'punch_only', 'digital_punching') OR LOWER(COALESCE(combined.process_type, combined.process_by, '')) LIKE '%punch%')`;
+      const processFilter = ` AND (
+        (LOWER(COALESCE(combined.process_type, combined.process_by, 'lead_punching')) IN ('lead_punching', 'partner_punch', 'punching', 'punch_only', 'digital_punching') OR LOWER(COALESCE(combined.process_type, combined.process_by, '')) LIKE '%punch%')
+        OR (
+          (LOWER(COALESCE(combined.bank_code, '')) = 'sbi' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%sbi%')
+          AND LOWER(COALESCE(combined.process_type, combined.process_by, 'lead_punching')) IN ('lead_punching', 'physical_process', 'partner_punch', 'punching', 'punch_only', 'digital_punching', 'physical', '')
+        )
+      )`;
       const dispatchFilter = ` AND (COALESCE(combined.dispatch_status, '') = '' OR LOWER(COALESCE(combined.dispatch_status, 'none')) IN ('none', 'na', 'n/a'))`;
       const claimFilter = ` AND (combined.sales_claimed_by IS NULL OR combined.sales_claimed_by = '' OR combined.sales_claimed_by = '${req.user.id}')`;
-      salesExecFilterSQL = ` ${baseBankAccessFilterSQL} AND ${tataExclusionFilter}${processFilter}${dispatchFilter}${claimFilter}`;
+      salesExecFilterSQL = ` ${salesBankScopeSQL} AND ${tataExclusionFilter}${processFilter}${dispatchFilter}${claimFilter}`;
     }
 
     const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
@@ -4018,8 +4041,15 @@ const exportApplicationsCSV = async (req, res, next) => {
 
     const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation);
     if (isSalesExecUser && userId) {
+      const sbiMatch = `((combined.bank_name ILIKE '%sbi%' OR combined.bank_name ILIKE '%state bank of india%') AND combined.bank_name NOT ILIKE '%tata%')`;
+      const hdfcMatch = `(combined.bank_name ILIKE '%hdfc%' AND combined.bank_name NOT ILIKE '%tata%')`;
+      const cleanWhere = (whereClause || '').replace(/^\s*WHERE\s*/i, '').trim();
+      const hasValidBase = cleanWhere && cleanWhere !== '1=0';
+      const bankScope = hasValidBase
+        ? `(${cleanWhere} OR ${sbiMatch})`
+        : `(${hdfcMatch} OR ${sbiMatch})`;
       const claimFilter = `(combined.sales_claimed_by IS NULL OR combined.sales_claimed_by = '' OR combined.sales_claimed_by = '${userId}')`;
-      whereClause = whereClause ? `${whereClause} AND ${claimFilter}` : `WHERE ${claimFilter}`;
+      whereClause = `WHERE ${bankScope} AND ${claimFilter}`;
     }
 
     const { rows } = await query(`

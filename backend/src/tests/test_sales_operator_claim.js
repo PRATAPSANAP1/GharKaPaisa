@@ -102,5 +102,40 @@ const claimAttempt4 = simulateClaim(targetApp, salesOpUser1);
 assert.strictEqual(claimAttempt4.status, 200);
 console.log('✓ Idempotent re-claim succeeds');
 
+// 3. Test Bank Scope & SBI Bank matching for Administrative Sales Executive
+function matchesSalesExecBankScope(app, userBankAssignments = []) {
+  const isSbi = (app.bank_code?.toLowerCase() === 'sbi' || app.bank_name?.toLowerCase().includes('sbi')) &&
+    !app.bank_name?.toLowerCase().includes('tata') && !app.bank_code?.toLowerCase().includes('tata');
+  const isHdfc = (app.bank_code?.toLowerCase() === 'hdfc' || app.bank_name?.toLowerCase().includes('hdfc')) &&
+    !app.bank_name?.toLowerCase().includes('tata') && !app.bank_code?.toLowerCase().includes('tata');
+
+  const hasAssignment = userBankAssignments.length > 0;
+  if (hasAssignment) {
+    const matchesAssigned = userBankAssignments.some(b =>
+      (b.short_code?.toLowerCase() === app.bank_code?.toLowerCase() || b.name?.toLowerCase() === app.bank_name?.toLowerCase())
+    );
+    return matchesAssigned || isSbi;
+  }
+  return isHdfc || isSbi;
+}
+
+const hdfcApp = { id: 'hdfc-1', bank_code: 'hdfc', bank_name: 'HDFC Bank', process_type: 'lead_punching' };
+const sbiApp = { id: 'sbi-1', bank_code: 'sbi', bank_name: 'SBI Bank', process_type: 'lead_punching' };
+const sbiPhysicalApp = { id: 'sbi-2', bank_code: 'sbi', bank_name: 'SBI Bank', process_type: 'physical_process' };
+const axisApp = { id: 'axis-1', bank_code: 'axis', bank_name: 'Axis Bank', process_type: 'lead_punching' };
+
+// Case A: User has only HDFC in bank assignments
+const hdfcOnlyAssignments = [{ short_code: 'hdfc', name: 'HDFC Bank' }];
+assert.ok(matchesSalesExecBankScope(hdfcApp, hdfcOnlyAssignments), 'HDFC app must match');
+assert.ok(matchesSalesExecBankScope(sbiApp, hdfcOnlyAssignments), 'SBI app must match even if only HDFC assigned');
+assert.ok(!matchesSalesExecBankScope(axisApp, hdfcOnlyAssignments), 'Axis app must NOT match');
+console.log('✓ Bank scope matches both HDFC and SBI for Sales Executive');
+
+// Case B: Claiming SBI application by Sales Executive
+const sbiClaimAttempt = simulateClaim(sbiApp, salesOpUser1);
+assert.strictEqual(sbiClaimAttempt.status, 200, 'Sales Operator can claim SBI Bank application');
+assert.strictEqual(sbiApp.sales_claimed_by, op1_id);
+console.log('✓ Administrative Sales Operator successfully claimed SBI application');
+
 console.log('--- ALL TESTS PASSED SUCCESSFULLY! ---');
 process.exit(0);

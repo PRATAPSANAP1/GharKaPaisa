@@ -820,9 +820,19 @@ const listBanks = async (req, res, next) => {
 
     if (isSalesExecUser && req.user?.id) {
       const { rows } = await query(`
-        SELECT b.* FROM banks b
-        JOIN admin_bank_assignments aba ON aba.bank_id = b.id
-        WHERE aba.admin_id = $1 AND b.is_active = true
+        SELECT DISTINCT b.* FROM banks b
+        WHERE b.is_active = true
+        AND (
+          EXISTS (
+            SELECT 1 FROM admin_bank_assignments aba
+            WHERE aba.bank_id = b.id AND aba.admin_id = $1
+          )
+          OR (
+            (LOWER(COALESCE(b.short_code, '')) IN ('hdfc', 'sbi') OR LOWER(COALESCE(b.name, '')) LIKE '%hdfc%' OR LOWER(COALESCE(b.name, '')) LIKE '%sbi%' OR LOWER(COALESCE(b.name, '')) LIKE '%state bank of india%')
+            AND LOWER(COALESCE(b.name, '')) NOT LIKE '%tata%'
+            AND LOWER(COALESCE(b.short_code, '')) NOT LIKE '%tata%'
+          )
+        )
         ORDER BY b.name
       `, [req.user.id]);
       return success(res, rows);
