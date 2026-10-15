@@ -394,6 +394,14 @@ const startServer = async () => {
       logger.warn('Sales Operator Claim auto migration note:', claimErr.message);
     }
 
+    // Always ensure Application Employee Assignment schema exists on boot
+    try {
+      const { migrateApplicationEmployeeAssignment } = require('./database/migrations/migrate_application_employee_assignment.js');
+      await migrateApplicationEmployeeAssignment();
+    } catch (assignErr) {
+      logger.warn('Application Employee Assignment auto migration note:', assignErr.message);
+    }
+
     // Always ensure Account Activation / Deactivation Lifecycle schema exists on boot
     try {
       const { ensureAccountStatusSchema } = require('./modules/super-admin/accountStatus.service.js');

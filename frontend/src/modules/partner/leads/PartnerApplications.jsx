@@ -12,7 +12,7 @@ import {
   XCircle, AlertCircle, Phone, MessageSquare, ArrowUpRight, 
   UserPlus, Layers, FileSpreadsheet, ChevronDown, ChevronUp,
   FileText, ShieldAlert, Sparkles, Check, RefreshCw, X, Send, Share2, Copy, Trash2, Eye, Activity,
-  FileEdit, Building2, User
+  FileEdit, Building2, User, UserCheck
 } from 'lucide-react';
 
 const STAGES = [
@@ -230,6 +230,118 @@ export default function PartnerApplications() {
   const [trackApp, setTrackApp] = useState(null);
   const [trackTimeline, setTrackTimeline] = useState([]);
   const [loadingTrack, setLoadingTrack] = useState(false);
+
+  // Employee Assignment Modal State
+  const [showEmployeeAssignModal, setShowEmployeeAssignModal] = useState(false);
+  const [employeeAssignTargetApp, setEmployeeAssignTargetApp] = useState(null);
+  const [employeeSearchQuery, setEmployeeSearchQuery] = useState('');
+  const [assignableEmployees, setAssignableEmployees] = useState([]);
+  const [loadingAssignableEmployees, setLoadingAssignableEmployees] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [employeeAssignNotes, setEmployeeAssignNotes] = useState('');
+  const [isSubmittingEmployeeAssign, setIsSubmittingEmployeeAssign] = useState(false);
+  const [employeeAssignMsg, setEmployeeAssignMsg] = useState(null);
+
+  const handleOpenEmployeeAssignModal = (app) => {
+    setEmployeeAssignTargetApp(app);
+    setSelectedEmployee(null);
+    setEmployeeSearchQuery('');
+    setEmployeeAssignNotes('');
+    setEmployeeAssignMsg(null);
+    setShowEmployeeAssignModal(true);
+    fetchAssignableEmployees('');
+  };
+
+  const fetchAssignableEmployees = async (search = '') => {
+    try {
+      setLoadingAssignableEmployees(true);
+      const res = await api.get('/applications/assignable-employees', {
+        params: { search: search.trim() }
+      });
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        setAssignableEmployees(res.data.data);
+      } else if (Array.isArray(res.data)) {
+        setAssignableEmployees(res.data);
+      } else {
+        setAssignableEmployees([]);
+      }
+    } catch (err) {
+      console.error('Failed to load assignable employees:', err);
+      setAssignableEmployees([]);
+    } finally {
+      setLoadingAssignableEmployees(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!showEmployeeAssignModal) return;
+    const timer = setTimeout(() => {
+      fetchAssignableEmployees(employeeSearchQuery);
+    }, 280);
+    return () => clearTimeout(timer);
+  }, [employeeSearchQuery, showEmployeeAssignModal]);
+
+  const handleConfirmEmployeeAssignment = async (e) => {
+    if (e) e.preventDefault();
+    if (!employeeAssignTargetApp || !selectedEmployee) {
+      setEmployeeAssignMsg({ type: 'error', text: 'Please select an employee to assign this application to.' });
+      return;
+    }
+
+    try {
+      setIsSubmittingEmployeeAssign(true);
+      setEmployeeAssignMsg(null);
+
+      const targetEmpId = selectedEmployee.id || selectedEmployee.employee_id || selectedEmployee.user_id;
+      const res = await api.post(`/applications/${employeeAssignTargetApp.id}/assign-employee`, {
+        target_employee_id: targetEmpId,
+        notes: employeeAssignNotes
+      });
+
+      if (res.data?.success) {
+        setEmployeeAssignMsg({
+          type: 'success',
+          text: res.data.message || `Assigned to ${selectedEmployee.full_name} (${selectedEmployee.employee_id}) successfully!`
+        });
+
+        // Optimistically update applications state locally
+        setApplications(prev => (Array.isArray(prev) ? prev : []).map(a => {
+          if (a.id === employeeAssignTargetApp.id) {
+            return {
+              ...a,
+              assigned_to_name: selectedEmployee.full_name,
+              assigned_to_code: selectedEmployee.employee_id,
+              assigned_to_user_id: selectedEmployee.user_id,
+              assigned_to_employee_id: selectedEmployee.id,
+              assigned_by_name: user?.full_name || 'You',
+              assigned_by_code: user?.employee_id || '',
+              assigned_at: new Date().toISOString(),
+              assignment_notes: employeeAssignNotes
+            };
+          }
+          return a;
+        }));
+
+        setTimeout(() => {
+          setShowEmployeeAssignModal(false);
+          fetchApplications();
+        }, 800);
+      } else {
+        setEmployeeAssignMsg({
+          type: 'error',
+          text: res.data?.message || 'Assignment failed. Please try again.'
+        });
+      }
+    } catch (err) {
+      console.error('Employee assignment error:', err);
+      setEmployeeAssignMsg({
+        type: 'error',
+        text: err.response?.data?.message || err.message || 'Failed to assign application.'
+      });
+    } finally {
+      setIsSubmittingEmployeeAssign(false);
+    }
+  };
 
   const handleOpenViewModal = async (app) => {
     setViewApp(app);
@@ -1027,6 +1139,20 @@ export default function PartnerApplications() {
                           </span>
                         </div>
 
+                        {app.assigned_to_name && (
+                          <div style={{ margin: '2px 0' }}>
+                            {app.assigned_to_user_id === user?.id || (user?.full_name && String(app.assigned_to_name).toLowerCase().trim() === String(user.full_name).toLowerCase().trim()) ? (
+                              <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: '#dcfce7', color: '#166534', border: '1px solid #86efac', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                📥 Assigned by: {app.assigned_by_name || 'Staff'} {app.assigned_by_code ? `(${app.assigned_by_code})` : ''}
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                📤 Assigned to: {app.assigned_to_name} {app.assigned_to_code ? `(${app.assigned_to_code})` : ''}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <span style={{ color: textMuted }}>Customer:</span>
@@ -1043,6 +1169,11 @@ export default function PartnerApplications() {
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 6, borderTop: `1px solid ${border}`, paddingTop: 8, flexWrap: 'wrap' }}>
+                          <button onClick={() => handleOpenEmployeeAssignModal(app)}
+                            title="Assign application to another employee"
+                            style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #6366f140`, background: '#6366f115', color: '#6366f1', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <UserPlus size={12} /> Assign
+                          </button>
                           <button onClick={() => handleGenerateShareLink(app)} disabled={generatingShare}
                             style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                             <Share2 size={12} /> Share
@@ -1100,6 +1231,19 @@ export default function PartnerApplications() {
                                 </div>
                               )}
                               <div style={{ fontSize: 11, color: textMuted }}>{app.created_at ? new Date(app.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}</div>
+                              {app.assigned_to_name && (
+                                <div style={{ marginTop: 4 }}>
+                                  {app.assigned_to_user_id === user?.id || (user?.full_name && String(app.assigned_to_name).toLowerCase().trim() === String(user.full_name).toLowerCase().trim()) ? (
+                                    <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: '#dcfce7', color: '#166534', border: '1px solid #86efac', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                      <span>📥 Assigned by: {app.assigned_by_name || 'Staff'} {app.assigned_by_code ? `(${app.assigned_by_code})` : ''}</span>
+                                    </span>
+                                  ) : (
+                                    <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                      <span>📤 Assigned to: {app.assigned_to_name} {app.assigned_to_code ? `(${app.assigned_to_code})` : ''}</span>
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </td>
                             <td style={{ padding: '12px 14px' }}>
                               {(() => {
@@ -1128,7 +1272,12 @@ export default function PartnerApplications() {
                               <div style={{ fontWeight: 800, color: app.commission_amount > 0 ? '#10b981' : textMuted }}>₹{app.commission_amount || 0}</div>
                             </td>
                             <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                              <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                              <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                                <button onClick={() => handleOpenEmployeeAssignModal(app)}
+                                  title="Assign application to another employee"
+                                  style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #6366f140`, background: '#6366f115', color: '#6366f1', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                  <UserPlus size={13} /> Assign
+                                </button>
                                 <button onClick={() => handleGenerateShareLink(app)} disabled={generatingShare}
                                   style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                                   <Share2 size={13} /> Share
@@ -1216,6 +1365,274 @@ export default function PartnerApplications() {
                 {assigning ? 'Assigning...' : `Confirm Assignment (${assignTargetApp ? 1 : selectedAppIds.length})`}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL 2.5: ASSIGN APPLICATION TO EMPLOYEE ═══ */}
+      {showEmployeeAssignModal && employeeAssignTargetApp && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', padding: 16 }}>
+          <div style={{ width: '100%', maxWidth: 540, background: cardBg, border: `1.5px solid ${border}`, borderRadius: 24, padding: 22, boxShadow: '0 25px 80px rgba(0,0,0,0.6)', animation: 'fadeIn 0.25s ease', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 12, background: `linear-gradient(135deg, #6366f1, ${accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: '0 4px 12px rgba(99,102,241,0.3)' }}>
+                  <UserPlus size={22} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: textPrimary }}>
+                    Assign Application #{employeeAssignTargetApp.app_number}
+                  </h3>
+                  <div style={{ fontSize: 11, color: textMuted, marginTop: 2 }}>
+                    Customer: <strong style={{ color: textPrimary }}>{employeeAssignTargetApp.customer_name || 'Customer'}</strong> • {employeeAssignTargetApp.product_name || 'Loan / Card'}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => { setShowEmployeeAssignModal(false); setEmployeeAssignMsg(null); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted, padding: 4 }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Notification alert banner */}
+            {employeeAssignMsg && (
+              <div style={{
+                padding: '10px 14px', borderRadius: 12, fontSize: 12, fontWeight: 700,
+                background: employeeAssignMsg.type === 'success' ? '#dcfce7' : '#fee2e2',
+                color: employeeAssignMsg.type === 'success' ? '#166534' : '#991b1b',
+                border: `1px solid ${employeeAssignMsg.type === 'success' ? '#86efac' : '#fca5a5'}`,
+                display: 'flex', alignItems: 'center', gap: 8
+              }}>
+                {employeeAssignMsg.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                <span>{employeeAssignMsg.text}</span>
+              </div>
+            )}
+
+            {/* Search Box by Name, Number, Employee Code */}
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 800, color: textMuted, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: 6 }}>
+                Search Employee (by Name, Number, or Code)
+              </label>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <Search size={16} style={{ position: 'absolute', left: 12, color: accent }} />
+                <input
+                  type="text"
+                  value={employeeSearchQuery}
+                  onChange={(e) => setEmployeeSearchQuery(e.target.value)}
+                  placeholder="Search by Employee Name, Phone Number, or Employee Code..."
+                  style={{
+                    width: '100%',
+                    padding: '10px 36px 10px 36px',
+                    borderRadius: 12,
+                    border: `1.5px solid ${border}`,
+                    background: isDark ? '#141414' : '#f8fafc',
+                    color: textPrimary,
+                    fontSize: 12.5,
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                  autoFocus
+                />
+                {employeeSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setEmployeeSearchQuery('')}
+                    style={{ position: 'absolute', right: 10, background: 'none', border: 'none', cursor: 'pointer', color: textMuted }}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              <span style={{ fontSize: 10.5, color: textMuted, marginTop: 4, display: 'block' }}>
+                Type employee's full name, registered mobile number, or employee ID code to filter.
+              </span>
+            </div>
+
+            {/* Employee Selection List */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <label style={{ fontSize: 11, fontWeight: 800, color: textMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Select Target Employee
+                </label>
+                <span style={{ fontSize: 11, fontWeight: 700, color: accent }}>
+                  {assignableEmployees.length} Employee{assignableEmployees.length === 1 ? '' : 's'} available
+                </span>
+              </div>
+
+              <div style={{
+                maxHeight: 220,
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                paddingRight: 4,
+                border: `1px solid ${border}`,
+                borderRadius: 14,
+                padding: 8,
+                background: isDark ? '#121212' : '#fbfcfd'
+              }}>
+                {loadingAssignableEmployees ? (
+                  <div style={{ padding: '24px 0', textAlign: 'center', color: textMuted }}>
+                    <RefreshCw size={20} className="animate-spin" style={{ margin: '0 auto 8px', color: accent }} />
+                    <span style={{ fontSize: 12, fontWeight: 700 }}>Searching employees...</span>
+                  </div>
+                ) : assignableEmployees.length === 0 ? (
+                  <div style={{ padding: '24px 12px', textAlign: 'center', color: textMuted }}>
+                    <User size={24} style={{ margin: '0 auto 6px', opacity: 0.5 }} />
+                    <p style={{ margin: 0, fontSize: 12, fontWeight: 700 }}>No employees found matching &quot;{employeeSearchQuery}&quot;</p>
+                    <p style={{ margin: '4px 0 0 0', fontSize: 11 }}>Try searching by first name, last name, phone number, or employee code.</p>
+                  </div>
+                ) : (
+                  assignableEmployees.map((emp) => {
+                    const isSelected = selectedEmployee && (selectedEmployee.id === emp.id || selectedEmployee.employee_id === emp.employee_id);
+                    const initials = (emp.full_name || 'E').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+
+                    return (
+                      <div
+                        key={emp.id || emp.employee_id}
+                        onClick={() => setSelectedEmployee(emp)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '10px 12px',
+                          borderRadius: 12,
+                          border: `1.5px solid ${isSelected ? accent : border}`,
+                          background: isSelected ? `${accent}12` : (isDark ? '#181818' : '#ffffff'),
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{
+                            width: 34, height: 34, borderRadius: '50%',
+                            background: isSelected ? `linear-gradient(135deg, ${accent}, #6366f1)` : (isDark ? '#262626' : '#e2e8f0'),
+                            color: isSelected ? '#fff' : textPrimary,
+                            fontWeight: 800, fontSize: 11,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                          }}>
+                            {initials}
+                          </div>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontWeight: 800, fontSize: 13, color: textPrimary }}>{emp.full_name}</span>
+                              <span style={{
+                                fontSize: 10, fontWeight: 800, fontFamily: 'monospace',
+                                padding: '1px 6px', borderRadius: 4,
+                                background: isDark ? '#2a2a2a' : '#e0e7ff',
+                                color: isDark ? '#a5b4fc' : '#4338ca',
+                                border: `1px solid ${isDark ? '#4338ca50' : '#c7d2fe'}`
+                              }}>
+                                {emp.employee_id}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2, fontSize: 11, color: textMuted }}>
+                              <span>{emp.designation || 'Employee'}</span>
+                              {emp.department && <span>• {emp.department}</span>}
+                              {emp.mobile_number && (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                                  <Phone size={10} /> {emp.mobile_number}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{
+                          width: 20, height: 20, borderRadius: '50%',
+                          border: `2px solid ${isSelected ? accent : border}`,
+                          background: isSelected ? accent : 'transparent',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff'
+                        }}>
+                          {isSelected && <Check size={12} strokeWidth={3} />}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Handover / Assignment Remarks */}
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 800, color: textMuted, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: 6 }}>
+                Handover Remarks / Instructions (Optional)
+              </label>
+              <textarea
+                rows={2}
+                value={employeeAssignNotes}
+                onChange={(e) => setEmployeeAssignNotes(e.target.value)}
+                placeholder="Add any specific instructions or reason for assigning to this employee..."
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  borderRadius: 12,
+                  border: `1.5px solid ${border}`,
+                  background: isDark ? '#141414' : '#f8fafc',
+                  color: textPrimary,
+                  fontSize: 12,
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  resize: 'vertical'
+                }}
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
+              <button
+                type="button"
+                onClick={() => { setShowEmployeeAssignModal(false); setEmployeeAssignMsg(null); }}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: 12,
+                  border: `1px solid ${border}`,
+                  background: 'transparent',
+                  color: textMuted,
+                  fontWeight: 700,
+                  fontSize: 12.5,
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!selectedEmployee || isSubmittingEmployeeAssign}
+                onClick={handleConfirmEmployeeAssignment}
+                style={{
+                  padding: '10px 22px',
+                  borderRadius: 12,
+                  border: 'none',
+                  background: !selectedEmployee || isSubmittingEmployeeAssign
+                    ? (isDark ? '#333' : '#cbd5e1')
+                    : `linear-gradient(135deg, ${accent}, #6366f1)`,
+                  color: '#fff',
+                  fontWeight: 800,
+                  fontSize: 12.5,
+                  cursor: !selectedEmployee || isSubmittingEmployeeAssign ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  boxShadow: selectedEmployee && !isSubmittingEmployeeAssign ? '0 4px 14px rgba(99,102,241,0.35)' : 'none'
+                }}
+              >
+                {isSubmittingEmployeeAssign ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    <span>Assigning...</span>
+                  </>
+                ) : (
+                  <>
+                    <UserCheck size={14} />
+                    <span>Confirm Assignment {selectedEmployee ? `to ${selectedEmployee.full_name}` : ''}</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1370,6 +1787,63 @@ export default function PartnerApplications() {
                       Status: {stBadge.label}
                     </div>
                   </div>
+
+                  {/* Employee Assignment Details (if assigned) */}
+                  {(viewApp.assigned_to_name || viewAppDetails?.assigned_to_name) && (
+                    <div style={{ background: isDark ? '#1e1b4b25' : '#f5f3ff', borderRadius: 14, padding: 14, border: '1.5px solid #818cf850' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <UserCheck size={16} style={{ color: '#6366f1' }} />
+                          <h4 style={{ margin: 0, fontSize: 12, fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            Employee Assignment Details
+                          </h4>
+                        </div>
+                        <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: '#e0e7ff', color: '#4338ca' }}>
+                          Assigned Application
+                        </span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
+                        <div>
+                          <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>ASSIGNED TO EMPLOYEE</div>
+                          <div style={{ fontWeight: 800, color: textPrimary, marginTop: 2 }}>
+                            {viewApp.assigned_to_name || viewAppDetails?.assigned_to_name}
+                            {(viewApp.assigned_to_code || viewAppDetails?.assigned_to_code) && (
+                              <span style={{ marginLeft: 6, fontSize: 10.5, color: '#6366f1', fontWeight: 800, background: '#e0e7ff', padding: '1px 6px', borderRadius: 4 }}>
+                                {viewApp.assigned_to_code || viewAppDetails?.assigned_to_code}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>ASSIGNED BY</div>
+                          <div style={{ fontWeight: 800, color: textPrimary, marginTop: 2 }}>
+                            {viewApp.assigned_by_name || viewAppDetails?.assigned_by_name || 'Staff User'}
+                            {(viewApp.assigned_by_code || viewAppDetails?.assigned_by_code) && (
+                              <span style={{ marginLeft: 6, fontSize: 10.5, color: '#6366f1', fontWeight: 800, background: '#e0e7ff', padding: '1px 6px', borderRadius: 4 }}>
+                                {viewApp.assigned_by_code || viewAppDetails?.assigned_by_code}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {(viewApp.assigned_at || viewAppDetails?.assigned_at) && (
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>ASSIGNED DATE & TIME</div>
+                            <div style={{ fontWeight: 700, color: textPrimary, marginTop: 2 }}>
+                              {new Date(viewApp.assigned_at || viewAppDetails?.assigned_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          </div>
+                        )}
+                        {(viewApp.assignment_notes || viewAppDetails?.assignment_notes) && (
+                          <div style={{ gridColumn: 'span 2' }}>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>HANDOVER REMARKS / NOTES</div>
+                            <div style={{ fontWeight: 600, color: textPrimary, marginTop: 3, background: isDark ? '#141414' : '#fff', padding: '6px 10px', borderRadius: 8, border: `1px solid ${border}` }}>
+                              {viewApp.assignment_notes || viewAppDetails?.assignment_notes}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Section 1: Bank & Process-Dependent Customer Form Details */}
                   <div style={{ background: isDark ? '#161616' : '#f8fafc', borderRadius: 14, padding: 14, border: `1px solid ${border}` }}>

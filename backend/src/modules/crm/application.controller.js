@@ -2017,6 +2017,10 @@ const listApplications = async (req, res, next) => {
           )
           OR combined.submitted_by = $8::uuid
           OR combined.employee_id IN (SELECT id FROM employees WHERE user_id = $8::uuid)
+          OR combined.assigned_to_user_id = $8::uuid
+          OR combined.assigned_to_employee_id IN (SELECT id FROM employees WHERE user_id = $8::uuid)
+          OR combined.assigned_by_user_id = $8::uuid
+          OR combined.assigned_by_employee_id IN (SELECT id FROM employees WHERE user_id = $8::uuid)
           OR combined.submitted_by IN (
             SELECT user_id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
             UNION SELECT u.id FROM users u WHERE u.created_by = $8::uuid
@@ -2185,7 +2189,17 @@ const listApplications = async (req, res, next) => {
           COALESCE(a.commission_amount, 0) as incentive_amount,
           COALESCE(NULLIF(to_jsonb(a)->>'remark_updated', '')::boolean, FALSE) as remark_updated,
           NULLIF(to_jsonb(a)->>'remark_updated_by', '')::uuid as remark_updated_by,
-          NULLIF(to_jsonb(a)->>'remark_updated_at', '')::timestamptz as remark_updated_at
+          NULLIF(to_jsonb(a)->>'remark_updated_at', '')::timestamptz as remark_updated_at,
+          NULLIF(to_jsonb(a)->>'assigned_to_employee_id', '')::uuid as assigned_to_employee_id,
+          NULLIF(to_jsonb(a)->>'assigned_to_user_id', '')::uuid as assigned_to_user_id,
+          COALESCE(NULLIF(to_jsonb(a)->>'assigned_to_name', ''), NULLIF(to_jsonb(pad)->>'assigned_to_name', '')) as assigned_to_name,
+          COALESCE(NULLIF(to_jsonb(a)->>'assigned_to_code', ''), NULLIF(to_jsonb(pad)->>'assigned_to_code', '')) as assigned_to_code,
+          NULLIF(to_jsonb(a)->>'assigned_by_user_id', '')::uuid as assigned_by_user_id,
+          NULLIF(to_jsonb(a)->>'assigned_by_employee_id', '')::uuid as assigned_by_employee_id,
+          COALESCE(NULLIF(to_jsonb(a)->>'assigned_by_name', ''), NULLIF(to_jsonb(pad)->>'assigned_by_name', '')) as assigned_by_name,
+          COALESCE(NULLIF(to_jsonb(a)->>'assigned_by_code', ''), NULLIF(to_jsonb(pad)->>'assigned_by_code', '')) as assigned_by_code,
+          NULLIF(COALESCE(to_jsonb(a)->>'assigned_at', to_jsonb(pad)->>'assigned_at', ''), '')::timestamptz as assigned_at,
+          COALESCE(NULLIF(to_jsonb(a)->>'assignment_notes', ''), NULLIF(to_jsonb(pad)->>'assignment_notes', '')) as assignment_notes
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
@@ -2281,6 +2295,10 @@ const listApplications = async (req, res, next) => {
           )
           OR combined.submitted_by = $8::uuid
           OR combined.employee_id IN (SELECT id FROM employees WHERE user_id = $8::uuid)
+          OR combined.assigned_to_user_id = $8::uuid
+          OR combined.assigned_to_employee_id IN (SELECT id FROM employees WHERE user_id = $8::uuid)
+          OR combined.assigned_by_user_id = $8::uuid
+          OR combined.assigned_by_employee_id IN (SELECT id FROM employees WHERE user_id = $8::uuid)
           OR combined.submitted_by IN (
             SELECT user_id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
             UNION SELECT u.id FROM users u WHERE u.created_by = $8::uuid
@@ -2301,7 +2319,11 @@ const listApplications = async (req, res, next) => {
         COALESCE(NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as curing_designation,
         COALESCE(NULLIF(to_jsonb(a)->>'primary_decline_code', ''), NULLIF(to_jsonb(pad)->>'primary_decline_code', ''), NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as primary_decline_code,
         COALESCE(NULLIF(to_jsonb(a)->>'secondary_decline_code', ''), NULLIF(to_jsonb(pad)->>'secondary_decline_code', '')) as secondary_decline_code,
-        COALESCE(to_jsonb(a)->>'sales_claimed_by', to_jsonb(pad)->>'sales_claimed_by', '') as sales_claimed_by
+        COALESCE(to_jsonb(a)->>'sales_claimed_by', to_jsonb(pad)->>'sales_claimed_by', '') as sales_claimed_by,
+        NULLIF(to_jsonb(a)->>'assigned_to_user_id', '')::uuid as assigned_to_user_id,
+        NULLIF(to_jsonb(a)->>'assigned_to_employee_id', '')::uuid as assigned_to_employee_id,
+        NULLIF(to_jsonb(a)->>'assigned_by_user_id', '')::uuid as assigned_by_user_id,
+        NULLIF(to_jsonb(a)->>'assigned_by_employee_id', '')::uuid as assigned_by_employee_id
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
@@ -6829,6 +6851,289 @@ const claimApplicationRequest = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/v1/applications/assignable-employees
+ * Search active employees by Name, Mobile Number, or Employee Code.
+ */
+const getAssignableEmployees = async (req, res, next) => {
+  try {
+    const rawSearch = (req.query.search || req.query.q || '').trim();
+    const currentUserId = req.user?.id;
+
+    let baseSQL = `
+      SELECT
+        e.id,
+        COALESCE(NULLIF(e.employee_id, ''), NULLIF(u.employee_id, ''), 'EMP') as employee_id,
+        e.user_id,
+        COALESCE(NULLIF(e.full_name, ''), NULLIF(u.full_name, ''), 'Staff') as full_name,
+        COALESCE(NULLIF(e.mobile_number, ''), NULLIF(u.mobile, ''), '') as mobile_number,
+        COALESCE(NULLIF(e.designation, ''), NULLIF(u.designation, ''), 'Employee') as designation,
+        COALESCE(NULLIF(e.department, ''), 'Operations') as department,
+        COALESCE(NULLIF(e.employee_status, ''), 'ACTIVE') as employee_status,
+        COALESCE(NULLIF(e.email_id, ''), u.email) as email
+      FROM employees e
+      LEFT JOIN users u ON u.id = e.user_id
+      WHERE (e.employee_status IS NULL OR UPPER(e.employee_status) NOT IN ('TERMINATED', 'INACTIVE'))
+    `;
+    const params = [];
+
+    if (currentUserId && isUuid(currentUserId)) {
+      params.push(currentUserId);
+      baseSQL += ` AND (e.user_id IS NULL OR e.user_id != $${params.length})`;
+    }
+
+    if (rawSearch) {
+      params.push(`%${rawSearch}%`);
+      const pIdx = params.length;
+      baseSQL += ` AND (
+        e.full_name ILIKE $${pIdx}
+        OR e.mobile_number ILIKE $${pIdx}
+        OR e.employee_id ILIKE $${pIdx}
+        OR COALESCE(u.full_name, '') ILIKE $${pIdx}
+        OR COALESCE(u.mobile, '') ILIKE $${pIdx}
+        OR COALESCE(u.employee_id, '') ILIKE $${pIdx}
+      )`;
+    }
+
+    baseSQL += ` ORDER BY e.full_name ASC LIMIT 50`;
+
+    const { rows } = await query(baseSQL, params);
+    return success(res, rows, 'Assignable employees retrieved successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/v1/applications/:id/assign-employee
+ * Assigns an application to another employee with audit logging and timeline tracking.
+ */
+const assignApplicationToEmployee = async (req, res, next) => {
+  const { id } = req.params;
+  const { target_employee_id, notes } = req.body;
+
+  if (!id) return error(res, 'Application ID is required', 400);
+  if (!target_employee_id) return error(res, 'Target employee ID or Employee Code is required', 400);
+
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Resolve application
+    const { rows: [app] } = await client.query(
+      `SELECT id, app_number, status, submitted_by, employee_id, customer_name, customer_mobile
+       FROM applications
+       WHERE id::text = $1 OR app_number = $1 OR lead_id::text = $1 LIMIT 1 FOR UPDATE`,
+      [id]
+    );
+
+    if (!app) {
+      await client.query('ROLLBACK');
+      return notFound(res, 'Application not found');
+    }
+
+    // 2. Resolve target employee
+    let targetEmp = null;
+    const { rows: empRows } = await client.query(
+      `SELECT e.id, e.employee_id, e.user_id, e.full_name, e.mobile_number, e.designation, e.department
+       FROM employees e
+       WHERE e.id::text = $1 OR e.employee_id = $1 OR (e.user_id IS NOT NULL AND e.user_id::text = $1)
+       LIMIT 1`,
+      [String(target_employee_id).trim()]
+    );
+
+    if (empRows.length > 0) {
+      targetEmp = empRows[0];
+    } else {
+      // Check in users table
+      const { rows: uRows } = await client.query(
+        `SELECT u.id as user_id, u.employee_id, u.full_name, u.mobile as mobile_number, u.designation
+         FROM users u
+         WHERE u.id::text = $1 OR u.employee_id = $1 LIMIT 1`,
+        [String(target_employee_id).trim()]
+      );
+      if (uRows.length > 0) {
+        targetEmp = {
+          id: null,
+          employee_id: uRows[0].employee_id || 'EMP',
+          user_id: uRows[0].user_id,
+          full_name: uRows[0].full_name || 'Staff User',
+          mobile_number: uRows[0].mobile_number || '',
+          designation: uRows[0].designation || 'Staff'
+        };
+      }
+    }
+
+    if (!targetEmp) {
+      await client.query('ROLLBACK');
+      return notFound(res, 'Target employee not found');
+    }
+
+    // 3. Resolve assigning employee
+    let assignerEmp = null;
+    if (req.user?.id) {
+      const { rows: aEmpRows } = await client.query(
+        `SELECT id, employee_id, full_name FROM employees WHERE user_id = $1 LIMIT 1`,
+        [req.user.id]
+      );
+      if (aEmpRows.length > 0) {
+        assignerEmp = aEmpRows[0];
+      }
+    }
+
+    const assignedByUserId = req.user?.id || null;
+    const assignedByEmpId = assignerEmp?.id || null;
+    const assignedByName = assignerEmp?.full_name || req.user?.full_name || req.user?.name || 'Staff Member';
+    const assignedByCode = assignerEmp?.employee_id || req.user?.employee_id || '';
+    const assignmentNotes = (notes || '').trim() || null;
+    const assignedAt = new Date().toISOString();
+
+    // 4. Update applications table
+    await client.query(`
+      UPDATE applications SET
+        assigned_to_employee_id = $1,
+        assigned_to_user_id = $2,
+        assigned_to_name = $3,
+        assigned_to_code = $4,
+        assigned_by_user_id = $5,
+        assigned_by_employee_id = $6,
+        assigned_by_name = $7,
+        assigned_by_code = $8,
+        assigned_at = NOW(),
+        assignment_notes = $9,
+        updated_at = NOW()
+      WHERE id = $10
+    `, [
+      targetEmp.id,
+      targetEmp.user_id,
+      targetEmp.full_name,
+      targetEmp.employee_id,
+      assignedByUserId,
+      assignedByEmpId,
+      assignedByName,
+      assignedByCode,
+      assignmentNotes,
+      app.id
+    ]);
+
+    // 5. Update physical_application_details if present
+    await client.query(`
+      UPDATE physical_application_details SET
+        assigned_to_employee_id = $1,
+        assigned_to_user_id = $2,
+        assigned_to_name = $3,
+        assigned_to_code = $4,
+        assigned_by_user_id = $5,
+        assigned_by_employee_id = $6,
+        assigned_by_name = $7,
+        assigned_by_code = $8,
+        assigned_at = NOW(),
+        assignment_notes = $9,
+        updated_at = NOW()
+      WHERE application_id = $10
+    `, [
+      targetEmp.id,
+      targetEmp.user_id,
+      targetEmp.full_name,
+      targetEmp.employee_id,
+      assignedByUserId,
+      assignedByEmpId,
+      assignedByName,
+      assignedByCode,
+      assignmentNotes,
+      app.id
+    ]).catch(() => {});
+
+    // 6. Record assignment in application_employee_assignments table
+    await client.query(`
+      INSERT INTO application_employee_assignments (
+        application_id,
+        assigned_to_employee_id,
+        assigned_to_user_id,
+        assigned_to_name,
+        assigned_to_code,
+        assigned_by_user_id,
+        assigned_by_employee_id,
+        assigned_by_name,
+        assigned_by_code,
+        assignment_notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `, [
+      app.id,
+      targetEmp.id,
+      targetEmp.user_id,
+      targetEmp.full_name,
+      targetEmp.employee_id,
+      assignedByUserId,
+      assignedByEmpId,
+      assignedByName,
+      assignedByCode,
+      assignmentNotes
+    ]).catch(() => {});
+
+    // 7. Add entry in application_timeline
+    const timelineDesc = `Application assigned to ${targetEmp.full_name} (${targetEmp.employee_id}) by ${assignedByName}${assignmentNotes ? ` - Remarks: ${assignmentNotes}` : ''}`;
+    await client.query(`
+      INSERT INTO application_timeline (
+        application_id,
+        status,
+        event_type,
+        title,
+        description,
+        performed_by,
+        performed_by_name,
+        performed_by_role
+      ) VALUES ($1, $2, 'EMPLOYEE_ASSIGNED', 'Assigned to Employee', $3, $4, $5, $6)
+    `, [
+      app.id,
+      app.status || 'in_progress',
+      timelineDesc,
+      assignedByUserId,
+      assignedByName,
+      req.user?.role || 'EMPLOYEE'
+    ]).catch(() => {});
+
+    // 8. Audit log
+    await logAction(req, 'ASSIGN_APPLICATION_TO_EMPLOYEE', app.id, {
+      app_number: app.app_number,
+      target_employee_id: targetEmp.id,
+      target_employee_name: targetEmp.full_name,
+      target_employee_code: targetEmp.employee_id,
+      assigned_by_name: assignedByName,
+      assigned_by_code: assignedByCode,
+      notes: assignmentNotes
+    }).catch(() => {});
+
+    await client.query('COMMIT');
+
+    // 9. Send notification to target employee user if user_id exists
+    if (targetEmp.user_id) {
+      notify(
+        targetEmp.user_id,
+        'APPLICATION_ASSIGNED',
+        `Application #${app.app_number} has been assigned to you by ${assignedByName}.`
+      ).catch(() => {});
+    }
+
+    return success(res, {
+      application_id: app.id,
+      app_number: app.app_number,
+      assigned_to_name: targetEmp.full_name,
+      assigned_to_code: targetEmp.employee_id,
+      assigned_to_user_id: targetEmp.user_id,
+      assigned_by_name: assignedByName,
+      assigned_by_code: assignedByCode,
+      assigned_at: assignedAt,
+      assignment_notes: assignmentNotes
+    }, `Application successfully assigned to ${targetEmp.full_name} (${targetEmp.employee_id})`);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   submitApplication,
   submitPublicApplication,
@@ -6874,7 +7179,9 @@ module.exports = {
   getRemarkOperatorDashboard,
   getApplicationOperatorHistory,
   normalizeAssignmentCategory,
-  claimApplicationRequest
+  claimApplicationRequest,
+  getAssignableEmployees,
+  assignApplicationToEmployee
 };
 
 

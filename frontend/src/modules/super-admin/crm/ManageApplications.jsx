@@ -998,6 +998,11 @@ export default function ManageApplications() {
                             <span>{app.sales_claimed_by === user?.id ? '⚡ Claimed by You' : `👤 Claimed: ${app.sales_claimed_by_name || 'Operator'}`}</span>
                           </div>
                         )}
+                        {app.assigned_to_name && (
+                          <div style={{ marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 6px', borderRadius: '4px', background: '#FEF3C7', color: '#92400E', fontSize: '10.5px', fontWeight: 800, border: '1px solid #FDE68A' }}>
+                            <span>🔄 Assigned: {app.assigned_to_name} {app.assigned_to_code ? `(${app.assigned_to_code})` : ''} {app.assigned_by_name ? `by ${app.assigned_by_name}` : ''}</span>
+                          </div>
+                        )}
                       </td>
 
                       {/* Remark Operator simplified view */}
@@ -1309,6 +1314,48 @@ export default function ManageApplications() {
                       <div><span style={{ color: C.textLight }}>Assigned Agent:</span> <strong style={{ color: C.teal }}>{getAgentLabel(selectedApp)}</strong></div>
                     </div>
                   </div>
+
+                  {/* Employee Assignment Details (if assigned) */}
+                  {(selectedApp.assigned_to_name || selectedApp.assigned_to_code) && (
+                    <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <h4 style={{ margin: 0, fontSize: '12px', fontWeight: 800, color: C.teal, textTransform: 'uppercase' }}>
+                          Employee Assignment Details
+                        </h4>
+                        <span style={{ fontSize: '10.5px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px', background: '#FEF3C7', color: '#92400E' }}>
+                          Assigned Lead
+                        </span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '10px', fontSize: '12.5px' }}>
+                        <div>
+                          <span style={{ color: C.textLight }}>Assigned To:</span>{' '}
+                          <strong style={{ color: C.text }}>
+                            {selectedApp.assigned_to_name} {selectedApp.assigned_to_code ? `(${selectedApp.assigned_to_code})` : ''}
+                          </strong>
+                        </div>
+                        <div>
+                          <span style={{ color: C.textLight }}>Assigned By:</span>{' '}
+                          <strong style={{ color: C.text }}>
+                            {selectedApp.assigned_by_name || 'Staff'} {selectedApp.assigned_by_code ? `(${selectedApp.assigned_by_code})` : ''}
+                          </strong>
+                        </div>
+                        {selectedApp.assigned_at && (
+                          <div>
+                            <span style={{ color: C.textLight }}>Assigned Date:</span>{' '}
+                            <strong style={{ color: C.text }}>
+                              {new Date(selectedApp.assigned_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </strong>
+                          </div>
+                        )}
+                        {selectedApp.assignment_notes && (
+                          <div style={{ gridColumn: isMobile ? '1' : 'span 2' }}>
+                            <span style={{ color: C.textLight }}>Handover Remarks:</span>{' '}
+                            <strong style={{ color: C.text }}>{selectedApp.assignment_notes}</strong>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Status & Commission Card */}
                   <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
