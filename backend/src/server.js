@@ -394,6 +394,22 @@ const startServer = async () => {
       logger.warn('Sales Operator Claim auto migration note:', claimErr.message);
     }
 
+    // Always ensure Account Activation / Deactivation Lifecycle schema exists on boot
+    try {
+      const { ensureAccountStatusSchema } = require('./modules/super-admin/accountStatus.service.js');
+      await ensureAccountStatusSchema();
+    } catch (accErr) {
+      logger.warn('Account status schema boot migration note:', accErr.message);
+    }
+
+    // Always ensure Working Hours Phase 2 schema exists on boot
+    try {
+      const { ensureWorkingHoursTables } = require('./modules/auth/workingHours.service.js');
+      await ensureWorkingHoursTables();
+    } catch (whErr) {
+      logger.warn('Working hours boot migration note:', whErr.message);
+    }
+
     // Initialize scheduled CRON jobs
     const { initReportJobs } = require('./jobs/report.job.js');
     initReportJobs();

@@ -258,6 +258,10 @@ class MockDatabaseEngine {
 const mockDb = new MockDatabaseEngine();
 const dbConfig = require('../config/database');
 dbConfig.query = (sql, params) => mockDb.executeQuery(sql, params);
+dbConfig.getClient = async () => ({
+  query: (sql, params) => mockDb.executeQuery(sql, params),
+  release: () => {}
+});
 
 const {
   ensureAccountStatusSchema,

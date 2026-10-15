@@ -2,76 +2,87 @@ const { query } = require('../../config/database');
 const logger = require('../../config/logger');
 
 let tablesInitialized = false;
+let initPromise = null;
 
 /**
  * Self-healing helper: Ensure required working hours tables and default records exist.
  */
 async function ensureWorkingHoursTables() {
   if (tablesInitialized) return;
-  try {
-    await query(`
-      CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-      CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+  if (initPromise) return initPromise;
 
-      CREATE TABLE IF NOT EXISTS admin_working_hours (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-        designation VARCHAR(100),
-        start_time VARCHAR(10) DEFAULT '09:30 AM',
-        end_time VARCHAR(10) DEFAULT '08:00 PM',
-        timezone VARCHAR(50) DEFAULT 'Asia/Kolkata',
-        is_enabled BOOLEAN DEFAULT TRUE,
-        created_by UUID REFERENCES users(id),
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS admin_working_hour_extensions (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-        apply_to VARCHAR(20) DEFAULT 'SPECIFIC',
-        extension_date DATE NOT NULL,
-        original_end_time VARCHAR(10) DEFAULT '08:00 PM',
-        extended_end_time VARCHAR(10) NOT NULL,
-        reason TEXT,
-        created_by UUID REFERENCES users(id),
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      );
-
-      CREATE INDEX IF NOT EXISTS idx_awhe_date_user ON admin_working_hour_extensions(extension_date, user_id);
-      ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS roles VARCHAR(50)[] DEFAULT '{}';
-      ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS designations VARCHAR(100)[] DEFAULT '{}';
-      ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS user_ids UUID[] DEFAULT '{}';
-      ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS original_start_time VARCHAR(20) DEFAULT '09:30 AM';
-      ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS extended_start_time VARCHAR(20) DEFAULT NULL;
-      ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS start_date DATE DEFAULT NULL;
-      ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS end_date DATE DEFAULT NULL;
-      ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS is_revoked BOOLEAN DEFAULT FALSE;
-      ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
-
-      ALTER TABLE admin_working_hour_policies ADD COLUMN IF NOT EXISTS user_ids UUID[] DEFAULT '{}';
-      ALTER TABLE admin_working_hour_policies ADD COLUMN IF NOT EXISTS grace_period INT DEFAULT 0;
-    `);
-
-    const { rows: existingGlobal } = await query(`SELECT id FROM admin_working_hours WHERE user_id IS NULL AND designation IS NULL LIMIT 1`);
-    if (existingGlobal.length === 0) {
-      await query(`
-        INSERT INTO admin_working_hours (user_id, designation, start_time, end_time, timezone, is_enabled)
-        VALUES (NULL, NULL, '09:30 AM', '08:00 PM', 'Asia/Kolkata', TRUE)
-      `);
-    }
-
+  initPromise = (async () => {
     try {
-      const migrateWorkingHoursPhase2 = require('../../database/migrations/migrate_working_hours_phase2');
-      await migrateWorkingHoursPhase2();
-    } catch (migErr) {
-      logger.warn('Phase 2 migration call note:', migErr.message);
-    }
+      // 1. Run Phase 2 migration first so policies table exists
+      try {
+        const migrateWorkingHoursPhase2 = require('../../database/migrations/migrate_working_hours_phase2');
+        await migrateWorkingHoursPhase2();
+      } catch (migErr) {
+        logger.warn('Phase 2 migration call note:', migErr.message);
+      }
 
-    tablesInitialized = true;
-  } catch (err) {
-    logger.error('Failed to auto-initialize admin working hours tables:', err.message);
-  }
+      // 2. Base working hours tables and legacy extensions
+      await query(`
+        CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+        CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+        CREATE TABLE IF NOT EXISTS admin_working_hours (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+          designation VARCHAR(100),
+          start_time VARCHAR(10) DEFAULT '09:30 AM',
+          end_time VARCHAR(10) DEFAULT '08:00 PM',
+          timezone VARCHAR(50) DEFAULT 'Asia/Kolkata',
+          is_enabled BOOLEAN DEFAULT TRUE,
+          created_by UUID REFERENCES users(id),
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS admin_working_hour_extensions (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+          apply_to VARCHAR(20) DEFAULT 'SPECIFIC',
+          extension_date DATE NOT NULL,
+          original_end_time VARCHAR(10) DEFAULT '08:00 PM',
+          extended_end_time VARCHAR(10) NOT NULL,
+          reason TEXT,
+          created_by UUID REFERENCES users(id),
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_awhe_date_user ON admin_working_hour_extensions(extension_date, user_id);
+        ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS roles VARCHAR(50)[] DEFAULT '{}';
+        ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS designations VARCHAR(100)[] DEFAULT '{}';
+        ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS user_ids UUID[] DEFAULT '{}';
+        ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS original_start_time VARCHAR(20) DEFAULT '09:30 AM';
+        ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS extended_start_time VARCHAR(20) DEFAULT NULL;
+        ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS start_date DATE DEFAULT NULL;
+        ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS end_date DATE DEFAULT NULL;
+        ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS is_revoked BOOLEAN DEFAULT FALSE;
+        ALTER TABLE admin_working_hour_extensions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+        ALTER TABLE admin_working_hour_policies ADD COLUMN IF NOT EXISTS user_ids UUID[] DEFAULT '{}';
+        ALTER TABLE admin_working_hour_policies ADD COLUMN IF NOT EXISTS grace_period INT DEFAULT 0;
+      `);
+
+      const { rows: existingGlobal } = await query(`SELECT id FROM admin_working_hours WHERE user_id IS NULL AND designation IS NULL LIMIT 1`);
+      if (existingGlobal.length === 0) {
+        await query(`
+          INSERT INTO admin_working_hours (user_id, designation, start_time, end_time, timezone, is_enabled)
+          VALUES (NULL, NULL, '09:30 AM', '08:00 PM', 'Asia/Kolkata', TRUE)
+        `);
+      }
+
+      tablesInitialized = true;
+    } catch (err) {
+      logger.error('Failed to auto-initialize admin working hours tables:', err.message);
+    } finally {
+      initPromise = null;
+    }
+  })();
+
+  return initPromise;
 }
 
 /**
@@ -321,7 +332,9 @@ async function checkUserWorkingHours(user) {
     }
 
     // Ensure database tables exist automatically
-    await ensureWorkingHoursTables();
+    if (!tablesInitialized) {
+      await ensureWorkingHoursTables();
+    }
 
     // Get current Kolkata time info (dateStr, dayName, dayNumber, currentMinutes)
     const { dateStr, dayName, currentMinutes } = getKolkataTimeInfo();

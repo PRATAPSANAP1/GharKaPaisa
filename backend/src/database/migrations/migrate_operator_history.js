@@ -3,11 +3,18 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
 const { query } = require('../../config/database');
 const logger = require('../../config/logger');
 
+let migrationRunning = null;
+let migrationDone = false;
+
 const migrateOperatorHistory = async () => {
-  logger.info('[Operator History Migration] Ensuring application_operator_history table and operator columns...');
-  try {
-    await query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
-    await query(`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`);
+  if (migrationDone) return { success: true };
+  if (migrationRunning) return migrationRunning;
+
+  migrationRunning = (async () => {
+    logger.info('[Operator History Migration] Ensuring application_operator_history table and operator columns...');
+    try {
+      await query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+      await query(`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`);
 
     await query(`
       CREATE TABLE IF NOT EXISTS application_operator_history (
@@ -46,11 +53,17 @@ const migrateOperatorHistory = async () => {
       ADD COLUMN IF NOT EXISTS last_operated_at TIMESTAMPTZ;
     `);
     logger.info('[Operator History Migration] application_operator_history migration completed successfully.');
+    migrationDone = true;
     return { success: true };
   } catch (err) {
     logger.error('[Operator History Migration] Error:', err.message);
     throw err;
+  } finally {
+    migrationRunning = null;
   }
+  })();
+
+  return migrationRunning;
 };
 
 if (require.main === module) {

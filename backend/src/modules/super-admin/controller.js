@@ -348,7 +348,9 @@ const listAdmins = async (req, res, next) => {
     }
 
     const { ensureAccountStatusSchema, determineAccountStatus, getWorkingHoursSummary } = require('./accountStatus.service');
+    const { ensureWorkingHoursTables } = require('../auth/workingHours.service');
     await ensureAccountStatusSchema();
+    await ensureWorkingHoursTables();
 
     const { rows: admins } = await query(`
       SELECT 

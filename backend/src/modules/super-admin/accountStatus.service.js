@@ -4,19 +4,28 @@ const { logAction } = require('../admin/audit.service');
 const { getKolkataTimeInfo, resolvePolicyForUser, resolveHolidayForUser, checkUserWorkingHours } = require('../auth/workingHours.service');
 
 let schemaEnsured = false;
+let schemaPromise = null;
 
 /**
  * Ensure database columns for account activation lifecycle are present.
  */
 async function ensureAccountStatusSchema() {
   if (schemaEnsured) return;
-  try {
-    const { migrateAccountActivationLifecycle } = require('../../database/migrations/migrate_account_activation_lifecycle');
-    await migrateAccountActivationLifecycle();
-    schemaEnsured = true;
-  } catch (err) {
-    logger.warn('Schema ensure notice:', err.message);
-  }
+  if (schemaPromise) return schemaPromise;
+
+  schemaPromise = (async () => {
+    try {
+      const { migrateAccountActivationLifecycle } = require('../../database/migrations/migrate_account_activation_lifecycle');
+      await migrateAccountActivationLifecycle();
+      schemaEnsured = true;
+    } catch (err) {
+      logger.warn('Schema ensure notice:', err.message);
+    } finally {
+      schemaPromise = null;
+    }
+  })();
+
+  return schemaPromise;
 }
 
 /**
