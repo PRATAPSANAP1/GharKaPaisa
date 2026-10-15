@@ -649,27 +649,6 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
             </select>
           </div>
 
-          {/* HDFC Dump Format Notification */}
-          {isHdfcSelected && (
-            <div style={{
-              background: isDark ? 'rgba(37, 99, 235, 0.15)' : '#eff6ff',
-              border: '1px solid #3b82f6',
-              borderRadius: '12px',
-              padding: '12px 14px',
-              display: 'flex',
-              gap: '10px',
-              alignItems: 'flex-start'
-            }}>
-              <Check size={18} color="#2563eb" style={{ flexShrink: 0, marginTop: '2px' }} />
-              <div style={{ fontSize: '12px', color: isDark ? '#93c5fd' : '#1e40af', lineHeight: 1.4 }}>
-                <strong style={{ display: 'block', fontSize: '12.5px', marginBottom: '2px', color: isDark ? '#bfdbfe' : '#1e3a8a' }}>
-                  Hdfc gharkapaisa dump format Active (33 Columns)
-                </strong>
-                Export file will contain the exact 33 bank audit headers: Application no, Customer name, Mobile number, Email ID, Pan no, City, State, Pincode, Product name, Bank name, Process type, Reference/ code, Status, Incentive amount, Bank application no, IPA STAGE, Soft approval stage, KYC stage, KYC link, Dispatch status, Final status form bank, Final card approval, User remark, Bank remark, Cureble stage, Primary code, Secondary code, Cureble type, Cureble operator code, Salas operator code, Remark opretor code, Decline reason, Crested date.
-              </div>
-            </div>
-          )}
-
           {/* Status Filter */}
           <div>
             <label style={{ fontSize: '12px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
