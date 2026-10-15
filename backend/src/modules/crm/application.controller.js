@@ -6722,7 +6722,6 @@ const ensureSalesClaimColumns = async () => {
 
 // POST /applications/:id/claim-request — Claim application by Administrative Sales Operator
 const claimApplicationRequest = async (req, res, next) => {
-  await ensureSalesClaimColumns();
   const client = await getClient();
   try {
     await client.query('BEGIN');

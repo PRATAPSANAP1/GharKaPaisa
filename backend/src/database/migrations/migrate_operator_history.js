@@ -33,25 +33,34 @@ const migrateOperatorHistory = async () => {
       CREATE INDEX IF NOT EXISTS idx_app_op_hist_app_id ON application_operator_history(application_id);
       CREATE INDEX IF NOT EXISTS idx_app_op_hist_op_id ON application_operator_history(operator_id);
       CREATE INDEX IF NOT EXISTS idx_app_op_hist_created ON application_operator_history(created_at DESC);
-
-      ALTER TABLE applications 
-      ADD COLUMN IF NOT EXISTS last_operator_id UUID,
-      ADD COLUMN IF NOT EXISTS last_operator_name VARCHAR(255),
-      ADD COLUMN IF NOT EXISTS last_operator_role VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS last_operator_designation VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS last_operator_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS final_status_operator_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS last_operated_at TIMESTAMPTZ;
-
-      ALTER TABLE physical_application_details 
-      ADD COLUMN IF NOT EXISTS last_operator_id UUID,
-      ADD COLUMN IF NOT EXISTS last_operator_name VARCHAR(255),
-      ADD COLUMN IF NOT EXISTS last_operator_role VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS last_operator_designation VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS last_operator_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS final_status_operator_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS last_operated_at TIMESTAMPTZ;
     `);
+
+    const { rows: opCols } = await query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'applications' AND column_name = 'last_operator_id'
+    `).catch(() => ({ rows: [] }));
+
+    if (opCols.length === 0) {
+      await query(`
+        ALTER TABLE applications
+        ADD COLUMN IF NOT EXISTS last_operator_id UUID,
+        ADD COLUMN IF NOT EXISTS last_operator_name VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS last_operator_role VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS last_operator_designation VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS last_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS final_status_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS last_operated_at TIMESTAMPTZ;
+
+        ALTER TABLE physical_application_details
+        ADD COLUMN IF NOT EXISTS last_operator_id UUID,
+        ADD COLUMN IF NOT EXISTS last_operator_name VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS last_operator_role VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS last_operator_designation VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS last_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS final_status_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS last_operated_at TIMESTAMPTZ;
+      `);
+    }
     logger.info('[Operator History Migration] application_operator_history migration completed successfully.');
     migrationDone = true;
     return { success: true };

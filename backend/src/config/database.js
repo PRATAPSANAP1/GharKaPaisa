@@ -24,11 +24,12 @@ const poolOptions = process.env.DATABASE_URL
     };
 
 // Enhanced Connection Pool Settings for High Availability and Connection Resiliency
-poolOptions.max = parseInt(process.env.DB_POOL_MAX) || 10;
+poolOptions.max = Math.max(parseInt(process.env.DB_POOL_MAX) || 30, 25);
 poolOptions.min = (process.env.NODE_ENV === 'test' || process.env.SKIP_DB === 'true') ? 0 : (parseInt(process.env.DB_POOL_MIN) || 2);
-poolOptions.idleTimeoutMillis = parseInt(process.env.DB_IDLE_TIMEOUT) || 30000;
-poolOptions.connectionTimeoutMillis = parseInt(process.env.DB_CONN_TIMEOUT) || 10000;
-poolOptions.acquireTimeoutMillis = parseInt(process.env.DB_ACQUIRE_TIMEOUT) || 10000;
+poolOptions.idleTimeoutMillis = parseInt(process.env.DB_IDLE_TIMEOUT) || parseInt(process.env.DB_IDLE_TIMEOUT_MS) || 30000;
+poolOptions.connectionTimeoutMillis = parseInt(process.env.DB_CONN_TIMEOUT) || parseInt(process.env.DB_CONNECTION_TIMEOUT_MS) || 15000;
+poolOptions.acquireTimeoutMillis = parseInt(process.env.DB_ACQUIRE_TIMEOUT) || 15000;
+poolOptions.query_timeout = parseInt(process.env.DB_QUERY_TIMEOUT) || 45000;
 poolOptions.allowExitOnIdle = false;
 poolOptions.keepAlive = true;
 poolOptions.keepAliveInitialDelayMillis = 10000;
@@ -98,8 +99,8 @@ const query = async (text, params, retries = 2) => {
         const jitter = Math.random() * (isDeadlock ? 100 : 300);
         const delay = backoff + jitter;
 
-        if (isPoolExhausted && currentPool.waitingCount > currentPool.options.max) {
-          logger.warn(`Pool severely saturated (waiting=${currentPool.waitingCount} > max=${currentPool.options.max}) — skipping retry to avoid amplifying the storm`, { error: err.message });
+        if (isPoolExhausted && currentPool.waitingCount > currentPool.options.max * 3) {
+          logger.warn(`Pool severely saturated (waiting=${currentPool.waitingCount} > threshold=${currentPool.options.max * 3}) — skipping retry to avoid amplifying the storm`, { error: err.message });
           throw err;
         }
 
