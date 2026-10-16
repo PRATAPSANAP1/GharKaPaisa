@@ -813,7 +813,17 @@ export default function PartnerApplications() {
     }
 
     colDefs.push(
-      { header: 'Bank Remark', getVal: a => (a.bank_remark && String(a.bank_remark).trim() !== '' && String(a.bank_remark).toUpperCase() !== 'N/A') ? String(a.bank_remark).replace(/"/g, '""') : 'NA' },
+      { header: 'Bank Remark', getVal: a => {
+          const rawUser = a.user_remark || a.notes || a.user_notes || a.operational_remarks || a.physical_details?.user_remark || '';
+          const cleanUser = String(rawUser).trim();
+          if (cleanUser !== '' && cleanUser.toUpperCase() !== 'NA' && cleanUser.toUpperCase() !== 'N/A') {
+            return cleanUser.replace(/"/g, '""');
+          }
+          const rawBank = a.bank_remark || a.physical_details?.bank_remark || '';
+          const cleanBank = String(rawBank).trim();
+          return (cleanBank !== '' && cleanBank.toUpperCase() !== 'NA' && cleanBank.toUpperCase() !== 'N/A') ? cleanBank.replace(/"/g, '""') : 'NA';
+        }
+      },
       { header: 'Decline Reason', getVal: a => (a.decline_reason && String(a.decline_reason).trim() !== '' && String(a.decline_reason).toUpperCase() !== 'N/A') ? String(a.decline_reason).replace(/"/g, '""') : 'NA' }
     );
 
@@ -1728,8 +1738,14 @@ export default function PartnerApplications() {
         const monthlyIncome = d.monthly_income || pd.monthly_income || null;
 
         // Remarks & Stage tracking
-        const userRemarkVal = d.user_remark || d.notes || pd.user_remark || pd.notes || d.operational_remarks || d.remarks || viewApp.user_remark || viewApp.notes || 'None';
-        const bankRemarkVal = d.bank_remark || pd.bank_remark || 'None';
+        const rawUserRem = d.user_remark || d.notes || pd.user_remark || pd.notes || d.operational_remarks || d.remarks || viewApp.user_remark || viewApp.notes || '';
+        const cleanUserRem = String(rawUserRem).trim();
+        const userRemarkVal = (cleanUserRem !== '' && cleanUserRem.toUpperCase() !== 'NA' && cleanUserRem.toUpperCase() !== 'N/A') ? cleanUserRem : 'NA';
+        const rawBankRem = d.bank_remark || pd.bank_remark || viewApp.bank_remark || '';
+        const cleanBankRem = String(rawBankRem).trim();
+        const bankRemarkVal = (cleanUserRem !== '' && cleanUserRem.toUpperCase() !== 'NA' && cleanUserRem.toUpperCase() !== 'N/A')
+          ? cleanUserRem
+          : ((cleanBankRem !== '' && cleanBankRem.toUpperCase() !== 'NA' && cleanBankRem.toUpperCase() !== 'N/A') ? cleanBankRem : 'NA');
         const declineReasonVal = d.decline_reason || d.rejection_reason || pd.decline_reason || '';
 
         const rawNum = d.bank_application_number || d.bank_ref_number || pd.bank_application_number || viewApp.bank_ref_number || '';

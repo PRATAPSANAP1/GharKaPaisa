@@ -221,8 +221,23 @@ const getFrontendColDefs = (hideCustomerMobile, isAdminOperator) => [
   { header: 'Dispatch status', getVal: a => a.dispatch_status || a.physical_details?.dispatch_status || 'NA' },
   { header: 'Final status form bank', getVal: a => a.final_status || a.physical_details?.final_status || a.bank_current_lead_status || a.physical_details?.bank_current_lead_status || 'NA' },
   { header: 'Final card approval', getVal: a => a.final_card_approval || a.card_approval_stage || a.card_approval_status || a.digital_card_issued || a.card_activation_stage || a.physical_details?.final_card_approval || a.physical_details?.card_approval_stage || 'NA' },
-  { header: 'User remark', getVal: a => a.user_remark || a.notes || a.user_notes || a.operational_remarks || a.physical_details?.user_remark || 'NA' },
-  { header: 'Bank remark', getVal: a => a.bank_remark || a.physical_details?.bank_remark || 'NA' },
+  { header: 'User remark', getVal: a => {
+      const raw = a.user_remark || a.notes || a.user_notes || a.operational_remarks || a.physical_details?.user_remark || '';
+      const clean = String(raw).trim();
+      return (clean !== '' && clean.toUpperCase() !== 'NA' && clean.toUpperCase() !== 'N/A') ? clean : 'NA';
+    }
+  },
+  { header: 'Bank remark', getVal: a => {
+      const rawUser = a.user_remark || a.notes || a.user_notes || a.operational_remarks || a.physical_details?.user_remark || a.physical_details?.notes || '';
+      const cleanUser = String(rawUser).trim();
+      if (cleanUser !== '' && cleanUser.toUpperCase() !== 'NA' && cleanUser.toUpperCase() !== 'N/A') {
+        return cleanUser;
+      }
+      const rawBank = a.bank_remark || a.physical_details?.bank_remark || '';
+      const cleanBank = String(rawBank).trim();
+      return (cleanBank !== '' && cleanBank.toUpperCase() !== 'NA' && cleanBank.toUpperCase() !== 'N/A') ? cleanBank : 'NA';
+    }
+  },
   { header: 'Cureble stage', getVal: a => a.cureble_stage || a.curable_stage || a.queryable_remark || a.physical_details?.cureble_stage || a.physical_details?.queryable_remark || 'NA' },
   { header: 'Primary code', getVal: a => a.primary_code || a.decline_code || a.physical_details?.primary_code || a.physical_details?.decline_code || 'NA' },
   { header: 'Secondary code', getVal: a => a.secondary_code || a.physical_details?.secondary_code || 'NA' },

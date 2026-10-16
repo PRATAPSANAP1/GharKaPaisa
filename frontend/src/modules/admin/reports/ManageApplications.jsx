@@ -376,6 +376,7 @@ export default function ManageApplications() {
         status: 'approved',
         final_status: 'Approved',
         super_admin_remark: superAdminRemark.trim() || 'Approved by Operations Head / Super Admin',
+        user_remark: superAdminRemark.trim() || 'Approved by Operations Head / Super Admin',
         bank_remark: superAdminRemark.trim() || 'Approved by Operations Head / Super Admin'
       });
       if (res.data?.success) {
@@ -404,6 +405,7 @@ export default function ManageApplications() {
         final_status: 'Operational Verified',
         ops_remark: superAdminRemark.trim() || 'Operational Verified by Administrative Operator',
         super_admin_remark: superAdminRemark.trim() || 'Operational Verified by Administrative Operator',
+        user_remark: superAdminRemark.trim() || 'Operational Verified by Administrative Operator',
         bank_remark: superAdminRemark.trim() || 'Operational Verified by Administrative Operator'
       });
       if (res.data?.success) {
@@ -1717,7 +1719,17 @@ export default function ManageApplications() {
                         <div>
                           <span style={{ color: C.textLight }}>6. Bank remark:</span>{' '}
                           <strong style={{ color: C.text }}>
-                            {appDetail.bank_remark || appDetail.physical_details?.bank_remark || '—'}
+                            {(() => {
+                              const u = appDetail.user_remark || appDetail.notes || appDetail.physical_details?.user_remark;
+                              if (u && String(u).trim() !== '' && String(u).trim().toUpperCase() !== 'NA' && String(u).trim().toUpperCase() !== 'N/A') {
+                                return String(u).trim();
+                              }
+                              const b = appDetail.bank_remark || appDetail.physical_details?.bank_remark;
+                              if (b && String(b).trim() !== '' && String(b).trim().toUpperCase() !== 'NA' && String(b).trim().toUpperCase() !== 'N/A') {
+                                return String(b).trim();
+                              }
+                              return 'NA';
+                            })()}
                           </strong>
                         </div>
                       </div>
@@ -1859,7 +1871,22 @@ export default function ManageApplications() {
                           );
                         })()}
                         <div><span style={{ color: C.textLight }}>Eligible for Re-QD:</span> <strong style={{ color: C.text }}>{appDetail.eligible_reqd || 'No'}</strong></div>
-                        <div><span style={{ color: C.textLight }}>Bank Remark:</span> <strong style={{ color: C.text }}>{appDetail.bank_remark || '—'}</strong></div>
+                        <div>
+                          <span style={{ color: C.textLight }}>Bank Remark:</span>{' '}
+                          <strong style={{ color: C.text }}>
+                            {(() => {
+                              const u = appDetail.user_remark || appDetail.notes || appDetail.physical_details?.user_remark;
+                              if (u && String(u).trim() !== '' && String(u).trim().toUpperCase() !== 'NA' && String(u).trim().toUpperCase() !== 'N/A') {
+                                return String(u).trim();
+                              }
+                              const b = appDetail.bank_remark || appDetail.physical_details?.bank_remark;
+                              if (b && String(b).trim() !== '' && String(b).trim().toUpperCase() !== 'NA' && String(b).trim().toUpperCase() !== 'N/A') {
+                                return String(b).trim();
+                              }
+                              return 'NA';
+                            })()}
+                          </strong>
+                        </div>
                       </div>
                     </div>
                   </>

@@ -389,11 +389,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
     }
     if (initialTab) {
       const targetKey = getTabKey(initialTab);
-      if (isSalesExecUser && targetKey === 'final') {
-        setActiveTab('remark');
-      } else {
-        setActiveTab(targetKey);
-      }
+      setActiveTab(targetKey);
     }
   }, [application?.id, initialTab, isSalesExecUser, isQuerableOperator, isCurableOperator]);
 
@@ -509,8 +505,26 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const [bankCurrentLeadStatus, setBankCurrentLeadStatus] = useState(sanitizeVal(application?.bank_current_lead_status) || sanitizeVal(application?.physical_details?.bank_current_lead_status) || sanitizeVal(application?.bank_lead_status) || 'None');
 
   // 3. Final Status & Bank Remarks State
-  const [bankRemark, setBankRemark] = useState(sanitizeVal(application?.bank_remark) || sanitizeVal(application?.physical_details?.bank_remark));
-  const [userRemark, setUserRemark] = useState(sanitizeVal(application?.user_remark) || sanitizeVal(application?.notes) || '');
+  const initialRawUserRemark = sanitizeVal(application?.user_remark) || sanitizeVal(application?.notes) || sanitizeVal(application?.physical_details?.user_remark) || sanitizeVal(application?.physical_details?.notes) || '';
+  const initialRawBankRemark = sanitizeVal(application?.bank_remark) || sanitizeVal(application?.physical_details?.bank_remark) || '';
+  const initialSyncedBankRemark = (initialRawUserRemark && initialRawUserRemark.trim() !== '' && initialRawUserRemark.trim().toUpperCase() !== 'NA' && initialRawUserRemark.trim().toUpperCase() !== 'N/A')
+    ? initialRawUserRemark.trim()
+    : ((initialRawBankRemark && initialRawBankRemark.trim() !== '' && initialRawBankRemark.trim().toUpperCase() !== 'NA' && initialRawBankRemark.trim().toUpperCase() !== 'N/A') ? initialRawBankRemark.trim() : '');
+
+  const [bankRemark, setBankRemark] = useState(initialSyncedBankRemark);
+  const [userRemark, setUserRemark] = useState(initialRawUserRemark);
+
+  const handleUserRemarkChange = (val) => {
+    setUserRemark(val);
+    const cleanVal = val !== null && val !== undefined ? String(val).trim() : '';
+    setBankRemark(cleanVal !== '' && cleanVal.toUpperCase() !== 'NA' && cleanVal.toUpperCase() !== 'N/A' ? val : '');
+  };
+
+  const handleBankRemarkChange = (val) => {
+    setBankRemark(val);
+    const cleanVal = val !== null && val !== undefined ? String(val).trim() : '';
+    setUserRemark(cleanVal === 'NA' || cleanVal === 'N/A' ? '' : val);
+  };
   const [backendRemark, setBackendRemark] = useState(sanitizeVal(application?.backend_remark) || sanitizeVal(application?.physical_details?.backend_remark) || '');
   const [finalStatus, setFinalStatus] = useState(sanitizeVal(application?.final_status) || sanitizeVal(application?.physical_details?.final_status) || sanitizeVal(application?.status) || 'None');
   const [appFileGenerated, setAppFileGenerated] = useState(sanitizeVal(application?.app_file_generated) || sanitizeVal(application?.appfile_generated) || sanitizeVal(application?.physical_details?.app_file_generated) || 'None');
@@ -703,8 +717,12 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         const realDispatch = sanitizeVal(app.dispatch_status) || sanitizeVal(pd.dispatch_status);
         const realFinal = sanitizeVal(app.final_status) || sanitizeVal(pd.final_status) || sanitizeVal(app.status) || 'In Process';
         const realAppFileGenerated = sanitizeVal(app.app_file_generated) || sanitizeVal(app.appfile_generated) || sanitizeVal(pd.app_file_generated) || sanitizeVal(pd.appfile_generated);
-        const realRemark = sanitizeVal(app.bank_remark) || sanitizeVal(pd.bank_remark);
-        const realUserRemark = sanitizeVal(app.user_remark) || sanitizeVal(app.notes) || sanitizeVal(pd.user_remark) || sanitizeVal(pd.notes) || sanitizeVal(app.remarks) || '';
+        const rawUserRem = sanitizeVal(app.user_remark) || sanitizeVal(app.notes) || sanitizeVal(pd.user_remark) || sanitizeVal(pd.notes) || sanitizeVal(app.remarks) || '';
+        const realUserRemark = rawUserRem.trim();
+        const rawBankRem = sanitizeVal(app.bank_remark) || sanitizeVal(pd.bank_remark) || '';
+        const realBankRemark = (realUserRemark !== '' && realUserRemark.toUpperCase() !== 'NA' && realUserRemark.toUpperCase() !== 'N/A')
+          ? realUserRemark
+          : ((rawBankRem && rawBankRem.trim() !== '' && rawBankRem.trim().toUpperCase() !== 'NA' && rawBankRem.trim().toUpperCase() !== 'N/A') ? rawBankRem.trim() : '');
 
         setRealData({
           appcodeStatus: realAppcode,
@@ -714,7 +732,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           dispatchStatus: realDispatch,
           finalStatus: realFinal,
           appFileGenerated: realAppFileGenerated,
-          bankRemark: realRemark,
+          bankRemark: realBankRemark,
           userRemark: realUserRemark
         });
 
@@ -723,7 +741,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         setVkycStage(realVkyc);
         setIqaStage(realIqa);
         setDispatchStatus(realDispatch);
-        setBankRemark(realRemark);
+        setBankRemark(realBankRemark);
         setUserRemark(realUserRemark);
         setFinalStatus(realFinal);
         setIpaStage(sanitizeVal(app.ipa_stage) || sanitizeVal(pd.ipa_stage) || 'None');
@@ -833,9 +851,15 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
     }
     setActionLoading(true);
     try {
+      const rawUserClean = userRemark && String(userRemark).trim() !== '' && String(userRemark).trim().toUpperCase() !== 'NA' && String(userRemark).trim().toUpperCase() !== 'N/A' ? String(userRemark).trim() : '';
+      const rawBankClean = bankRemark && String(bankRemark).trim() !== '' && String(bankRemark).trim().toUpperCase() !== 'NA' && String(bankRemark).trim().toUpperCase() !== 'N/A' ? String(bankRemark).trim() : '';
+      const effectiveRemarkToSave = rawUserClean || rawBankClean || 'NA';
+      const userRemarkToSave = effectiveRemarkToSave !== 'NA' ? effectiveRemarkToSave : '';
+
       let payload = {
-        user_remark: userRemark,
-        notes: userRemark,
+        user_remark: userRemarkToSave,
+        bank_remark: effectiveRemarkToSave,
+        notes: userRemarkToSave,
         backend_remark: backendRemark
       };
       if (formType === 'qd') {
@@ -893,10 +917,11 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           in_process_stage: inProcessStage || 'None',
           bank_current_lead_status: bankCurrentLeadStatus || 'None',
           bank_lead_status: bankCurrentLeadStatus || 'None',
-          user_remark: userRemark,
+          user_remark: userRemarkToSave,
+          bank_remark: effectiveRemarkToSave,
           backend_remark: backendRemark,
-          notes: userRemark,
-          operational_remarks: userRemark,
+          notes: userRemarkToSave,
+          operational_remarks: userRemarkToSave,
           // LOC / EOC updated 6 fields
           insta_jumbo_offer: instaJumboOffer,
           customer_loan_type: customerLoanType,
@@ -1013,12 +1038,12 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           queryable_remark: queryableRemark,
           queryable_sales_remark: queryableSalesRemark,
           digital_remark: digitalRemark,
-          bank_remark: bankRemark,
-          decline_reason: declineReason || offerDeclineReason || declineRemark || bankRemark || userRemark,
-          user_remark: userRemark,
+          bank_remark: effectiveRemarkToSave,
+          decline_reason: declineReason || offerDeclineReason || declineRemark || effectiveRemarkToSave,
+          user_remark: userRemarkToSave,
           backend_remark: backendRemark,
-          notes: userRemark,
-          operational_remarks: userRemark,
+          notes: userRemarkToSave,
+          operational_remarks: userRemarkToSave,
           final_status: isLocOrEoc 
             ? (String(finalBankStage || '').toUpperCase() === 'DISBURSEMENT' ? 'Approved' : String(finalBankStage || '').toUpperCase() === 'DECLINE' ? 'Declined' : String(finalBankStage || '').toUpperCase() === 'DISBURSEMENT PENDING' ? 'Disbursement Pending' : String(finalBankStage || '').toUpperCase() === 'IN PROCESS' ? 'In Process' : (finalBankStage || finalStatus)) 
             : finalStatus,
@@ -1461,8 +1486,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     value={userRemark || ''}
                     onChange={(e) => {
                       const selectedVal = e.target.value;
-                      setUserRemark(selectedVal);
-                      if (!bankRemark) setBankRemark(selectedVal);
+                      handleUserRemarkChange(selectedVal);
                       if (selectedVal === 'PAN OK' || selectedVal === 'NO RECORD FOUND') {
                         setPanCheck('yes');
                       } else {
@@ -1600,7 +1624,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   <input
                     type="text"
                     value={bankRemark || ''}
-                    onChange={(e) => setBankRemark(e.target.value)}
+                    onChange={(e) => handleBankRemarkChange(e.target.value)}
                     style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
                     placeholder="Enter Bank Remark"
                   />
@@ -1611,7 +1635,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   <input
                     type="text"
                     value={userRemark || ''}
-                    onChange={(e) => setUserRemark(e.target.value)}
+                    onChange={(e) => handleUserRemarkChange(e.target.value)}
                     style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
                     placeholder="Enter Internal Notes"
                   />
@@ -1902,8 +1926,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
               <Sliders size={14} /> Application Remark & Stage Tracking
             </button>
 
-            {/* 3. Final Tab (Shown for all processes including Customer Apply & Direct Bank) */}
-            {!isSalesExecUser && !isRemarkOperator && (initialTabKey === 'final' || showAllTabs || isFinalStatusOperator) && (
+            {/* 3. Final Tab (Shown for all processes and all admin designations) */}
+            {(!isPartner || initialTabKey === 'final' || showAllTabs || isOpsOrAdmin || isAdministrativeOperator || isSalesExecUser || isRemarkOperator || isPanChecker || isQdOperator || isFinalStatusOperator || isCurableOperator || isQuerableOperator) && (
               <button
                 onClick={() => setActiveTab('final')}
                 style={{
@@ -3441,7 +3465,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     <textarea
                       disabled={isLockedStatus}
                       value={userRemark}
-                      onChange={(e) => setUserRemark(e.target.value)}
+                      onChange={(e) => handleUserRemarkChange(e.target.value)}
                       placeholder="Enter user remark / notes for this application..."
                       rows={3}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #93c5fd', fontSize: '13px', background: isLockedStatus ? '#f8fafc' : '#eff6ff', fontWeight: 600, color: '#1e3a8a' }}
@@ -3717,7 +3741,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         <textarea
                           disabled={isLockedStatus}
                           value={userRemark}
-                          onChange={(e) => setUserRemark(e.target.value)}
+                          onChange={(e) => handleUserRemarkChange(e.target.value)}
                           placeholder="Enter user remark / notes..."
                           rows={2}
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #93c5fd', fontSize: '13px', background: isLockedStatus ? '#f8fafc' : '#eff6ff', fontWeight: 600, color: '#1e3a8a' }}
@@ -3729,9 +3753,15 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>BANK REMARK</label>
                         <textarea
                           disabled={!canEditFinal}
-                          value={bankRemark}
-                          onChange={(e) => setBankRemark(e.target.value)}
-                          placeholder="Enter Bank Remark..."
+                          value={(() => {
+                            const u = userRemark && String(userRemark).trim() !== '' && String(userRemark).trim().toUpperCase() !== 'NA' && String(userRemark).trim().toUpperCase() !== 'N/A' ? String(userRemark) : '';
+                            const b = bankRemark && String(bankRemark).trim() !== '' && String(bankRemark).trim().toUpperCase() !== 'NA' && String(bankRemark).trim().toUpperCase() !== 'N/A' ? String(bankRemark) : '';
+                            if (u) return u;
+                            if (b) return b;
+                            return 'NA';
+                          })()}
+                          onChange={(e) => handleBankRemarkChange(e.target.value)}
+                          placeholder="NA"
                           rows={3}
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff' }}
                         />
@@ -3898,7 +3928,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         <textarea
                           disabled={isLockedStatus}
                           value={userRemark}
-                          onChange={(e) => setUserRemark(e.target.value)}
+                          onChange={(e) => handleUserRemarkChange(e.target.value)}
                           placeholder="Enter user remark / notes..."
                           rows={2}
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #93c5fd', fontSize: '13px', background: isLockedStatus ? '#f8fafc' : '#eff6ff', fontWeight: 600, color: '#1e3a8a' }}
@@ -3910,9 +3940,15 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>BANK REMARK</label>
                         <textarea
                           disabled={!canEditFinal}
-                          value={bankRemark}
-                          onChange={(e) => setBankRemark(e.target.value)}
-                          placeholder="Enter Bank Remark..."
+                          value={(() => {
+                            const u = userRemark && String(userRemark).trim() !== '' && String(userRemark).trim().toUpperCase() !== 'NA' && String(userRemark).trim().toUpperCase() !== 'N/A' ? String(userRemark) : '';
+                            const b = bankRemark && String(bankRemark).trim() !== '' && String(bankRemark).trim().toUpperCase() !== 'NA' && String(bankRemark).trim().toUpperCase() !== 'N/A' ? String(bankRemark) : '';
+                            if (u) return u;
+                            if (b) return b;
+                            return 'NA';
+                          })()}
+                          onChange={(e) => handleBankRemarkChange(e.target.value)}
+                          placeholder="NA"
                           rows={3}
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff' }}
                         />
@@ -4331,7 +4367,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     <textarea
                       disabled={isLockedStatus}
                       value={userRemark}
-                      onChange={(e) => setUserRemark(e.target.value)}
+                      onChange={(e) => handleUserRemarkChange(e.target.value)}
                       placeholder="Enter user remark / notes..."
                       rows={2}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #93c5fd', fontSize: '13px', background: isLockedStatus ? '#f8fafc' : '#eff6ff', fontWeight: 600, color: '#1e3a8a' }}
@@ -4343,9 +4379,15 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>4. BANK REMARK</label>
                     <textarea
                       disabled={!canEditFinal}
-                      value={bankRemark}
-                      onChange={(e) => setBankRemark(e.target.value)}
-                      placeholder="Enter Bank Remark..."
+                      value={(() => {
+                        const u = userRemark && String(userRemark).trim() !== '' && String(userRemark).trim().toUpperCase() !== 'NA' && String(userRemark).trim().toUpperCase() !== 'N/A' ? String(userRemark) : '';
+                        const b = bankRemark && String(bankRemark).trim() !== '' && String(bankRemark).trim().toUpperCase() !== 'NA' && String(bankRemark).trim().toUpperCase() !== 'N/A' ? String(bankRemark) : '';
+                        if (u) return u;
+                        if (b) return b;
+                        return 'NA';
+                      })()}
+                      onChange={(e) => handleBankRemarkChange(e.target.value)}
+                      placeholder="NA"
                       rows={3}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff' }}
                     />

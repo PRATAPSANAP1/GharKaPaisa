@@ -2119,8 +2119,15 @@ const listApplications = async (req, res, next) => {
           COALESCE(NULLIF(a.vkyc_stage, ''), NULLIF(a.vkyc_status, ''), NULLIF(pad.vkyc_stage, '')) as vkyc_stage,
           COALESCE(NULLIF(a.vkyc_status, ''), NULLIF(a.vkyc_stage, ''), NULLIF(pad.vkyc_stage, '')) as vkyc_status,
           COALESCE(NULLIF(a.vkyc_url, ''), NULLIF(pad.vkyc_url, '')) as vkyc_url,
-          COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status,
-          COALESCE(NULLIF(a.bank_remark, ''), NULLIF(pad.bank_remark, '')) as bank_remark,
+          COALESCE(
+            NULLIF(to_jsonb(a)->>'user_remark', ''),
+            NULLIF(to_jsonb(pad)->>'user_remark', ''),
+            NULLIF(a.user_remark, ''),
+            NULLIF(a.notes, ''),
+            NULLIF(a.bank_remark, ''),
+            NULLIF(pad.bank_remark, ''),
+            'NA'
+          ) as bank_remark,
           COALESCE(NULLIF(to_jsonb(a)->>'user_remark', ''), NULLIF(to_jsonb(pad)->>'user_remark', ''), a.user_remark, a.notes, a.operational_remarks) as user_remark,
           COALESCE(a.user_remark, a.notes) as notes,
           COALESCE(NULLIF(a.final_status, ''), NULLIF(pad.final_status, '')) as final_status,
@@ -2791,9 +2798,11 @@ const getApplication = async (req, res, next) => {
       if (!isClean(app.kyc_stage) && pd.kyc_stage) app.kyc_stage = pd.kyc_stage;
       if (!isClean(app.card_approval_stage) && pd.card_approval_stage) app.card_approval_stage = pd.card_approval_stage;
       if (!isClean(app.digital_card_issued) && pd.digital_card_issued) app.digital_card_issued = pd.digital_card_issued;
-      if (!isClean(app.vkyc_url) && pd.vkyc_url) app.vkyc_url = pd.vkyc_url;
       if (!isClean(app.user_remark) && pd.user_remark) app.user_remark = pd.user_remark;
       if (!isClean(app.notes) && pd.user_remark) app.notes = pd.user_remark;
+      const effUser = (app.user_remark && String(app.user_remark).trim() !== '' && String(app.user_remark).toUpperCase() !== 'NA' && String(app.user_remark).toUpperCase() !== 'N/A') ? String(app.user_remark).trim() : '';
+      const effBank = (app.bank_remark && String(app.bank_remark).trim() !== '' && String(app.bank_remark).toUpperCase() !== 'NA' && String(app.bank_remark).toUpperCase() !== 'N/A') ? String(app.bank_remark).trim() : ((pd.bank_remark && String(pd.bank_remark).trim() !== '' && String(pd.bank_remark).toUpperCase() !== 'NA' && String(pd.bank_remark).toUpperCase() !== 'N/A') ? String(pd.bank_remark).trim() : '');
+      app.bank_remark = effUser || effBank || 'NA';
       if (!app.final_status && app.status) app.final_status = app.status;
       if (!app.bank_ref_number && pd.bank_application_number) app.bank_ref_number = pd.bank_application_number;
       if (!app.bank_application_number && pd.bank_application_number) app.bank_application_number = pd.bank_application_number;
@@ -3233,7 +3242,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
     `, [
       currentStatus, bank_ref_number || bankAppNoVal || null, bankAppNoVal || null, rejection_reason || decline_reason || null, parsedAmount,
       appcode_status || null, soft_approval_status || null, vkyc_stage || null, iqa_stage || null,
-      dispatch_status || null, bank_remark || null, final_status || null, decline_reason || null,
+      dispatch_status || null, (userRemarkVal || bank_remark || null), final_status || null, decline_reason || null,
       eligible_reqd || null, dob || null, designation || null, company_address || null,
       mother_name || null, vkyc_url || null, userRemarkVal, appFileGenVal,
       ipa_stage || null, kyc_stage || null, card_approval_stage || null, digital_card_issued || null,
@@ -4086,7 +4095,15 @@ const exportApplicationsCSV = async (req, res, next) => {
           COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status,
           COALESCE(NULLIF(a.final_status, ''), NULLIF(pad.final_status, '')) as final_status,
           COALESCE(NULLIF(a.app_file_generated, ''), NULLIF(pad.app_file_generated, '')) as app_file_generated,
-          COALESCE(NULLIF(a.bank_remark, ''), NULLIF(pad.bank_remark, '')) as bank_remark,
+          COALESCE(
+            NULLIF(to_jsonb(a)->>'user_remark', ''),
+            NULLIF(to_jsonb(pad)->>'user_remark', ''),
+            NULLIF(a.user_remark, ''),
+            NULLIF(a.notes, ''),
+            NULLIF(a.bank_remark, ''),
+            NULLIF(pad.bank_remark, ''),
+            'NA'
+          ) as bank_remark,
           COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, '')) as decline_reason,
           COALESCE(NULLIF(a.eligible_reqd, ''), NULLIF(pad.eligible_reqd, '')) as eligible_reqd,
           COALESCE(a.approved_amount, pad.approved_amount) as approved_amount,
@@ -4316,8 +4333,10 @@ const exportApplicationsCSV = async (req, res, next) => {
         const bankAppNoVal = formatBankAppNumber(row.bank_application_number, row.app_number);
         const vkycLink = (row.vkyc_url && String(row.vkyc_url).trim() !== '' && String(row.vkyc_url).toUpperCase() !== 'N/A') ? row.vkyc_url : 'NA';
         const finalStatus = (row.final_status && String(row.final_status).trim() !== '' && String(row.final_status).toUpperCase() !== 'N/A') ? row.final_status : (row.bank_current_lead_status || 'NA');
-        const userRemark = (row.user_remark && String(row.user_remark).trim() !== '' && String(row.user_remark).toUpperCase() !== 'N/A') ? row.user_remark : 'NA';
-        const bankRemark = (row.bank_remark && String(row.bank_remark).trim() !== '' && String(row.bank_remark).toUpperCase() !== 'N/A') ? row.bank_remark : 'NA';
+        const userRemarkClean = (row.user_remark && String(row.user_remark).trim() !== '' && String(row.user_remark).toUpperCase() !== 'N/A' && String(row.user_remark).toUpperCase() !== 'NA') ? String(row.user_remark).trim() : 'NA';
+        const rawBankClean = (row.bank_remark && String(row.bank_remark).trim() !== '' && String(row.bank_remark).toUpperCase() !== 'N/A' && String(row.bank_remark).toUpperCase() !== 'NA') ? String(row.bank_remark).trim() : 'NA';
+        const userRemark = userRemarkClean;
+        const bankRemark = userRemarkClean !== 'NA' ? userRemarkClean : rawBankClean;
         const declineReason = (row.decline_reason && String(row.decline_reason).trim() !== '' && String(row.decline_reason).toUpperCase() !== 'N/A') ? row.decline_reason : 'NA';
 
         const rowValues = [
@@ -4387,7 +4406,10 @@ const exportApplicationsCSV = async (req, res, next) => {
       const vkycLink = (row.vkyc_url && String(row.vkyc_url).trim() !== '' && String(row.vkyc_url).toUpperCase() !== 'N/A') ? row.vkyc_url : 'NA';
       
       const finalStatus = (row.final_status && String(row.final_status).trim() !== '' && String(row.final_status).toUpperCase() !== 'N/A') ? String(row.final_status).replace(/"/g, '""') : 'NA';
-      const bankRemark = (row.bank_remark && String(row.bank_remark).trim() !== '' && String(row.bank_remark).toUpperCase() !== 'N/A') ? String(row.bank_remark).replace(/"/g, '""') : 'NA';
+      const rawUserClean = (row.user_remark && String(row.user_remark).trim() !== '' && String(row.user_remark).toUpperCase() !== 'N/A' && String(row.user_remark).toUpperCase() !== 'NA') ? String(row.user_remark).trim() : '';
+      const rawBankClean = (row.bank_remark && String(row.bank_remark).trim() !== '' && String(row.bank_remark).toUpperCase() !== 'N/A' && String(row.bank_remark).toUpperCase() !== 'NA') ? String(row.bank_remark).trim() : '';
+      const effectiveBankRem = rawUserClean || rawBankClean || 'NA';
+      const bankRemark = String(effectiveBankRem).replace(/"/g, '""');
       const declineReason = (row.decline_reason && String(row.decline_reason).trim() !== '' && String(row.decline_reason).toUpperCase() !== 'N/A') ? String(row.decline_reason).replace(/"/g, '""') : 'NA';
       const eligibleReqd = (row.eligible_reqd && String(row.eligible_reqd).trim() !== '' && String(row.eligible_reqd).toUpperCase() !== 'N/A') ? String(row.eligible_reqd).replace(/"/g, '""') : 'NA';
 
@@ -4780,6 +4802,24 @@ const updateApplicationDetails = async (req, res, next) => {
       return s;
     };
 
+    const rawUserRemInput = user_remark !== undefined ? user_remark : (req.body.user_remark !== undefined ? req.body.user_remark : (req.body.user_notes || req.body.notes || notes || user_notes));
+    const rawBankRemInput = bank_remark !== undefined ? bank_remark : req.body.bank_remark;
+
+    const trimmedUser = rawUserRemInput !== undefined && rawUserRemInput !== null ? String(rawUserRemInput).trim() : null;
+    const trimmedBank = rawBankRemInput !== undefined && rawBankRemInput !== null ? String(rawBankRemInput).trim() : null;
+
+    let syncedRemarkToSave = null;
+    if (trimmedUser !== null && trimmedUser !== '' && trimmedUser.toUpperCase() !== 'NA' && trimmedUser.toUpperCase() !== 'N/A') {
+      syncedRemarkToSave = trimmedUser;
+    } else if (trimmedBank !== null && trimmedBank !== '' && trimmedBank.toUpperCase() !== 'NA' && trimmedBank.toUpperCase() !== 'N/A') {
+      syncedRemarkToSave = trimmedBank;
+    } else if (trimmedUser !== null || trimmedBank !== null) {
+      syncedRemarkToSave = 'NA';
+    }
+
+    const bankRemarkToSave = syncedRemarkToSave !== null ? syncedRemarkToSave : cleanStr(bank_remark || req.body.bank_remark);
+    const userRemarkToSave = syncedRemarkToSave !== null ? (syncedRemarkToSave !== 'NA' ? syncedRemarkToSave : '') : cleanStr(user_remark || req.body.user_remark || req.body.user_notes || req.body.notes || notes || user_notes);
+
     const { rows: [updatedApp] } = await client.query(`
       UPDATE applications SET
         bank_application_number = COALESCE(NULLIF($1, ''), bank_application_number),
@@ -4873,7 +4913,7 @@ const updateApplicationDetails = async (req, res, next) => {
       cleanStr(vkyc_stage || req.body.vkyc_stage),
       cleanStr(iqa_stage || req.body.iqa_stage),
       cleanStr(dispatch_status || req.body.dispatch_status),
-      cleanStr(bank_remark || req.body.bank_remark),
+      bankRemarkToSave,
       cleanStr(final_status || req.body.final_status),
       cleanStr(decline_reason || req.body.decline_reason),
       cleanStr(eligible_reqd || req.body.eligible_reqd),
@@ -4893,7 +4933,7 @@ const updateApplicationDetails = async (req, res, next) => {
       cleanStr(address),
       app.id,
       cleanStr(appcode_status || req.body.appcode_status),
-      cleanStr(user_remark || req.body.user_remark || req.body.user_notes || req.body.notes || notes || user_notes),
+      userRemarkToSave,
       cleanStr(app_file_generated || appfile_generated || req.body.app_file_generated || req.body.appfile_generated),
       cleanStr(ipa_stage || req.body.ipa_stage),
       cleanStr(kyc_stage || req.body.kyc_stage),
@@ -5237,7 +5277,7 @@ const updateApplicationDetails = async (req, res, next) => {
         cleanStr(vkyc_stage || req.body.vkyc_stage),
         cleanStr(iqa_stage || req.body.iqa_stage),
         cleanStr(dispatch_status || req.body.dispatch_status),
-        cleanStr(bank_remark || req.body.bank_remark),
+        bankRemarkToSave,
         cleanStr(final_status || req.body.final_status),
         cleanStr(app_file_generated || appfile_generated || req.body.app_file_generated || req.body.appfile_generated),
         cleanStr(decline_reason || req.body.decline_reason),
@@ -5246,7 +5286,7 @@ const updateApplicationDetails = async (req, res, next) => {
         cleanStr(kyc_stage || req.body.kyc_stage),
         cleanStr(card_approval_stage || req.body.card_approval_stage),
         cleanStr(vkyc_url || req.body.vkyc_url),
-        cleanStr(user_remark || req.body.user_remark || req.body.user_notes || req.body.notes || notes || user_notes),
+        userRemarkToSave,
         cleanStr(income_details || req.body.income_details),
         cleanStr(mail_status || req.body.mail_status),
         cleanStr(bank_smart_emi_offer),
@@ -6331,7 +6371,7 @@ const get360ApplicationTrace = async (req, res, next) => {
         a.vkyc_url,
         a.iqa_stage,
         a.dispatch_status,
-        a.remarks AS bank_remark,
+        COALESCE(NULLIF(to_jsonb(a)->>'user_remark', ''), NULLIF(a.user_remark, ''), NULLIF(a.notes, ''), NULLIF(a.bank_remark, ''), NULLIF(a.remarks, ''), 'NA') AS bank_remark,
         a.decline_reason,
         a.commission_amount,
         
