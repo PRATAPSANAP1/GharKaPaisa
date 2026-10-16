@@ -9,6 +9,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher/LanguageSwitcher';
 import Chatbot from '../components/Chatbot/Chatbot';
 import AnnouncementBanner from '../components/AnnouncementBanner';
 import api from '../services/api';
+import useNotificationPolling from '../hooks/useNotificationPolling';
 import { MdExpandMore, MdChevronRight, MdAccountBalance, MdShoppingBag, MdSettings, MdMenu, MdClose, MdNotifications } from 'react-icons/md';
 import { FaComments } from 'react-icons/fa';
 
@@ -136,45 +137,17 @@ const AdminLayout = () => {
 
   // Notification & Messenger State
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
-  const [messengerUnread, setMessengerUnread] = useState(0);
-  const [notificationsList, setNotificationsList] = useState([]);
-  const [systemUnreadCount, setSystemUnreadCount] = useState(0);
   const notifDropdownRef = useRef(null);
 
-  const fetchNotificationCounts = async () => {
-    try {
-      const [msgRes, notifRes] = await Promise.all([
-        api.get('/messenger/unread-count').catch(() => ({ data: { success: false } })),
-        api.get('/notifications/unread').catch(() => ({ data: { success: false } }))
-      ]);
-
-      if (msgRes?.data?.success && typeof msgRes.data?.data?.unread_count === 'number') {
-        setMessengerUnread(msgRes.data.data.unread_count);
-      }
-      if (notifRes?.data?.success) {
-        setNotificationsList(notifRes.data.data?.notifications || []);
-        setSystemUnreadCount(notifRes.data.data?.unread_count || 0);
-      }
-    } catch (err) {
-      console.error('Error fetching notification counts:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (!user) return;
-    fetchNotificationCounts();
-
-    const handleUnreadUpdate = () => {
-      fetchNotificationCounts();
-    };
-
-    window.addEventListener('messenger:unread_updated', handleUnreadUpdate);
-    const interval = setInterval(fetchNotificationCounts, 10000);
-    return () => {
-      window.removeEventListener('messenger:unread_updated', handleUnreadUpdate);
-      clearInterval(interval);
-    };
-  }, [user?.id]);
+  const {
+    messengerUnread,
+    setMessengerUnread,
+    notificationsList,
+    setNotificationsList,
+    systemUnreadCount,
+    setSystemUnreadCount,
+    handleMarkAllRead,
+  } = useNotificationPolling(user);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -185,16 +158,6 @@ const AdminLayout = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const handleMarkAllRead = async () => {
-    try {
-      await api.post('/notifications/read-all').catch(() => {});
-      setSystemUnreadCount(0);
-      setNotificationsList(prev => prev.map(n => ({ ...n, is_read: true })));
-    } catch (err) {
-      console.error('Failed to mark all as read:', err);
-    }
-  };
 
 
   // Close mobile menu on route change & restrict navigation based on role designation

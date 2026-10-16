@@ -12,6 +12,7 @@ import {
 import logo from '../assets/logos/logo.png';
 import Chatbot from '../components/Chatbot/Chatbot';
 import api from '../services/api';
+import useNotificationPolling from '../hooks/useNotificationPolling';
 
 import EmployeeForcePasswordModal from '../modules/employee/components/EmployeeForcePasswordModal';
 import EmployeeMobileBottomNav from '../components/EmployeeMobileBottomNav';
@@ -34,9 +35,16 @@ export default function EmployeeLayout() {
 
   // Notification & Messenger State
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
-  const [messengerUnread, setMessengerUnread] = useState(0);
-  const [notificationsList, setNotificationsList] = useState([]);
-  const [systemUnreadCount, setSystemUnreadCount] = useState(0);
+
+  const {
+    messengerUnread,
+    setMessengerUnread,
+    notificationsList,
+    setNotificationsList,
+    systemUnreadCount,
+    setSystemUnreadCount,
+    handleMarkAllRead,
+  } = useNotificationPolling(user);
 
   // Invite Modal State
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
@@ -44,41 +52,6 @@ export default function EmployeeLayout() {
   const [copiedMsg, setCopiedMsg] = useState('');
 
   const [fetchedPhoto, setFetchedPhoto] = useState(null);
-
-  const fetchNotificationCounts = async () => {
-    try {
-      const [msgRes, notifRes] = await Promise.all([
-        api.get('/messenger/unread-count').catch(() => ({ data: { success: false } })),
-        api.get('/notifications/unread').catch(() => ({ data: { success: false } }))
-      ]);
-
-      if (msgRes.data?.success && typeof msgRes.data?.data?.unread_count === 'number') {
-        setMessengerUnread(msgRes.data.data.unread_count);
-      }
-      if (notifRes.data?.success) {
-        setNotificationsList(notifRes.data.data?.notifications || []);
-        setSystemUnreadCount(notifRes.data.data?.unread_count || 0);
-      }
-    } catch (err) {
-      console.error('Error fetching notification counts:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (!user) return;
-    fetchNotificationCounts();
-
-    const handleUnreadUpdate = () => {
-      fetchNotificationCounts();
-    };
-
-    window.addEventListener('messenger:unread_updated', handleUnreadUpdate);
-    const interval = setInterval(fetchNotificationCounts, 10000);
-    return () => {
-      window.removeEventListener('messenger:unread_updated', handleUnreadUpdate);
-      clearInterval(interval);
-    };
-  }, [user?.id]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -103,16 +76,6 @@ export default function EmployeeLayout() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const handleMarkAllRead = async () => {
-    try {
-      await api.post('/notifications/read-all').catch(() => {});
-      setSystemUnreadCount(0);
-      setNotificationsList(prev => prev.map(n => ({ ...n, is_read: true })));
-    } catch (err) {
-      console.error('Failed to mark all as read:', err);
-    }
-  };
 
 
   useEffect(() => {
