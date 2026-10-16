@@ -289,12 +289,25 @@ const startServer = async () => {
     try {
       await db.query(`ALTER TABLE admin_bank_assignments ADD COLUMN IF NOT EXISTS category VARCHAR(50) NOT NULL DEFAULT 'credit_card'`);
       await db.query(`ALTER TABLE admin_bank_assignments ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
+      await db.query(`ALTER TABLE banks ADD COLUMN IF NOT EXISTS operation_head_id UUID REFERENCES users(id) ON DELETE SET NULL`);
+      await db.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS operation_head_id UUID REFERENCES users(id) ON DELETE SET NULL`);
       await db.query(`
         DO $$
         BEGIN
+          -- 1. Deduplicate any existing duplicate assignments so unique constraint creation succeeds
+          DELETE FROM admin_bank_assignments a
+          USING admin_bank_assignments b
+          WHERE a.id > b.id
+            AND a.admin_id = b.admin_id
+            AND a.bank_id = b.bank_id
+            AND COALESCE(a.category, 'credit_card') = COALESCE(b.category, 'credit_card');
+
+          -- 2. Drop legacy constraint on (admin_id, bank_id) if exists
           IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'admin_bank_assignments_admin_id_bank_id_key') THEN
             ALTER TABLE admin_bank_assignments DROP CONSTRAINT admin_bank_assignments_admin_id_bank_id_key;
           END IF;
+
+          -- 3. Add modern unique constraint on (admin_id, bank_id, category)
           IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'admin_bank_assignments_admin_bank_category_key') THEN
             ALTER TABLE admin_bank_assignments ADD CONSTRAINT admin_bank_assignments_admin_bank_category_key UNIQUE (admin_id, bank_id, category);
           END IF;

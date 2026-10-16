@@ -5,13 +5,13 @@ const { logAction } = require('../admin/audit.service.js');
 const { getPaginationParams, sanitizeMobile, normalizeAssignmentCategory } = require('../../utils/helpers/helpers');
 const { success, created, error, paginate, notFound } = require('../../utils/response/response');
 const logger = require('../../config/logger');
+const isUuid = (str) => typeof str === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str.trim());
 
 const resolveBankId = async (bId, client = null) => {
   if (!bId) return null;
   const str = String(bId).trim();
   const execQuery = client ? (q, p) => client.query(q, p) : (q, p) => query(q, p);
-  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-  if (isUuid) return str;
+  if (isUuid(str)) return str;
 
   if (str.toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(str)) {
     const { rows } = await execQuery(`
@@ -20,18 +20,25 @@ const resolveBankId = async (bId, client = null) => {
          OR LOWER(name) LIKE '%loc/eoc%' 
          OR LOWER(name) LIKE '%loan on card%' 
       LIMIT 1
-    `);
-    if (rows.length > 0) return rows[0].id;
-    const { rows: created } = await execQuery(`
-      INSERT INTO banks (name, short_code, is_active, status)
-      VALUES ('LOC/EOC (Loan on Card & Smart EMI)', 'LOC_EOC', true, 'Active')
-      ON CONFLICT (short_code) DO UPDATE SET 
-        name = 'LOC/EOC (Loan on Card & Smart EMI)',
-        is_active = true,
-        status = 'Active'
-      RETURNING id
-    `);
-    return created[0]?.id || null;
+    `).catch(() => ({ rows: [] }));
+    if (rows && rows.length > 0) return rows[0].id;
+    try {
+      const { rows: created } = await execQuery(`
+        INSERT INTO banks (name, short_code, is_active, status)
+        VALUES ('LOC/EOC (Loan on Card & Smart EMI)', 'LOC_EOC', true, 'Active')
+        ON CONFLICT (short_code) DO UPDATE SET 
+          name = EXCLUDED.name,
+          is_active = true,
+          status = 'Active'
+        RETURNING id
+      `);
+      return created[0]?.id || null;
+    } catch (insErr) {
+      const { rows: byName } = await execQuery(`
+        SELECT id FROM banks WHERE LOWER(name) LIKE '%loc/eoc%' OR LOWER(name) LIKE '%loan on card%' LIMIT 1
+      `).catch(() => ({ rows: [] }));
+      return byName[0]?.id || null;
+    }
   }
 
   // Look up bank by id, short_code, or name if not a direct UUID
@@ -42,38 +49,70 @@ const resolveBankId = async (bId, client = null) => {
        OR LOWER(name) = LOWER($1) 
     LIMIT 1
   `, [str]).catch(() => ({ rows: [] }));
-  if (rows.length > 0) return rows[0].id;
+  if (rows && rows.length > 0) return rows[0].id;
 
   return null;
 };
 
+let spCounter = 0;
 const safeTxQuery = async (client, text, params) => {
   if (!client) {
     return query(text, params).catch(() => ({ rows: [] }));
   }
+  const spName = `sp_safe_${Date.now()}_${++spCounter}`;
   try {
-    await client.query('SAVEPOINT sp_safe');
+    await client.query(`SAVEPOINT ${spName}`);
     const res = await client.query(text, params);
-    await client.query('RELEASE SAVEPOINT sp_safe');
+    await client.query(`RELEASE SAVEPOINT ${spName}`);
     return res;
   } catch (err) {
-    await client.query('ROLLBACK TO SAVEPOINT sp_safe').catch(() => {});
+    try {
+      await client.query(`ROLLBACK TO SAVEPOINT ${spName}`);
+    } catch (rbErr) {
+      return client.query(text, params).catch(() => ({ rows: [] }));
+    }
     return { rows: [] };
   }
 };
 
 const insertBankAssignment = async (adminId, bankId, category, createdById, client = null) => {
   const cat = normalizeAssignmentCategory(category);
-  const cBy = createdById || null;
+  const validCreatedBy = isUuid(createdById) ? createdById : null;
   const qFn = client ? (q, p) => client.query(q, p) : (q, p) => query(q, p);
 
-  return qFn(
-    `INSERT INTO admin_bank_assignments (admin_id, bank_id, category, is_active, created_by)
-     VALUES ($1, $2, $3, TRUE, $4)
-     ON CONFLICT (admin_id, bank_id, category)
-     DO UPDATE SET is_active = TRUE`,
-    [adminId, bankId, cat, cBy]
+  // 1. Check if the assignment already exists
+  const checkRes = await qFn(
+    `SELECT id FROM admin_bank_assignments WHERE admin_id = $1 AND bank_id = $2 AND category = $3 LIMIT 1`,
+    [adminId, bankId, cat]
   );
+
+  if (checkRes.rows && checkRes.rows.length > 0) {
+    return qFn(
+      `UPDATE admin_bank_assignments SET is_active = TRUE, created_by = COALESCE($2, created_by) WHERE id = $1`,
+      [checkRes.rows[0].id, validCreatedBy]
+    );
+  }
+
+  // 2. Insert new assignment safely with ON CONFLICT DO NOTHING
+  try {
+    return await qFn(
+      `INSERT INTO admin_bank_assignments (admin_id, bank_id, category, is_active, created_by)
+       VALUES ($1, $2, $3, TRUE, $4)
+       ON CONFLICT DO NOTHING`,
+      [adminId, bankId, cat, validCreatedBy]
+    );
+  } catch (insErr) {
+    // If foreign key constraint failed on created_by (e.g. actorId not in users table), retry with NULL
+    if (insErr.code === '23503' && validCreatedBy) {
+      return qFn(
+        `INSERT INTO admin_bank_assignments (admin_id, bank_id, category, is_active, created_by)
+         VALUES ($1, $2, $3, TRUE, NULL)
+         ON CONFLICT DO NOTHING`,
+        [adminId, bankId, cat]
+      );
+    }
+    throw insErr;
+  }
 };
 
 const parseAssignmentPairsFromBody = (body) => {
@@ -315,7 +354,7 @@ const createAdmin = async (req, res, next) => {
           await query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [dbUser.id, bId]).catch(() => {});
           const { rows: bRows } = await query(`SELECT short_code, name FROM banks WHERE id = $1`, [bId]).catch(() => ({ rows: [] }));
           if (bRows && bRows.length > 0 && ((bRows[0].short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(bRows[0].name || '') || cat === 'loc_eoc')) {
-            await query(`UPDATE products SET operation_head_id = $1 WHERE category = 'loc_eoc' OR category::text IN ('loan_on_credit_card', 'smart_emi')`, [dbUser.id]).catch(() => {});
+            await query(`UPDATE products SET operation_head_id = $1 WHERE category::text = 'loc_eoc' OR category::text IN ('loan_on_credit_card', 'smart_emi')`, [dbUser.id]).catch(() => {});
           }
         }
       }
@@ -562,7 +601,7 @@ const updateAdmin = async (req, res, next) => {
           await query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [existing.id, bId]).catch(() => {});
           const { rows: bRows } = await query(`SELECT short_code, name FROM banks WHERE id = $1`, [bId]).catch(() => ({ rows: [] }));
           if (bRows && bRows.length > 0 && ((bRows[0].short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(bRows[0].name || '') || cat === 'loc_eoc')) {
-            await query(`UPDATE products SET operation_head_id = $1 WHERE category = 'loc_eoc' OR category::text IN ('loan_on_credit_card', 'smart_emi')`, [existing.id]).catch(() => {});
+            await query(`UPDATE products SET operation_head_id = $1 WHERE category::text = 'loc_eoc' OR category::text IN ('loan_on_credit_card', 'smart_emi')`, [existing.id]).catch(() => {});
           }
         }
       }
@@ -663,7 +702,7 @@ const updateAdminBanks = async (req, res, next) => {
       if (!bId) continue;
 
       // Verify the bank exists in database
-      const { rows: bankCheck } = await client.query(`SELECT id FROM banks WHERE id = $1`, [bId]);
+      const { rows: bankCheck } = await client.query(`SELECT id FROM banks WHERE id::text = $1`, [bId]);
       if (bankCheck.length === 0) continue;
 
       const cat = normalizeAssignmentCategory(pair.category);
@@ -676,7 +715,8 @@ const updateAdminBanks = async (req, res, next) => {
     const assignmentPairs = Array.from(uniqueMap.values());
     console.log('[BANK ASSIGNMENT] RESOLVED PAIRS', assignmentPairs);
 
-    const actorId = req.user?.id || req.user?._id || req.user?.userId || null;
+    const rawActorId = req.user?.id || req.user?._id || req.user?.userId || null;
+    const actorId = isUuid(rawActorId) ? rawActorId : null;
 
     console.log('[BANK ASSIGNMENT] BEGIN');
     await client.query('BEGIN');
@@ -690,28 +730,30 @@ const updateAdminBanks = async (req, res, next) => {
       || ['OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS_HEAD', 'OPERATIONS HEAD'].includes(currentRole);
 
     if (isTargetOpHead) {
-      await client.query(`UPDATE banks SET operation_head_id = NULL WHERE operation_head_id = $1`, [userRec.id]);
-      await client.query(`UPDATE products SET operation_head_id = NULL WHERE operation_head_id = $1`, [userRec.id]);
+      await safeTxQuery(client, `UPDATE banks SET operation_head_id = NULL WHERE operation_head_id = $1`, [userRec.id]);
+      await safeTxQuery(client, `UPDATE products SET operation_head_id = NULL WHERE operation_head_id = $1`, [userRec.id]);
     }
 
     console.log('[BANK ASSIGNMENT] INSERT');
     for (const pair of assignmentPairs) {
       await insertBankAssignment(userRec.id, pair.bank_id, pair.category, actorId, client);
       if (isTargetOpHead) {
-        await client.query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [userRec.id, pair.bank_id]);
-        await client.query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [userRec.id, pair.bank_id]);
+        await safeTxQuery(client, `UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [userRec.id, pair.bank_id]);
+        await safeTxQuery(client, `UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [userRec.id, pair.bank_id]);
         if (pair.category === 'loc_eoc') {
-          await client.query(`UPDATE products SET operation_head_id = $1 WHERE category = 'loc_eoc' OR category::text IN ('loan_on_credit_card', 'smart_emi')`, [userRec.id]);
+          await safeTxQuery(client, `UPDATE products SET operation_head_id = $1 WHERE category::text = 'loc_eoc' OR category::text IN ('loan_on_credit_card', 'smart_emi')`, [userRec.id]);
         }
       }
     }
 
     console.log('[BANK ASSIGNMENT] UPDATE LOC/EOC');
     const hasLocEoc = assignmentPairs.some(pair => normalizeAssignmentCategory(pair.category) === 'loc_eoc');
-    await client.query(`UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [hasLocEoc, userRec.id]);
+    await safeTxQuery(client, `UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [hasLocEoc, userRec.id]);
 
     console.log('[BANK ASSIGNMENT] COMMIT');
     await client.query('COMMIT');
+
+    logAction(req, 'UPDATE_ADMIN_BANKS', userRec.id, { assignmentPairs }).catch(() => {});
 
     return success(res, { adminId: userRec.id, assignedPairs: assignmentPairs }, 'Bank assignments updated successfully');
 
@@ -720,7 +762,7 @@ const updateAdminBanks = async (req, res, next) => {
       await client.query('ROLLBACK').catch(() => {});
     }
 
-    console.error('[SUPERADMIN BANK ASSIGNMENT ERROR]', {
+    logger.error('[SUPERADMIN BANK ASSIGNMENT ERROR]', {
       message: err?.message,
       code: err?.code,
       detail: err?.detail,
@@ -731,7 +773,7 @@ const updateAdminBanks = async (req, res, next) => {
       stack: err?.stack
     });
 
-    return next(err);
+    return error(res, `Failed to update bank assignments: ${err?.message || 'Database error'}`, 500);
 
   } finally {
     if (client) client.release();
@@ -1506,7 +1548,6 @@ const getReferralAnalytics = async (req, res, next) => {
   }
 };
 
-const isUuid = (str) => typeof str === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
 
 const getOperationHeads = async (req, res, next) => {
   try {
