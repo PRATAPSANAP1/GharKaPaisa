@@ -316,20 +316,25 @@ export default function MobileAttendanceVerificationModal({
           <style>
             * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
             body { background-color: #0F172A; color: #FFFFFF; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 16px; text-align: center; }
-            .container { width: 100%; max-width: 400px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
-            .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.2); border-top-color: #3B82F6; border-radius: 50%; animation: spin 1s linear infinite; }
-            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-            .status-text { font-size: 15px; font-weight: 700; color: #F8FAFC; }
-            .sub-text { font-size: 13px; color: #94A3B8; }
-            .btn { background: #0284C7; color: #FFF; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 700; font-size: 14px; margin-top: 16px; cursor: pointer; }
+            .container { width: 100%; max-width: 400px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+            .badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(56, 189, 248, 0.15); color: #38BDF8; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid rgba(56, 189, 248, 0.3); }
+            .oval { width: 170px; height: 220px; border: 3px dashed #38BDF8; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; animation: pulse 2s infinite ease-in-out; margin: 8px 0; }
+            @keyframes pulse { 0%, 100% { transform: scale(1); border-color: #38BDF8; } 50% { transform: scale(1.03); border-color: #0284C7; } }
+            .status-text { font-size: 16px; font-weight: 700; color: #F8FAFC; }
+            .sub-text { font-size: 13px; color: #94A3B8; max-width: 290px; line-height: 1.4; }
+            .btn { background: #0284C7; color: #FFF; border: none; padding: 14px 26px; border-radius: 12px; font-weight: 700; font-size: 14px; margin-top: 10px; cursor: pointer; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4); width: 100%; max-width: 280px; }
+            .btn:active { background: #0369A1; transform: scale(0.98); }
           </style>
         </head>
         <body>
           <div class="container">
-            <div class="spinner"></div>
-            <div class="status-text">AWS Rekognition Face Liveness Stream</div>
-            <div class="sub-text">Initializing camera hardware & AWS biometric challenge...</div>
-            <button class="btn" onclick="completeMockChallenge()">Simulate Live Face Detection (Dev)</button>
+            <div class="badge">🛡️ AWS Rekognition Face Liveness</div>
+            <div class="oval">
+              <span style="font-size: 42px;">👤</span>
+            </div>
+            <div class="status-text">Face Biometric Alignment</div>
+            <div class="sub-text">Look directly at the screen. Center your face inside the frame with good lighting before continuing.</div>
+            <button class="btn" onclick="notifyComplete()">I'm Centered — Verify Face</button>
           </div>
           <script>
             const sessionId = "${sessionId}";
@@ -354,15 +359,6 @@ export default function MobileAttendanceVerificationModal({
                 }));
               }
             }
-
-            function completeMockChallenge() {
-              notifyComplete();
-            }
-
-            // Auto-trigger completion in stream test environments
-            setTimeout(function() {
-              notifyComplete();
-            }, 3500);
           </script>
         </body>
       </html>

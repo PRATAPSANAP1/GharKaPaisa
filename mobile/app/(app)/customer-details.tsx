@@ -17,9 +17,15 @@ import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 import { Card, StatusBadge, LoadingState, ErrorState, Button } from '../../components';
 import { Icon } from '../../components/Icon';
-import { fetchCustomerProfile, addCustomerNote, addCustomerFollowUp, mergeCustomers } from '../../services/customer.service';
+import {
+  fetchCustomerProfile,
+  addCustomerNote,
+  addCustomerFollowUp,
+  mergeCustomers,
+  updateCustomerStatus,
+} from '../../services/customer.service';
 
-type TabType = 'overview' | 'applications' | 'leads' | 'activity' | 'notes';
+type TabType = 'overview' | 'applications' | 'leads' | 'activity' | 'notes' | 'followups';
 
 const maskPan = (pan?: string) => {
   if (!pan || pan.length < 10) return pan || 'N/A';
@@ -45,11 +51,16 @@ export default function CustomerDetailsScreen() {
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
   const [showMergeModal, setShowMergeModal] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [followUpDate, setFollowUpDate] = useState('');
   const [followUpRemark, setFollowUpRemark] = useState('');
+  const [followUpPriority, setFollowUpPriority] = useState('medium');
   const [mergeCustomerId, setMergeCustomerId] = useState('');
   const [notes, setNotes] = useState<any[]>([]);
+  const [followups, setFollowups] = useState<any[]>([]);
+  const [pipelineStatus, setPipelineStatus] = useState('new');
+  const [statusReason, setStatusReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const isFetchingRef = useRef(false);
@@ -60,7 +71,6 @@ export default function CustomerDetailsScreen() {
 
     if (!isRefresh) {
       setLoading(true);
-      // Reset state to avoid showing previous customer data
       setCustomerData(null);
     }
 
@@ -71,6 +81,18 @@ export default function CustomerDetailsScreen() {
       const res = await fetchCustomerProfile(customerId);
       if (res?.success && res?.data) {
         setCustomerData(res.data);
+        const profile = res.data.profile || res.data;
+        if (Array.isArray(res.data.notes)) {
+          setNotes(res.data.notes);
+        } else if (Array.isArray(profile.notes)) {
+          setNotes(profile.notes);
+        }
+        if (Array.isArray(res.data.followups)) {
+          setFollowups(res.data.followups);
+        } else if (Array.isArray(profile.followups)) {
+          setFollowups(profile.followups);
+        }
+        setPipelineStatus(profile.pipeline_status || 'new');
       } else {
         setError(res?.message || 'Customer profile not found');
         setStatusCode(404);
@@ -117,8 +139,13 @@ export default function CustomerDetailsScreen() {
 
     setSubmitting(true);
     try {
-      await addCustomerNote(id, noteText);
-      setNotes([...notes, { note: noteText, created_at: new Date().toISOString() }]);
+      const res = await addCustomerNote(id, noteText.trim());
+      const newNote = res?.data || {
+        note: noteText.trim(),
+        created_at: new Date().toISOString(),
+        author_name: 'You',
+      };
+      setNotes((prev) => [newNote, ...prev]);
       setNoteText('');
       setShowNoteModal(false);
       Alert.alert('Success', 'Note added successfully');
@@ -131,16 +158,24 @@ export default function CustomerDetailsScreen() {
 
   const handleAddFollowUp = async () => {
     if (!followUpDate.trim()) {
-      Alert.alert('Required', 'Please select a follow-up date');
+      Alert.alert('Required', 'Please enter follow-up date (YYYY-MM-DD)');
       return;
     }
 
     setSubmitting(true);
     try {
-      await addCustomerFollowUp(id, {
-        follow_up_date: followUpDate,
-        remarks: followUpRemark,
+      const res = await addCustomerFollowUp(id, {
+        followup_date: followUpDate.trim(),
+        remarks: followUpRemark.trim(),
+        priority: followUpPriority,
       });
+      const newFollowup = res?.data || {
+        followup_date: followUpDate.trim(),
+        remarks: followUpRemark.trim(),
+        priority: followUpPriority,
+        created_at: new Date().toISOString(),
+      };
+      setFollowups((prev) => [newFollowup, ...prev]);
       setShowFollowUpModal(false);
       setFollowUpDate('');
       setFollowUpRemark('');
@@ -153,25 +188,56 @@ export default function CustomerDetailsScreen() {
   };
 
   const handleMergeCustomers = async () => {
-    if (!mergeCustomerId.trim()) {
-      Alert.alert('Required', 'Please enter the customer ID to merge');
+    const cleanDuplicateId = mergeCustomerId.trim();
+    if (!cleanDuplicateId) {
+      Alert.alert('Required', 'Please enter the Duplicate Customer UUID to merge');
       return;
     }
 
-    if (mergeCustomerId === id) {
+    if (cleanDuplicateId === id) {
       Alert.alert('Invalid', 'Cannot merge customer with themselves');
       return;
     }
 
+    Alert.alert(
+      'Confirm Customer Merge',
+      `Are you sure you want to merge customer ${cleanDuplicateId} into this record? All applications, leads, documents, and notes will be consolidated into this profile.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Merge',
+          style: 'destructive',
+          onPress: async () => {
+            setSubmitting(true);
+            try {
+              // Primary is current customer id, duplicate is cleanDuplicateId
+              await mergeCustomers(id, cleanDuplicateId);
+              setShowMergeModal(false);
+              setMergeCustomerId('');
+              Alert.alert('Success', 'Customer records merged successfully');
+              loadProfile(id, true);
+            } catch (err: any) {
+              Alert.alert('Merge Failed', err.message || 'Failed to merge customers');
+            } finally {
+              setSubmitting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleUpdateStatus = async (newStatus: string) => {
     setSubmitting(true);
     try {
-      await mergeCustomers(mergeCustomerId, id);
-      setShowMergeModal(false);
-      setMergeCustomerId('');
-      Alert.alert('Success', 'Customers merged successfully');
-      loadProfile(id); // Reload to see merged data
+      await updateCustomerStatus(id, newStatus, statusReason.trim() || undefined);
+      setPipelineStatus(newStatus);
+      setShowStatusModal(false);
+      setStatusReason('');
+      Alert.alert('Updated', `Customer pipeline status updated to ${newStatus.replace('_', ' ').toUpperCase()}`);
+      loadProfile(id, true);
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to merge customers');
+      Alert.alert('Update Failed', err.message || 'Failed to update pipeline status');
     } finally {
       setSubmitting(false);
     }
@@ -216,7 +282,11 @@ export default function CustomerDetailsScreen() {
       </View>
 
       {/* Segmented Tab Navigation */}
-      <View style={styles.tabContainer}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.tabContainer}
+      >
         <TouchableOpacity
           style={[styles.tabItem, activeTab === 'overview' && styles.tabItemActive]}
           onPress={() => setActiveTab('overview')}
@@ -254,6 +324,15 @@ export default function CustomerDetailsScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
+          style={[styles.tabItem, activeTab === 'followups' && styles.tabItemActive]}
+          onPress={() => setActiveTab('followups')}
+        >
+          <Text style={[styles.tabText, activeTab === 'followups' && styles.tabTextActive]}>
+            Follow-ups ({followups.length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[styles.tabItem, activeTab === 'activity' && styles.tabItemActive]}
           onPress={() => setActiveTab('activity')}
         >
@@ -261,7 +340,7 @@ export default function CustomerDetailsScreen() {
             Activity ({timeline.length})
           </Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
 
       {/* Main Tab Content */}
       <ScrollView
@@ -280,21 +359,28 @@ export default function CustomerDetailsScreen() {
             style={styles.actionButton}
             onPress={() => setShowNoteModal(true)}
           >
-            <Icon name="message-square" size={20} color={colors.primary} />
-            <Text style={styles.actionButtonText}>Add Note</Text>
+            <Icon name="message-square" size={16} color={colors.primary} />
+            <Text style={styles.actionButtonText}>+ Note</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => setShowFollowUpModal(true)}
           >
-            <Icon name="calendar" size={20} color={colors.primary} />
-            <Text style={styles.actionButtonText}>Follow Up</Text>
+            <Icon name="calendar" size={16} color={colors.primary} />
+            <Text style={styles.actionButtonText}>+ Follow-Up</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => setShowStatusModal(true)}
+          >
+            <Icon name="award" size={16} color={colors.primary} />
+            <Text style={styles.actionButtonText}>Status</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => setShowMergeModal(true)}
           >
-            <Icon name="merge" size={20} color={colors.primary} />
+            <Icon name="merge" size={16} color={colors.primary} />
             <Text style={styles.actionButtonText}>Merge</Text>
           </TouchableOpacity>
         </View>
@@ -464,7 +550,7 @@ export default function CustomerDetailsScreen() {
               style={styles.addNoteButton}
               onPress={() => setShowNoteModal(true)}
             >
-              <Icon name="plus" size={20} color="#fff" />
+              <Icon name="plus" size={18} color="#fff" />
               <Text style={styles.addNoteButtonText}>Add Note</Text>
             </TouchableOpacity>
             {notes.length === 0 ? (
@@ -473,8 +559,57 @@ export default function CustomerDetailsScreen() {
               notes.map((note: any, idx: number) => (
                 <Card key={idx} style={styles.noteCard}>
                   <Text style={styles.noteText}>{note.note}</Text>
+                  <View style={styles.metaRow}>
+                    <Text style={styles.metaAuthor}>{note.author_name || 'Partner'}</Text>
+                    <Text style={styles.noteDate}>
+                      {note.created_at ? new Date(note.created_at).toLocaleString() : ''}
+                    </Text>
+                  </View>
+                </Card>
+              ))
+            )}
+          </View>
+        )}
+
+        {activeTab === 'followups' && (
+          <View>
+            <TouchableOpacity
+              style={styles.addNoteButton}
+              onPress={() => setShowFollowUpModal(true)}
+            >
+              <Icon name="plus" size={18} color="#fff" />
+              <Text style={styles.addNoteButtonText}>Schedule Follow-Up</Text>
+            </TouchableOpacity>
+            {followups.length === 0 ? (
+              <Text style={styles.emptyText}>No follow-ups scheduled yet.</Text>
+            ) : (
+              followups.map((item: any, idx: number) => (
+                <Card key={idx} style={styles.noteCard}>
+                  <View style={styles.followupHeader}>
+                    <View style={styles.followupDateRow}>
+                      <Icon name="calendar" size={14} color={colors.primary} />
+                      <Text style={styles.followupDate}>
+                        {item.followup_date || item.scheduled_date || 'Date not set'}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.priorityBadge,
+                        item.priority === 'high'
+                          ? styles.priorityHigh
+                          : item.priority === 'low'
+                          ? styles.priorityLow
+                          : styles.priorityMedium,
+                      ]}
+                    >
+                      <Text style={styles.priorityText}>
+                        {(item.priority || 'medium').toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                  {item.remarks ? <Text style={styles.noteText}>{item.remarks}</Text> : null}
                   <Text style={styles.noteDate}>
-                    {note.created_at ? new Date(note.created_at).toLocaleString() : ''}
+                    Scheduled on: {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'Recent'}
                   </Text>
                 </Card>
               ))
@@ -487,10 +622,10 @@ export default function CustomerDetailsScreen() {
       <Modal visible={showNoteModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add Note</Text>
+            <Text style={styles.modalTitle}>Add Customer Note</Text>
             <TextInput
               style={styles.modalInput}
-              placeholder="Enter your note..."
+              placeholder="Enter details, feedback, or client discussion..."
               placeholderTextColor={colors.textLight}
               value={noteText}
               onChangeText={setNoteText}
@@ -529,19 +664,46 @@ export default function CustomerDetailsScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Schedule Follow-Up</Text>
+            <Text style={styles.inputLabel}>Date (YYYY-MM-DD):</Text>
             <TextInput
               style={styles.modalInput}
-              placeholder="Follow-up date (YYYY-MM-DD)"
+              placeholder="e.g. 2026-10-25"
               placeholderTextColor={colors.textLight}
               value={followUpDate}
               onChangeText={setFollowUpDate}
             />
+
+            <Text style={[styles.inputLabel, { marginTop: spacing.sm }]}>Priority:</Text>
+            <View style={styles.prioritySelector}>
+              {(['low', 'medium', 'high'] as const).map((p) => (
+                <TouchableOpacity
+                  key={p}
+                  style={[
+                    styles.priorityChoice,
+                    followUpPriority === p && styles.priorityChoiceActive,
+                  ]}
+                  onPress={() => setFollowUpPriority(p)}
+                >
+                  <Text
+                    style={[
+                      styles.priorityChoiceText,
+                      followUpPriority === p && styles.priorityChoiceTextActive,
+                    ]}
+                  >
+                    {p.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[styles.inputLabel, { marginTop: spacing.sm }]}>Remarks / Discussion:</Text>
             <TextInput
-              style={[styles.modalInput, { marginTop: spacing.md }]}
-              placeholder="Remarks (optional)"
+              style={[styles.modalInput, { minHeight: 70 }]}
+              placeholder="Notes on what to follow up regarding..."
               placeholderTextColor={colors.textLight}
               value={followUpRemark}
               onChangeText={setFollowUpRemark}
+              multiline
             />
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -570,17 +732,79 @@ export default function CustomerDetailsScreen() {
         </View>
       </Modal>
 
+      {/* Update Pipeline Status Modal */}
+      <Modal visible={showStatusModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Update Pipeline Status</Text>
+            <Text style={styles.modalSubtitle}>
+              Select the current pipeline lifecycle stage for this customer.
+            </Text>
+
+            <View style={styles.statusOptions}>
+              {[
+                { key: 'new', label: 'New Lead' },
+                { key: 'contacted', label: 'Contacted' },
+                { key: 'interested', label: 'Interested' },
+                { key: 'document_pending', label: 'Doc Collection' },
+                { key: 'in_progress', label: 'In Progress' },
+                { key: 'converted', label: 'Converted' },
+                { key: 'rejected', label: 'Lost / Rejected' },
+              ].map((opt) => (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[
+                    styles.statusOptionChip,
+                    pipelineStatus === opt.key && styles.statusOptionChipActive,
+                  ]}
+                  onPress={() => handleUpdateStatus(opt.key)}
+                >
+                  <Text
+                    style={[
+                      styles.statusOptionText,
+                      pipelineStatus === opt.key && styles.statusOptionTextActive,
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[styles.inputLabel, { marginTop: spacing.md }]}>
+              Reason / Comment (Optional):
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="e.g. Needs high limit card, submitted salary slips"
+              placeholderTextColor={colors.textLight}
+              value={statusReason}
+              onChangeText={setStatusReason}
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => setShowStatusModal(false)}
+              >
+                <Text style={styles.modalButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Merge Customers Modal */}
       <Modal visible={showMergeModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Merge Customer</Text>
+            <Text style={styles.modalTitle}>Merge Duplicate Customer</Text>
             <Text style={styles.modalSubtitle}>
-              Enter the customer ID to merge into this customer profile. The source customer will be merged into this profile.
+              Consolidate duplicate records. Enter the UUID of the duplicate customer record to merge into this master profile.
             </Text>
             <TextInput
               style={styles.modalInput}
-              placeholder="Customer ID to merge"
+              placeholder="Enter Duplicate Customer UUID"
               placeholderTextColor={colors.textLight}
               value={mergeCustomerId}
               onChangeText={setMergeCustomerId}
@@ -862,5 +1086,111 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.bold,
     color: colors.text,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.xs,
+  },
+  metaAuthor: {
+    fontSize: typography.sizes.xs - 1,
+    color: colors.primary,
+    fontWeight: typography.weights.semibold,
+  },
+  followupHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  followupDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  followupDate: {
+    fontSize: typography.sizes.xs,
+    color: colors.text,
+    fontWeight: typography.weights.bold,
+    marginLeft: 4,
+  },
+  priorityBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  priorityHigh: {
+    backgroundColor: '#fee2e2',
+  },
+  priorityMedium: {
+    backgroundColor: '#fef3c7',
+  },
+  priorityLow: {
+    backgroundColor: '#e0f2fe',
+  },
+  priorityText: {
+    fontSize: typography.sizes.xs - 2,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+  },
+  inputLabel: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
+    color: colors.textLight,
+    marginBottom: 4,
+  },
+  prioritySelector: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  priorityChoice: {
+    flex: 1,
+    paddingVertical: spacing.xs,
+    alignItems: 'center',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.bg,
+  },
+  priorityChoiceActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary + '15',
+  },
+  priorityChoiceText: {
+    fontSize: typography.sizes.xs - 1,
+    color: colors.textLight,
+    fontWeight: typography.weights.semibold,
+  },
+  priorityChoiceTextActive: {
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
+  },
+  statusOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  statusOptionChip: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.bg,
+  },
+  statusOptionChipActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary + '20',
+  },
+  statusOptionText: {
+    fontSize: typography.sizes.xs,
+    color: colors.textLight,
+    fontWeight: typography.weights.medium,
+  },
+  statusOptionTextActive: {
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
   },
 });

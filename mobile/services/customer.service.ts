@@ -67,11 +67,18 @@ export const addCustomerNote = async (customerId: string, note: string) => {
  * Add a follow-up to a customer
  */
 export const addCustomerFollowUp = async (customerId: string, followUpData: {
-  follow_up_date: string;
+  follow_up_date?: string;
+  followup_date?: string;
   remarks?: string;
+  priority?: string;
 }) => {
   try {
-    const res = await apiClient.post(`/customers/${customerId}/followups`, followUpData);
+    const payload = {
+      followup_date: followUpData.followup_date || followUpData.follow_up_date,
+      remarks: followUpData.remarks || '',
+      priority: followUpData.priority || 'medium',
+    };
+    const res = await apiClient.post(`/customers/${customerId}/followups`, payload);
     return res.data;
   } catch (err: any) {
     throw err.response?.data || { success: false, message: 'Failed to schedule follow-up' };
@@ -79,16 +86,28 @@ export const addCustomerFollowUp = async (customerId: string, followUpData: {
 };
 
 /**
- * Merge two customers
+ * Merge two customers (primary retains all records, duplicate is merged into primary)
  */
-export const mergeCustomers = async (sourceId: string, targetId: string) => {
+export const mergeCustomers = async (primaryId: string, duplicateId: string) => {
   try {
     const res = await apiClient.post('/customers/merge', {
-      source_id: sourceId,
-      target_id: targetId,
+      primary_id: primaryId,
+      duplicate_id: duplicateId,
     });
     return res.data;
   } catch (err: any) {
     throw err.response?.data || { success: false, message: 'Failed to merge customers' };
+  }
+};
+
+/**
+ * Update Customer Pipeline Status
+ */
+export const updateCustomerStatus = async (customerId: string, status: string, reason?: string) => {
+  try {
+    const res = await apiClient.patch(`/customers/${customerId}/status`, { status, reason });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to update customer status' };
   }
 };
