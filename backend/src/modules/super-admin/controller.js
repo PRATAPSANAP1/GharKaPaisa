@@ -516,39 +516,56 @@ const listAdmins = async (req, res, next) => {
   }
 };
 
+let _adminSchemaReady = null;
+const ensureAdminSchemaOnce = () => {
+  if (!_adminSchemaReady) {
+    _adminSchemaReady = (async () => {
+      try {
+        const { ensureAccountStatusSchema } = require('./accountStatus.service');
+        await ensureAccountStatusSchema();
+      } catch (scErr) {
+        // Ignore if already loaded or in test environment
+      }
+      await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'HR'`).catch(() => {});
+      await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'EMPLOYEE'`).catch(() => {});
+      await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'SUPER_ADMIN'`).catch(() => {});
+      await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'PARTNER'`).catch(() => {});
+      await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'ADMIN'`).catch(() => {});
+      await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'KYC_OPERATOR'`).catch(() => {});
+      await query(`ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'inactive'`).catch(() => {});
+      await query(`ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'suspended'`).catch(() => {});
+      await query(`ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'blocked'`).catch(() => {});
+      await query(`ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'pending_verification'`).catch(() => {});
+      await query(`ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'rejected'`).catch(() => {});
+      await query(`ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'active'`).catch(() => {});
+      await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS has_loc_eoc BOOLEAN DEFAULT FALSE`).catch(() => {});
+      await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(() => {});
+      await query(`ALTER TABLE admin_bank_assignments ADD COLUMN IF NOT EXISTS category VARCHAR(50) NOT NULL DEFAULT 'credit_card'`).catch(() => {});
+      await query(`ALTER TABLE admin_bank_assignments ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(() => {});
+    })().catch(() => { _adminSchemaReady = null; });
+  }
+  return _adminSchemaReady;
+};
+
 const updateAdmin = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { fullName, email, mobile, designation, role, status, password, bank_ids, bankIds } = req.body;
+    let { fullName, email, mobile, designation, role, status, password, bank_ids, bankIds } = req.body || {};
+    const onlyStr = (v) => (typeof v === 'string' ? v : undefined);
+    fullName = onlyStr(fullName);
+    email = onlyStr(email);
+    mobile = onlyStr(mobile);
+    designation = onlyStr(designation);
+    role = onlyStr(role);
+    status = onlyStr(status);
+    password = onlyStr(password);
 
     const { rows: [existing] } = await query(`SELECT id, role, designation, full_name, email, mobile, employee_id FROM users WHERE id::text = $1`, [id]);
     if (!existing) {
       return notFound(res, 'Administrator user not found.');
     }
 
-    // Ensure schema & enums are present idempotently
-    try {
-      const { ensureAccountStatusSchema } = require('./accountStatus.service');
-      await ensureAccountStatusSchema();
-    } catch (scErr) {
-      // Ignore if already loaded or in test environment
-    }
-    await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'HR'`).catch(() => {});
-    await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'EMPLOYEE'`).catch(() => {});
-    await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'SUPER_ADMIN'`).catch(() => {});
-    await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'PARTNER'`).catch(() => {});
-    await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'ADMIN'`).catch(() => {});
-    await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'KYC_OPERATOR'`).catch(() => {});
-    await query(`ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'inactive'`).catch(() => {});
-    await query(`ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'suspended'`).catch(() => {});
-    await query(`ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'blocked'`).catch(() => {});
-    await query(`ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'pending_verification'`).catch(() => {});
-    await query(`ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'rejected'`).catch(() => {});
-    await query(`ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'active'`).catch(() => {});
-    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS has_loc_eoc BOOLEAN DEFAULT FALSE`).catch(() => {});
-    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(() => {});
-    await query(`ALTER TABLE admin_bank_assignments ADD COLUMN IF NOT EXISTS category VARCHAR(50) NOT NULL DEFAULT 'credit_card'`).catch(() => {});
-    await query(`ALTER TABLE admin_bank_assignments ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(() => {});
+    await ensureAdminSchemaOnce();
 
     // Check duplicate email / mobile
     if (email !== undefined && email && email.trim()) {
@@ -756,10 +773,13 @@ const updateAdmin = async (req, res, next) => {
       message: err.message,
       code: err?.code,
       detail: err?.detail,
+      constraint: err?.constraint,
       adminId: req.params?.id,
       stack: err.stack
     });
-    return error(res, err.message || 'Failed to update administrator user', err.statusCode || 500);
+    const pgHttpStatus = { '22P02': 400, '23502': 400, '23503': 400, '23514': 400, '23505': 409 };
+    const httpStatus = err.statusCode || pgHttpStatus[err?.code] || 500;
+    return error(res, err.message || 'Failed to update administrator user', httpStatus);
   }
 };
 

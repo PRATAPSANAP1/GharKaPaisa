@@ -96,8 +96,9 @@ const syncUser = async (req, res, next) => {
 
     next();
   } catch (err) {
-    logger.error('syncUser middleware error:', err.message);
-    return unauthorized(res, 'Failed to synchronize user profile');
+    // A DB/infra failure is not an authentication failure. Returning 401 made the frontend log users out.
+    logger.error('syncUser middleware error:', { message: err.message, code: err?.code });
+    return next(err);
   }
 };
 

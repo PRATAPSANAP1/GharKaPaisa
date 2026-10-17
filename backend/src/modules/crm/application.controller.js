@@ -2113,6 +2113,7 @@ const listApplications = async (req, res, next) => {
           (to_jsonb(a)->>'card_approval_stage') as card_approval_stage,
           (to_jsonb(a)->>'digital_card_issued') as digital_card_issued,
           COALESCE(NULLIF(a.appcode_status, ''), NULLIF(pad.appcode_status, '')) as appcode_status,
+          COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(to_jsonb(pad)->>'dispatch_status', '')) as dispatch_status,
           COALESCE(NULLIF(to_jsonb(a)->>'soft_approval_stage', ''), NULLIF(to_jsonb(pad)->>'soft_approval_stage', ''), NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, '')) as soft_approval_stage,
           COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, '')) as soft_approval_status,
           COALESCE(NULLIF(a.iqa_stage, ''), NULLIF(pad.iqa_stage, '')) as iqa_stage,
