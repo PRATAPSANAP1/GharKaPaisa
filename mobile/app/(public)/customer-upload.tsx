@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 import { router, useLocalSearchParams } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
@@ -17,17 +19,67 @@ import { Icon } from '../../components/Icon';
 import { Button } from '../../components/Button';
 import { uploadCustomerDocument } from '../../services/application.service';
 
+interface PickedFile {
+  uri: string;
+  name: string;
+  size: number;
+  type: string;
+}
+
+// Helper function to format file size
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+};
+
 export default function CustomerUploadScreen() {
   const params = useLocalSearchParams<{ token?: string }>();
   const [tokenInput, setTokenInput] = useState(params.token || '');
   const [docType, setDocType] = useState('PAN_CARD');
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<PickedFile | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadedDocs, setUploadedDocs] = useState<string[]>([]);
 
-  const handleSimulatePick = () => {
-    // Pick photo / document
-    setSelectedFile(`doc_${docType.toLowerCase()}_${Date.now()}.pdf`);
+  const handlePickFile = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          'application/pdf',
+          'image/jpeg',
+          'image/png',
+          'image/jpg',
+        ],
+        copyToCacheDirectory: true,
+      });
+
+      // Get file info
+      const fileInfo = await FileSystem.getInfoAsync(result.uri);
+      const fileSize = fileInfo.size ? fileInfo.size : 0;
+
+      // Validate file size (10MB limit)
+      const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+      if (fileSize > MAX_SIZE) {
+        Alert.alert('File Too Large', 'Maximum file size is 10MB. Please select a smaller file.');
+        return;
+      }
+
+      setSelectedFile({
+        uri: result.uri,
+        name: result.name,
+        size: fileSize,
+        type: result.mimeType || 'application/octet-stream',
+      });
+    } catch (err: any) {
+      if (DocumentPicker.isCancel(err)) {
+        // User cancelled
+        return;
+      }
+      Alert.alert('Error', 'Failed to pick document. Please try again.');
+      console.error('Document picker error:', err);
+    }
   };
 
   const handleUpload = async () => {
@@ -42,9 +94,17 @@ export default function CustomerUploadScreen() {
 
     setUploading(true);
     try {
+      // Read file as base64 for upload
+      const base64 = await FileSystem.readAsStringAsync(selectedFile.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
       await uploadCustomerDocument(tokenInput.trim(), {
         document_type: docType,
-        file_name: selectedFile,
+        file_name: selectedFile.name,
+        file_data: base64,
+        file_size: selectedFile.size,
+        file_type: selectedFile.type,
         uploaded_at: new Date().toISOString(),
       });
 
@@ -53,6 +113,7 @@ export default function CustomerUploadScreen() {
       Alert.alert('Uploaded', `${docType.replace('_', ' ')} has been uploaded successfully for verification.`);
     } catch (err: any) {
       Alert.alert('Upload Failed', err.message || 'Could not upload document.');
+      console.error('Upload error:', err);
     } finally {
       setUploading(false);
     }
@@ -123,11 +184,16 @@ export default function CustomerUploadScreen() {
         </View>
 
         {/* File Picker Box */}
-        <TouchableOpacity style={styles.pickerBox} onPress={handleSimulatePick}>
+        <TouchableOpacity style={styles.pickerBox} onPress={handlePickFile}>
           <Icon name="upload-cloud" size={32} color={colors.primaryLight} />
           <Text style={styles.pickerTitle}>
-            {selectedFile ? selectedFile : 'Tap to Choose File (PDF, JPG, PNG)'}
+            {selectedFile ? selectedFile.name : 'Tap to Choose File (PDF, JPG, PNG)'}
           </Text>
+          {selectedFile && (
+            <Text style={styles.pickerInfo}>
+              {formatFileSize(selectedFile.size)}
+            </Text>
+          )}
           <Text style={styles.pickerSubtitle}>Max file size: 10MB • Clear & Readable scan</Text>
         </TouchableOpacity>
 
@@ -247,6 +313,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginTop: spacing.xs,
     textAlign: 'center',
+  },
+  pickerInfo: {
+    fontSize: 11,
+    color: colors.textLight,
+    marginTop: 2,
   },
   pickerSubtitle: {
     fontSize: 11,

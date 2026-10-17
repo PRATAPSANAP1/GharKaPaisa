@@ -255,19 +255,29 @@ if (process.env.NODE_ENV !== 'production' && process.env.ENABLE_TEST_EMAIL_ROUTE
   app.use('/api/test-email', testEmailRoutes);
 }
 
-// ── Error Handling ─────────────────────────────────────────────
-app.use((req, res, next) => {
-  if (req.path && (req.path.startsWith('/socket.io') || req.originalUrl.includes('/socket.io'))) {
-    return;
+// ── Socket.IO Engine Route Delegation ──────────────────────────
+const handleSocketIoRequest = (req, res) => {
+  if (io && io.engine) {
+    io.engine.handleRequest(req, res);
+  } else {
+    res.status(503).json({ success: false, message: 'Socket server initializing' });
   }
-  next();
+};
+
+app.use('/socket.io', handleSocketIoRequest);
+app.use('/api/v1/socket.io', (req, res) => {
+  req.url = req.url.replace(/^\/api\/v1\/socket\.io/, '/socket.io');
+  handleSocketIoRequest(req, res);
 });
+
+// ── Error Handling ─────────────────────────────────────────────
 app.use(notFoundHandler);
 app.use(errorHandler);
 
 // ── Start Server ───────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 let server;
+let io;
 
 const startServer = async () => {
   try {
@@ -459,7 +469,7 @@ const startServer = async () => {
           'http://localhost:4173'
         ];
 
-    const io = new Server(server, {
+    io = new Server(server, {
       path: '/socket.io',
       transports: ['websocket', 'polling'],
       cors: {
@@ -474,6 +484,17 @@ const startServer = async () => {
         credentials: true
       }
     });
+
+    // Also support WebSocket upgrades on /api/v1/socket.io
+    server.on('upgrade', (req, socket, head) => {
+      if (req.url && req.url.startsWith('/api/v1/socket.io')) {
+        req.url = req.url.replace('/api/v1/socket.io', '/socket.io');
+        if (io && io.engine) {
+          io.engine.handleUpgrade(req, socket, head);
+        }
+      }
+    });
+
     messengerSocket.init(io);
 
     server.listen(PORT, () => {

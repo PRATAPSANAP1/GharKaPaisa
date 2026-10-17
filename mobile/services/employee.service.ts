@@ -254,3 +254,45 @@ export const submitEmployeeKYC = async (formData: any) => {
     throw err.response?.data || { success: false, message: 'Failed to submit employee KYC' };
   }
 };
+
+/**
+ * Submit onboarding step data
+ */
+export const submitOnboardingStep = async (stepData: {
+  step: string;
+  data: any;
+}) => {
+  try {
+    const res = await apiClient.post('/employee/onboarding/step', stepData);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to submit onboarding step' };
+  }
+};
+
+/**
+ * Accept terms and conditions
+ */
+export const acceptTermsAndConditions = async () => {
+  try {
+    const res = await apiClient.post('/employee/terms/accept');
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to accept terms' };
+  }
+};
+
+/**
+ * Submit employee verification data
+ */
+export const submitEmployeeVerification = async (verificationData: {
+  face_image?: string;
+  video_url?: string;
+}) => {
+  try {
+    const res = await apiClient.post('/employee/verification', verificationData);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to submit verification' };
+  }
+};

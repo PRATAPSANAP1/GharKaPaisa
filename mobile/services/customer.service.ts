@@ -50,3 +50,45 @@ export const createCustomer = async (payload: CreateCustomerPayload) => {
     throw err.response?.data || { success: false, message: 'Failed to create customer' };
   }
 };
+
+/**
+ * Add a note to a customer
+ */
+export const addCustomerNote = async (customerId: string, note: string) => {
+  try {
+    const res = await apiClient.post(`/customers/${customerId}/notes`, { note });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to add note' };
+  }
+};
+
+/**
+ * Add a follow-up to a customer
+ */
+export const addCustomerFollowUp = async (customerId: string, followUpData: {
+  follow_up_date: string;
+  remarks?: string;
+}) => {
+  try {
+    const res = await apiClient.post(`/customers/${customerId}/followups`, followUpData);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to schedule follow-up' };
+  }
+};
+
+/**
+ * Merge two customers
+ */
+export const mergeCustomers = async (sourceId: string, targetId: string) => {
+  try {
+    const res = await apiClient.post('/customers/merge', {
+      source_id: sourceId,
+      target_id: targetId,
+    });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to merge customers' };
+  }
+};

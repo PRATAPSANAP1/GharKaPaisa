@@ -39,7 +39,7 @@ jobs:
             --region ap-south-1 \
             --document-name "AWS-RunShellScript" \
             --instance-ids "i-07600948e01bb2aa3" \
-            --parameters "commands=[\"sudo -u ubuntu -H bash -c 'cd /home/ubuntu/GharKaPaisa/backend && git fetch origin master && git reset --hard origin/master && npm ci && node --check src/server.js && pm2 reload gharkapaisa-backend && pm2 save'\"]" \
+            --parameters "commands=[\"sudo -u ubuntu -H bash -c 'cd /home/ubuntu/GharKaPaisa/backend && git fetch origin master && git reset --hard origin/master && npm ci && node --check src/server.js && (pm2 restart gharkapaisa-backend --update-env || pm2 reload gharkapaisa-backend || pm2 restart all --update-env) && pm2 save'\"]" \
             --query 'Command.CommandId' \
             --output text)
 

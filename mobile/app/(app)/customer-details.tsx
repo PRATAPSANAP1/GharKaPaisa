@@ -6,15 +6,20 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  TextInput,
+  Modal,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
-import { Card, StatusBadge, LoadingState, ErrorState } from '../../components';
-import { fetchCustomerProfile } from '../../services/customer.service';
+import { Card, StatusBadge, LoadingState, ErrorState, Button } from '../../components';
+import { Icon } from '../../components/Icon';
+import { fetchCustomerProfile, addCustomerNote, addCustomerFollowUp, mergeCustomers } from '../../services/customer.service';
 
-type TabType = 'overview' | 'applications' | 'leads' | 'activity';
+type TabType = 'overview' | 'applications' | 'leads' | 'activity' | 'notes';
 
 const maskPan = (pan?: string) => {
   if (!pan || pan.length < 10) return pan || 'N/A';
@@ -35,6 +40,17 @@ export default function CustomerDetailsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusCode, setStatusCode] = useState<number | null>(null);
+
+  // CRM States
+  const [showNoteModal, setShowNoteModal] = useState(false);
+  const [showFollowUpModal, setShowFollowUpModal] = useState(false);
+  const [showMergeModal, setShowMergeModal] = useState(false);
+  const [noteText, setNoteText] = useState('');
+  const [followUpDate, setFollowUpDate] = useState('');
+  const [followUpRemark, setFollowUpRemark] = useState('');
+  const [mergeCustomerId, setMergeCustomerId] = useState('');
+  const [notes, setNotes] = useState<any[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   const isFetchingRef = useRef(false);
 
@@ -89,6 +105,75 @@ export default function CustomerDetailsScreen() {
     if (id && !isFetchingRef.current) {
       setRefreshing(true);
       loadProfile(id, true);
+    }
+  };
+
+  // CRM Functions
+  const handleAddNote = async () => {
+    if (!noteText.trim()) {
+      Alert.alert('Required', 'Please enter a note');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await addCustomerNote(id, noteText);
+      setNotes([...notes, { note: noteText, created_at: new Date().toISOString() }]);
+      setNoteText('');
+      setShowNoteModal(false);
+      Alert.alert('Success', 'Note added successfully');
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to add note');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleAddFollowUp = async () => {
+    if (!followUpDate.trim()) {
+      Alert.alert('Required', 'Please select a follow-up date');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await addCustomerFollowUp(id, {
+        follow_up_date: followUpDate,
+        remarks: followUpRemark,
+      });
+      setShowFollowUpModal(false);
+      setFollowUpDate('');
+      setFollowUpRemark('');
+      Alert.alert('Success', 'Follow-up scheduled successfully');
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to schedule follow-up');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleMergeCustomers = async () => {
+    if (!mergeCustomerId.trim()) {
+      Alert.alert('Required', 'Please enter the customer ID to merge');
+      return;
+    }
+
+    if (mergeCustomerId === id) {
+      Alert.alert('Invalid', 'Cannot merge customer with themselves');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await mergeCustomers(mergeCustomerId, id);
+      setShowMergeModal(false);
+      setMergeCustomerId('');
+      Alert.alert('Success', 'Customers merged successfully');
+      loadProfile(id); // Reload to see merged data
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to merge customers');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -160,6 +245,15 @@ export default function CustomerDetailsScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
+          style={[styles.tabItem, activeTab === 'notes' && styles.tabItemActive]}
+          onPress={() => setActiveTab('notes')}
+        >
+          <Text style={[styles.tabText, activeTab === 'notes' && styles.tabTextActive]}>
+            Notes ({notes.length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[styles.tabItem, activeTab === 'activity' && styles.tabItemActive]}
           onPress={() => setActiveTab('activity')}
         >
@@ -180,6 +274,31 @@ export default function CustomerDetailsScreen() {
           />
         }
       >
+        {/* CRM Action Buttons */}
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => setShowNoteModal(true)}
+          >
+            <Icon name="message-square" size={20} color={colors.primary} />
+            <Text style={styles.actionButtonText}>Add Note</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => setShowFollowUpModal(true)}
+          >
+            <Icon name="calendar" size={20} color={colors.primary} />
+            <Text style={styles.actionButtonText}>Follow Up</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => setShowMergeModal(true)}
+          >
+            <Icon name="merge" size={20} color={colors.primary} />
+            <Text style={styles.actionButtonText}>Merge</Text>
+          </TouchableOpacity>
+        </View>
+
         {activeTab === 'overview' && (
           <View>
             <Card style={styles.card}>
@@ -338,7 +457,159 @@ export default function CustomerDetailsScreen() {
             )}
           </View>
         )}
+
+        {activeTab === 'notes' && (
+          <View>
+            <TouchableOpacity
+              style={styles.addNoteButton}
+              onPress={() => setShowNoteModal(true)}
+            >
+              <Icon name="plus" size={20} color="#fff" />
+              <Text style={styles.addNoteButtonText}>Add Note</Text>
+            </TouchableOpacity>
+            {notes.length === 0 ? (
+              <Text style={styles.emptyText}>No notes added yet.</Text>
+            ) : (
+              notes.map((note: any, idx: number) => (
+                <Card key={idx} style={styles.noteCard}>
+                  <Text style={styles.noteText}>{note.note}</Text>
+                  <Text style={styles.noteDate}>
+                    {note.created_at ? new Date(note.created_at).toLocaleString() : ''}
+                  </Text>
+                </Card>
+              ))
+            )}
+          </View>
+        )}
       </ScrollView>
+
+      {/* Add Note Modal */}
+      <Modal visible={showNoteModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Add Note</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Enter your note..."
+              placeholderTextColor={colors.textLight}
+              value={noteText}
+              onChangeText={setNoteText}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => {
+                  setShowNoteModal(false);
+                  setNoteText('');
+                }}
+              >
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonConfirm]}
+                onPress={handleAddNote}
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.modalButtonText}>Save Note</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Add Follow-Up Modal */}
+      <Modal visible={showFollowUpModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Schedule Follow-Up</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Follow-up date (YYYY-MM-DD)"
+              placeholderTextColor={colors.textLight}
+              value={followUpDate}
+              onChangeText={setFollowUpDate}
+            />
+            <TextInput
+              style={[styles.modalInput, { marginTop: spacing.md }]}
+              placeholder="Remarks (optional)"
+              placeholderTextColor={colors.textLight}
+              value={followUpRemark}
+              onChangeText={setFollowUpRemark}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => {
+                  setShowFollowUpModal(false);
+                  setFollowUpDate('');
+                  setFollowUpRemark('');
+                }}
+              >
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonConfirm]}
+                onPress={handleAddFollowUp}
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.modalButtonText}>Schedule</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Merge Customers Modal */}
+      <Modal visible={showMergeModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Merge Customer</Text>
+            <Text style={styles.modalSubtitle}>
+              Enter the customer ID to merge into this customer profile. The source customer will be merged into this profile.
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Customer ID to merge"
+              placeholderTextColor={colors.textLight}
+              value={mergeCustomerId}
+              onChangeText={setMergeCustomerId}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => {
+                  setShowMergeModal(false);
+                  setMergeCustomerId('');
+                }}
+              >
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonConfirm]}
+                onPress={handleMergeCustomers}
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.modalButtonText}>Merge</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -484,5 +755,112 @@ const styles = StyleSheet.create({
     color: colors.textLight,
     textAlign: 'center',
     marginVertical: spacing.xl,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.bgSecondary,
+    padding: spacing.sm,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  actionButtonText: {
+    fontSize: typography.sizes.xs,
+    color: colors.primary,
+    fontWeight: typography.weights.semibold,
+    marginLeft: spacing.xs,
+  },
+  addNoteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    padding: spacing.md,
+    borderRadius: 8,
+    marginBottom: spacing.md,
+  },
+  addNoteButtonText: {
+    fontSize: typography.sizes.sm,
+    color: '#fff',
+    fontWeight: typography.weights.bold,
+    marginLeft: spacing.xs,
+  },
+  noteCard: {
+    marginBottom: spacing.sm,
+  },
+  noteText: {
+    fontSize: typography.sizes.xs,
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  noteDate: {
+    fontSize: typography.sizes.xs - 1,
+    color: colors.textLight,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  modalContent: {
+    backgroundColor: colors.bgSecondary,
+    borderRadius: 16,
+    padding: spacing.lg,
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: spacing.md,
+  },
+  modalSubtitle: {
+    fontSize: typography.sizes.xs,
+    color: colors.textLight,
+    marginBottom: spacing.md,
+  },
+  modalInput: {
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: spacing.md,
+    fontSize: typography.sizes.sm,
+    color: colors.text,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  modalButton: {
+    flex: 1,
+    padding: spacing.md,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalButtonCancel: {
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalButtonConfirm: {
+    backgroundColor: colors.primary,
+  },
+  modalButtonText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
   },
 });

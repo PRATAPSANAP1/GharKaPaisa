@@ -9,3 +9,4 @@ export * from './operations/QueueFilterSheet';
 export * from './operations/QueueHeader';
 export * from './operations/OperatorBadge';
 export * from './operations/ActionButton';
+export { Icon } from './Icon';

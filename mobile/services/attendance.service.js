@@ -1,4 +1,4 @@
-import apiClient from '../config/api';
+import apiClient from './api';
 
 /**
  * Fetch Today's Attendance for authenticated employee

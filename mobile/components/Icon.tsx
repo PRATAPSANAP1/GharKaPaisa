@@ -35,7 +35,9 @@ export type IconName =
   | 'dollar-sign'
   | 'briefcase'
   | 'settings'
-  | 'message-square';
+  | 'message-square'
+  | 'merge'
+  | 'plus';
 
 interface IconProps {
   name: IconName | string;
@@ -84,6 +86,8 @@ export const Icon: React.FC<IconProps> = ({ name, size = 16, color = '#000', sty
       case 'briefcase': return '💼';
       case 'settings': return '⚙️';
       case 'message-square': return '💬';
+      case 'merge': return '🔀';
+      case 'plus': return '+';
       default: return '•';
     }
   };
