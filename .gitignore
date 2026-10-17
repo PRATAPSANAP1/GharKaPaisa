@@ -16,6 +16,7 @@ documentation/
 **/docs/
 *.md
 !/README.md
+!/MOBILE_VS_WEBSITE_IMPLEMENTATION_AUDIT.md
 *.docx
 *.pdf
 *.xlsx
