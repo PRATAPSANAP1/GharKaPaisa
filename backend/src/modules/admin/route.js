@@ -53,4 +53,8 @@ router.post('/withdrawal/reject', roleCheck('ADMIN', 'SUPER_ADMIN'), walletCtrl.
 // ── POST /admin/wallet/adjust ────────────────────────────────────────────────
 router.post('/wallet/adjust', roleCheck('ADMIN', 'SUPER_ADMIN'), walletCtrl.adminAdjustWalletController);
 
+// ── Bulk SMS Sub-Router Compatibility ────────────────────────────────────────
+const bulkSmsRoute = require('../bulk-sms/bulk-sms.routes.js');
+router.use('/bulk-sms', bulkSmsRoute);
+
 module.exports = router;

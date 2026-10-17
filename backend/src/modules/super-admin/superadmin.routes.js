@@ -144,4 +144,8 @@ router.post('/upgrade-requests/:id/reject', async (req, res, next) => {
 // Reports
 router.get('/reports/payouts/export', reportCtrl.exportPayoutsReport);
 
+// ── Bulk SMS Sub-Router Compatibility ────────────────────────────────────────
+const bulkSmsRoute = require('../bulk-sms/bulk-sms.routes.js');
+router.use('/bulk-sms', bulkSmsRoute);
+
 module.exports = router;

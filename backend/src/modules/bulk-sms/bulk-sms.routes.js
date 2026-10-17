@@ -31,11 +31,23 @@ router.post('/webhook/dlr', ctrl.handleDeliveryReceipt);
 router.use(jwtAuth);
 router.use(roleCheck('SUPER_ADMIN'));
 
+const handleUploadMiddleware = (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ success: false, message: 'File size exceeds 10MB limit.' });
+      }
+      return res.status(400).json({ success: false, message: err.message || 'File upload error.' });
+    }
+    next();
+  });
+};
+
 // ── Bulk SMS Endpoints ───────────────────────────────────────────────────────
 // Delivery Receipt (Super Admin manual/test trigger)
 router.post('/delivery-receipt', ctrl.handleDeliveryReceipt);
 // Upload & Validation
-router.post('/upload', upload.single('file'), ctrl.uploadRecipients);
+router.post('/upload', handleUploadMiddleware, ctrl.uploadRecipients);
 
 // Statistics
 router.get('/stats', ctrl.getStats);
