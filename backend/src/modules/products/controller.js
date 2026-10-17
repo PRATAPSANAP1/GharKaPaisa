@@ -263,9 +263,24 @@ const getProduct = async (req, res, next) => {
   }
 };
 
+let _productColumnsEnsured = false;
+const ensureProductColumns = async () => {
+  if (_productColumnsEnsured) return;
+  try {
+    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS joining_fee VARCHAR(255)`);
+    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS processing_fee VARCHAR(255)`);
+    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS operation_head_id UUID REFERENCES users(id) ON DELETE SET NULL`);
+    _productColumnsEnsured = true;
+  } catch (e) {
+    // Ignore if DB in restricted mode
+  }
+};
+
 // POST /products (Admin/Super Admin)
 const createProduct = async (req, res, next) => {
   try {
+    await ensureProductColumns();
+    const body = req.body || {};
     const { 
       bank_id, name, category, sub_category, description, commission_type, commission_value, 
       min_age, max_age, min_income, display_order, annual_fee, time_period,
@@ -275,11 +290,11 @@ const createProduct = async (req, res, next) => {
       seo_description, seo_keywords, priority, status, is_active,
       card_network, card_variant, best_for, welcome_benefits, is_lifetime_free, badge, is_recommended, is_trending,
       public_url, partner_url, joining_fee, processing_fee
-    } = req.body;
-    let image_url = req.body.image_url;
+    } = body;
+    let image_url = body.image_url;
 
     // Handle features and eligibility parsing
-    let parsedFeatures = req.body.features;
+    let parsedFeatures = body.features;
     if (typeof parsedFeatures === 'string') {
       try { parsedFeatures = JSON.parse(parsedFeatures); } catch (e) {
         return error(res, 'Features must be a valid JSON array', 400);
@@ -367,7 +382,9 @@ const createProduct = async (req, res, next) => {
 // PUT /products/:id (Admin)
 const updateProduct = async (req, res, next) => {
   try {
+    await ensureProductColumns();
     const { id } = req.params;
+    const body = req.body || {};
     const { 
       bank_id, category, min_age, max_age, min_income, operation_head_id,
       name, description, commission_type, commission_value, is_active, display_order, 
@@ -378,20 +395,20 @@ const updateProduct = async (req, res, next) => {
       public_url, partner_url, sub_category,
       card_network, card_variant, best_for, welcome_benefits, badge,
       joining_fee, processing_fee
-    } = req.body;
-    let image_url = req.body.image_url;
+    } = body;
+    let image_url = body.image_url;
 
     const { rows: [existing] } = await query(`SELECT * FROM products WHERE id = $1`, [id]);
     if (!existing) return notFound(res, 'Product not found');
 
-    let parsedFeatures = req.body.features;
+    let parsedFeatures = body.features;
     if (typeof parsedFeatures === 'string') {
       try { parsedFeatures = JSON.parse(parsedFeatures); } catch (e) {
         return error(res, 'Features must be a valid JSON array', 400);
       }
     }
 
-    let parsedEligibility = req.body.eligibility;
+    let parsedEligibility = body.eligibility;
     if (typeof parsedEligibility === 'string') {
       try { parsedEligibility = JSON.parse(parsedEligibility); } catch (e) {
         return error(res, 'Eligibility must be a valid JSON object', 400);

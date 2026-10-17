@@ -77,78 +77,65 @@ const safeTxQuery = async (client, text, params) => {
 
 const insertBankAssignment = async (adminId, bankId, category, createdById, client = null) => {
   const cat = normalizeAssignmentCategory(category);
-  const validCreatedBy = isUuid(createdById) ? createdById : null;
-  const qFn = client ? (q, p) => client.query(q, p) : (q, p) => query(q, p);
+  const qFn = (q, p) => safeTxQuery(client, q, p);
+
+  // Validate actor / creator exists in users table to prevent FK 23503 violation
+  let validCreatedBy = null;
+  if (isUuid(createdById)) {
+    const userCheck = await qFn(`SELECT id FROM users WHERE id::text = $1 LIMIT 1`, [createdById]);
+    if (userCheck.rows && userCheck.rows.length > 0) {
+      validCreatedBy = createdById;
+    }
+  }
 
   // 0. Ensure bank exists in banks table before attempting assignment
-  const { rows: bankCheck } = await qFn(`SELECT id FROM banks WHERE id::text = $1 LIMIT 1`, [bankId]).catch(() => ({ rows: [] }));
-  if (!bankCheck || bankCheck.length === 0) {
+  const bankCheck = await qFn(`SELECT id FROM banks WHERE id::text = $1 LIMIT 1`, [bankId]);
+  if (!bankCheck.rows || bankCheck.rows.length === 0) {
     logger.warn(`Skipping bank assignment: bank id ${bankId} does not exist in banks table.`);
     return null;
   }
 
   // 1. Check if the assignment already exists
-  let checkRes = { rows: [] };
-  try {
-    checkRes = await qFn(
-      `SELECT id FROM admin_bank_assignments WHERE admin_id = $1 AND bank_id = $2 AND category = $3 LIMIT 1`,
-      [adminId, bankId, cat]
-    );
-  } catch (chkErr) {
+  let checkRes = await qFn(
+    `SELECT id FROM admin_bank_assignments WHERE admin_id = $1 AND bank_id = $2 AND COALESCE(category, 'credit_card') = $3 LIMIT 1`,
+    [adminId, bankId, cat]
+  );
+  if (!checkRes.rows || checkRes.rows.length === 0) {
     checkRes = await qFn(
       `SELECT id FROM admin_bank_assignments WHERE admin_id = $1 AND bank_id = $2 LIMIT 1`,
       [adminId, bankId]
-    ).catch(() => ({ rows: [] }));
+    );
   }
 
   if (checkRes.rows && checkRes.rows.length > 0) {
-    try {
-      return await qFn(
-        `UPDATE admin_bank_assignments SET is_active = TRUE, created_by = COALESCE($2, created_by) WHERE id = $1`,
-        [checkRes.rows[0].id, validCreatedBy]
-      );
-    } catch (updErr) {
-      return await qFn(
-        `UPDATE admin_bank_assignments SET is_active = TRUE WHERE id = $1`,
-        [checkRes.rows[0].id]
-      ).catch(() => {});
-    }
+    return await qFn(
+      `UPDATE admin_bank_assignments SET is_active = TRUE, category = $2, created_by = COALESCE($3, created_by) WHERE id = $1`,
+      [checkRes.rows[0].id, cat, validCreatedBy]
+    );
   }
 
-  // 2. Insert new assignment safely with ON CONFLICT DO NOTHING
+  // 2. Insert new assignment safely with WHERE NOT EXISTS (constraint-agnostic, avoids ON CONFLICT mismatch)
   try {
     return await qFn(
       `INSERT INTO admin_bank_assignments (admin_id, bank_id, category, is_active, created_by)
-       VALUES ($1, $2, $3, TRUE, $4)
-       ON CONFLICT DO NOTHING`,
+       SELECT $1, $2, $3, TRUE, $4
+       WHERE NOT EXISTS (
+         SELECT 1 FROM admin_bank_assignments
+         WHERE admin_id = $1 AND bank_id = $2 AND COALESCE(category, 'credit_card') = $3
+       )`,
       [adminId, bankId, cat, validCreatedBy]
     );
   } catch (insErr) {
-    // If foreign key constraint failed on created_by (e.g. actorId not in users table), retry with NULL
-    if (insErr.code === '23503' && validCreatedBy) {
-      try {
-        return await qFn(
-          `INSERT INTO admin_bank_assignments (admin_id, bank_id, category, is_active, created_by)
-           VALUES ($1, $2, $3, TRUE, NULL)
-           ON CONFLICT DO NOTHING`,
-          [adminId, bankId, cat]
-        );
-      } catch (retryErr) {
-        return await qFn(
-          `INSERT INTO admin_bank_assignments (admin_id, bank_id)
-           VALUES ($1, $2)
-           ON CONFLICT DO NOTHING`,
-          [adminId, bankId]
-        ).catch(() => {});
-      }
-    }
     // Fallback if category or other columns are missing
     return await qFn(
       `INSERT INTO admin_bank_assignments (admin_id, bank_id)
-       VALUES ($1, $2)
-       ON CONFLICT DO NOTHING`,
+       SELECT $1, $2
+       WHERE NOT EXISTS (
+         SELECT 1 FROM admin_bank_assignments
+         WHERE admin_id = $1 AND bank_id = $2
+       )`,
       [adminId, bankId]
-    ).catch(() => {});
+    );
   }
 };
 
@@ -829,6 +816,8 @@ const updateAdminBanks = async (req, res, next) => {
     console.log('[BANK ASSIGNMENT] BODY', req.body);
 
     const { id } = req.params;
+
+    await ensureAdminSchemaOnce();
 
     const { rows: [userRec] } = await client.query(`SELECT id, role, designation FROM users WHERE id::text = $1`, [id]);
     if (!userRec) {

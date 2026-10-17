@@ -296,6 +296,8 @@ const startServer = async () => {
       await db.query(`ALTER TABLE admin_bank_assignments ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
       await db.query(`ALTER TABLE banks ADD COLUMN IF NOT EXISTS operation_head_id UUID REFERENCES users(id) ON DELETE SET NULL`);
       await db.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS operation_head_id UUID REFERENCES users(id) ON DELETE SET NULL`);
+      await db.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS joining_fee VARCHAR(255)`);
+      await db.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS processing_fee VARCHAR(255)`);
       await db.query(`
         DO $$
         BEGIN

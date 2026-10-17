@@ -11,6 +11,7 @@ const productCtrl = require('../products/controller.js');
 const reportCtrl = require('../reports/controller.js');
 const workingHoursCtrl = require('./workingHours.controller.js');
 const accountCtrl = require('./accountStatus.controller.js');
+const { upload } = require('../../services/aws/s3.service.js');
 
 // Require authentication and super_admin authorization globally for this router
 router.use(jwtAuth);
@@ -106,10 +107,10 @@ router.post('/notification/broadcast', notifCtrl.broadcastNotification);
 router.get('/notification/reports', notifCtrl.getNotificationReports);
 
 // Product Management System (Task 7)
-router.post('/products', productCtrl.createProduct);
+router.post('/products', upload.single('image'), productCtrl.createProduct);
 router.put('/products/status', productCtrl.updateStatus);
 router.put('/products/featured', productCtrl.updateFeatured);
-router.put('/products/:id', productCtrl.updateProduct);
+router.put('/products/:id', upload.single('image'), productCtrl.updateProduct);
 router.delete('/products/:id', productCtrl.deleteProduct);
 
 // CRM Bulk Export
