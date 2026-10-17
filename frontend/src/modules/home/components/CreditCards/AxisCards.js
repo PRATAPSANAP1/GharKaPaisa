@@ -16,7 +16,8 @@ export const AxisCards = {
         { name: "Axis Bank Privilege Credit Card", desc: "Double activation benefits and milestone rewards" },
         { name: "Axis Bank Vistara Credit Card", desc: "Complimentary economy flight tickets" },
         { name: "Axis Bank Vistara Infinite Credit Card", desc: "Complimentary business class ticket and gold membership" },
-        { name: "Axis Bank Aura Credit Card", desc: "Health and wellness focused credit card" }
+        { name: "Axis Bank Aura Credit Card", desc: "Health and wellness focused credit card" },
+        { name: "Indigo Axis Bank Credit Card", desc: "Up to 5% 6E Rewards on IndiGo, ₹1,500 flight voucher and dining perks" }
       ]
     }
   ]

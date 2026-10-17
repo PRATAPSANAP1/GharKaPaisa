@@ -1475,6 +1475,30 @@ const ALL_CARDS = {
       seo_description: 'Apply for Axis FD Credit Card. Secured credit card issued instantly against Axis Fixed Deposit with no income verification.',
       seo_keywords: 'axis fd credit card, apply axis credit card',
       min_age: 18, max_age: 65, min_income: 0, display_order: 13, priority: 13
+    },
+    {
+      name: 'Indigo Axis Bank Credit Card',
+      category: 'credit_card',
+      sub_category: 'Co-Branded Cards',
+      short_description: 'Welcome flight ticket voucher worth ₹1,500, up to 5% 6E Rewards on IndiGo, and dining perks.',
+      description: 'Indigo Axis Bank Credit Card provides complimentary flight ticket voucher, accelerated 6E Rewards on IndiGo bookings, dining discounts, and fuel surcharge waivers. Designed to offer max savings and travel convenience.',
+      annual_fee: '₹700 + GST',
+      features: [
+        'Complimentary IndiGo flight ticket voucher worth ₹1,500 on card activation',
+        '5% 6E Rewards on IndiGo flight, meal, and seat bookings',
+        '3% 6E Rewards on dining, grocery, and entertainment spends',
+        '2% 6E Rewards on all other retail spends',
+        '1% fuel surcharge waiver across all fuel stations in India'
+      ],
+      benefits: 'Complimentary IndiGo flight voucher worth ₹1,500, up to 5% 6E Rewards on IndiGo spends, and 1% fuel surcharge waiver.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
+      fees_charges: 'Joining Fee: ₹700 + GST | Annual Fee: ₹700 + GST | Interest Rate: 3.49% p.m.',
+      seo_title: 'Indigo Axis Bank Credit Card – Apply Online | GharKaPaisa',
+      seo_description: 'Apply for Indigo Axis Bank Credit Card. Welcome flight ticket voucher worth ₹1,500, up to 5% 6E Rewards on IndiGo flights, and dining perks.',
+      seo_keywords: 'indigo axis bank credit card, 6e rewards axis credit card, apply axis credit card',
+      min_age: 21, max_age: 65, min_income: 25000, display_order: 14, priority: 14
     }
   ],
 

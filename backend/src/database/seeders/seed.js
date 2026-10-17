@@ -54,6 +54,7 @@ const seed = async () => {
     { bank: 'SBI', name: 'SBI SimplyCLICK', category: 'credit_card', commission: 950, features: ['10x rewards online','Amazon voucher','Fuel surcharge waiver'] },
     { bank: 'ICICI', name: 'ICICI Amazon Pay', category: 'credit_card', commission: 1100, features: ['5% Amazon cashback','1% everywhere','No annual fee'] },
     { bank: 'AXIS', name: 'Axis Ace Credit Card', category: 'credit_card', commission: 1050, features: ['5% on bill payments','2% on food delivery','Free Google Pay'] },
+    { bank: 'AXIS', name: 'Indigo Axis Bank Credit Card', category: 'credit_card', commission: 1200, features: ['Flight voucher worth ₹1,500', '5% 6E Rewards on IndiGo', '1% fuel waiver'] },
     { bank: 'KOTAK', name: 'Kotak 811 #DreamDifferent', category: 'credit_card', commission: 1000, features: ['Lifetime free','Railway lounge','Online rewards'] },
     { bank: 'RBL', name: 'RBL Shoprite', category: 'credit_card', commission: 900, features: ['Grocery rewards','Movie discounts','Fuel waiver'] },
     { bank: 'AU', name: 'AU LIT Credit Card', category: 'credit_card', commission: 850, features: ['Customizable benefits','Health & wellness','Travel perks'] },
