@@ -35,20 +35,61 @@ jobs:
         run: |
           set -euo pipefail
 
+          echo "Discovering backend deployment target instances..."
+          TG_ARN="arn:aws:elasticloadbalancing:ap-south-1:537124932736:targetgroup/gkp-backend-tg/065557a60e0d51af"
+          
+          TG_INSTANCES=$(aws elbv2 describe-target-health \
+            --region ap-south-1 \
+            --target-group-arn "$TG_ARN" \
+            --query "TargetHealthDescriptions[*].Target.Id" \
+            --output text 2>/dev/null || echo "")
+
+          ASG_INSTANCES=$(aws autoscaling describe-auto-scaling-groups \
+            --region ap-south-1 \
+            --auto-scaling-group-names "gharkapaisa-asg" \
+            --query "AutoScalingGroups[0].Instances[*].InstanceId" \
+            --output text 2>/dev/null || echo "")
+
+          ONLINE_SSM=$(aws ssm describe-instance-information \
+            --region ap-south-1 \
+            --query "InstanceInformationList[?PingStatus=='Online'].InstanceId" \
+            --output text 2>/dev/null || echo "")
+
+          ALL_CANDIDATES=$(echo "$TG_INSTANCES $ASG_INSTANCES i-07600948e01bb2aa3" | tr '\t' '\n' | tr ' ' '\n' | grep -E '^i-[a-z0-9]+' | sort -u || true)
+
+          TARGETS=""
+          for id in $ALL_CANDIDATES; do
+            if echo "$ONLINE_SSM" | grep -qw "$id"; then
+              TARGETS="$TARGETS $id"
+            fi
+          done
+
+          TARGETS=$(echo "$TARGETS" | xargs)
+
+          if [ -z "$TARGETS" ]; then
+            echo "Warning: No dynamic targets resolved online, falling back to i-07600948e01bb2aa3"
+            TARGETS="i-07600948e01bb2aa3"
+          fi
+
+          echo "Deploying to target EC2 instances: $TARGETS"
+
           COMMAND_ID=$(aws ssm send-command \
             --region ap-south-1 \
             --document-name "AWS-RunShellScript" \
-            --instance-ids "i-07600948e01bb2aa3" \
+            --instance-ids $TARGETS \
             --parameters "commands=[\"sudo -u ubuntu -H bash -c 'cd /home/ubuntu/GharKaPaisa/backend && git fetch origin master && git reset --hard origin/master && npm ci && node --check src/server.js && (pm2 restart gharkapaisa-backend --update-env || pm2 reload gharkapaisa-backend || pm2 restart all --update-env) && pm2 save'\"]" \
             --query 'Command.CommandId' \
             --output text)
 
           echo "SSM Command ID: $COMMAND_ID"
 
-          aws ssm wait command-executed \
-            --region ap-south-1 \
-            --command-id "$COMMAND_ID" \
-            --instance-id i-07600948e01bb2aa3
+          for id in $TARGETS; do
+            echo "Waiting for execution on $id..."
+            aws ssm wait command-executed \
+              --region ap-south-1 \
+              --command-id "$COMMAND_ID" \
+              --instance-id "$id"
+          done
 
       - name: Deployment complete
         run: |
