@@ -58,17 +58,19 @@ jobs:
           ALL_CANDIDATES=$(echo "$TG_INSTANCES $ASG_INSTANCES i-07600948e01bb2aa3" | tr '\t' '\n' | tr ' ' '\n' | grep -E '^i-[a-z0-9]+' | sort -u || true)
 
           TARGETS=""
-          for id in $ALL_CANDIDATES; do
-            if echo "$ONLINE_SSM" | grep -qw "$id"; then
-              TARGETS="$TARGETS $id"
-            fi
-          done
+          if [ -n "$ONLINE_SSM" ]; then
+            for id in $ALL_CANDIDATES; do
+              if echo "$ONLINE_SSM" | grep -qw "$id"; then
+                TARGETS="$TARGETS $id"
+              fi
+            done
+          fi
 
           TARGETS=$(echo "$TARGETS" | xargs)
 
           if [ -z "$TARGETS" ]; then
-            echo "Warning: No dynamic targets resolved online, falling back to i-07600948e01bb2aa3"
-            TARGETS="i-07600948e01bb2aa3"
+            echo "Falling back to all candidates: $ALL_CANDIDATES"
+            TARGETS=$(echo "$ALL_CANDIDATES" | xargs)
           fi
 
           echo "Deploying to target EC2 instances: $TARGETS"
