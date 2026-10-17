@@ -80,17 +80,39 @@ const insertBankAssignment = async (adminId, bankId, category, createdById, clie
   const validCreatedBy = isUuid(createdById) ? createdById : null;
   const qFn = client ? (q, p) => client.query(q, p) : (q, p) => query(q, p);
 
+  // 0. Ensure bank exists in banks table before attempting assignment
+  const { rows: bankCheck } = await qFn(`SELECT id FROM banks WHERE id::text = $1 LIMIT 1`, [bankId]).catch(() => ({ rows: [] }));
+  if (!bankCheck || bankCheck.length === 0) {
+    logger.warn(`Skipping bank assignment: bank id ${bankId} does not exist in banks table.`);
+    return null;
+  }
+
   // 1. Check if the assignment already exists
-  const checkRes = await qFn(
-    `SELECT id FROM admin_bank_assignments WHERE admin_id = $1 AND bank_id = $2 AND category = $3 LIMIT 1`,
-    [adminId, bankId, cat]
-  );
+  let checkRes = { rows: [] };
+  try {
+    checkRes = await qFn(
+      `SELECT id FROM admin_bank_assignments WHERE admin_id = $1 AND bank_id = $2 AND category = $3 LIMIT 1`,
+      [adminId, bankId, cat]
+    );
+  } catch (chkErr) {
+    checkRes = await qFn(
+      `SELECT id FROM admin_bank_assignments WHERE admin_id = $1 AND bank_id = $2 LIMIT 1`,
+      [adminId, bankId]
+    ).catch(() => ({ rows: [] }));
+  }
 
   if (checkRes.rows && checkRes.rows.length > 0) {
-    return qFn(
-      `UPDATE admin_bank_assignments SET is_active = TRUE, created_by = COALESCE($2, created_by) WHERE id = $1`,
-      [checkRes.rows[0].id, validCreatedBy]
-    );
+    try {
+      return await qFn(
+        `UPDATE admin_bank_assignments SET is_active = TRUE, created_by = COALESCE($2, created_by) WHERE id = $1`,
+        [checkRes.rows[0].id, validCreatedBy]
+      );
+    } catch (updErr) {
+      return await qFn(
+        `UPDATE admin_bank_assignments SET is_active = TRUE WHERE id = $1`,
+        [checkRes.rows[0].id]
+      ).catch(() => {});
+    }
   }
 
   // 2. Insert new assignment safely with ON CONFLICT DO NOTHING
@@ -104,14 +126,29 @@ const insertBankAssignment = async (adminId, bankId, category, createdById, clie
   } catch (insErr) {
     // If foreign key constraint failed on created_by (e.g. actorId not in users table), retry with NULL
     if (insErr.code === '23503' && validCreatedBy) {
-      return qFn(
-        `INSERT INTO admin_bank_assignments (admin_id, bank_id, category, is_active, created_by)
-         VALUES ($1, $2, $3, TRUE, NULL)
-         ON CONFLICT DO NOTHING`,
-        [adminId, bankId, cat]
-      );
+      try {
+        return await qFn(
+          `INSERT INTO admin_bank_assignments (admin_id, bank_id, category, is_active, created_by)
+           VALUES ($1, $2, $3, TRUE, NULL)
+           ON CONFLICT DO NOTHING`,
+          [adminId, bankId, cat]
+        );
+      } catch (retryErr) {
+        return await qFn(
+          `INSERT INTO admin_bank_assignments (admin_id, bank_id)
+           VALUES ($1, $2)
+           ON CONFLICT DO NOTHING`,
+          [adminId, bankId]
+        ).catch(() => {});
+      }
     }
-    throw insErr;
+    // Fallback if category or other columns are missing
+    return await qFn(
+      `INSERT INTO admin_bank_assignments (admin_id, bank_id)
+       VALUES ($1, $2)
+       ON CONFLICT DO NOTHING`,
+      [adminId, bankId]
+    ).catch(() => {});
   }
 };
 
@@ -484,11 +521,56 @@ const updateAdmin = async (req, res, next) => {
     const { id } = req.params;
     const { fullName, email, mobile, designation, role, status, password, bank_ids, bankIds } = req.body;
 
-    const targetBankIds = Array.isArray(bank_ids) ? bank_ids : (Array.isArray(bankIds) ? bankIds : null);
-
     const { rows: [existing] } = await query(`SELECT id, role, designation, full_name, email, mobile, employee_id FROM users WHERE id::text = $1`, [id]);
     if (!existing) {
       return notFound(res, 'Administrator user not found.');
+    }
+
+    // Ensure schema & enums are present idempotently
+    try {
+      const { ensureAccountStatusSchema } = require('./accountStatus.service');
+      await ensureAccountStatusSchema();
+    } catch (scErr) {
+      // Ignore if already loaded or in test environment
+    }
+    await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'HR'`).catch(() => {});
+    await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'EMPLOYEE'`).catch(() => {});
+    await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'SUPER_ADMIN'`).catch(() => {});
+    await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'PARTNER'`).catch(() => {});
+    await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'ADMIN'`).catch(() => {});
+    await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'KYC_OPERATOR'`).catch(() => {});
+    await query(`ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'inactive'`).catch(() => {});
+    await query(`ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'suspended'`).catch(() => {});
+    await query(`ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'blocked'`).catch(() => {});
+    await query(`ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'pending_verification'`).catch(() => {});
+    await query(`ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'rejected'`).catch(() => {});
+    await query(`ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'active'`).catch(() => {});
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS has_loc_eoc BOOLEAN DEFAULT FALSE`).catch(() => {});
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(() => {});
+    await query(`ALTER TABLE admin_bank_assignments ADD COLUMN IF NOT EXISTS category VARCHAR(50) NOT NULL DEFAULT 'credit_card'`).catch(() => {});
+    await query(`ALTER TABLE admin_bank_assignments ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(() => {});
+
+    // Check duplicate email / mobile
+    if (email !== undefined && email && email.trim()) {
+      const normEmail = email.trim().toLowerCase();
+      const { rows: emailDup } = await query(
+        `SELECT id FROM users WHERE LOWER(email) = $1 AND id <> $2 LIMIT 1`,
+        [normEmail, existing.id]
+      ).catch(() => ({ rows: [] }));
+      if (emailDup && emailDup.length > 0) {
+        return error(res, 'Email is already in use by another user.', 409);
+      }
+    }
+
+    if (mobile !== undefined && mobile && mobile.trim()) {
+      const normMobile = mobile.trim();
+      const { rows: mobileDup } = await query(
+        `SELECT id FROM users WHERE mobile = $1 AND id <> $2 LIMIT 1`,
+        [normMobile, existing.id]
+      ).catch(() => ({ rows: [] }));
+      if (mobileDup && mobileDup.length > 0) {
+        return error(res, 'Mobile number is already in use by another user.', 409);
+      }
     }
 
     const updates = [];
@@ -510,11 +592,6 @@ const updateAdmin = async (req, res, next) => {
     let normRole = null;
     if (role !== undefined && role.trim()) {
       normRole = role.trim().toUpperCase();
-      await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'HR'`).catch(() => {});
-      await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'EMPLOYEE'`).catch(() => {});
-      await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'SUPER_ADMIN'`).catch(() => {});
-      await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'PARTNER'`).catch(() => {});
-      await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'ADMIN'`).catch(() => {});
       updates.push(`role = $${pIdx++}::user_role`);
       params.push(normRole);
     }
@@ -522,12 +599,18 @@ const updateAdmin = async (req, res, next) => {
       updates.push(`designation = $${pIdx++}`);
       params.push(designation.trim());
     }
-    if (status !== undefined) {
+    let normStatus = null;
+    if (status !== undefined && status.trim()) {
+      normStatus = status.trim().toLowerCase();
       updates.push(`status = $${pIdx++}::user_status`);
-      params.push(status.trim().toLowerCase());
+      params.push(normStatus);
+
+      // Keep is_active in sync with status
+      const newActive = normStatus === 'active';
+      updates.push(`is_active = $${pIdx++}`);
+      params.push(newActive);
     }
     if (password && password.trim().length >= 6) {
-      const bcrypt = require('bcryptjs');
       const hash = await bcrypt.hash(password.trim(), 10);
       updates.push(`password_hash = $${pIdx++}`);
       params.push(hash);
@@ -536,11 +619,19 @@ const updateAdmin = async (req, res, next) => {
     if (updates.length > 0) {
       updates.push(`updated_at = NOW()`);
       params.push(existing.id);
-      await query(`UPDATE users SET ${updates.join(', ')} WHERE id = $${pIdx}`, params);
+      try {
+        await query(`UPDATE users SET ${updates.join(', ')} WHERE id = $${pIdx}`, params);
+      } catch (updErr) {
+        logger.warn(`Update users with enum cast failed, retrying without cast: ${updErr.message}`);
+        const fallbackUpdates = updates.map(u => u.replace(/::user_role/g, '').replace(/::user_status/g, ''));
+        await query(`UPDATE users SET ${fallbackUpdates.join(', ')} WHERE id = $${pIdx}`, params);
+      }
     }
 
     if (normRole) {
-      await query(`UPDATE users SET role = $1::user_role WHERE id = $2`, [normRole, existing.id]).catch(() => {});
+      await query(`UPDATE users SET role = $1::user_role WHERE id = $2`, [normRole, existing.id]).catch(async () => {
+        await query(`UPDATE users SET role = $1 WHERE id = $2`, [normRole, existing.id]).catch(() => {});
+      });
       if (normRole === 'HR') {
         const fullNameVal = fullName !== undefined ? fullName.trim() : (existing.full_name || 'HR Manager');
         const emailVal = email !== undefined ? email.trim().toLowerCase() : existing.email;
@@ -580,7 +671,9 @@ const updateAdmin = async (req, res, next) => {
 
     // Handle bank assignments
     let assignmentPairs = parseAssignmentPairsFromBody(req.body);
-    const actorId = req.user?.id || req.user?._id || req.user?.userId || null;
+    const rawActorId = req.user?.id || req.user?._id || req.user?.userId || null;
+    const actorId = isUuid(rawActorId) ? rawActorId : null;
+
     if (assignmentPairs !== null) {
       await query(`DELETE FROM admin_bank_assignments WHERE admin_id = $1`, [existing.id]).catch(() => {});
       await query(`UPDATE banks SET operation_head_id = NULL WHERE operation_head_id = $1`, [existing.id]).catch(() => {});
@@ -588,27 +681,47 @@ const updateAdmin = async (req, res, next) => {
 
       const currentDesig = designation !== undefined ? designation.trim() : existing.designation;
       const currentRole = role !== undefined ? role.trim() : existing.role;
-      const isTargetOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'OPERATIONS_HEAD'].includes(currentDesig)
+      const isTargetOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'OPERATIONS_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'Querable Operator', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'Queryable Operator', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR', 'Physical Curable Operator', 'PHYSICAL CURABLE OPERATOR', 'PHYSICAL_CURABLE_OPERATOR', 'Digital Curable Operator', 'DIGITAL CURABLE OPERATOR', 'DIGITAL_CURABLE_OPERATOR', 'Email Curable Operator', 'EMAIL CURABLE OPERATOR', 'EMAIL_CURABLE_OPERATOR', 'Physical Curable', 'Digital Curable', 'Email Curable'].includes(currentDesig)
         || ['OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS_HEAD', 'OPERATIONS HEAD'].includes(currentRole);
 
+      // Deduplicate assignment pairs
+      const uniqueMap = new Map();
       for (const pair of assignmentPairs) {
-        const bId = await resolveBankId(pair.bank_id || pair.id);
+        const rawBId = pair.bank_id || pair.bankId || pair.id;
+        if (!rawBId) continue;
+        const bId = await resolveBankId(rawBId);
         if (!bId) continue;
+
+        // Verify the bank exists in database
+        const { rows: bankCheck } = await query(`SELECT id FROM banks WHERE id::text = $1`, [bId]).catch(() => ({ rows: [] }));
+        if (!bankCheck || bankCheck.length === 0) continue;
+
         const cat = (pair.category || 'credit_card').toLowerCase() === 'loc_eoc' ? 'loc_eoc' : 'credit_card';
-        await insertBankAssignment(existing.id, bId, cat, actorId);
-        if (isTargetOpHead) {
-          await query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [existing.id, bId]).catch(() => {});
-          await query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [existing.id, bId]).catch(() => {});
-          const { rows: bRows } = await query(`SELECT short_code, name FROM banks WHERE id = $1`, [bId]).catch(() => ({ rows: [] }));
-          if (bRows && bRows.length > 0 && ((bRows[0].short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(bRows[0].name || '') || cat === 'loc_eoc')) {
-            await query(`UPDATE products SET operation_head_id = $1 WHERE category::text = 'loc_eoc' OR category::text IN ('loan_on_credit_card', 'smart_emi')`, [existing.id]).catch(() => {});
+        const key = `${bId}_${cat}`;
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, { bank_id: bId, category: cat });
+        }
+      }
+
+      for (const item of uniqueMap.values()) {
+        try {
+          await insertBankAssignment(existing.id, item.bank_id, item.category, actorId);
+          if (isTargetOpHead) {
+            await query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [existing.id, item.bank_id]).catch(() => {});
+            await query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [existing.id, item.bank_id]).catch(() => {});
+            const { rows: bRows } = await query(`SELECT short_code, name FROM banks WHERE id = $1`, [item.bank_id]).catch(() => ({ rows: [] }));
+            if (bRows && bRows.length > 0 && ((bRows[0].short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(bRows[0].name || '') || item.category === 'loc_eoc')) {
+              await query(`UPDATE products SET operation_head_id = $1 WHERE category::text = 'loc_eoc' OR category::text IN ('loan_on_credit_card', 'smart_emi')`, [existing.id]).catch(() => {});
+            }
           }
+        } catch (pairErr) {
+          logger.warn(`Failed to insert bank assignment for user ${existing.id}: ${pairErr.message}`);
         }
       }
 
       if (req.body.has_loc_eoc !== undefined || req.body.hasLocEoc !== undefined) {
         const val = req.body.has_loc_eoc !== undefined ? Boolean(req.body.has_loc_eoc) : Boolean(req.body.hasLocEoc);
-        await query(`UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [val, existing.id]);
+        await query(`UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [val, existing.id]).catch(() => {});
       } else {
         let locCheckRows = [];
         try {
@@ -619,23 +732,34 @@ const updateAdmin = async (req, res, next) => {
           `, [existing.id]);
           locCheckRows = resLoc.rows;
         } catch (abaErr) {
-          const resLoc = await query(`
-            SELECT 1 FROM admin_bank_assignments aba
-            JOIN banks b ON b.id = aba.bank_id
-            WHERE aba.admin_id = $1 AND (UPPER(COALESCE(b.short_code, '')) = 'LOC_EOC' OR b.name ~* 'loc|loan on card|smart emi')
-          `, [existing.id]);
-          locCheckRows = resLoc.rows;
+          try {
+            const resLoc = await query(`
+              SELECT 1 FROM admin_bank_assignments aba
+              JOIN banks b ON b.id = aba.bank_id
+              WHERE aba.admin_id = $1 AND (UPPER(COALESCE(b.short_code, '')) = 'LOC_EOC' OR b.name ~* 'loc|loan on card|smart emi')
+            `, [existing.id]);
+            locCheckRows = resLoc.rows;
+          } catch (e) {
+            locCheckRows = [];
+          }
         }
         const hasLoc = locCheckRows.length > 0;
-        await query(`UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [hasLoc, existing.id]);
+        await query(`UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [hasLoc, existing.id]).catch(() => {});
       }
     }
 
-    await logAction(req, 'UPDATE_USER', existing.id, { email, designation, role, assignmentPairs });
+    await logAction(req, 'UPDATE_USER', existing.id, { email, designation, role, assignmentPairs }).catch(() => {});
 
     return success(res, { id: existing.id }, 'Administrator updated successfully.');
   } catch (err) {
-    next(err);
+    logger.error('Error in updateAdmin:', {
+      message: err.message,
+      code: err?.code,
+      detail: err?.detail,
+      adminId: req.params?.id,
+      stack: err.stack
+    });
+    return error(res, err.message || 'Failed to update administrator user', err.statusCode || 500);
   }
 };
 

@@ -368,7 +368,7 @@ export default function SuperAdminDashboard() {
       mobile: admin.mobile || '',
       role: currentRole,
       designation: admin.designation || 'Operational Head',
-      status: admin.status || 'active',
+      status: String(admin.status || 'active').toLowerCase(),
       bank_ids: catAssignments.map(a => a.bank_id),
       password: ''
     });
@@ -398,7 +398,7 @@ export default function SuperAdminDashboard() {
         mobile: editForm.mobile,
         role: editForm.role,
         designation: editForm.designation,
-        status: editForm.status,
+        status: String(editForm.status || 'active').toLowerCase(),
         category_assignments: editCategoryAssignments,
         bank_ids: editCategoryAssignments.map(a => a.bank_id)
       };
