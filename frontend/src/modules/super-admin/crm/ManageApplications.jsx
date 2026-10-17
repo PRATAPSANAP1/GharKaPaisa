@@ -370,13 +370,14 @@ export default function ManageApplications() {
       setClaimingId(app.id);
       const res = await api.post(`/applications/${app.id}/claim-request`);
       if (res.data?.success) {
-        alert(`Application #${app.app_number || app.id} claimed successfully!`);
+        alert(res.data?.message || `Application #${app.app_number || app.id} claimed successfully!`);
+        const claimData = res.data?.data || {};
         setApplications(prev => prev.map(item => item.id === app.id ? {
           ...item,
-          sales_claimed_by: user?.id,
-          sales_claimed_by_name: user?.full_name || user?.name || 'Sales Operator',
-          sales_claimed_by_code: user?.user_code || user?.employee_id || '',
-          sales_claimed_at: new Date().toISOString()
+          sales_claimed_by: claimData.sales_claimed_by || user?.id,
+          sales_claimed_by_name: claimData.sales_claimed_by_name || user?.full_name || user?.name || 'Sales Operator',
+          sales_claimed_by_code: claimData.sales_claimed_by_code || user?.user_code || user?.employee_id || '',
+          sales_claimed_at: claimData.sales_claimed_at || new Date().toISOString()
         } : item));
       } else {
         alert(res.data?.message || 'Failed to claim application.');
@@ -386,6 +387,13 @@ export default function ManageApplications() {
       const errMsg = err?.response?.data?.message || err?.message || 'Failed to claim application.';
       alert(errMsg);
       if (err?.response?.status === 409) {
+        const conflictData = err?.response?.data || {};
+        setApplications(prev => prev.map(item => item.id === app.id ? {
+          ...item,
+          sales_claimed_by: conflictData.claimed_by || 'already_claimed',
+          sales_claimed_by_name: conflictData.claimed_by_name || 'Another Operator',
+          sales_claimed_at: conflictData.claimed_at || item.sales_claimed_at
+        } : item));
         fetchApplications();
       }
     } finally {

@@ -430,13 +430,14 @@ export default function ManageApplications() {
       setClaimingId(app.id);
       const res = await api.post(`/applications/${app.id}/claim-request`);
       if (res.data?.success) {
-        alert(`Application #${app.app_number || app.id} claimed successfully!`);
+        alert(res.data?.message || `Application #${app.app_number || app.id} claimed successfully!`);
+        const claimData = res.data?.data || {};
         setApps(prev => prev.map(item => item.id === app.id ? {
           ...item,
-          sales_claimed_by: user?.id,
-          sales_claimed_by_name: user?.full_name || user?.name || 'Sales Operator',
-          sales_claimed_by_code: user?.user_code || user?.employee_id || '',
-          sales_claimed_at: new Date().toISOString()
+          sales_claimed_by: claimData.sales_claimed_by || user?.id,
+          sales_claimed_by_name: claimData.sales_claimed_by_name || user?.full_name || user?.name || 'Sales Operator',
+          sales_claimed_by_code: claimData.sales_claimed_by_code || user?.user_code || user?.employee_id || '',
+          sales_claimed_at: claimData.sales_claimed_at || new Date().toISOString()
         } : item));
       } else {
         alert(res.data?.message || 'Failed to claim application.');
@@ -446,6 +447,13 @@ export default function ManageApplications() {
       const errMsg = err?.response?.data?.message || err?.message || 'Failed to claim application.';
       alert(errMsg);
       if (err?.response?.status === 409) {
+        const conflictData = err?.response?.data || {};
+        setApps(prev => prev.map(item => item.id === app.id ? {
+          ...item,
+          sales_claimed_by: conflictData.claimed_by || 'already_claimed',
+          sales_claimed_by_name: conflictData.claimed_by_name || 'Another Operator',
+          sales_claimed_at: conflictData.claimed_at || item.sales_claimed_at
+        } : item));
         fetchApplications();
       }
     } finally {
@@ -1355,14 +1363,32 @@ export default function ManageApplications() {
                                 </span>
                               )}
                               <button
-                                onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }}
+                                onClick={() => {
+                                  if (!app.sales_claimed_by) {
+                                    if (window.confirm(`You must claim Application #${app.app_number || app.id} before filling the QD form. Do you want to claim it now?`)) {
+                                      handleClaimRequest(app);
+                                    }
+                                    return;
+                                  }
+                                  setVerifyModalTab('qd');
+                                  setVerifyModalApp(app);
+                                }}
                                 style={{ background: "#2563eb15", border: "1px solid #2563eb40", color: "#2563eb", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
                                 title="Open Quick Details (QD) Form"
                               >
                                 <FileText size={12} /> QD Form
                               </button>
                               <button
-                                onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }}
+                                onClick={() => {
+                                  if (!app.sales_claimed_by) {
+                                    if (window.confirm(`You must claim Application #${app.app_number || app.id} before filling the Remark form. Do you want to claim it now?`)) {
+                                      handleClaimRequest(app);
+                                    }
+                                    return;
+                                  }
+                                  setVerifyModalTab('remark');
+                                  setVerifyModalApp(app);
+                                }}
                                 style={{ background: "#ea580c15", border: "1px solid #ea580c40", color: "#ea580c", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: 'center', gap: "4px" }}
                                 title="Open Bank Remark Form"
                               >

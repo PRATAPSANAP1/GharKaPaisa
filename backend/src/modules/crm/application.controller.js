@@ -3193,6 +3193,11 @@ const updateBankProcessingStatus = async (req, res, next) => {
 
     const app = appRes.rows[0];
 
+    const isSalesExecUserLocal = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
+    if (isSalesExecUserLocal && app.sales_claimed_by && app.sales_claimed_by !== (req.user?.id) && !['ADMIN', 'SUPER_ADMIN'].includes(userRole)) {
+      return forbidden(res, `This application has been claimed by another Administrative Sales Operator (${app.sales_claimed_by_name || 'Operator'}). You are not authorized to modify it.`);
+    }
+
     const opId = req.user?.id || null;
     const opName = req.user?.full_name || req.user?.email || 'Operator';
     const opRole = userRole || 'OPERATOR';
@@ -4634,6 +4639,12 @@ const updateApplicationDetails = async (req, res, next) => {
     const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
     const isOpsOrAdmin = ['SUPER_ADMIN', 'ADMIN', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'EMPLOYEE', 'TELECALLER', 'SALES_EXECUTIVE', 'MANAGER', 'TEAM_LEADER', 'FIELD_OPERATOR', 'PARTNER'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation) || !!req.user;
 
+    const isSalesExecUserLocal = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
+    if (isSalesExecUserLocal && app.sales_claimed_by && app.sales_claimed_by !== req.user?.id && !['ADMIN', 'SUPER_ADMIN'].includes(userRole)) {
+      await client.query('ROLLBACK');
+      return forbidden(res, `This application has been claimed by another Administrative Sales Operator (${app.sales_claimed_by_name || 'Operator'}). You are not authorized to modify it.`);
+    }
+
     const isRestrictedAdminStatus = ['approved', 'rejected', 'disbursed', 'commission_released', 'super_admin_approved'].includes((status || '').toLowerCase());
     if (['PARTNER', 'TEAM_MEMBER'].includes(userRole) && status && status !== app.status && isRestrictedAdminStatus) {
       await client.query('ROLLBACK');
@@ -4968,7 +4979,6 @@ const updateApplicationDetails = async (req, res, next) => {
     ]);
 
     const currentOpCode = req.user?.employee_id || req.user?.user_code || req.user?.employee_code || req.user?.emp_code || req.user?.full_name || req.user?.email || req.user?.id;
-    const isSalesExecUserLocal = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
     const isPanCheckerUserLocal = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
     const isRemarkOperatorUserLocal = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
 
@@ -6513,6 +6523,12 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
         return forbidden(res, 'You are not assigned to handle applications for this category and bank combination.');
       }
 
+      const isSalesExecUserLocal = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
+      if (isSalesExecUserLocal && app.sales_claimed_by && app.sales_claimed_by !== userId && !['ADMIN', 'SUPER_ADMIN'].includes(userRole)) {
+        await client.query('ROLLBACK');
+        return forbidden(res, `This application has been claimed by another Administrative Sales Operator (${app.sales_claimed_by_name || 'Operator'}). You are not authorized to modify it.`);
+      }
+
       if (isQuerableOperator) {
         const statusStr = (app.status || '').toLowerCase();
         const finalStatusStr = (app.final_status || '').toLowerCase();
@@ -6789,40 +6805,116 @@ const ensureSalesClaimColumns = async () => {
 
 // POST /applications/:id/claim-request — Claim application by Administrative Sales Operator
 const claimApplicationRequest = async (req, res, next) => {
+  const { id } = req.params;
+  if (!id || id === 'undefined' || id === 'null' || !String(id).trim()) {
+    return error(res, 'A valid Application ID is required', 400);
+  }
+
+  const userId = req.user?.id;
+  if (!userId) {
+    return error(res, 'Authentication required', 401);
+  }
+
+  const userName = req.user.full_name || req.user.name || 'Sales Operator';
+  const userCode = req.user.user_code || req.user.employee_id || req.user.emp_code || '';
+  const userRole = (req.user.role || '').toUpperCase();
+  const userDesignation = (req.user.designation || '').toUpperCase();
+
+  // Verify operator permission:
+  // Administrative Sales Operator / Sales Executive, or Admin / Super Admin
+  const isSalesUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(userRole);
+
+  if (!isSalesUser && !isAdmin) {
+    return error(res, 'Only Administrative Sales Operators or Administrators can claim an application request', 403);
+  }
+
   const client = await getClient();
   try {
     await client.query('BEGIN');
-    const { id } = req.params;
-    const userId = req.user.id;
-    const userName = req.user.full_name || req.user.name || 'Sales Operator';
-    const userCode = req.user.user_code || req.user.employee_id || req.user.emp_code || '';
-    const userRole = (req.user.role || '').toUpperCase();
-    const userDesignation = (req.user.designation || '').toUpperCase();
-
-    // Verify operator permission:
-    // Administrative Sales Operator / Sales Executive, or Admin / Super Admin
-    const isSalesUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
-    const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(userRole);
-
-    if (!isSalesUser && !isAdmin) {
-      await client.query('ROLLBACK');
-      return error(res, 'Only Administrative Sales Operators or Administrators can claim an application request', 403);
-    }
 
     // Row-lock application for concurrency protection
+    const cleanId = String(id).trim();
     const { rows: [app] } = await client.query(`
       SELECT a.*,
+        p.bank_id as product_bank_id,
+        b.id as resolved_bank_id,
+        b.short_code as bank_code,
+        b.name as bank_name,
         COALESCE(to_jsonb(a)->>'sales_claimed_by', to_jsonb(pad)->>'sales_claimed_by', '') as existing_claimed_by,
-        COALESCE(to_jsonb(a)->>'sales_claimed_by_name', to_jsonb(pad)->>'sales_claimed_by_name', '') as existing_claimed_by_name
+        COALESCE(to_jsonb(a)->>'sales_claimed_by_name', to_jsonb(pad)->>'sales_claimed_by_name', '') as existing_claimed_by_name,
+        COALESCE(to_jsonb(a)->>'sales_claimed_by_code', to_jsonb(pad)->>'sales_claimed_by_code', '') as existing_claimed_by_code,
+        COALESCE(to_jsonb(a)->>'sales_claimed_at', to_jsonb(pad)->>'sales_claimed_at', NULL) as existing_claimed_at
       FROM applications a 
+      LEFT JOIN products p ON p.id = a.product_id
+      LEFT JOIN banks b ON b.id = COALESCE(a.bank_id, p.bank_id)
       LEFT JOIN physical_application_details pad ON pad.application_id = a.id
       WHERE a.id::text = $1 OR a.app_number = $1
       FOR UPDATE OF a
-    `, [id]);
+    `, [cleanId]);
 
     if (!app) {
       await client.query('ROLLBACK');
       return error(res, 'Application not found', 404);
+    }
+
+    // Eligibility check: cancelled or disbursed applications cannot be claimed
+    const appStatusLower = (app.status || '').toLowerCase();
+    if (['cancelled', 'cancel'].includes(appStatusLower)) {
+      await client.query('ROLLBACK');
+      return error(res, 'Cancelled applications cannot be claimed.', 400);
+    }
+    if (['disbursed'].includes(appStatusLower)) {
+      await client.query('ROLLBACK');
+      return error(res, 'Disbursed applications cannot be claimed.', 400);
+    }
+
+    // Bank assignment verification for non-admin executives
+    if (!isAdmin) {
+      const { rows: assignedBanks } = await client.query(`
+        SELECT aba.bank_id, b.short_code, b.name 
+        FROM admin_bank_assignments aba
+        LEFT JOIN banks b ON b.id = aba.bank_id
+        WHERE aba.admin_id = $1 AND (aba.is_active IS NULL OR aba.is_active = true)
+      `, [userId]);
+
+      const effectiveBankId = app.resolved_bank_id || app.bank_id || app.product_bank_id;
+      const bankCode = (app.bank_code || '').toLowerCase();
+      const bankName = (app.bank_name || '').toLowerCase();
+
+      const isSbi = (bankCode === 'sbi' || bankName.includes('sbi')) &&
+        !bankName.includes('tata') && !bankCode.includes('tata');
+      const isHdfc = (bankCode === 'hdfc' || bankName.includes('hdfc')) &&
+        !bankName.includes('tata') && !bankCode.includes('tata');
+
+      let hasBankAccess = false;
+      if (assignedBanks.length > 0) {
+        hasBankAccess = assignedBanks.some(b => {
+          const bCode = (b.short_code || '').toLowerCase();
+          const bName = (b.name || '').toLowerCase();
+          return (b.bank_id && b.bank_id === effectiveBankId) ||
+            (bCode && bankCode.includes(bCode)) ||
+            (bName && (bankName.includes(bName) || bName.includes(bankName)));
+        }) || isSbi;
+      } else {
+        hasBankAccess = isHdfc || isSbi;
+      }
+
+      // Check Tata exclusion unless explicitly assigned Tata
+      const isTata = bankName.includes('tata') || bankCode.includes('tata');
+      if (isTata) {
+        const hasTataAssignment = assignedBanks.some(b =>
+          (b.name || '').toLowerCase().includes('tata') || (b.short_code || '').toLowerCase().includes('tata')
+        );
+        if (!hasTataAssignment) {
+          hasBankAccess = false;
+        }
+      }
+
+      if (!hasBankAccess) {
+        await client.query('ROLLBACK');
+        return error(res, `You are not authorized to claim applications for ${app.bank_name || 'this bank partner'}.`, 403);
+      }
     }
 
     const currentClaimedBy = app.sales_claimed_by || app.existing_claimed_by || '';
@@ -6836,26 +6928,26 @@ const claimApplicationRequest = async (req, res, next) => {
         message: `This application has already been claimed by ${claimantName}.`,
         claimed_by: currentClaimedBy,
         claimed_by_name: claimantName,
-        claimed_at: app.sales_claimed_at
+        claimed_at: app.sales_claimed_at || app.existing_claimed_at
       });
     }
 
-    // If already claimed by this user, return idempotent success
+    // If already claimed by this user, return idempotent success without duplicate timeline/history
     if (currentClaimedBy === userId) {
       await client.query('ROLLBACK');
       return success(res, {
         application_id: app.id,
         sales_claimed_by: userId,
-        sales_claimed_by_name: app.sales_claimed_by_name || userName,
-        sales_claimed_by_code: app.sales_claimed_by_code || userCode,
-        sales_claimed_at: app.sales_claimed_at
+        sales_claimed_by_name: app.sales_claimed_by_name || app.existing_claimed_by_name || userName,
+        sales_claimed_by_code: app.sales_claimed_by_code || app.existing_claimed_by_code || userCode,
+        sales_claimed_at: app.sales_claimed_at || app.existing_claimed_at
       }, 'Application is already claimed by you.');
     }
 
     const claimedAt = new Date().toISOString();
 
-    // Update application
-    await client.query(`
+    // Atomic conditional update to prevent concurrent duplicate claims
+    const updateResult = await client.query(`
       UPDATE applications 
       SET 
         sales_claimed_by = $1,
@@ -6863,8 +6955,23 @@ const claimApplicationRequest = async (req, res, next) => {
         sales_claimed_by_code = $3,
         sales_claimed_at = $4,
         updated_at = NOW()
-      WHERE id = $5
+      WHERE id = $5 
+        AND (sales_claimed_by IS NULL OR sales_claimed_by = '' OR sales_claimed_by = $1)
+      RETURNING *
     `, [userId, userName, userCode, claimedAt, app.id]);
+
+    if (updateResult.rowCount === 0 && !isAdmin) {
+      const { rows: [latestApp] } = await client.query(`SELECT sales_claimed_by, sales_claimed_by_name, sales_claimed_at FROM applications WHERE id = $1`, [app.id]);
+      await client.query('ROLLBACK');
+      const claimantName = latestApp?.sales_claimed_by_name || 'another Administrative Sales Operator';
+      return res.status(409).json({
+        success: false,
+        message: `This application has already been claimed by ${claimantName}.`,
+        claimed_by: latestApp?.sales_claimed_by,
+        claimed_by_name: claimantName,
+        claimed_at: latestApp?.sales_claimed_at
+      });
+    }
 
     // Also update physical application details if exists
     await client.query(`
