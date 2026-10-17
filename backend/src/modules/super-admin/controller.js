@@ -529,6 +529,23 @@ const ensureAdminSchemaOnce = () => {
       await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(() => {});
       await query(`ALTER TABLE admin_bank_assignments ADD COLUMN IF NOT EXISTS category VARCHAR(50) NOT NULL DEFAULT 'credit_card'`).catch(() => {});
       await query(`ALTER TABLE admin_bank_assignments ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(() => {});
+      await query(`
+        DO $$
+        BEGIN
+          DELETE FROM admin_bank_assignments a
+          USING admin_bank_assignments b
+          WHERE a.id > b.id
+            AND a.admin_id = b.admin_id
+            AND a.bank_id = b.bank_id;
+
+          IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'admin_bank_assignments_admin_id_bank_id_key') THEN
+            ALTER TABLE admin_bank_assignments ADD CONSTRAINT admin_bank_assignments_admin_id_bank_id_key UNIQUE (admin_id, bank_id);
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'admin_bank_assignments_admin_bank_category_key') THEN
+            ALTER TABLE admin_bank_assignments ADD CONSTRAINT admin_bank_assignments_admin_bank_category_key UNIQUE (admin_id, bank_id, category);
+          END IF;
+        END $$;
+      `).catch(() => {});
     })().catch(() => { _adminSchemaReady = null; });
   }
   return _adminSchemaReady;

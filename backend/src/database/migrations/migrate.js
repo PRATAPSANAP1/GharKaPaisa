@@ -646,8 +646,14 @@ const migrate = async () => {
   await query(`
     DO $$
     BEGIN
-      IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'admin_bank_assignments_admin_id_bank_id_key') THEN
-        ALTER TABLE admin_bank_assignments DROP CONSTRAINT admin_bank_assignments_admin_id_bank_id_key;
+      DELETE FROM admin_bank_assignments a
+      USING admin_bank_assignments b
+      WHERE a.id > b.id
+        AND a.admin_id = b.admin_id
+        AND a.bank_id = b.bank_id;
+
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'admin_bank_assignments_admin_id_bank_id_key') THEN
+        ALTER TABLE admin_bank_assignments ADD CONSTRAINT admin_bank_assignments_admin_id_bank_id_key UNIQUE (admin_id, bank_id);
       END IF;
       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'admin_bank_assignments_admin_bank_category_key') THEN
         ALTER TABLE admin_bank_assignments ADD CONSTRAINT admin_bank_assignments_admin_bank_category_key UNIQUE (admin_id, bank_id, category);

@@ -306,15 +306,14 @@ const startServer = async () => {
           USING admin_bank_assignments b
           WHERE a.id > b.id
             AND a.admin_id = b.admin_id
-            AND a.bank_id = b.bank_id
-            AND COALESCE(a.category, 'credit_card') = COALESCE(b.category, 'credit_card');
+            AND a.bank_id = b.bank_id;
 
-          -- 2. Drop legacy constraint on (admin_id, bank_id) if exists
-          IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'admin_bank_assignments_admin_id_bank_id_key') THEN
-            ALTER TABLE admin_bank_assignments DROP CONSTRAINT admin_bank_assignments_admin_id_bank_id_key;
+          -- 2. Ensure unique constraint on (admin_id, bank_id) exists for backward compatibility with ON CONFLICT (admin_id, bank_id)
+          IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'admin_bank_assignments_admin_id_bank_id_key') THEN
+            ALTER TABLE admin_bank_assignments ADD CONSTRAINT admin_bank_assignments_admin_id_bank_id_key UNIQUE (admin_id, bank_id);
           END IF;
 
-          -- 3. Add modern unique constraint on (admin_id, bank_id, category)
+          -- 3. Ensure modern unique constraint on (admin_id, bank_id, category) exists
           IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'admin_bank_assignments_admin_bank_category_key') THEN
             ALTER TABLE admin_bank_assignments ADD CONSTRAINT admin_bank_assignments_admin_bank_category_key UNIQUE (admin_id, bank_id, category);
           END IF;
