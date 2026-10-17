@@ -1,5 +1,20 @@
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
+const fs = require('fs');
+
+const envPaths = [
+  path.resolve(__dirname, '../../.env'),
+  path.resolve(__dirname, '../../../.env'),
+];
+for (const p of envPaths) {
+  if (fs.existsSync(p)) {
+    require('dotenv').config({ path: p });
+    break;
+  }
+}
+if (!process.env.MSG91_BULK_SMS_TEMPLATE_ID) {
+  require('dotenv').config();
+}
+
 const { query } = require('../../config/database');
 const logger = require('../../config/logger');
 
@@ -85,12 +100,13 @@ const migrateBulkSms = async () => {
     await query(`CREATE INDEX IF NOT EXISTS idx_bulk_sms_recipients_mobile ON bulk_sms_recipients(normalized_mobile_number)`);
 
     // 6. Seed Standard Approved Template (Single template required)
+    const correctTemplateId = (process.env.MSG91_BULK_SMS_TEMPLATE_ID || '').trim() || '6acdf0660b357ef1f10a6343';
     const defaultTemplates = [
       {
         id: 'tpl-preapproved-loan-001',
         name: 'Pre-Approved Credit Card Loan Offer',
         provider: 'MSG91',
-        provider_template_id: process.env.MSG91_BULK_SMS_TEMPLATE_ID || '6acdf0660b357ef1f10a6343',
+        provider_template_id: correctTemplateId,
         sender_id: 'GHARKP',
         content: `Hello! Greetings from ##var1##\n\nYou have a pre-approved loan on your credit card with instant disbursal in 10 seconds.\n\nHow much loan amount are you looking for?\n\n[Apply here] ##var2##\n-YOHESA MARKETING CONSULTATION PRIVATE LIMITED\n-GharKaPaisa`,
         template_type: 'Promotional',
@@ -100,33 +116,7 @@ const migrateBulkSms = async () => {
       },
     ];
 
-    const correctTemplateId = process.env.MSG91_BULK_SMS_TEMPLATE_ID || '6acdf0660b357ef1f10a6343';
-
-    // Force-update any existing old template rows to the correct template ID & content
-    try {
-      await query(`
-        UPDATE sms_templates
-        SET provider_template_id = $1,
-            content = $2,
-            updated_at = NOW()
-        WHERE id = 'tpl-preapproved-loan-001'
-          AND provider_template_id != $1
-      `, [correctTemplateId, defaultTemplates[0].content]);
-    } catch (updateErr) {
-      logger.warn('[Bulk SMS Migration] Template ID update note:', updateErr.message);
-    }
-
-    // Cleanup legacy templates so only this approved template remains
-    try {
-      await query(`
-        DELETE FROM sms_templates 
-        WHERE id NOT IN ('tpl-preapproved-loan-001')
-          AND provider_template_id NOT IN ($1)
-      `, [correctTemplateId]);
-    } catch (cleanupErr) {
-      logger.warn('[Bulk SMS Migration] Legacy templates cleanup note:', cleanupErr.message);
-    }
-
+    // Upsert template without wiping out other templates and without overriding existing approval_status
     for (const t of defaultTemplates) {
       await query(
         `INSERT INTO sms_templates (
@@ -138,7 +128,6 @@ const migrateBulkSms = async () => {
           content = EXCLUDED.content,
           sender_id = EXCLUDED.sender_id,
           variables = EXCLUDED.variables,
-          approval_status = EXCLUDED.approval_status,
           updated_at = NOW();
       `,
         [

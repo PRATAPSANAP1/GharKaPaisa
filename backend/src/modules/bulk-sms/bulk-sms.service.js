@@ -2,7 +2,13 @@ const ExcelJS = require('exceljs');
 const { PDFParse } = require('pdf-parse');
 const { query } = require('../../config/database');
 const logger = require('../../config/logger');
-const { normalizeForMsg91, maskMobileNumber, sendBatchViaFlow, msg91SenderId } = require('./msg91.service');
+const {
+  normalizeForMsg91,
+  maskMobileNumber,
+  sendBatchViaFlow,
+  getMsg91SenderId,
+  getConfiguredTemplateId,
+} = require('./msg91.service');
 
 // ── In-Memory Resilient Cache & Queue Store ──────────────────────────────────
 // Ensures guaranteed uptime even if remote database has transient connection drops
@@ -16,16 +22,76 @@ const shouldSkipDb = () => process.env.NODE_ENV === 'test' || process.env.SKIP_D
 
 let tablesEnsured = false;
 let ensuringPromise = null;
+
+/**
+ * Defensive table creation without modifying, deleting, or forcing template approval
+ */
 const ensureBulkSmsTables = async () => {
   if (tablesEnsured || shouldSkipDb()) return;
   if (!ensuringPromise) {
     ensuringPromise = (async () => {
       try {
-        const migrateBulkSms = require('../../database/migrations/migrate_bulk_sms');
-        await migrateBulkSms();
+        await query(`
+          CREATE TABLE IF NOT EXISTS sms_templates (
+            id VARCHAR(255) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            provider VARCHAR(50) DEFAULT 'MSG91',
+            provider_template_id VARCHAR(100) NOT NULL UNIQUE,
+            sender_id VARCHAR(50) NOT NULL DEFAULT 'GHARKP',
+            content TEXT NOT NULL,
+            template_type VARCHAR(50) DEFAULT 'Promotional',
+            approval_status VARCHAR(50) DEFAULT 'APPROVED',
+            variables JSONB DEFAULT '[]',
+            preview_url VARCHAR(500),
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+          );
+        `);
+        await query(`
+          CREATE TABLE IF NOT EXISTS bulk_sms_campaigns (
+            id VARCHAR(255) PRIMARY KEY,
+            campaign_name VARCHAR(255) NOT NULL,
+            template_id VARCHAR(255) REFERENCES sms_templates(id) ON DELETE SET NULL,
+            sender_id VARCHAR(50) NOT NULL DEFAULT 'GHARKP',
+            status VARCHAR(50) DEFAULT 'DRAFT',
+            total_recipients INT DEFAULT 0,
+            valid_recipients INT DEFAULT 0,
+            invalid_recipients INT DEFAULT 0,
+            duplicate_recipients INT DEFAULT 0,
+            sent_count INT DEFAULT 0,
+            delivered_count INT DEFAULT 0,
+            failed_count INT DEFAULT 0,
+            pending_count INT DEFAULT 0,
+            file_name VARCHAR(255),
+            file_size INT DEFAULT 0,
+            scheduled_at TIMESTAMPTZ,
+            started_at TIMESTAMPTZ,
+            completed_at TIMESTAMPTZ,
+            created_by VARCHAR(255),
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+          );
+        `);
+        await query(`
+          CREATE TABLE IF NOT EXISTS bulk_sms_recipients (
+            id VARCHAR(255) PRIMARY KEY,
+            campaign_id VARCHAR(255) NOT NULL REFERENCES bulk_sms_campaigns(id) ON DELETE CASCADE,
+            mobile_number VARCHAR(30) NOT NULL,
+            normalized_mobile_number VARCHAR(30) NOT NULL,
+            recipient_name VARCHAR(255),
+            status VARCHAR(50) DEFAULT 'QUEUED',
+            variables JSONB DEFAULT '{}',
+            msg91_message_id VARCHAR(100),
+            sent_at TIMESTAMPTZ,
+            delivered_at TIMESTAMPTZ,
+            failure_reason TEXT,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+          );
+        `);
         tablesEnsured = true;
       } catch (err) {
-        logger.warn(`[Bulk-SMS] Table auto-migration notice: ${err.message}`);
+        logger.warn(`[Bulk-SMS] Table ensure notice: ${err.message}`);
       } finally {
         ensuringPromise = null;
       }
@@ -34,13 +100,15 @@ const ensureBulkSmsTables = async () => {
   return ensuringPromise;
 };
 
-// Seed default approved template (Single template required per business rule)
-const DEFAULT_TEMPLATES = [
+const APPROVED_DEFAULT_TEMPLATE_ID = '6acdf0660b357ef1f10a6343';
+
+// Seed default approved template matching the approved business template
+const getDefaultTemplates = () => [
   {
     id: 'tpl-preapproved-loan-001',
     name: 'Pre-Approved Credit Card Loan Offer',
     provider: 'MSG91',
-    provider_template_id: process.env.MSG91_BULK_SMS_TEMPLATE_ID || '6acdf0660b357ef1f10a6343',
+    provider_template_id: APPROVED_DEFAULT_TEMPLATE_ID,
     sender_id: 'GHARKP',
     content: `Hello! Greetings from ##var1##\n\nYou have a pre-approved loan on your credit card with instant disbursal in 10 seconds.\n\nHow much loan amount are you looking for?\n\n[Apply here] ##var2##\n-YOHESA MARKETING CONSULTATION PRIVATE LIMITED\n-GharKaPaisa`,
     template_type: 'Promotional',
@@ -52,7 +120,7 @@ const DEFAULT_TEMPLATES = [
 ];
 
 // Initialize inMemory templates
-DEFAULT_TEMPLATES.forEach((t) => inMemoryStore.templates.set(t.id, t));
+getDefaultTemplates().forEach((t) => inMemoryStore.templates.set(t.id, t));
 
 /**
  * Mobile Number Normalization Helper
@@ -62,16 +130,13 @@ const cleanAndValidateMobile = (rawInput) => {
   const rawStr = String(rawInput).trim();
   const digits = rawStr.replace(/\D/g, '');
 
-  // 10 digits starting with 6, 7, 8, 9
   if (digits.length === 10 && /^[6-9]/.test(digits)) {
     return { isValid: true, normalized: `91${digits}`, tenDigit: digits };
   }
-  // 11 digits starting with 0 followed by 6-9
   if (digits.length === 11 && digits.startsWith('0') && /^[6-9]/.test(digits.slice(1))) {
     const ten = digits.slice(1);
     return { isValid: true, normalized: `91${ten}`, tenDigit: ten };
   }
-  // 12 digits starting with 91 followed by 6-9
   if (digits.length === 12 && digits.startsWith('91') && /^[6-9]/.test(digits.slice(2))) {
     return { isValid: true, normalized: digits, tenDigit: digits.slice(2) };
   }
@@ -131,7 +196,7 @@ const parseRecipientFile = async ({ fileBuffer, fileName, fileSize, manualMobile
     }
 
     worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber === 1) return; // Skip header
+      if (rowNumber === 1) return;
       const rowData = {};
       let hasData = false;
       for (let c = 1; c <= detectedHeaders.length; c++) {
@@ -156,7 +221,6 @@ const parseRecipientFile = async ({ fileBuffer, fileName, fileSize, manualMobile
       throw new Error('Uploaded CSV file is empty.');
     }
 
-    // Parse header row
     detectedHeaders = lines[0].split(',').map((h) => h.replace(/^["']|["']$/g, '').trim());
     if (!chosenMobileColumn) {
       chosenMobileColumn = detectMobileColumn(detectedHeaders);
@@ -187,7 +251,6 @@ const parseRecipientFile = async ({ fileBuffer, fileName, fileSize, manualMobile
       pdfText = fileBuffer.toString('latin1');
     }
 
-    // Extract potential Indian numbers matching standard phone patterns
     const regex = /(?:(?:\+91|91|0)?[-\s]?)?([6-9]\d{4}[-\s]?\d{5})/g;
     let match;
     const extractedNumbers = [];
@@ -204,7 +267,7 @@ const parseRecipientFile = async ({ fileBuffer, fileName, fileSize, manualMobile
     throw new Error(`Unsupported file type: .${ext}. Only CSV, XLSX, and PDF files are allowed.`);
   }
 
-  // ── Recipient Validation & Deduplication ────────────────────────────────────
+  // Deduplication & validation
   const seenNumbers = new Set();
   const previewList = [];
   const validRecipients = [];
@@ -218,7 +281,6 @@ const parseRecipientFile = async ({ fileBuffer, fileName, fileSize, manualMobile
     const rawVal = row[chosenMobileColumn];
     const validation = cleanAndValidateMobile(rawVal);
 
-    // Extract potential recipient name from row data
     const nameKey = Object.keys(row).find((k) => /name|customer_name|client|lead/i.test(k));
     const recipientName = nameKey && row[nameKey] ? row[nameKey] : `Recipient ${idx + 1}`;
 
@@ -279,73 +341,129 @@ const parseRecipientFile = async ({ fileBuffer, fileName, fileSize, manualMobile
 };
 
 /**
- * List Approved SMS Templates
+ * Extract required variable names from a template record
+ */
+const extractRequiredVariables = (template) => {
+  if (!template) return [];
+
+  if (Array.isArray(template.variables) && template.variables.length > 0) {
+    return template.variables.map((v) => String(v).replace(/^##|##$/g, '').trim()).filter(Boolean);
+  }
+
+  if (typeof template.variables === 'string') {
+    try {
+      const parsed = JSON.parse(template.variables);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((v) => String(v).replace(/^##|##$/g, '').trim()).filter(Boolean);
+      }
+    } catch (e) {}
+  }
+
+  // Parse variables from content (e.g. ##var1## or {{var1}})
+  const content = template.content || '';
+  const matches = content.match(/##([a-zA-Z0-9_-]+)##|\{\{([a-zA-Z0-9_-]+)\}\}/g) || [];
+  const vars = new Set();
+  matches.forEach((m) => {
+    const clean = m.replace(/^[#{]+|[}#]+$/g, '').trim();
+    if (clean) vars.add(clean);
+  });
+  return Array.from(vars);
+};
+
+/**
+ * List Approved SMS Templates (Exact, Deterministic Lookup)
+ * Matches strictly the configured MSG91_BULK_SMS_TEMPLATE_ID
  */
 const getTemplates = async () => {
+  const configuredTemplateId = getConfiguredTemplateId();
+
   if (!shouldSkipDb()) {
     await ensureBulkSmsTables();
     try {
-      const activeTemplateId = process.env.MSG91_BULK_SMS_TEMPLATE_ID || '6acdf0660b357ef1f10a6343';
-      const res = await query(`
-        SELECT id, name, provider, provider_template_id, sender_id, content,
-               template_type, approval_status, variables, preview_url, created_at
-        FROM sms_templates
-        WHERE id = 'tpl-preapproved-loan-001' 
-           OR provider_template_id = $1
-           OR content LIKE '%##var1##%'
-        ORDER BY created_at DESC
-        LIMIT 1
-      `, [activeTemplateId]);
+      const res = await query(
+        `SELECT id, name, provider, provider_template_id, sender_id, content,
+                template_type, approval_status, variables, preview_url, created_at
+         FROM sms_templates
+         WHERE provider_template_id = $1`,
+        [configuredTemplateId]
+      );
       if (res.rows && res.rows.length > 0) {
         return res.rows;
       }
     } catch (err) {
-      if (err.message && err.message.includes('does not exist')) {
-        tablesEnsured = false;
-        await ensureBulkSmsTables();
-        try {
-          const activeTemplateId = process.env.MSG91_BULK_SMS_TEMPLATE_ID || '6acdf0660b357ef1f10a6343';
-          const retryRes = await query(`
-            SELECT id, name, provider, provider_template_id, sender_id, content,
-                   template_type, approval_status, variables, preview_url, created_at
-            FROM sms_templates
-            WHERE id = 'tpl-preapproved-loan-001' 
-               OR provider_template_id = $1
-               OR content LIKE '%##var1##%'
-            ORDER BY created_at DESC
-            LIMIT 1
-          `, [activeTemplateId]);
-          if (retryRes.rows && retryRes.rows.length > 0) return retryRes.rows;
-        } catch (retryErr) {}
-      }
-      logger.warn(`[Bulk-SMS] Database templates query fallback: ${err.message}`);
+      logger.warn(`[Bulk-SMS] Database templates query notice: ${err.message}`);
     }
   }
-  return Array.from(inMemoryStore.templates.values());
+
+  // Check inMemoryStore strictly matching configuredTemplateId
+  const inMem = Array.from(inMemoryStore.templates.values()).filter(
+    (t) => t.provider_template_id === configuredTemplateId
+  );
+  if (inMem.length > 0) {
+    return inMem;
+  }
+
+  // If in test or fallback mode and inMemoryStore has default
+  const defaults = getDefaultTemplates();
+  const matchedDefault = defaults.find((t) => t.provider_template_id === configuredTemplateId);
+  if (matchedDefault) {
+    inMemoryStore.templates.set(matchedDefault.id, matchedDefault);
+    return [matchedDefault];
+  }
+
+  return [];
 };
 
 /**
- * Get Template By ID
+ * Get Template By ID (Exact Lookup)
+ * Distinguishes internal DB template ID from MSG91 provider template ID.
+ * Returns null if not found. Never silently falls back to an unrelated template.
  */
 const getTemplateById = async (templateId) => {
+  if (!templateId) return null;
+  const configuredTemplateId = getConfiguredTemplateId();
+
+  let template = null;
   if (!shouldSkipDb()) {
     try {
       const res = await query(
-        `SELECT * FROM sms_templates WHERE id = $1 OR provider_template_id = $1`,
+        `SELECT id, name, provider, provider_template_id, sender_id, content,
+                template_type, approval_status, variables, preview_url, created_at
+         FROM sms_templates
+         WHERE id = $1 OR provider_template_id = $1`,
         [templateId]
       );
       if (res.rows && res.rows.length > 0) {
-        return res.rows[0];
+        template = res.rows[0];
       }
     } catch (err) {
-      logger.warn(`[Bulk-SMS] Database getTemplateById fallback: ${err.message}`);
+      logger.warn(`[Bulk-SMS] Database getTemplateById notice: ${err.message}`);
     }
   }
-  return inMemoryStore.templates.get(templateId) || inMemoryStore.templates.get('tpl-preapproved-loan-001') || DEFAULT_TEMPLATES[0];
+
+  if (!template) {
+    template = inMemoryStore.templates.get(templateId) || null;
+    if (!template) {
+      for (const t of inMemoryStore.templates.values()) {
+        if (t.provider_template_id === templateId) {
+          template = t;
+          break;
+        }
+      }
+    }
+    if (!template) {
+      const defaults = getDefaultTemplates();
+      template = defaults.find((t) => t.id === templateId || t.provider_template_id === templateId) || null;
+    }
+  }
+
+  if (!template) return null;
+
+  return template;
 };
 
 /**
- * Create SMS Template (Admin configuration)
+ * Create SMS Template
  */
 const createTemplate = async (templateData) => {
   const {
@@ -370,34 +488,37 @@ const createTemplate = async (templateData) => {
     content,
     template_type,
     approval_status,
-    variables,
+    variables: Array.isArray(variables) ? variables : JSON.parse(variables || '[]'),
     preview_url,
     created_at: new Date(),
   };
 
-  try {
-    const res = await query(
-      `INSERT INTO sms_templates (
-        name, provider, provider_template_id, sender_id, content, template_type, approval_status, variables, preview_url
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [
-        name,
-        provider,
-        provider_template_id,
-        sender_id,
-        content,
-        template_type,
-        approval_status,
-        JSON.stringify(variables),
-        preview_url,
-      ]
-    );
-    if (res.rows && res.rows.length > 0) {
-      inMemoryStore.templates.set(res.rows[0].id, res.rows[0]);
-      return res.rows[0];
+  if (!shouldSkipDb()) {
+    try {
+      const res = await query(
+        `INSERT INTO sms_templates (
+          id, name, provider, provider_template_id, sender_id, content, template_type, approval_status, variables, preview_url
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+        [
+          newId,
+          name,
+          provider,
+          provider_template_id,
+          sender_id,
+          content,
+          template_type,
+          approval_status,
+          JSON.stringify(templateObj.variables),
+          preview_url,
+        ]
+      );
+      if (res.rows && res.rows.length > 0) {
+        inMemoryStore.templates.set(res.rows[0].id, res.rows[0]);
+        return res.rows[0];
+      }
+    } catch (err) {
+      logger.warn(`[Bulk-SMS] Create template DB notice: ${err.message}`);
     }
-  } catch (err) {
-    logger.warn(`[Bulk-SMS] Create template DB fallback: ${err.message}`);
   }
 
   inMemoryStore.templates.set(newId, templateObj);
@@ -410,7 +531,7 @@ const createTemplate = async (templateData) => {
 const createCampaign = async ({
   campaign_name,
   template_id,
-  sender_id = msg91SenderId,
+  sender_id = null,
   schedule_type = 'SEND_NOW',
   scheduled_at = null,
   recipients = [],
@@ -423,17 +544,48 @@ const createCampaign = async ({
     throw new Error('Campaign name is required.');
   }
 
+  const configuredTemplateId = getConfiguredTemplateId();
   const template = await getTemplateById(template_id);
+
   if (!template) {
     throw new Error(`Template not found: ${template_id}`);
   }
 
+  // Strict verification: selected template's provider_template_id MUST match configuredTemplateId
+  if (template.provider_template_id !== configuredTemplateId) {
+    throw new Error(
+      `Template provider ID mismatch: configured is '${configuredTemplateId}', but selected template has '${template.provider_template_id}'.`
+    );
+  }
+
+  // Strict verification: approval_status must be APPROVED
   if (template.approval_status !== 'APPROVED') {
     throw new Error(`Selected template is not approved for sending. Status: ${template.approval_status}`);
   }
 
   if (!recipients || recipients.length === 0) {
     throw new Error('No valid recipients provided for this campaign.');
+  }
+
+  // Validate required template variables
+  const requiredVars = extractRequiredVariables(template);
+  for (let idx = 0; idx < recipients.length; idx++) {
+    const r = recipients[idx];
+    const rVars = r.variables || {};
+    for (const vName of requiredVars) {
+      const val =
+        rVars[vName] !== undefined && rVars[vName] !== null && String(rVars[vName]).trim() !== ''
+          ? String(rVars[vName]).trim()
+          : (custom_variables && custom_variables[vName] !== undefined && String(custom_variables[vName]).trim() !== ''
+              ? String(custom_variables[vName]).trim()
+              : (rVars[`##${vName}##`] ? String(rVars[`##${vName}##`]).trim() : ''));
+
+      if (!val) {
+        throw new Error(
+          `Recipient at row ${idx + 1} (${r.mobile_number || 'N/A'}) is missing required template variable: ##${vName}##`
+        );
+      }
+    }
   }
 
   const isScheduled = schedule_type === 'SCHEDULE_LATER' && scheduled_at;
@@ -443,13 +595,14 @@ const createCampaign = async ({
 
   const campaignId = `cmp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
   const initialStatus = isScheduled ? 'SCHEDULED' : 'QUEUED';
+  const effectiveSenderId = template.sender_id || sender_id || getMsg91SenderId();
 
   const campaignRecord = {
     id: campaignId,
     campaign_name: campaign_name.trim(),
     template_id: template.id,
     template_name: template.name,
-    sender_id: template.sender_id || sender_id,
+    sender_id: effectiveSenderId,
     status: initialStatus,
     total_recipients: recipients.length,
     valid_recipients: recipients.length,
@@ -471,8 +624,19 @@ const createCampaign = async ({
 
   const recipientRecords = recipients.map((r, idx) => {
     const rVars = r.variables || {};
-    const finalVar1 = rVars.var1 || rVars['##var1##'] || custom_variables?.var1 || '';
-    const finalVar2 = rVars.var2 || rVars['##var2##'] || custom_variables?.var2 || '';
+    const formattedVars = { ...rVars };
+
+    requiredVars.forEach((vName) => {
+      const val =
+        rVars[vName] !== undefined && rVars[vName] !== null && String(rVars[vName]).trim() !== ''
+          ? String(rVars[vName]).trim()
+          : (custom_variables && custom_variables[vName] !== undefined && String(custom_variables[vName]).trim() !== ''
+              ? String(custom_variables[vName]).trim()
+              : (rVars[`##${vName}##`] ? String(rVars[`##${vName}##`]).trim() : ''));
+      formattedVars[vName] = val;
+      formattedVars[`##${vName}##`] = val;
+    });
+
     return {
       id: `rec-${campaignId}-${idx + 1}`,
       campaign_id: campaignId,
@@ -480,26 +644,21 @@ const createCampaign = async ({
       normalized_mobile_number: r.normalized_mobile_number || `91${r.mobile_number}`,
       recipient_name: r.recipient_name || '',
       status: 'QUEUED',
-      variables: {
-        ...rVars,
-        var1: finalVar1,
-        var2: finalVar2,
-        '##var1##': finalVar1,
-        '##var2##': finalVar2,
-      },
+      variables: formattedVars,
       msg91_message_id: null,
       sent_at: null,
       delivered_at: null,
       failure_reason: null,
       created_at: new Date(),
+      updated_at: new Date(),
     };
   });
 
-  // Persist into memory store
+  // Persist into inMemoryStore
   inMemoryStore.campaigns.set(campaignId, campaignRecord);
   inMemoryStore.recipients.set(campaignId, recipientRecords);
 
-  // Attempt database persistence asynchronously
+  // Persist into database if available
   if (!shouldSkipDb()) {
     await ensureBulkSmsTables();
     try {
@@ -524,8 +683,35 @@ const createCampaign = async ({
           userId,
         ]
       );
+
+      // Persist recipients in batches of 100
+      for (let i = 0; i < recipientRecords.length; i += 100) {
+        const chunk = recipientRecords.slice(i, i + 100);
+        const valueClauses = [];
+        const params = [];
+        let pIdx = 1;
+        for (const rec of chunk) {
+          valueClauses.push(`($${pIdx}, $${pIdx + 1}, $${pIdx + 2}, $${pIdx + 3}, $${pIdx + 4}, $${pIdx + 5}, $${pIdx + 6})`);
+          params.push(
+            rec.id,
+            rec.campaign_id,
+            rec.mobile_number,
+            rec.normalized_mobile_number,
+            rec.recipient_name,
+            rec.status,
+            JSON.stringify(rec.variables || {})
+          );
+          pIdx += 7;
+        }
+        await query(
+          `INSERT INTO bulk_sms_recipients (
+            id, campaign_id, mobile_number, normalized_mobile_number, recipient_name, status, variables
+          ) VALUES ${valueClauses.join(', ')}`,
+          params
+        );
+      }
     } catch (err) {
-      logger.warn(`[Bulk-SMS] Database campaign insert fallback: ${err.message}`);
+      logger.warn(`[Bulk-SMS] Database campaign/recipients insert notice: ${err.message}`);
     }
   }
 
@@ -553,7 +739,12 @@ const createCampaign = async ({
 
 /**
  * Background Asynchronous Queue Processor
- * Batches recipients (50 per batch) and dispatches via MSG91 Flow API
+ * Batches recipients (50 per batch) and dispatches via MSG91 Flow API.
+ * Uses exact distinctions:
+ * - SENT: provider accepted request.
+ * - FAILED: provider rejected request.
+ * - SIMULATED: test mock response (does NOT increment real sent/delivered counts).
+ * - DELIVERED: set ONLY by verified delivery receipt.
  */
 const processCampaignQueueAsync = async (campaignId, template, recipientList) => {
   logger.info(`[Bulk-SMS-Queue] Starting background processing for campaign: ${campaignId} (${recipientList.length} recipients)`);
@@ -577,8 +768,6 @@ const processCampaignQueueAsync = async (campaignId, template, recipientList) =>
       return {
         mobiles: r.normalized_mobile_number,
         ...vars,
-        var1: vars.var1 || vars['##var1##'] || '',
-        var2: vars.var2 || vars['##var2##'] || '',
       };
     });
 
@@ -589,18 +778,32 @@ const processCampaignQueueAsync = async (campaignId, template, recipientList) =>
         template.sender_id
       );
 
+      const isSimulated = Boolean(response.simulated);
+
       batch.forEach((r, idx) => {
         const itemResult = response.recipients ? response.recipients[idx] : null;
-        if (response.success && itemResult?.status !== 'FAILED') {
-          r.status = 'DELIVERED'; // Final provider delivery confirmed
+
+        if (isSimulated) {
+          // Mock / Simulated response: NEVER mark as SENT or DELIVERED, and do not increment real sent/delivered counts
+          r.status = 'SIMULATED';
+          r.msg91_message_id = itemResult?.message_id || response.messageId;
+          r.sent_at = null;
+          r.delivered_at = null;
+          r.failure_reason = null;
+        } else if (response.success && itemResult?.status !== 'FAILED') {
+          // Provider accepted: status is SENT (awaiting delivery receipt), NEVER DELIVERED
+          r.status = 'SENT';
           r.msg91_message_id = itemResult?.message_id || response.messageId;
           r.sent_at = new Date();
-          r.delivered_at = new Date();
+          r.delivered_at = null;
+          r.failure_reason = null;
           totalSent++;
-          totalDelivered++;
         } else {
+          // Provider rejected / failed
           r.status = 'FAILED';
           r.failure_reason = itemResult?.failure_reason || response.error || 'Provider rejected SMS';
+          r.sent_at = null;
+          r.delivered_at = null;
           totalFailed++;
         }
       });
@@ -616,9 +819,30 @@ const processCampaignQueueAsync = async (campaignId, template, recipientList) =>
     // Update in-memory progress
     if (campaign) {
       campaign.sent_count = totalSent;
-      campaign.delivered_count = totalDelivered;
+      campaign.delivered_count = totalDelivered; // remains 0 until verified DLR
       campaign.failed_count = totalFailed;
-      campaign.pending_count = recipientList.length - (totalDelivered + totalFailed);
+      campaign.pending_count = recipientList.length - (totalSent + totalFailed);
+    }
+
+    // Update database records
+    if (!shouldSkipDb()) {
+      try {
+        for (const r of batch) {
+          await query(
+            `UPDATE bulk_sms_recipients
+             SET status = $1,
+                 msg91_message_id = $2,
+                 sent_at = $3,
+                 delivered_at = $4,
+                 failure_reason = $5,
+                 updated_at = NOW()
+             WHERE id = $6`,
+            [r.status, r.msg91_message_id, r.sent_at, r.delivered_at, r.failure_reason, r.id]
+          );
+        }
+      } catch (dbErr) {
+        logger.warn(`[Bulk-SMS] Database recipient batch update notice: ${dbErr.message}`);
+      }
     }
   }
 
@@ -629,9 +853,11 @@ const processCampaignQueueAsync = async (campaignId, template, recipientList) =>
     campaign.pending_count = 0;
   }
 
-  logger.info(`[Bulk-SMS-Queue] Finished campaign ${campaignId}. Sent: ${totalSent}, Delivered: ${totalDelivered}, Failed: ${totalFailed}`);
+  logger.info(
+    `[Bulk-SMS-Queue] Finished campaign ${campaignId}. Sent: ${totalSent}, Delivered: ${totalDelivered}, Failed: ${totalFailed}`
+  );
 
-  // Update DB campaign record asynchronously
+  // Update DB campaign record
   if (!shouldSkipDb()) {
     try {
       await query(
@@ -647,22 +873,119 @@ const processCampaignQueueAsync = async (campaignId, template, recipientList) =>
         [totalSent, totalDelivered, totalFailed, campaignId]
       );
     } catch (err) {
-      logger.warn(`[Bulk-SMS] DB campaign update fallback: ${err.message}`);
+      logger.warn(`[Bulk-SMS] DB campaign update notice: ${err.message}`);
     }
   }
+};
+
+/**
+ * Handle Verified MSG91 Delivery Receipt / Postback
+ * Updates recipient status to DELIVERED or FAILED, and recalculates campaign aggregates.
+ */
+const handleDeliveryReceipt = async ({
+  messageId,
+  requestId,
+  mobile,
+  status,
+  deliveredAt = new Date(),
+  failureReason = null,
+}) => {
+  const targetId = messageId || requestId;
+  if (!targetId && !mobile) {
+    throw new Error('Delivery receipt must include a messageId/requestId or mobile number.');
+  }
+
+  const rawStatus = String(status || '').toUpperCase();
+  const isDelivered = rawStatus === 'DELIVERED' || rawStatus === '1' || rawStatus === 'SUCCESS';
+  const isFailed = rawStatus === 'FAILED' || rawStatus === '2' || rawStatus === 'UNDELIVERED' || rawStatus === 'REJECTED';
+
+  const newStatus = isDelivered ? 'DELIVERED' : isFailed ? 'FAILED' : 'SENT';
+  const normMobile = mobile ? normalizeForMsg91(mobile) : null;
+  const tenDigit = mobile ? String(mobile).replace(/\D/g, '').slice(-10) : null;
+
+  let updatedCount = 0;
+  const affectedCampaignIds = new Set();
+
+  // 1. Update In-Memory Store
+  for (const [cId, recList] of inMemoryStore.recipients.entries()) {
+    for (const r of recList) {
+      const matchId = targetId && (r.msg91_message_id === targetId || String(r.msg91_message_id).includes(targetId));
+      const matchMobile = normMobile && (r.normalized_mobile_number === normMobile || r.mobile_number === tenDigit);
+
+      if (matchId || (matchMobile && (!targetId || r.msg91_message_id === targetId))) {
+        r.status = newStatus;
+        if (isDelivered) {
+          r.delivered_at = new Date(deliveredAt);
+        } else if (isFailed) {
+          r.failure_reason = failureReason || 'Carrier undelivered';
+        }
+        updatedCount++;
+        affectedCampaignIds.add(cId);
+      }
+    }
+  }
+
+  // Recalculate campaign stats in memory
+  for (const cId of affectedCampaignIds) {
+    const campaign = inMemoryStore.campaigns.get(cId);
+    const recs = inMemoryStore.recipients.get(cId) || [];
+    if (campaign) {
+      campaign.delivered_count = recs.filter((r) => r.status === 'DELIVERED').length;
+      campaign.failed_count = recs.filter((r) => r.status === 'FAILED').length;
+      campaign.sent_count = recs.filter((r) => r.status === 'SENT' || r.status === 'DELIVERED').length;
+    }
+  }
+
+  // 2. Update Database
+  if (!shouldSkipDb()) {
+    try {
+      let updateSql = `
+        UPDATE bulk_sms_recipients
+        SET status = $1,
+            delivered_at = $2,
+            failure_reason = $3,
+            updated_at = NOW()
+        WHERE (msg91_message_id = $4 OR ($4 IS NULL AND normalized_mobile_number = $5))
+        RETURNING campaign_id
+      `;
+      const res = await query(updateSql, [
+        newStatus,
+        isDelivered ? new Date(deliveredAt) : null,
+        isFailed ? (failureReason || 'Carrier undelivered') : null,
+        targetId || null,
+        normMobile || null,
+      ]);
+
+      if (res.rows && res.rows.length > 0) {
+        updatedCount = Math.max(updatedCount, res.rows.length);
+        const dbCampaignIds = [...new Set(res.rows.map((r) => r.campaign_id))];
+        for (const cId of dbCampaignIds) {
+          await query(
+            `UPDATE bulk_sms_campaigns
+             SET delivered_count = (SELECT COUNT(*)::INT FROM bulk_sms_recipients WHERE campaign_id = $1 AND status = 'DELIVERED'),
+                 failed_count = (SELECT COUNT(*)::INT FROM bulk_sms_recipients WHERE campaign_id = $1 AND status = 'FAILED'),
+                 updated_at = NOW()
+             WHERE id = $1`,
+            [cId]
+          );
+        }
+      }
+    } catch (err) {
+      logger.warn(`[Bulk-SMS] Database delivery receipt update notice: ${err.message}`);
+    }
+  }
+
+  return {
+    success: true,
+    updated_status: newStatus,
+    updated_count: updatedCount,
+  };
 };
 
 /**
  * Top Statistics Cards
  */
 const getCampaignStats = async () => {
-  const allCampaigns = Array.from(inMemoryStore.campaigns.values());
-
-  let totalCampaigns = allCampaigns.length;
-  let messagesSent = allCampaigns.reduce((acc, c) => acc + (c.sent_count || 0), 0);
-  let delivered = allCampaigns.reduce((acc, c) => acc + (c.delivered_count || 0), 0);
-  let failed = allCampaigns.reduce((acc, c) => acc + (c.failed_count || 0), 0);
-
   if (!shouldSkipDb()) {
     await ensureBulkSmsTables();
     try {
@@ -677,45 +1000,23 @@ const getCampaignStats = async () => {
       if (res.rows && res.rows[0]) {
         const dbStats = res.rows[0];
         return {
-          total_campaigns: Math.max(totalCampaigns, Number(dbStats.total_campaigns)),
-          messages_sent: Math.max(messagesSent, Number(dbStats.messages_sent)),
-          delivered: Math.max(delivered, Number(dbStats.delivered)),
-          failed: Math.max(failed, Number(dbStats.failed)),
+          total_campaigns: Number(dbStats.total_campaigns),
+          messages_sent: Number(dbStats.messages_sent),
+          delivered: Number(dbStats.delivered),
+          failed: Number(dbStats.failed),
         };
       }
     } catch (err) {
-      if (err.message && err.message.includes('does not exist')) {
-        tablesEnsured = false;
-        await ensureBulkSmsTables();
-        try {
-          const retryRes = await query(`
-            SELECT 
-              COUNT(*)::INT AS total_campaigns,
-              COALESCE(SUM(sent_count), 0)::INT AS messages_sent,
-              COALESCE(SUM(delivered_count), 0)::INT AS delivered,
-              COALESCE(SUM(failed_count), 0)::INT AS failed
-            FROM bulk_sms_campaigns
-          `);
-          if (retryRes.rows && retryRes.rows[0]) {
-            const dbStats = retryRes.rows[0];
-            return {
-              total_campaigns: Math.max(totalCampaigns, Number(dbStats.total_campaigns)),
-              messages_sent: Math.max(messagesSent, Number(dbStats.messages_sent)),
-              delivered: Math.max(delivered, Number(dbStats.delivered)),
-              failed: Math.max(failed, Number(dbStats.failed)),
-            };
-          }
-        } catch (retryErr) {}
-      }
-      logger.warn(`[Bulk-SMS] DB stats fallback: ${err.message}`);
+      logger.warn(`[Bulk-SMS] DB stats notice: ${err.message}`);
     }
   }
 
+  const allCampaigns = Array.from(inMemoryStore.campaigns.values());
   return {
-    total_campaigns: totalCampaigns,
-    messages_sent: messagesSent,
-    delivered,
-    failed,
+    total_campaigns: allCampaigns.length,
+    messages_sent: allCampaigns.reduce((acc, c) => acc + (c.sent_count || 0), 0),
+    delivered: allCampaigns.reduce((acc, c) => acc + (c.delivered_count || 0), 0),
+    failed: allCampaigns.reduce((acc, c) => acc + (c.failed_count || 0), 0),
   };
 };
 
@@ -723,6 +1024,44 @@ const getCampaignStats = async () => {
  * List Campaigns with Pagination & Filters
  */
 const listCampaigns = async ({ page = 1, limit = 20, status = 'ALL', search = '' }) => {
+  if (!shouldSkipDb()) {
+    try {
+      let queryStr = `SELECT * FROM bulk_sms_campaigns WHERE 1=1`;
+      const queryParams = [];
+
+      if (status && status !== 'ALL') {
+        queryParams.push(status.toUpperCase());
+        queryStr += ` AND UPPER(status) = $${queryParams.length}`;
+      }
+
+      if (search && search.trim()) {
+        queryParams.push(`%${search.trim().toLowerCase()}%`);
+        queryStr += ` AND (LOWER(campaign_name) LIKE $${queryParams.length})`;
+      }
+
+      queryStr += ` ORDER BY created_at DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
+      const offset = (Number(page) - 1) * Number(limit);
+      queryParams.push(Number(limit), offset);
+
+      const res = await query(queryStr, queryParams);
+      const countRes = await query(`SELECT COUNT(*)::INT AS total FROM bulk_sms_campaigns`);
+
+      if (res.rows && res.rows.length > 0) {
+        return {
+          campaigns: res.rows,
+          pagination: {
+            page: Number(page),
+            limit: Number(limit),
+            total: countRes.rows[0]?.total || res.rows.length,
+            totalPages: Math.ceil((countRes.rows[0]?.total || res.rows.length) / Number(limit)) || 1,
+          },
+        };
+      }
+    } catch (e) {
+      logger.warn(`[Bulk-SMS] DB listCampaigns notice: ${e.message}`);
+    }
+  }
+
   let list = Array.from(inMemoryStore.campaigns.values()).sort(
     (a, b) => new Date(b.created_at) - new Date(a.created_at)
   );
@@ -758,12 +1097,14 @@ const listCampaigns = async ({ page = 1, limit = 20, status = 'ALL', search = ''
  * Get Single Campaign Details
  */
 const getCampaignDetails = async (campaignId) => {
-  const campaign = inMemoryStore.campaigns.get(campaignId);
-  if (!campaign) {
+  if (!shouldSkipDb()) {
     try {
       const res = await query(`SELECT * FROM bulk_sms_campaigns WHERE id = $1`, [campaignId]);
       if (res.rows && res.rows[0]) return res.rows[0];
     } catch (e) {}
+  }
+  const campaign = inMemoryStore.campaigns.get(campaignId);
+  if (!campaign) {
     throw new Error(`Campaign not found: ${campaignId}`);
   }
   return campaign;
@@ -773,6 +1114,42 @@ const getCampaignDetails = async (campaignId) => {
  * Get Recipients for a Campaign
  */
 const getCampaignRecipients = async (campaignId, { page = 1, limit = 50, status = 'ALL' }) => {
+  if (!shouldSkipDb()) {
+    try {
+      let queryStr = `SELECT * FROM bulk_sms_recipients WHERE campaign_id = $1`;
+      const queryParams = [campaignId];
+      if (status && status !== 'ALL') {
+        queryParams.push(status.toUpperCase());
+        queryStr += ` AND UPPER(status) = $${queryParams.length}`;
+      }
+      queryStr += ` ORDER BY created_at ASC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
+      const offset = (Number(page) - 1) * Number(limit);
+      queryParams.push(Number(limit), offset);
+
+      const res = await query(queryStr, queryParams);
+      const countRes = await query(
+        `SELECT COUNT(*)::INT AS total FROM bulk_sms_recipients WHERE campaign_id = $1 ${
+          status && status !== 'ALL' ? `AND UPPER(status) = '${status.toUpperCase()}'` : ''
+        }`,
+        [campaignId]
+      );
+
+      if (res.rows && res.rows.length > 0) {
+        return {
+          recipients: res.rows.map((r) => ({ ...r, masked_mobile: r.mobile_number })),
+          pagination: {
+            page: Number(page),
+            limit: Number(limit),
+            total: countRes.rows[0]?.total || res.rows.length,
+            totalPages: Math.ceil((countRes.rows[0]?.total || res.rows.length) / Number(limit)) || 1,
+          },
+        };
+      }
+    } catch (e) {
+      logger.warn(`[Bulk-SMS] DB getCampaignRecipients notice: ${e.message}`);
+    }
+  }
+
   let recipients = inMemoryStore.recipients.get(campaignId) || [];
 
   if (status && status !== 'ALL') {
@@ -785,7 +1162,7 @@ const getCampaignRecipients = async (campaignId, { page = 1, limit = 50, status 
   return {
     recipients: paged.map((r) => ({
       ...r,
-      masked_mobile: r.mobile_number, // show full number
+      masked_mobile: r.mobile_number,
     })),
     pagination: {
       page: Number(page),
@@ -801,17 +1178,44 @@ const getCampaignRecipients = async (campaignId, { page = 1, limit = 50, status 
  */
 const getCampaignReport = async (campaignId) => {
   const campaign = await getCampaignDetails(campaignId);
-  const recipients = inMemoryStore.recipients.get(campaignId) || [];
 
   const breakdown = {
     QUEUED: 0,
     SENT: 0,
     DELIVERED: 0,
     FAILED: 0,
+    SIMULATED: 0,
     REJECTED: 0,
     PENDING: 0,
   };
 
+  if (!shouldSkipDb()) {
+    try {
+      const res = await query(
+        `SELECT status, COUNT(*)::INT AS count FROM bulk_sms_recipients WHERE campaign_id = $1 GROUP BY status`,
+        [campaignId]
+      );
+      if (res.rows && res.rows.length > 0) {
+        res.rows.forEach((r) => {
+          const s = String(r.status).toUpperCase();
+          if (breakdown[s] !== undefined) {
+            breakdown[s] = Number(r.count);
+          } else {
+            breakdown.PENDING += Number(r.count);
+          }
+        });
+        return {
+          campaign,
+          breakdown,
+          total_recipients: campaign.total_recipients,
+        };
+      }
+    } catch (e) {
+      logger.warn(`[Bulk-SMS] DB getCampaignReport notice: ${e.message}`);
+    }
+  }
+
+  const recipients = inMemoryStore.recipients.get(campaignId) || [];
   recipients.forEach((r) => {
     const s = String(r.status).toUpperCase();
     if (breakdown[s] !== undefined) {
@@ -833,7 +1237,8 @@ const getCampaignReport = async (campaignId) => {
  */
 const exportCampaignCsv = async (campaignId) => {
   const campaign = await getCampaignDetails(campaignId);
-  const recipients = inMemoryStore.recipients.get(campaignId) || [];
+  const recipientData = await getCampaignRecipients(campaignId, { limit: 100000 });
+  const recipients = recipientData.recipients || [];
 
   const headers = ['#', 'Mobile Number', 'Recipient Name', 'Status', 'Message ID', 'Sent At', 'Delivered At', 'Failure Reason'];
   const rows = [headers.join(',')];
@@ -845,7 +1250,7 @@ const exportCampaignCsv = async (campaignId) => {
 
     rows.push([
       idx + 1,
-      r.mobile_number, // full number
+      r.mobile_number,
       `"${r.recipient_name || ''}"`,
       r.status,
       r.msg91_message_id || 'N/A',
@@ -885,13 +1290,16 @@ const triggerCampaignSendNow = async (campaignId) => {
 };
 
 module.exports = {
+  inMemoryStore,
   cleanAndValidateMobile,
   parseRecipientFile,
+  extractRequiredVariables,
   getTemplates,
   getTemplateById,
   createTemplate,
   createCampaign,
   processCampaignQueueAsync,
+  handleDeliveryReceipt,
   triggerCampaignSendNow,
   getCampaignStats,
   listCampaigns,
@@ -900,4 +1308,3 @@ module.exports = {
   getCampaignReport,
   exportCampaignCsv,
 };
-

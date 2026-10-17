@@ -383,6 +383,45 @@ const rescheduleCampaign = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/v1/admin/bulk-sms/delivery-receipt
+ * Process verified MSG91 delivery receipt callback / report
+ */
+const handleDeliveryReceipt = async (req, res) => {
+  try {
+    const body = req.body || {};
+    const { message_id, request_id, requestId, mobile, status, delivered_at, failure_reason, data, report } = body;
+
+    const reports = Array.isArray(data) ? data : (Array.isArray(report) ? report : (Array.isArray(body) ? body : [body]));
+    let totalUpdated = 0;
+
+    for (const item of reports) {
+      if (!item || typeof item !== 'object') continue;
+      const resItem = await bulkSmsService.handleDeliveryReceipt({
+        messageId: item.message_id || item.messageId || item.msgId || item.requestId || requestId || message_id,
+        requestId: item.request_id || item.requestId || requestId,
+        mobile: item.mobile || item.number || item.mobiles || mobile,
+        status: item.status || item.desc || status,
+        deliveredAt: item.delivered_at || item.date || item.deliveredAt || delivered_at,
+        failureReason: item.failure_reason || item.reason || item.desc || failure_reason,
+      });
+      totalUpdated += (resItem.updated_count || 0);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Delivery receipt processed successfully.',
+      updated_records: totalUpdated,
+    });
+  } catch (err) {
+    logger.error(`[Bulk-SMS] Delivery receipt error: ${err.message}`);
+    return res.status(400).json({
+      success: false,
+      message: err.message || 'Failed to process delivery receipt.',
+    });
+  }
+};
+
 module.exports = {
   uploadRecipients,
   getStats,
@@ -397,4 +436,5 @@ module.exports = {
   exportCampaignReport,
   triggerSendNow,
   rescheduleCampaign,
+  handleDeliveryReceipt,
 };

@@ -23,12 +23,17 @@ const upload = multer({
   },
 });
 
+// ── Public Inbound Webhook for MSG91 Delivery Reports (DLR) ──────────────────
+router.post('/webhook/dlr', ctrl.handleDeliveryReceipt);
+
 // ── Super Admin Authorization Enforcement ────────────────────────────────────
 // Direct API requests from non-Super Admin users are strictly rejected (401/403)
 router.use(jwtAuth);
 router.use(roleCheck('SUPER_ADMIN'));
 
 // ── Bulk SMS Endpoints ───────────────────────────────────────────────────────
+// Delivery Receipt (Super Admin manual/test trigger)
+router.post('/delivery-receipt', ctrl.handleDeliveryReceipt);
 // Upload & Validation
 router.post('/upload', upload.single('file'), ctrl.uploadRecipients);
 

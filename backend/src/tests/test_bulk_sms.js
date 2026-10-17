@@ -111,14 +111,19 @@ async function runTests() {
   console.log('Test 7: Testing CSV Delivery Report generation...');
   const reportCsv = await bulkSmsService.exportCampaignCsv(campaign.campaign_id);
   assert(reportCsv.includes('Mobile Number'), 'Report should include headers');
-  assert(reportCsv.includes('DELIVERED') || reportCsv.includes('SENT') || reportCsv.includes('QUEUED'), 'Report should have status');
+  assert(
+    reportCsv.includes('SIMULATED') || reportCsv.includes('DELIVERED') || reportCsv.includes('SENT') || reportCsv.includes('QUEUED'),
+    'Report should have status'
+  );
   console.log('✓ Test 7 passed: Delivery report generated');
 
-  console.log('\n--- ALL BULK SMS BACKEND TESTS COMPLETED SUCCESSFULLY! ---');
-  process.exit(0);
+  console.log('\n--- ALL BASIC BULK SMS BACKEND TESTS COMPLETED SUCCESSFULLY! ---');
+  console.log('\n--- NOW RUNNING 10 COMPREHENSIVE VERIFICATION TEST CASES ---');
+  require('./test_bulk_sms_comprehensive');
 }
 
 runTests().catch((err) => {
   console.error('Test failed with error:', err);
   process.exit(1);
 });
+

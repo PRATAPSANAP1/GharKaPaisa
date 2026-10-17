@@ -93,25 +93,11 @@ export default function BulkSmsDashboard({ defaultTab }) {
   const [previewFilter, setPreviewFilter] = useState('ALL'); // ALL | Valid | Invalid | Duplicate
   const fileInputRef = useRef(null);
 
-// Single approved template per business requirements
-const SINGLE_APPROVED_TEMPLATE = {
-  id: 'tpl-preapproved-loan-001',
-  name: 'Pre-Approved Credit Card Loan Offer',
-  provider: 'MSG91',
-  provider_template_id: '6acdf0660b357ef1f10a6343',
-  sender_id: 'GHARKP',
-  content: `Hello! Greetings from ##var1## You have a pre-approved loan on your credit card with instant disbursal in 10 seconds. How much loan amount are you looking for?\n\n[Apply here] ##var2##\n-YOHESA MARKETING CONSULTATION PRIVATE LIMITED\n-GharKaPaisa`,
-  template_type: 'Promotional',
-  approval_status: 'APPROVED',
-  variables: ['var1', 'var2'],
-  preview_url: 'https://gharkapaisa.com/apply',
-  created_at: new Date('2026-10-01T10:00:00Z'),
-};
-
-  // Template Selection State - Strictly single approved template
-  const [templates, setTemplates] = useState([SINGLE_APPROVED_TEMPLATE]);
+  // Template Selection State - Populated strictly from backend runtime configuration
+  const [templates, setTemplates] = useState([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState(SINGLE_APPROVED_TEMPLATE);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [templateError, setTemplateError] = useState('');
   const [variableMappings, setVariableMappings] = useState({});
 
   // Dynamic Variable Inputs (##var1## and ##var2##)
@@ -152,37 +138,26 @@ const SINGLE_APPROVED_TEMPLATE = {
   const [modalTestVar1, setModalTestVar1] = useState('GharKaPaisa');
   const [modalTestVar2, setModalTestVar2] = useState('https://gharkapaisa.com/apply');
 
-  // ── Fetch Templates (Ensure only the single approved template is exposed) ───
+  // ── Fetch Templates (Exact validated template from backend runtime) ─────────
   const fetchTemplates = async () => {
     setLoadingTemplates(true);
+    setTemplateError('');
     try {
       const res = await api.get('/admin/bulk-sms/templates');
       if (res.data?.success && Array.isArray(res.data?.data) && res.data.data.length > 0) {
-        const matched = res.data.data.find(
-          (t) => t.id === 'tpl-preapproved-loan-001' || t.content?.includes('##var1##') || t.content?.includes('pre-approved loan')
-        );
-        const tpl = matched || res.data.data[0] || SINGLE_APPROVED_TEMPLATE;
-        const normalized = {
-          ...tpl,
-          id: tpl.id || SINGLE_APPROVED_TEMPLATE.id,
-          name: tpl.name || SINGLE_APPROVED_TEMPLATE.name,
-          provider_template_id: tpl.provider_template_id || SINGLE_APPROVED_TEMPLATE.provider_template_id,
-          sender_id: tpl.sender_id || SINGLE_APPROVED_TEMPLATE.sender_id,
-          content: tpl.content?.includes('##var1##') ? tpl.content : SINGLE_APPROVED_TEMPLATE.content,
-          variables: ['var1', 'var2'],
-          approval_status: 'APPROVED',
-          template_type: 'Promotional',
-        };
-        setTemplates([normalized]);
-        setSelectedTemplate(normalized);
+        setTemplates(res.data.data);
+        const approved = res.data.data.find((t) => t.approval_status === 'APPROVED') || res.data.data[0];
+        setSelectedTemplate(approved);
       } else {
-        setTemplates([SINGLE_APPROVED_TEMPLATE]);
-        setSelectedTemplate(SINGLE_APPROVED_TEMPLATE);
+        setTemplates([]);
+        setSelectedTemplate(null);
+        setTemplateError('No approved MSG91 SMS template returned by backend configuration.');
       }
     } catch (err) {
-      console.warn('Failed to load templates, using single approved template:', err);
-      setTemplates([SINGLE_APPROVED_TEMPLATE]);
-      setSelectedTemplate(SINGLE_APPROVED_TEMPLATE);
+      const msg = err.response?.data?.message || err.message || 'Failed to load approved templates.';
+      setTemplates([]);
+      setSelectedTemplate(null);
+      setTemplateError(`Template error: ${msg}`);
     } finally {
       setLoadingTemplates(false);
     }
@@ -278,8 +253,8 @@ const SINGLE_APPROVED_TEMPLATE = {
 
   // ── Real-Time Message Preview Interpolation (##var1## and ##var2##) ─────────
   const renderMessageContent = (customRecipient = null, customV1 = null, customV2 = null) => {
-    const tpl = selectedTemplate || SINGLE_APPROVED_TEMPLATE;
-    let text = tpl.content || SINGLE_APPROVED_TEMPLATE.content;
+    if (!selectedTemplate) return 'No template selected.';
+    let text = selectedTemplate.content || '';
 
     // Sample data from first valid recipient or defaults
     const sampleRec = customRecipient || uploadResult?.valid_recipients?.[0] || {};
@@ -321,6 +296,12 @@ const SINGLE_APPROVED_TEMPLATE = {
 
     if (!selectedTemplate) {
       alert('Please select an approved SMS template.');
+      setCurrentStep(2);
+      return;
+    }
+
+    if (selectedTemplate.approval_status !== 'APPROVED') {
+      alert(`The selected template cannot be used because its approval status is: ${selectedTemplate.approval_status}`);
       setCurrentStep(2);
       return;
     }
@@ -373,8 +354,8 @@ const SINGLE_APPROVED_TEMPLATE = {
 
       const payload = {
         campaign_name: campaignName.trim(),
-        template_id: (selectedTemplate || SINGLE_APPROVED_TEMPLATE).id,
-        sender_id: (selectedTemplate || SINGLE_APPROVED_TEMPLATE).sender_id || 'GHARKP',
+        template_id: selectedTemplate.id,
+        sender_id: selectedTemplate.sender_id || 'GHARKP',
         schedule_type: scheduleType,
         scheduled_at: scheduledAt ? scheduledAt.toISOString() : null,
         recipients: preparedRecipients,
@@ -409,7 +390,7 @@ const SINGLE_APPROVED_TEMPLATE = {
     setCampaignName('');
     setUploadedFile(null);
     setUploadResult(null);
-    setSelectedTemplate(templates[0] || SINGLE_APPROVED_TEMPLATE);
+    setSelectedTemplate(templates.find((t) => t.approval_status === 'APPROVED') || templates[0] || null);
     setVar1Value('GharKaPaisa');
     setVar2Value('https://gharkapaisa.com/apply');
     setVar1Source('custom');
@@ -1403,6 +1384,28 @@ const SINGLE_APPROVED_TEMPLATE = {
               {/* ────────────────────────────────────────────────────────────── */}
               {currentStep === 2 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  {templateError && (
+                    <div
+                      style={{
+                        padding: '16px 20px',
+                        backgroundColor: '#FEF2F2',
+                        border: '1px solid #F87171',
+                        borderRadius: '12px',
+                        color: '#B91C1C',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        fontSize: '13px',
+                      }}
+                    >
+                      <FaExclamationTriangle size={18} />
+                      <div>
+                        <strong>Template Configuration Notice: </strong>
+                        <span>{templateError}</span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Template Details Card */}
                   <div
                     style={{
@@ -1417,7 +1420,7 @@ const SINGLE_APPROVED_TEMPLATE = {
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                           <h3 style={{ fontSize: '17px', fontWeight: '700', color: C.text, margin: 0 }}>
-                            Approved SMS Template
+                            {selectedTemplate?.name || 'SMS Template'}
                           </h3>
                           <span
                             style={{
@@ -1425,18 +1428,19 @@ const SINGLE_APPROVED_TEMPLATE = {
                               borderRadius: '12px',
                               fontSize: '11px',
                               fontWeight: '700',
-                              backgroundColor: '#ECFDF5',
-                              color: '#059669',
+                              backgroundColor: selectedTemplate?.approval_status === 'APPROVED' ? '#ECFDF5' : '#FEF2F2',
+                              color: selectedTemplate?.approval_status === 'APPROVED' ? '#059669' : '#DC2626',
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '4px',
                             }}
                           >
-                            <FaCheck size={10} /> DLT APPROVED
+                            {selectedTemplate?.approval_status === 'APPROVED' ? <FaCheck size={10} /> : <FaTimes size={10} />}
+                            {selectedTemplate?.approval_status === 'APPROVED' ? 'DLT APPROVED' : (selectedTemplate?.approval_status || 'NOT APPROVED')}
                           </span>
                         </div>
                         <p style={{ fontSize: '13px', color: C.textMid, margin: 0 }}>
-                          Per Indian telecom regulations, only this pre-registered TRAI/DLT and MSG91 template is approved for broadcast.
+                          Per Indian telecom regulations, broadcast requires a verified TRAI/DLT and MSG91 registered template.
                         </p>
                       </div>
 
@@ -1465,7 +1469,7 @@ const SINGLE_APPROVED_TEMPLATE = {
                             border: `1px solid ${C.border}`,
                           }}
                         >
-                          MSG91 ID: {selectedTemplate?.provider_template_id || '6acdf0660b357ef1f10a6343'}
+                          MSG91 ID: {selectedTemplate?.provider_template_id || 'Not configured'}
                         </span>
                       </div>
                     </div>
@@ -1487,13 +1491,34 @@ const SINGLE_APPROVED_TEMPLATE = {
                         Template Master Body (DLT Registered Text):
                       </div>
                       <div style={{ whiteSpace: 'pre-line', fontFamily: 'Inter, sans-serif' }}>
-                        Hello! Greetings from <span style={{ backgroundColor: '#DBEAFE', color: '#1E40AF', padding: '2px 8px', borderRadius: '6px', fontWeight: '700', fontFamily: 'monospace' }}>##var1##</span> You have a pre-approved loan on your credit card with instant disbursal in 10 seconds. How much loan amount are you looking for?
-                        {'\n\n'}
-                        [Apply here] <span style={{ backgroundColor: '#DCFCE7', color: '#166534', padding: '2px 8px', borderRadius: '6px', fontWeight: '700', fontFamily: 'monospace' }}>##var2##</span>
-                        {'\n'}
-                        -YOHESA MARKETING CONSULTATION PRIVATE LIMITED
-                        {'\n'}
-                        -GharKaPaisa
+                        {selectedTemplate?.content ? (
+                          selectedTemplate.content.split(/(##[a-zA-Z0-9_-]+##|\{\{[a-zA-Z0-9_-]+\}\})/g).map((part, i) => {
+                            if (/^##var1##|\{\{var1\}\}/i.test(part)) {
+                              return (
+                                <span key={i} style={{ backgroundColor: '#DBEAFE', color: '#1E40AF', padding: '2px 8px', borderRadius: '6px', fontWeight: '700', fontFamily: 'monospace' }}>
+                                  ##var1##
+                                </span>
+                              );
+                            }
+                            if (/^##var2##|\{\{var2\}\}/i.test(part)) {
+                              return (
+                                <span key={i} style={{ backgroundColor: '#DCFCE7', color: '#166534', padding: '2px 8px', borderRadius: '6px', fontWeight: '700', fontFamily: 'monospace' }}>
+                                  ##var2##
+                                </span>
+                              );
+                            }
+                            if (/^(##|\{\{)/.test(part)) {
+                              return (
+                                <span key={i} style={{ backgroundColor: '#FEF3C7', color: '#B45309', padding: '2px 8px', borderRadius: '6px', fontWeight: '700', fontFamily: 'monospace' }}>
+                                  {part}
+                                </span>
+                              );
+                            }
+                            return part;
+                          })
+                        ) : (
+                          <span style={{ color: C.textMid, fontStyle: 'italic' }}>No template content loaded</span>
+                        )}
                       </div>
                     </div>
 

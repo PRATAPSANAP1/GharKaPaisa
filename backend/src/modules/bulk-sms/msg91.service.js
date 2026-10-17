@@ -1,11 +1,24 @@
+const path = require('path');
+const fs = require('fs');
 const axios = require('axios');
 const logger = require('../../config/logger');
 
-// MSG91 Configuration
-const msg91AuthKey = (process.env.MSG91_AUTH_KEY || process.env.MSG91_AUTHKEY || '').trim();
-const msg91SenderId = (process.env.MSG91_SENDER_ID || 'GHARKP').trim();
-const msg91Route = (process.env.MSG91_ROUTE || '4').trim();
-const msg91BaseUrl = (process.env.MSG91_BASE_URL || 'https://api.msg91.com/api/v5').replace(/\/$/, '');
+// Defensively load .env if not yet loaded in runtime environment
+if (!process.env.MSG91_AUTH_KEY && !process.env.MSG91_AUTHKEY) {
+  const backendEnvPath = path.resolve(__dirname, '../../../.env');
+  if (fs.existsSync(backendEnvPath)) {
+    require('dotenv').config({ path: backendEnvPath });
+  } else {
+    require('dotenv').config();
+  }
+}
+
+// MSG91 Configuration Helpers (read dynamically from runtime process.env)
+const getMsg91AuthKey = () => (process.env.MSG91_AUTH_KEY || process.env.MSG91_AUTHKEY || '').trim();
+const getMsg91SenderId = () => (process.env.MSG91_SENDER_ID || 'GHARKP').trim();
+const getMsg91Route = () => (process.env.MSG91_ROUTE || '4').trim();
+const getMsg91BaseUrl = () => (process.env.MSG91_BASE_URL || 'https://api.msg91.com/api/v5').replace(/\/$/, '');
+const getConfiguredTemplateId = () => (process.env.MSG91_BULK_SMS_TEMPLATE_ID || '').trim() || '6acdf0660b357ef1f10a6343';
 
 /**
  * Format Indian mobile number for MSG91:
@@ -44,13 +57,53 @@ const maskMobileNumber = (mobile) => {
  * @param {Array<{mobiles: string, [key: string]: any}>} recipients - Array of recipient objects with mobile & variables
  * @param {string} senderId - Sender ID (default: GHARKP)
  */
-const sendBatchViaFlow = async (templateId, recipients = [], senderId = msg91SenderId) => {
+const sendBatchViaFlow = async (templateId, recipients = [], senderId = null) => {
   if (!recipients || recipients.length === 0) {
     return { success: true, count: 0, results: [] };
   }
 
-  // If no live MSG91 key configured or in test mode, simulate realistic response
-  if (!msg91AuthKey || msg91AuthKey === 'mock_key' || process.env.NODE_ENV === 'test') {
+  const authKey = getMsg91AuthKey();
+  const effectiveSenderId = senderId || getMsg91SenderId();
+  const baseUrl = getMsg91BaseUrl();
+  const configuredTemplateId = getConfiguredTemplateId();
+
+  // Validate that templateId matches the configured template ID
+  if (templateId !== configuredTemplateId) {
+    logger.error(`[MSG91-FLOW] Template ID mismatch: provided '${templateId}' does not match configured '${configuredTemplateId}'.`);
+    return {
+      success: false,
+      simulated: false,
+      error: `Template ID mismatch: provided '${templateId}' does not match configured '${configuredTemplateId}'.`,
+      recipients: recipients.map((r) => ({
+        mobile: r.mobiles,
+        status: 'FAILED',
+        failure_reason: `Template ID mismatch: provided '${templateId}' does not match configured '${configuredTemplateId}'.`,
+      })),
+    };
+  }
+
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isMockKey = !authKey || authKey === 'mock_key';
+
+  // In production, missing credentials or mock key MUST produce a configuration error, NOT a simulated success
+  if (isProduction && isMockKey) {
+    const errorMsg = 'MSG91 credentials missing or mock key detected in production environment.';
+    logger.error(`[MSG91-FLOW] Production error: ${errorMsg}`);
+    return {
+      success: false,
+      simulated: false,
+      error: errorMsg,
+      recipients: recipients.map((r) => ({
+        mobile: r.mobiles,
+        status: 'FAILED',
+        failure_reason: errorMsg,
+      })),
+    };
+  }
+
+  // Non-production simulation / test mode:
+  // Returns status 'SIMULATED' (NEVER 'SENT' or 'DELIVERED') so mock responses never increment real sent/delivered counts
+  if (isMockKey || (process.env.NODE_ENV === 'test' && !process.env.MSG91_FORCE_LIVE)) {
     logger.info(`[MSG91-MOCK] Simulating Flow SMS dispatch for ${recipients.length} recipients using template ${templateId}`);
     return {
       success: true,
@@ -58,17 +111,17 @@ const sendBatchViaFlow = async (templateId, recipients = [], senderId = msg91Sen
       messageId: `MOCK_MSG91_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
       recipients: recipients.map((r) => ({
         mobile: r.mobiles,
-        status: 'SENT',
+        status: 'SIMULATED',
         message_id: `MOCK_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       })),
     };
   }
 
   try {
-    const url = `${msg91BaseUrl}/flow/?authkey=${encodeURIComponent(msg91AuthKey)}`;
+    const url = `${baseUrl}/flow/?authkey=${encodeURIComponent(authKey)}`;
     const payload = {
       template_id: templateId,
-      sender: senderId || msg91SenderId,
+      sender: effectiveSenderId,
       short_url: '0',
       recipients: recipients.map((r) => ({
         ...r,
@@ -78,14 +131,15 @@ const sendBatchViaFlow = async (templateId, recipients = [], senderId = msg91Sen
 
     const res = await axios.post(url, payload, {
       headers: {
-        authkey: msg91AuthKey,
+        authkey: authKey,
         'Content-Type': 'application/json',
       },
       timeout: 20000,
     });
 
     const data = res.data;
-    logger.info(`[MSG91-FLOW] Batch dispatched: ${JSON.stringify(data)}`);
+    // Log response type without exposing auth keys or recipient PII
+    logger.info(`[MSG91-FLOW] Batch dispatched. Provider status: ${data?.type || data?.status || 'received'}`);
 
     const isSuccess = Boolean(
       data &&
@@ -93,38 +147,43 @@ const sendBatchViaFlow = async (templateId, recipients = [], senderId = msg91Sen
       (data.type === 'success' || data.status === 'success' || data.hasError === false)
     );
 
+    const providerRequestId = data?.request_id || (data?.type === 'success' && typeof data?.message === 'string' ? data.message : null) || `MSG91_${Date.now()}`;
+
     return {
       success: isSuccess,
       simulated: false,
-      messageId: isSuccess ? (data.request_id || data.message || `MSG91_${Date.now()}`) : null,
+      messageId: isSuccess ? providerRequestId : null,
       providerResponse: data,
       recipients: recipients.map((r) => ({
         mobile: r.mobiles,
+        // Provider acceptance sets status to SENT (awaiting delivery receipt), NEVER DELIVERED
         status: isSuccess ? 'SENT' : 'FAILED',
-        message_id: isSuccess ? (data.request_id || `MSG91_${Date.now()}`) : null,
-        failure_reason: isSuccess ? null : (data.message || 'Provider rejected request'),
+        message_id: isSuccess ? providerRequestId : null,
+        failure_reason: isSuccess ? null : (data?.message || 'Provider rejected request'),
       })),
     };
   } catch (error) {
     const errData = error.response?.data || error.message;
-    logger.error(`[MSG91-FLOW] Dispatch error: ${JSON.stringify(errData)}`);
+    logger.error(`[MSG91-FLOW] Dispatch error: ${typeof errData === 'string' ? errData : JSON.stringify(errData)}`);
     return {
       success: false,
       simulated: false,
-      error: errData,
+      error: typeof errData === 'string' ? errData : (errData?.message || JSON.stringify(errData)),
       recipients: recipients.map((r) => ({
         mobile: r.mobiles,
         status: 'FAILED',
-        failure_reason: typeof errData === 'string' ? errData : JSON.stringify(errData),
+        failure_reason: typeof errData === 'string' ? errData : (errData?.message || JSON.stringify(errData)),
       })),
     };
   }
 };
 
 module.exports = {
-  msg91AuthKey,
-  msg91SenderId,
-  msg91Route,
+  getMsg91AuthKey,
+  getMsg91SenderId,
+  getMsg91Route,
+  getMsg91BaseUrl,
+  getConfiguredTemplateId,
   normalizeForMsg91,
   maskMobileNumber,
   sendBatchViaFlow,
