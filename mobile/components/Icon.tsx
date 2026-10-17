@@ -29,7 +29,13 @@ export type IconName =
   | 'x'
   | 'circle'
   | 'lock'
-  | 'calendar';
+  | 'calendar'
+  | 'bell'
+  | 'activity'
+  | 'dollar-sign'
+  | 'briefcase'
+  | 'settings'
+  | 'message-square';
 
 interface IconProps {
   name: IconName | string;
@@ -72,6 +78,12 @@ export const Icon: React.FC<IconProps> = ({ name, size = 16, color = '#000', sty
       case 'x-circle': return '❌';
       case 'circle': return '○';
       case 'shield-check': return '🛡️✓';
+      case 'bell': return '🔔';
+      case 'activity': return '⚡';
+      case 'dollar-sign': return '💵';
+      case 'briefcase': return '💼';
+      case 'settings': return '⚙️';
+      case 'message-square': return '💬';
       default: return '•';
     }
   };

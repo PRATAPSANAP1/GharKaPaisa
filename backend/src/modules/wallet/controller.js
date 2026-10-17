@@ -664,7 +664,7 @@ const listWithdrawals = async (req, res, next) => {
 
     if ((!data.rows || data.rows.length === 0) && (!count.rows || count.rows[0]?.count == 0)) {
       try {
-        const fbCount = await query(`SELECT COUNT(*) FROM withdrawal_requests`);
+        const fbCount = await query(`SELECT COUNT(*) FROM wallet_withdrawals`);
         const fbData = await query(`
           SELECT wr.id::text as id, wr.partner_id::text as partner_id, wr.amount, wr.status,
             COALESCE(wr.created_at, NOW()) as requested_at,
@@ -673,7 +673,7 @@ const listWithdrawals = async (req, res, next) => {
             COALESCE(ap.first_name, u.full_name, 'Partner') as first_name,
             COALESCE(ap.last_name, '') as last_name,
             COALESCE(u.mobile, '') as mobile
-          FROM withdrawal_requests wr
+          FROM wallet_withdrawals wr
           LEFT JOIN partner_profiles ap ON (ap.id::text = wr.partner_id::text OR ap.user_id::text = wr.partner_id::text)
           LEFT JOIN users u ON (u.id::text = wr.partner_id::text OR u.id::text = ap.user_id::text)
           ORDER BY wr.created_at DESC

@@ -1,4 +1,4 @@
-import apiClient from '../config/api';
+import apiClient from './api';
 
 /**
  * Single Source of Truth Wallet & Commission Service

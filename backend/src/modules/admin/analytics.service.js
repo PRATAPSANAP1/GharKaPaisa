@@ -9,8 +9,8 @@ const getSuperAdminDashboard = async () => {
       (SELECT COUNT(*) FROM leads) as total_leads,
       (SELECT COUNT(*) FROM leads WHERE status = 'approved') as approved_leads,
       (SELECT COUNT(*) FROM leads WHERE status = 'rejected') as rejected_leads,
-      (SELECT COALESCE(SUM(amount), 0) FROM withdrawal_requests WHERE status = 'processed') as total_commission_paid,
-      (SELECT COUNT(*) FROM withdrawal_requests WHERE status = 'pending') as pending_withdrawals,
+      (SELECT COALESCE(SUM(amount), 0) FROM wallet_withdrawals WHERE status = 'processed') as total_commission_paid,
+      (SELECT COUNT(*) FROM wallet_withdrawals WHERE status = 'pending') as pending_withdrawals,
       (SELECT COUNT(*) FROM banks) as total_banks,
       (SELECT COUNT(*) FROM products) as total_products
   `);
@@ -23,7 +23,7 @@ const getAdminDashboard = async (adminId) => {
       (SELECT COUNT(*) FROM leads WHERE status = 'pending') as pending_leads,
       (SELECT COUNT(*) FROM leads WHERE created_at::date = CURRENT_DATE) as todays_leads,
       (SELECT COUNT(*) FROM partner_profiles p JOIN users u ON u.id = p.user_id WHERE p.kyc_status = 'pending' AND (u.role IS NULL OR u.role IN ('PARTNER', 'TEAM_MEMBER') OR u.role NOT IN ('EMPLOYEE', 'ADMIN', 'HR', 'SUPER_ADMIN'))) as pending_kyc,
-      (SELECT COUNT(*) FROM withdrawal_requests WHERE status = 'pending') as pending_withdrawals
+      (SELECT COUNT(*) FROM wallet_withdrawals WHERE status = 'pending') as pending_withdrawals
   `);
 
   const { rows: recentPartners } = await query(`

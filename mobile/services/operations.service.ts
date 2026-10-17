@@ -1,4 +1,4 @@
-import api from './api';
+import apiClient from './api';
 import { ApplicationItem } from '../types';
 
 export interface KycStats {
@@ -92,7 +92,7 @@ export interface OperatorAuditLog {
  * KYC Operator API Services
  */
 export const fetchKycApplications = async (params: FetchQueueParams = {}) => {
-  const res = await api.get('/kyc-operator/applications', { params });
+  const res = await apiClient.get('/kyc-operator/applications', { params });
   return {
     success: res.data?.success ?? true,
     stats: res.data?.stats as KycStats | undefined,
@@ -102,22 +102,22 @@ export const fetchKycApplications = async (params: FetchQueueParams = {}) => {
 };
 
 export const verifyKycApplication = async (id: string, remarks?: string) => {
-  const res = await api.post(`/kyc-operator/applications/${id}/verify`, { remarks });
+  const res = await apiClient.post(`/kyc-operator/applications/${id}/verify`, { remarks });
   return res.data;
 };
 
 export const rejectKycApplication = async (id: string, remarks: string) => {
-  const res = await api.post(`/kyc-operator/applications/${id}/reject`, { remarks });
+  const res = await apiClient.post(`/kyc-operator/applications/${id}/reject`, { remarks });
   return res.data;
 };
 
 export const requestInfoKycApplication = async (id: string, remarks: string) => {
-  const res = await api.post(`/kyc-operator/applications/${id}/request-information`, { remarks });
+  const res = await apiClient.post(`/kyc-operator/applications/${id}/request-information`, { remarks });
   return res.data;
 };
 
 export const updateKycStage = async (id: string, payload: KycStageUpdatePayload) => {
-  const res = await api.post(`/kyc-operator/applications/${id}/update-stage`, payload);
+  const res = await apiClient.post(`/kyc-operator/applications/${id}/update-stage`, payload);
   return res.data;
 };
 
@@ -125,7 +125,7 @@ export const updateKycStage = async (id: string, payload: KycStageUpdatePayload)
  * General & Operator Queue Verification Services
  */
 export const fetchGeneralApplicationsQueue = async (params: FetchQueueParams = {}) => {
-  const res = await api.get('/applications', { params });
+  const res = await apiClient.get('/applications', { params });
   return {
     success: res.data?.success ?? true,
     data: (res.data?.data || []) as ApplicationItem[],
@@ -134,16 +134,112 @@ export const fetchGeneralApplicationsQueue = async (params: FetchQueueParams = {
 };
 
 export const updateApplicationVerification = async (id: string, payload: VerificationUpdatePayload) => {
-  const res = await api.put(`/applications/${id}/verification`, payload);
+  const res = await apiClient.put(`/applications/${id}/verification`, payload);
   return res.data;
 };
 
 export const updateRemarkOperatorRemark = async (id: string, payload: VerificationUpdatePayload) => {
-  const res = await api.put(`/applications/${id}/remark`, payload);
+  const res = await apiClient.put(`/applications/${id}/remark`, payload);
   return res.data;
 };
 
 export const fetchOperatorHistory = async (id: string): Promise<OperatorAuditLog[]> => {
-  const res = await api.get(`/applications/${id}/operator-history`);
+  const res = await apiClient.get(`/applications/${id}/operator-history`);
   return res.data?.data || [];
+};
+
+export const fetchApplicationTimeline = async (id: string) => {
+  try {
+    const res = await apiClient.get(`/applications/${id}/timeline`);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch application timeline' };
+  }
+};
+
+// ============================================================================
+// UTILITIES
+// ============================================================================
+
+/**
+ * Mask PAN number - show only last 4 characters
+ */
+export const maskPAN = (pan?: string): string => {
+  if (!pan || pan.toUpperCase() === 'N/A' || pan.toUpperCase() === 'NA') {
+    return 'N/A';
+  }
+  const cleanPan = pan.trim().toUpperCase();
+  if (cleanPan.length >= 6) {
+    return 'XXXXXX' + cleanPan.slice(6);
+  }
+  return 'XXXXXX';
+};
+
+/**
+ * Mask mobile number - show only last 4 characters
+ */
+export const maskMobile = (mobile?: string): string => {
+  if (!mobile || mobile === 'N/A' || mobile === 'NA') {
+    return 'N/A';
+  }
+  const cleanMobile = mobile.trim();
+  if (cleanMobile.length >= 4) {
+    return 'XXXXXX' + cleanMobile.slice(-4);
+  }
+  return 'XXXXXX';
+};
+
+/**
+ * Normalize designation for comparison
+ */
+export const normalizeDesignation = (designation?: string): string => {
+  if (!designation) return '';
+  return designation.toUpperCase().replace(/\s+/g, '_');
+};
+
+/**
+ * Check if user has specific designation
+ */
+export const hasDesignation = (
+  userDesignation: string | undefined,
+  targetDesignations: string[]
+): boolean => {
+  if (!userDesignation) return false;
+  const normalized = normalizeDesignation(userDesignation);
+  return targetDesignations.some(d => {
+    const target = d.toUpperCase().replace(/\s+/g, '_');
+    return normalized === target || userDesignation.toUpperCase() === d.toUpperCase();
+  });
+};
+
+/**
+ * Get workspace type based on user role and designation
+ */
+export const getWorkspaceType = (
+  role: string | undefined,
+  designation: string | undefined
+): 'kyc_operator' | 'pan_checker' | 'qd_operator' | 'remark_operator' | 'final_status' | 'default' => {
+  const normalizedDesignation = normalizeDesignation(designation);
+
+  if (hasDesignation(designation, ['KYC_OPERATOR', 'KYC OPERATOR'])) {
+    return 'kyc_operator';
+  }
+
+  if (hasDesignation(designation, ['PAN_CHECKER', 'PAN CHECKER'])) {
+    return 'pan_checker';
+  }
+
+  if (hasDesignation(designation, ['QD_OPERATOR', 'QD OPERATOR'])) {
+    return 'qd_operator';
+  }
+
+  if (hasDesignation(designation, ['REMARK_OPERATOR', 'REMARK OPERATOR'])) {
+    return 'remark_operator';
+  }
+
+  if (hasDesignation(designation, ['FINAL_STATUS_OPERATOR', 'FINAL STATUS OPERATOR'])) {
+    return 'final_status';
+  }
+
+  return 'default';
 };

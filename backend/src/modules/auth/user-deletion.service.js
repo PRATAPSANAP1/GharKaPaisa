@@ -96,7 +96,7 @@ const softDeleteUserAccount = async (inputId) => {
         [actualPartnerId]
       );
       await safeExec(
-        `UPDATE withdrawal_requests SET status = 'rejected', admin_notes = 'Account suspended' WHERE partner_id::text = $1 AND status = 'pending'`,
+        `UPDATE wallet_withdrawals SET status = 'rejected', admin_note = 'Account suspended', updated_at = NOW() WHERE partner_id::text = $1 AND status = 'pending'`,
         [actualPartnerId]
       );
     }
@@ -256,7 +256,6 @@ const deleteUserAccount = async (inputId) => {
       );
       // Financial ledger (wallet_ledger) remains 100% immutable and untouched for auditability
       await safeDelete(`DELETE FROM wallet_withdrawals WHERE partner_id::text = $1`, [actualPartnerId || '']);
-      await safeDelete(`DELETE FROM withdrawal_requests WHERE partner_id::text = $1`, [actualPartnerId || '']);
       await safeDelete(
         `DELETE FROM wallet_transactions WHERE partner_id::text = $1 OR user_id::text = $2`,
         [actualPartnerId || '', actualUserId || '']
@@ -269,7 +268,7 @@ const deleteUserAccount = async (inputId) => {
       await safeDelete(`UPDATE partner_profiles SET approved_by = NULL WHERE approved_by::text = $1`, [actualUserId]);
       await safeDelete(`UPDATE kyc_documents SET verified_by = NULL WHERE verified_by::text = $1`, [actualUserId]);
       await safeDelete(`UPDATE wallet_transactions SET processed_by = NULL WHERE processed_by::text = $1`, [actualUserId]);
-      await safeDelete(`UPDATE withdrawal_requests SET processed_by = NULL WHERE processed_by::text = $1`, [actualUserId]);
+      await safeDelete(`UPDATE wallet_withdrawals SET processed_by = NULL WHERE processed_by::text = $1`, [actualUserId]);
       await safeDelete(`UPDATE products SET created_by = NULL, updated_by = NULL WHERE created_by::text = $1 OR updated_by::text = $1`, [actualUserId]);
       await safeDelete(`UPDATE banks SET created_by = NULL WHERE created_by::text = $1`, [actualUserId]);
       await safeDelete(`UPDATE lead_followups SET scheduled_by = NULL WHERE scheduled_by::text = $1`, [actualUserId]);

@@ -208,7 +208,7 @@ const getWithdrawalsReport = async (partnerId, filters) => {
     SELECT 
       w.id, w.amount, w.status, w.utr_number, w.created_at,
       w.bank_name, w.account_number
-    FROM withdrawal_requests w
+    FROM wallet_withdrawals w
     ${where}
     ORDER BY w.created_at DESC LIMIT 100
   `, values);
@@ -278,7 +278,7 @@ const getRevenueReport = async (filters) => {
   `);
 
   const { rows: [withd] } = await query(`
-    SELECT COALESCE(SUM(amount), 0) as total_withdrawals FROM withdrawal_requests WHERE status IN ('completed','processed','approved')
+    SELECT COALESCE(SUM(amount), 0) as total_withdrawals FROM wallet_withdrawals WHERE status IN ('completed','processed','approved')
   `);
 
   const { rows: [apps] } = await query(`
