@@ -171,7 +171,13 @@ export default function PartnerProducts({
     // Check custom options first if provided
     if (customBankOptions && Array.isArray(customBankOptions)) {
       const cleanCustom = bankStr.toLowerCase().trim();
-      const matchCustom = customBankOptions.find(b => b.toLowerCase().trim() === cleanCustom || cleanCustom.includes(b.toLowerCase().trim()));
+      const matchCustom = customBankOptions.find(b => {
+        const bLower = b.toLowerCase().trim();
+        if (bLower === cleanCustom || cleanCustom.includes(bLower) || bLower.includes(cleanCustom)) return true;
+        const bCore = bLower.replace(/bank|first/g, '').trim();
+        const customCore = cleanCustom.replace(/bank|first/g, '').trim();
+        return Boolean(bCore && customCore && bCore === customCore);
+      });
       if (matchCustom) return matchCustom;
     }
 
@@ -572,7 +578,7 @@ export default function PartnerProducts({
 
     const cleanFilterWord = filterLower.replace(/bank/g, '').trim();
 
-    return (pBankCode && pBankCode === filterLower) ||
+    return (pBankCode && (pBankCode === filterLower || pBankCode === cleanFilterWord)) ||
            (pBankName && pBankName.includes(filterLower)) ||
            (pBankName && cleanFilterWord && pBankName.includes(cleanFilterWord)) ||
            (pBankSlug && pBankSlug === filterLower) ||
@@ -602,9 +608,12 @@ export default function PartnerProducts({
     const matchSearch = !query || 
                         p.name.toLowerCase().includes(query) || 
                         p.bank_code?.toLowerCase().includes(query) ||
+                        p.bank_name?.toLowerCase().includes(query) ||
                         p.category?.toLowerCase().includes(query) ||
                         p.commission_value?.toString().includes(query) ||
-                        eligibilityText.toLowerCase().includes(query);
+                        eligibilityText.toLowerCase().includes(query) ||
+                        (p.name.toLowerCase().includes('hdfc') && query.includes('10sec')) ||
+                        (p.name.toLowerCase().includes('indusind') && query.includes('vpl'));
                         
     const pCat = (p.category || '').toLowerCase();
     let matchCategory = false;
@@ -612,6 +621,8 @@ export default function PartnerProducts({
       matchCategory = true;
     } else if (activeCategory === 'credit_card' || activeCategory.includes('card')) {
       matchCategory = pCat.includes('card') || pCat.includes('credit');
+    } else if (activeCategory === 'personal_loan') {
+      matchCategory = pCat === 'personal_loan' || (providerType === 'finance' && pCat.includes('loan'));
     } else if (activeCategory.includes('loan')) {
       matchCategory = pCat.includes('loan');
     } else if (activeCategory.includes('insurance')) {

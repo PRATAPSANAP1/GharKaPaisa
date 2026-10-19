@@ -41,6 +41,43 @@ export const BANK_OPTIONS = [
   'YES Bank'
 ];
 
+// Stable CIBIL Bank Personal Loan product IDs (verified from database)
+export const CIBIL_BANK_PRODUCT_IDS = [
+  'd8486f1f-fde2-4c37-ade0-e8c5277a75a3', // HDFC Personal Loan ("HDFC pl 10sec bank")
+  '621d282c-832e-4cce-8344-b4a80ddf6fc4', // IDFC Personal Loan ("IDFC Bank")
+];
+
+// Verified Slugs for CIBIL Bank Personal Loan products
+export const CIBIL_BANK_SLUGS = [
+  'hdfc-personal-loan',
+  'hdfc-pl-10sec',
+  'hdfc-pl-10sec-bank',
+  'idfc-personal-loan',
+  'indusind-bank-vpl',
+  'indusind-vpl',
+  'indusind-personal-loan'
+];
+
+// IndusInd Bank UUID from database banks table
+export const INDUSIND_BANK_ID = '7eda6d99-10e2-4bf8-bbe5-9de0b1b0fc9c';
+
+// Bank dropdown and quick-filter chip options for CIBIL-Based Personal Loans
+export const CIBIL_BANK_OPTIONS = [
+  'All Banks',
+  'HDFC Bank',
+  'IDFC First Bank',
+  'IndusInd Bank'
+];
+
+// Bank dropdown and quick-filter chip options for Income-Based Personal Loans
+export const INCOME_BANK_OPTIONS = [
+  'All Banks',
+  'Axis Bank',
+  'ICICI Bank',
+  'Kotak Mahindra Bank',
+  'State Bank of India'
+];
+
 /**
  * Check if a product belongs to a Finance / NBFC company.
  */
@@ -77,16 +114,79 @@ export const isBankProduct = (p) => {
 };
 
 /**
+ * Check if a bank product belongs to the 3 designated CIBIL-Based products:
+ *  1. IndusInd Bank VPL
+ *  2. IDFC Bank (IDFC Personal Loan)
+ *  3. HDFC pl 10sec bank (HDFC Personal Loan)
+ */
+export const isCibilBankProduct = (p) => {
+  if (!p) return false;
+
+  // 1. Stable UUID matching (verified against database)
+  if (p.id && CIBIL_BANK_PRODUCT_IDS.includes(p.id)) return true;
+
+  // 2. Stable Slug matching
+  const slug = String(p.slug || '').toLowerCase().trim();
+  if (slug && CIBIL_BANK_SLUGS.includes(slug)) return true;
+
+  const pName = String(p.name || '').toLowerCase();
+  const bName = String(p.bank_name || '').toLowerCase();
+  const bCode = String(p.bank_code || '').toUpperCase();
+  const bId = String(p.bank_id || '');
+
+  // 3. IndusInd Bank VPL (by name, slug, or IndusInd personal loan)
+  if (
+    pName.includes('vpl') ||
+    slug.includes('vpl') ||
+    ((bCode === 'INDUSIND' || bName.includes('indusind') || bId === INDUSIND_BANK_ID) &&
+      (pName.includes('vpl') || pName.includes('personal loan') || p.category === 'personal_loan'))
+  ) {
+    if (p.category && p.category !== 'personal_loan' && !pName.includes('vpl')) {
+      return false;
+    }
+    return true;
+  }
+
+  // 4. IDFC Bank (IDFC Personal Loan)
+  if (
+    (bCode === 'IDFC' || bName.includes('idfc')) &&
+    (pName.includes('personal loan') || p.category === 'personal_loan')
+  ) {
+    if (p.category && p.category !== 'personal_loan' && !pName.includes('personal loan')) {
+      return false;
+    }
+    return true;
+  }
+
+  // 5. HDFC pl 10sec bank / HDFC Personal Loan (exclude TATA cobrand)
+  if (
+    (bCode === 'HDFC' || bName.includes('hdfc')) &&
+    !pName.includes('tata') &&
+    (pName.includes('10sec') || pName.includes('10 sec') || pName.includes('personal loan') || p.category === 'personal_loan')
+  ) {
+    if (p.category && p.category !== 'personal_loan' && !pName.includes('10sec') && !pName.includes('personal loan')) {
+      return false;
+    }
+    return true;
+  }
+
+  return false;
+};
+
+/**
  * Determine if a personal loan product is CIBIL-Based or Income-Based.
- * Evaluates:
- *  1. p.sub_category (explicit column in database)
- *  2. p.eligibility (JSONB metadata)
- *  3. p.eligibility_criteria text
- *  4. Features / description keywords
- *  5. Bank-specific standard product mapping
+ * - Bank Personal Loans:
+ *   - CIBIL-Based: IndusInd Bank VPL, IDFC Bank, HDFC pl 10sec bank
+ *   - Income-Based: All other bank Personal Loan products
+ * - Finance / NBFC Personal Loans: Evaluated via metadata/sub_category/eligibility criteria
  */
 export const getLoanEligibilityType = (p) => {
   if (!p) return 'cibil';
+
+  // Bank Personal Loans: strict eligibility partitioning
+  if (isBankProduct(p)) {
+    return isCibilBankProduct(p) ? 'cibil' : 'income';
+  }
 
   // 1. Explicit sub_category in database
   const subCat = String(p.sub_category || '').toLowerCase().trim();
@@ -129,18 +229,6 @@ export const getLoanEligibilityType = (p) => {
     combined.includes('doorstep service')
   ) {
     return 'income';
-  }
-
-  // 5. Standard mapping for existing seeded bank personal loans:
-  // - SBI Xpress Credit (salary package based) & Axis Personal Loan (document/doorstep based) -> Income-Based
-  // - HDFC, ICICI, IDFC, Kotak (instant disbursal / pre-approved / minimal docs) -> CIBIL-Based
-  const bCode = String(p.bank_code || '').toUpperCase();
-  const pName = String(p.name || '').toLowerCase();
-  if (bCode === 'SBI' || pName.includes('xpress credit') || bCode === 'AXIS') {
-    return 'income';
-  }
-  if (bCode === 'HDFC' || bCode === 'ICICI' || bCode === 'IDFC' || bCode === 'KOTAK') {
-    return 'cibil';
   }
 
   return 'cibil';

@@ -4,6 +4,8 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import PartnerProducts from '../../partner/products/PartnerProducts';
 import { 
   BANK_OPTIONS, 
+  CIBIL_BANK_OPTIONS,
+  INCOME_BANK_OPTIONS,
   FINANCE_COMPANY_OPTIONS 
 } from '../../../utils/personalLoanHelpers';
 import { 
@@ -80,18 +82,6 @@ function IncomeWalletIcon({ size = 42 }) {
   );
 }
 
-// Bank chips for Screen 3
-const QUICK_BANK_CHIPS = [
-  'All Banks',
-  'HDFC Bank',
-  'ICICI Bank',
-  'Kotak Mahindra Bank',
-  'Axis Bank',
-  'State Bank of India',
-  'IDFC First Bank',
-  'YES Bank'
-];
-
 // Finance chips for Screen 4 (the 7 canonical finance companies)
 const QUICK_FINANCE_CHIPS = [
   'All Finance Companies',
@@ -147,8 +137,15 @@ export default function EmployeePersonalLoanOptions() {
     setProviderType(parsedProv);
   }, [searchParams]);
 
-  const defaultBankValue = providerType === 'finance' ? 'All Finance Companies' : 'All Banks';
-  const selectedBank = searchParams.get('bank') || defaultBankValue;
+  const isFinanceMode = providerType === 'finance';
+  const defaultBankValue = isFinanceMode ? 'All Finance Companies' : 'All Banks';
+  const activeBankOptions = isFinanceMode 
+    ? FINANCE_COMPANY_OPTIONS 
+    : (eligibilityType === 'cibil' ? CIBIL_BANK_OPTIONS : INCOME_BANK_OPTIONS);
+
+  const rawBankParam = searchParams.get('bank');
+  const isBankValidForMode = !rawBankParam || activeBankOptions.includes(rawBankParam) || rawBankParam === defaultBankValue || rawBankParam === 'All Banks';
+  const selectedBank = isBankValidForMode ? (rawBankParam || defaultBankValue) : defaultBankValue;
 
   // Navigation handlers
   const handleSelectEligibility = (type) => {
@@ -727,7 +724,7 @@ export default function EmployeePersonalLoanOptions() {
     ? 'Choose a finance company to explore their personal loan offers' 
     : 'Choose a bank to explore their personal loan offers';
 
-  const quickChips = isFinance ? QUICK_FINANCE_CHIPS : QUICK_BANK_CHIPS;
+  const quickChips = isFinance ? QUICK_FINANCE_CHIPS : activeBankOptions;
 
   return (
     <div 
@@ -921,7 +918,7 @@ export default function EmployeePersonalLoanOptions() {
           initialCategory="personal_loan"
           providerType={providerType}
           eligibilityType={eligibilityType}
-          customBankOptions={isFinance ? FINANCE_COMPANY_OPTIONS : BANK_OPTIONS}
+          customBankOptions={activeBankOptions}
           bankLabel={isFinance ? 'Choose Finance Company' : 'Choose Bank'}
           allBanksLabel={defaultBankValue}
           emptyStateMessage={isFinance 
