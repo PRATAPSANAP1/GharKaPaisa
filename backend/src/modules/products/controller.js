@@ -269,6 +269,8 @@ const ensureProductColumns = async () => {
   try {
     await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS joining_fee VARCHAR(255)`);
     await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS processing_fee VARCHAR(255)`);
+    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS interest_rate VARCHAR(255)`);
+    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS sub_category VARCHAR(100)`);
     await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS operation_head_id UUID REFERENCES users(id) ON DELETE SET NULL`);
     _productColumnsEnsured = true;
   } catch (e) {
@@ -289,7 +291,7 @@ const createProduct = async (req, res, next) => {
       documents_required, benefits, fees_charges, apply_button_text, seo_title,
       seo_description, seo_keywords, priority, status, is_active,
       card_network, card_variant, best_for, welcome_benefits, is_lifetime_free, badge, is_recommended, is_trending,
-      public_url, partner_url, joining_fee, processing_fee
+      public_url, partner_url, joining_fee, processing_fee, interest_rate
     } = body;
     let image_url = body.image_url;
 
@@ -351,12 +353,12 @@ const createProduct = async (req, res, next) => {
         fees_charges, apply_button_text, seo_title, seo_description, seo_keywords,
         priority, status, is_active, created_by, slug,
         card_network, card_variant, best_for, welcome_benefits, is_lifetime_free, badge, is_recommended, is_trending,
-        public_url, partner_url, joining_fee, processing_fee
+        public_url, partner_url, joining_fee, processing_fee, interest_rate
       )
       VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
         $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,
-        $40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$50,$51
+        $40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$50,$51,$52
       ) RETURNING id
     `, [
       bank_id, name, category, sub_category || null, description, JSON.stringify(parsedFeatures || []), 
@@ -369,7 +371,7 @@ const createProduct = async (req, res, next) => {
       fees_charges || null, apply_button_text || 'Apply Now', seo_title || null, seo_description || null, seo_keywords || null,
       priority || 0, status || 'Active', isActive, req.user?.id || null, productSlug,
       card_network || null, card_variant || null, best_for || null, welcome_benefits || null, isLtf, badge || null, isRec, isTrend,
-      public_url || null, partner_url || null, joining_fee || null, processing_fee || null
+      public_url || null, partner_url || null, joining_fee || null, processing_fee || null, interest_rate || null
     ]);
 
     await logAction(req, 'CREATE_PRODUCT', p.id, { name, category, commission_value });
@@ -496,8 +498,10 @@ const updateProduct = async (req, res, next) => {
         operation_head_id = COALESCE($47, operation_head_id),
         joining_fee = COALESCE($48, joining_fee),
         processing_fee = COALESCE($49, processing_fee),
+        interest_rate = COALESCE($50, interest_rate),
+        sub_category = COALESCE($51, sub_category),
         updated_at = NOW()
-      WHERE id = $50
+      WHERE id = $52
     `, [
       name || null,
       description || null,
@@ -547,7 +551,10 @@ const updateProduct = async (req, res, next) => {
       min_income ? parseFloat(min_income) : null,
       validOpHeadId,
       joining_fee || null,
-      processing_fee || null
+      processing_fee || null,
+      interest_rate || null,
+      sub_category || null,
+      id
     ]);
 
     await logAction(req, 'UPDATE_PRODUCT', id, { name, bank_id: validBankId, category, commission_value, is_active });

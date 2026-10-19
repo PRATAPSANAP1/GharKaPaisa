@@ -6,6 +6,12 @@ import { useActiveBanks } from "../../../contexts/BanksContext";
 import { getCleanImageUrl } from "../../../utils/urlHelper";
 import { getBankApplyLink } from "../../home/components/CreditCards/cardLinkHelper";
 import { 
+  isFinanceProduct, 
+  isBankProduct, 
+  isCibilBankProduct, 
+  getLoanEligibilityType 
+} from "../../../utils/personalLoanHelpers";
+import { 
   MdAdd, MdSearch, MdEdit, MdDelete, MdVisibility,
   MdStar, MdCheckCircle, MdCancel, MdClose, MdFileUpload,
   MdCheck, MdHelpOutline, MdPreview, MdLink, MdContentCopy, MdOpenInNew, MdLaunch
@@ -29,6 +35,14 @@ const CATEGORY_MAP = {
 const CARD_NETWORKS = ["Visa", "Mastercard", "RuPay", "American Express", "Diners Club"];
 const CARD_VARIANTS = ["Classic", "Gold", "Platinum", "Signature", "World", "Infinite", "Select", "Privilege", "Metal"];
 const BEST_FOR_OPTIONS = ["Cashback", "Travel", "Shopping", "Fuel", "Rewards", "Business", "Students", "Premium", "Golf", "Dining"];
+const LOAN_PURPOSE_OPTIONS = [
+  "Personal Needs", "Debt Consolidation", "Home Renovation", "Medical Emergency",
+  "Wedding", "Travel", "Business Expansion", "Higher Education", "Instant Cash"
+];
+const DISBURSAL_TIME_OPTIONS = [
+  "Instant (10 Seconds)", "Within 2 Hours", "Within 24 Hours", "24 - 48 Hours",
+  "2 - 3 Working Days", "Same Day Disbursal"
+];
 const BADGE_OPTIONS = ["New", "Hot", "Editor's Choice", "Limited Offer", "Best Seller", "Popular"];
 
 const DOCUMENT_OPTIONS = [
@@ -71,6 +85,7 @@ export default function ManageAdminProducts() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [networkFilter, setNetworkFilter] = useState("All");
   const [feeFilter, setFeeFilter] = useState("All");
+  const [loanAllocationFilter, setLoanAllocationFilter] = useState("All");
 
   const [page, setPage] = useState(1);
   const itemsPerPage = 25;
@@ -78,7 +93,7 @@ export default function ManageAdminProducts() {
   // Reset page to 1 on filter changes
   useEffect(() => {
     setPage(1);
-  }, [activeCategory, search, bankFilter, typeFilter, statusFilter, networkFilter, feeFilter]);
+  }, [activeCategory, search, bankFilter, typeFilter, statusFilter, networkFilter, feeFilter, loanAllocationFilter]);
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -100,6 +115,17 @@ export default function ManageAdminProducts() {
     status: "Active",
     is_active: true,
 
+    // Personal Loan Specific Allocation
+    loan_type: "cibil", // "cibil" | "income"
+    provider_type: "bank", // "bank" | "finance"
+
+    // Loan Specific Fields
+    min_amount: "",
+    max_amount: "",
+    time_period: "",
+    disbursal_time: "",
+    foreclosure_charges: "",
+
     // Card Specifics
     card_network: "Visa",
     card_variant: "Platinum",
@@ -111,6 +137,7 @@ export default function ManageAdminProducts() {
     joining_fee: "₹0",
     annual_fee: "₹500 (Waived on ₹50,000 spend)",
     interest_rate: "3.5% p.m.",
+    processing_fee: "",
 
     // Eligibility
     min_age: 21,
@@ -146,7 +173,11 @@ export default function ManageAdminProducts() {
     // SEO
     meta_title: "",
     meta_description: "",
-    slug: ""
+    slug: "",
+    public_url: "",
+    partner_url: "",
+    button_text: "Apply Now",
+    redirect_type: "new_tab"
   });
 
   // Fetch products
@@ -209,40 +240,60 @@ export default function ManageAdminProducts() {
     return [];
   };
 
+  const isLoanCategory = activeCategory === 'loans' || form.category === 'loans' || form.category === 'personal_loan';
+  const isPersonalLoan = isLoanCategory && form.sub_category === 'Personal Loan';
+
   const openAddModal = () => {
     setEditItem(null);
     setCardImageFile(null);
+    const isLoans = activeCategory === 'loans';
     setForm({
       name: "",
       bank_id: banks[0]?.id || "",
       category: activeCategory,
-      sub_category: activeCategory === 'loc_eoc' ? 'LOC' : activeCategory === 'loans' ? 'Personal Loan' : activeCategory === 'insurance' ? 'Health Insurance' : 'Core Cards',
+      sub_category: activeCategory === 'loc_eoc' ? 'LOC' : isLoans ? 'Personal Loan' : activeCategory === 'insurance' ? 'Health Insurance' : 'Core Cards',
       description: "",
       image_url: "",
       status: "Active",
       is_active: true,
 
+      // Personal Loan Specific Allocation
+      loan_type: "cibil", // "cibil" | "income"
+      provider_type: "bank", // "bank" | "finance"
+
+      // Loan Specific Fields
+      min_amount: isLoans ? "50000" : "",
+      max_amount: isLoans ? "4000000" : "",
+      time_period: isLoans ? "12 - 60 Months" : "",
+      disbursal_time: isLoans ? "Instant (10 Seconds)" : "",
+      foreclosure_charges: "",
+
       card_network: "Visa",
       card_variant: "Platinum",
       is_lifetime_free: false,
-      best_for: "Cashback",
+      best_for: isLoans ? "Personal Needs" : "Cashback",
       welcome_benefits: "",
 
-      joining_fee: "₹0",
-      annual_fee: "",
-      interest_rate: "",
+      joining_fee: isLoans ? "" : "₹0",
+      annual_fee: isLoans ? "" : "",
+      interest_rate: isLoans ? "10.49% p.a." : "",
+      processing_fee: isLoans ? "Up to 1.5% + GST" : "",
 
       min_age: 21,
       max_age: 60,
-      min_income: 25000,
+      min_income: isLoans ? 25000 : 25000,
       cibil_required: 750,
 
-      features: [],
+      features: isLoans
+        ? ["Instant Disbursal directly to bank account", "Minimal documentation & quick verification", "Flexible repayment tenure up to 5 years"]
+        : [],
       benefits: [],
-      compare_reward_rate: "",
-      compare_lounge: "",
+      compare_reward_rate: isLoans ? "Instant 10-Sec Approval" : "",
+      compare_lounge: isLoans ? "Up to ₹40 Lakhs" : "",
 
-      required_documents: ["PAN Card", "Aadhaar Card"],
+      required_documents: isLoans
+        ? ["PAN Card", "Aadhaar Card", "Salary Slip", "Bank Statement"]
+        : ["PAN Card", "Aadhaar Card"],
       faqs: [],
 
       show_on_website: true,
@@ -251,14 +302,16 @@ export default function ManageAdminProducts() {
       is_popular: false,
       is_recommended: false,
       is_trending: false,
-      badge: "",
+      badge: isLoans ? "Best Seller" : "",
       display_order: 1,
 
       meta_title: "",
       meta_description: "",
       slug: "",
       public_url: "",
-      partner_url: ""
+      partner_url: "",
+      button_text: "Apply Now",
+      redirect_type: "new_tab"
     });
     setModalTab("basic");
     setModalOpen(true);
@@ -270,7 +323,12 @@ export default function ManageAdminProducts() {
 
     const buildFormFromItem = (prod) => {
       const fees = prod.fees || prod.fees_structure || {};
-      const elig = prod.eligibility || prod.eligibility_criteria || {};
+      let elig = prod.eligibility || prod.eligibility_criteria || {};
+      if (typeof elig === 'string') {
+        try { elig = JSON.parse(elig); } catch (e) { elig = {}; }
+      }
+      if (!elig || typeof elig !== 'object') elig = {};
+
       const compare = prod.compare || prod.compare_specs || {};
       const vis = prod.visibility || {};
       const seo = prod.seo_metadata || {};
@@ -290,25 +348,41 @@ export default function ManageAdminProducts() {
 
       let faqsArr = Array.isArray(prod.faqs) ? prod.faqs : [];
 
+      const isItemLoan = prod.category === 'loans' || prod.category === 'personal_loan' || activeCategory === 'loans';
+      const parsedLoanType = prod.loan_type || elig.loan_type || (isCibilBankProduct(prod) ? 'cibil' : 'income');
+      const parsedProviderType = prod.provider_type || elig.provider_type || (isFinanceProduct(prod) ? 'finance' : 'bank');
+
       return {
         name: prod.name || "",
         bank_id: prod.bank_id || "",
         category: prod.category || activeCategory,
-        sub_category: prod.sub_category || "Core Cards",
+        sub_category: prod.sub_category || (isItemLoan ? "Personal Loan" : "Core Cards"),
         description: prod.description || "",
         image_url: prod.image_url || "",
         status: prod.status || "Active",
         is_active: prod.is_active !== undefined ? prod.is_active : true,
 
-        card_network: prod.card_network || "",
-        card_variant: prod.card_variant || "",
+        // Personal Loan Specific Allocation
+        loan_type: parsedLoanType,
+        provider_type: parsedProviderType,
+
+        // Loan Specific Fields
+        min_amount: elig.min_amount || prod.min_amount || "",
+        max_amount: elig.max_amount || prod.max_amount || "",
+        time_period: prod.time_period || elig.time_period || "",
+        disbursal_time: elig.disbursal_time || prod.disbursal_time || "",
+        foreclosure_charges: fees.foreclosure_charges || elig.foreclosure_charges || "",
+
+        card_network: prod.card_network || "Visa",
+        card_variant: prod.card_variant || "Platinum",
         is_lifetime_free: prod.is_lifetime_free !== undefined ? prod.is_lifetime_free : false,
-        best_for: prod.best_for || "",
+        best_for: prod.best_for || (isItemLoan ? "Personal Needs" : "Cashback"),
         welcome_benefits: prod.welcome_benefits || "",
 
         joining_fee: fees.joining_fee || prod.joining_fee || "",
         annual_fee: fees.annual_fee || prod.annual_fee || prod.fees_charges || "",
-        interest_rate: fees.interest_rate || prod.interest_rate || "",
+        interest_rate: fees.interest_rate || prod.interest_rate || elig.interest_rate || "",
+        processing_fee: prod.processing_fee || fees.processing_fee || elig.processing_fee || "",
 
         min_age: elig.min_age !== undefined ? elig.min_age : (prod.min_age !== undefined ? prod.min_age : 21),
         max_age: elig.max_age !== undefined ? elig.max_age : (prod.max_age !== undefined ? prod.max_age : 65),
@@ -336,7 +410,9 @@ export default function ManageAdminProducts() {
         meta_description: seo.meta_description || prod.seo_description || "",
         slug: prod.slug || "",
         public_url: prod.public_url || prod.application_url || getBankApplyLink(prod.name, prod.bank_name || prod.bank_code || prod.bank_id) || "",
-        partner_url: prod.partner_url || getBankApplyLink(prod.name, prod.bank_name || prod.bank_code || prod.bank_id) || ""
+        partner_url: prod.partner_url || getBankApplyLink(prod.name, prod.bank_name || prod.bank_code || prod.bank_id) || "",
+        button_text: prod.apply_button_text || "Apply Now",
+        redirect_type: prod.redirect_type || "new_tab"
       };
     };
 
@@ -395,6 +471,22 @@ export default function ManageAdminProducts() {
 
     try {
       const autoSlug = form.slug?.trim() || form.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const isLoan = activeCategory === 'loans' || form.category === 'loans' || form.category === 'personal_loan';
+
+      const eligibilityPayload = {
+        min_age: parseInt(form.min_age) || null,
+        max_age: parseInt(form.max_age) || null,
+        min_income: parseFloat(form.min_income) || null,
+        cibil_required: parseInt(form.cibil_required) || null,
+        loan_type: form.loan_type,
+        provider_type: form.provider_type,
+        min_amount: form.min_amount || null,
+        max_amount: form.max_amount || null,
+        disbursal_time: form.disbursal_time || null,
+        foreclosure_charges: form.foreclosure_charges || null,
+        interest_rate: form.interest_rate || null,
+        processing_fee: form.processing_fee || null
+      };
 
       const payload = {
         name: form.name.trim(),
@@ -406,18 +498,26 @@ export default function ManageAdminProducts() {
         status: form.status,
         is_active: form.status === "Active",
 
-        card_network: form.card_network,
-        card_variant: form.card_variant,
-        is_lifetime_free: form.is_lifetime_free,
-        best_for: form.best_for,
-        welcome_benefits: form.welcome_benefits,
+        // Loan Allocation & Fields
+        loan_type: form.loan_type,
+        provider_type: form.provider_type,
+        time_period: form.time_period || null,
+        processing_fee: form.processing_fee || null,
+        interest_rate: form.interest_rate || null,
+        eligibility: eligibilityPayload,
 
-        annual_fee: form.annual_fee,
-        joining_fee: form.joining_fee,
-        interest_rate: form.interest_rate,
-        min_age: parseInt(form.min_age),
-        max_age: parseInt(form.max_age),
-        min_income: parseFloat(form.min_income),
+        // Card Specifics (only relevant if not loan)
+        card_network: isLoan ? null : form.card_network,
+        card_variant: isLoan ? null : form.card_variant,
+        is_lifetime_free: isLoan ? false : form.is_lifetime_free,
+        best_for: form.best_for,
+        welcome_benefits: isLoan ? null : form.welcome_benefits,
+
+        annual_fee: isLoan ? (form.interest_rate || null) : form.annual_fee,
+        joining_fee: isLoan ? (form.processing_fee || null) : form.joining_fee,
+        min_age: parseInt(form.min_age) || null,
+        max_age: parseInt(form.max_age) || null,
+        min_income: parseFloat(form.min_income) || null,
 
         features_list: form.features,
         features: form.features,
@@ -425,7 +525,7 @@ export default function ManageAdminProducts() {
         required_documents: form.required_documents,
 
         compare_specs: {
-          annual_fee: form.annual_fee,
+          annual_fee: isLoan ? form.processing_fee : form.annual_fee,
           reward_rate: form.compare_reward_rate,
           lounge: form.compare_lounge,
         },
@@ -450,7 +550,8 @@ export default function ManageAdminProducts() {
         is_trending: form.is_trending,
         featured: form.is_featured,
         public_url: form.public_url,
-        partner_url: form.partner_url
+        partner_url: form.partner_url,
+        apply_button_text: form.button_text || 'Apply Now'
       };
 
       let res;
@@ -526,6 +627,12 @@ export default function ManageAdminProducts() {
     if (networkFilter !== "All" && p.card_network !== networkFilter) return false;
     if (feeFilter === "ltf" && !p.is_lifetime_free) return false;
     if (feeFilter === "paid" && p.is_lifetime_free) return false;
+    if (activeCategory === 'loans' && loanAllocationFilter !== "All") {
+      const pElig = getLoanEligibilityType(p);
+      const pProv = isFinanceProduct(p) ? 'finance' : 'bank';
+      const allocKey = `${pElig}_${pProv}`;
+      if (loanAllocationFilter !== allocKey) return false;
+    }
     return true;
   });
 
@@ -599,7 +706,9 @@ export default function ManageAdminProducts() {
             </span>
           </div>
           <p style={{ fontSize: '13px', color: C.textLight || '#64748B', margin: '4px 0 0' }}>
-            Create, edit and manage credit cards and product specifications dynamically
+            {activeCategory === 'loans' 
+              ? 'Create, allocate and manage loan products, tenure, interest rates and criteria' 
+              : 'Create, edit and manage credit cards and product specifications dynamically'}
           </p>
         </div>
 
@@ -637,7 +746,7 @@ export default function ManageAdminProducts() {
         {/* MULTI-FILTER DROPDOWNS */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', paddingTop: '10px', borderTop: `1px solid ${C.border}` }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: isMobile ? '1 1 calc(50% - 6px)' : 'none' }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>Bank</span>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>Bank / Institution</span>
             <select value={bankFilter} onChange={(e) => setBankFilter(e.target.value)} style={{ ...S.input, height: '42px', minWidth: isMobile ? '100%' : '150px', width: '100%', padding: '0 12px', fontSize: '13px', fontWeight: 700, borderRadius: '10px', boxSizing: 'border-box' }}>
               <option value="All">All Banks</option>
               {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -645,13 +754,22 @@ export default function ManageAdminProducts() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: isMobile ? '1 1 calc(50% - 6px)' : 'none' }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>{activeCategory === 'loc_eoc' ? 'Subcategory' : 'Product Type'}</span>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>
+              {activeCategory === 'loc_eoc' ? 'Subcategory' : activeCategory === 'loans' ? 'Loan Subcategory' : 'Product Type'}
+            </span>
             <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} style={{ ...S.input, height: '42px', minWidth: isMobile ? '100%' : '150px', width: '100%', padding: '0 12px', fontSize: '13px', fontWeight: 700, borderRadius: '10px', boxSizing: 'border-box' }}>
-              <option value="All">All {activeCategory === 'loc_eoc' ? 'Subcategories' : 'Product Types'}</option>
+              <option value="All">All {activeCategory === 'loc_eoc' ? 'Subcategories' : activeCategory === 'loans' ? 'Loan Types' : 'Product Types'}</option>
               {activeCategory === 'loc_eoc' ? (
                 <>
                   <option value="LOC">LOC (Loan on Credit Card)</option>
                   <option value="EOC">EOC (Smart EMI on Credit Card)</option>
+                </>
+              ) : activeCategory === 'loans' ? (
+                <>
+                  <option value="Personal Loan">Personal Loan</option>
+                  <option value="Home Loan">Home Loan</option>
+                  <option value="Business Loan">Business Loan</option>
+                  <option value="Instant Cash Loan">Instant Cash Loan</option>
                 </>
               ) : (
                 <>
@@ -672,16 +790,29 @@ export default function ManageAdminProducts() {
             </select>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: isMobile ? '1 1 calc(50% - 6px)' : 'none' }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>Annual Fee</span>
-            <select value={feeFilter} onChange={(e) => setFeeFilter(e.target.value)} style={{ ...S.input, height: '42px', minWidth: isMobile ? '100%' : '160px', width: '100%', padding: '0 12px', fontSize: '13px', fontWeight: 700, borderRadius: '10px', boxSizing: 'border-box' }}>
-              <option value="All">All Fee Options</option>
-              <option value="ltf">Lifetime Free Only</option>
-              <option value="paid">Paid Annual Fee</option>
-            </select>
-          </div>
+          {activeCategory === 'loans' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: isMobile ? '1 1 calc(50% - 6px)' : 'none' }}>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>Personal Loan Allocation</span>
+              <select value={loanAllocationFilter} onChange={(e) => setLoanAllocationFilter(e.target.value)} style={{ ...S.input, height: '42px', minWidth: isMobile ? '100%' : '180px', width: '100%', padding: '0 12px', fontSize: '13px', fontWeight: 700, borderRadius: '10px', boxSizing: 'border-box' }}>
+                <option value="All">All Allocations</option>
+                <option value="cibil_bank">CIBIL-Based • Bank</option>
+                <option value="cibil_finance">CIBIL-Based • Finance</option>
+                <option value="income_bank">Income-Based • Bank</option>
+                <option value="income_finance">Income-Based • Finance</option>
+              </select>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: isMobile ? '1 1 calc(50% - 6px)' : 'none' }}>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>Annual Fee</span>
+              <select value={feeFilter} onChange={(e) => setFeeFilter(e.target.value)} style={{ ...S.input, height: '42px', minWidth: isMobile ? '100%' : '160px', width: '100%', padding: '0 12px', fontSize: '13px', fontWeight: 700, borderRadius: '10px', boxSizing: 'border-box' }}>
+                <option value="All">All Fee Options</option>
+                <option value="ltf">Lifetime Free Only</option>
+                <option value="paid">Paid Annual Fee</option>
+              </select>
+            </div>
+          )}
 
-          {(bankFilter !== "All" || typeFilter !== "All" || statusFilter !== "All" || feeFilter !== "All") && (
+          {(bankFilter !== "All" || typeFilter !== "All" || statusFilter !== "All" || feeFilter !== "All" || loanAllocationFilter !== "All") && (
             <button
               onClick={() => {
                 setBankFilter("All");
@@ -689,6 +820,7 @@ export default function ManageAdminProducts() {
                 setStatusFilter("All");
                 setNetworkFilter("All");
                 setFeeFilter("All");
+                setLoanAllocationFilter("All");
               }}
               style={{ marginTop: '16px', padding: '8px 14px', background: '#EF444420', color: '#EF4444', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}
             >
@@ -702,15 +834,23 @@ export default function ManageAdminProducts() {
       <div style={{ background: C.card, borderRadius: '20px', border: `1px solid ${C.border}`, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
         {(() => {
           const isLocEoc = activeCategory === 'loc_eoc';
-          const isLoanOrEmi = isLocEoc || activeCategory === 'loan_on_credit_card' || activeCategory === 'smart_emi';
+          const isLoans = activeCategory === 'loans';
+          const isLoanOrEmi = isLoans || isLocEoc || activeCategory === 'loan_on_credit_card' || activeCategory === 'smart_emi';
           return (
         <table style={{ width: '100%', minWidth: '950px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
           <thead>
             <tr style={{ background: isDark ? C.bgSecondary : '#F8FAFC', borderBottom: `1px solid ${C.border}` }}>
               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Image</th>
               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Product Name</th>
-              <th style={{ padding: '14px 16px', fontWeight: 800 }}>Bank</th>
-              {isLocEoc ? (
+              <th style={{ padding: '14px 16px', fontWeight: 800 }}>Bank / Institution</th>
+              {isLoans ? (
+                <>
+                  <th style={{ padding: '14px 16px', fontWeight: 800 }}>Subcategory</th>
+                  <th style={{ padding: '14px 16px', fontWeight: 800 }}>Allocation</th>
+                  <th style={{ padding: '14px 16px', fontWeight: 800 }}>Interest Rate</th>
+                  <th style={{ padding: '14px 16px', fontWeight: 800 }}>Tenure</th>
+                </>
+              ) : isLocEoc ? (
                 <>
                   <th style={{ padding: '14px 16px', fontWeight: 800 }}>Subcategory</th>
                   <th style={{ padding: '14px 16px', fontWeight: 800 }}>Interest Rate</th>
@@ -733,9 +873,9 @@ export default function ManageAdminProducts() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={isLocEoc ? 8 : 7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>Loading products...</td></tr>
+              <tr><td colSpan={isLoans ? 9 : isLocEoc ? 8 : 7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>Loading products...</td></tr>
             ) : filteredProducts.length === 0 ? (
-              <tr><td colSpan={isLocEoc ? 8 : 7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>No products match your selected filters. Click <strong>Reset Filters</strong> or add a new product!</td></tr>
+              <tr><td colSpan={isLoans ? 9 : isLocEoc ? 8 : 7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>No products match your selected filters. Click <strong>Reset Filters</strong> or add a new product!</td></tr>
             ) : (
               paginatedProducts.map(prod => (
                 <tr key={prod.id} style={{ borderBottom: `1px solid ${C.border}` }}>
@@ -766,7 +906,34 @@ export default function ManageAdminProducts() {
                     {prod.badge && <span style={{ marginLeft: '8px', fontSize: '10px', padding: '2px 6px', background: '#F59E0B20', color: '#D97706', borderRadius: '4px', fontWeight: 800 }}>{prod.badge}</span>}
                   </td>
                   <td style={{ padding: '14px 16px', fontWeight: 700, color: C.teal }}>{prod.bank_name || 'Generic'}</td>
-                  {isLocEoc ? (
+                  {isLoans ? (
+                    <>
+                      <td style={{ padding: '14px 16px', fontSize: '12px', fontWeight: 700 }}>
+                        {prod.sub_category || 'Personal Loan'}
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        {prod.sub_category === 'Personal Loan' ? (() => {
+                          const eligType = getLoanEligibilityType(prod);
+                          const isFin = isFinanceProduct(prod);
+                          const isCibil = eligType === 'cibil';
+                          return (
+                            <span style={{
+                              padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800,
+                              background: isCibil ? '#EFF6FF' : '#FDF2F8',
+                              color: isCibil ? '#2563EB' : '#DB2777',
+                              border: `1px solid ${isCibil ? '#BFDBFE' : '#FBCFE8'}`
+                            }}>
+                              {isCibil ? 'CIBIL' : 'Income'} • {isFin ? 'Finance' : 'Bank'}
+                            </span>
+                          );
+                        })() : (
+                          <span style={{ fontSize: '12px', color: '#64748b' }}>Standard</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '14px 16px', fontWeight: 700, color: '#6366F1' }}>{prod.interest_rate || '—'}</td>
+                      <td style={{ padding: '14px 16px', fontSize: '12px', fontWeight: 700 }}>{prod.time_period || '—'}</td>
+                    </>
+                  ) : isLocEoc ? (
                     <>
                       <td style={{ padding: '14px 16px' }}>
                         <span style={{
@@ -881,10 +1048,10 @@ export default function ManageAdminProducts() {
             <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px', borderBottom: `1px solid ${C.border}`, marginBottom: '20px' }}>
               {[
                 { id: 'basic', label: '1. Basic Info' },
-                { id: 'fees', label: '2. Fees & Eligibility' },
-                { id: 'benefits', label: '3. Benefits' },
+                { id: 'fees', label: isLoanCategory ? '2. Interest & Criteria' : '2. Fees & Eligibility' },
+                { id: 'benefits', label: isLoanCategory ? '3. Loan Features' : '3. Benefits' },
                 { id: 'documents', label: '4. Docs & FAQs' },
-                { id: 'marketing', label: '5. Marketing & Links 🔗' },
+                { id: 'marketing', label: isLoanCategory ? '5. Loan Links & Badges 🔗' : '5. Marketing & Links 🔗' },
                 { id: 'seo', label: '6. SEO' },
                 { id: 'preview', label: '7. Live Preview 👁️' }
               ].map(t => (
@@ -914,7 +1081,7 @@ export default function ManageAdminProducts() {
                     <input
                       type="text"
                       required
-                      placeholder="e.g. HDFC Regalia Gold"
+                      placeholder={isLoanCategory ? "e.g. HDFC PL (10sec) or IndusInd Bank VPL" : "e.g. HDFC Regalia Gold"}
                       value={form.name}
                       onChange={(e) => handleNameChange(e.target.value)}
                       style={{ ...S.input, height: '42px' }}
@@ -922,14 +1089,14 @@ export default function ManageAdminProducts() {
                   </div>
 
                   <div>
-                    <label style={S.label}>Issuing Bank *</label>
+                    <label style={S.label}>{isLoanCategory ? "Issuing Bank / Institution *" : "Issuing Bank *"}</label>
                     <select
                       required
                       value={form.bank_id}
                       onChange={(e) => setForm({ ...form, bank_id: e.target.value })}
                       style={{ ...S.input, height: '42px', fontWeight: 700 }}
                     >
-                      <option value="">-- Select Bank --</option>
+                      <option value="">-- Select Bank / Institution --</option>
                       {banks.map(b => <option key={b.id} value={b.id}>{b.name} ({b.short_code})</option>)}
                     </select>
                   </div>
@@ -979,22 +1146,151 @@ export default function ManageAdminProducts() {
                     </select>
                   </div>
 
-                  <div>
-                    <label style={S.label}>Card Network</label>
-                    <select value={form.card_network} onChange={(e) => setForm({ ...form, card_network: e.target.value })} style={{ ...S.input, height: '42px', fontWeight: 700 }}>
-                      {CARD_NETWORKS.map(net => <option key={net} value={net}>{net}</option>)}
-                    </select>
-                  </div>
+                  {/* PERSONAL LOAN CLASSIFICATION & ALLOCATION BOX */}
+                  {isPersonalLoan && (
+                    <div style={{
+                      gridColumn: 'span 2',
+                      background: isDark ? '#1e293b' : '#F0F9FF',
+                      border: `1.5px solid ${isDark ? '#3b82f6' : '#0284C7'}`,
+                      borderRadius: '14px',
+                      padding: '16px 18px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '14px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '20px' }}>🎯</span>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 900, color: isDark ? '#38BDF8' : '#0369A1' }}>
+                            Personal Loan Classification & Section Allocation
+                          </h4>
+                          <p style={{ margin: '2px 0 0', fontSize: '12px', color: isDark ? '#94A3B8' : '#0284C7', fontWeight: 600 }}>
+                            Specify loan eligibility basis and allocate this product to Bank or Finance section
+                          </p>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        {/* Field 1: Which Type Loan (CIBIL-Based vs Income-Based) */}
+                        <div>
+                          <label style={{ ...S.label, fontWeight: 900, color: isDark ? '#E2E8F0' : '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>Which Type Loan? (Eligibility Type) *</span>
+                            <span style={{ fontSize: '11px', fontWeight: 600, color: isDark ? '#94A3B8' : '#64748B' }}>
+                              (Choose CIBIL-based or Income-based)
+                            </span>
+                          </label>
+                          <select
+                            value={form.loan_type}
+                            onChange={(e) => setForm({ ...form, loan_type: e.target.value })}
+                            style={{ ...S.input, height: '42px', fontWeight: 800, borderColor: '#0284C7', background: isDark ? '#0f172a' : '#FFFFFF' }}
+                          >
+                            <option value="cibil">1. Cibil based (Credit Score & Pre-Approved)</option>
+                            <option value="income">2. Income based (Salary Slip & ITR Proof)</option>
+                          </select>
+                          <span style={{ fontSize: '11.5px', color: isDark ? '#94A3B8' : '#475569', marginTop: '4px', display: 'block', fontWeight: 600 }}>
+                            {form.loan_type === 'cibil' 
+                              ? '✓ Allocates to: Stage 1 → CIBIL-Based Personal Loan' 
+                              : '✓ Allocates to: Stage 1 → Income-Based Personal Loan'}
+                          </span>
+                        </div>
+
+                        {/* Field 2: Bank vs Finance Allocation (Below side) */}
+                        <div>
+                          <label style={{ ...S.label, fontWeight: 900, color: isDark ? '#E2E8F0' : '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>Product Allocation (Provider Type) *</span>
+                            <span style={{ fontSize: '11px', fontWeight: 600, color: isDark ? '#94A3B8' : '#64748B' }}>
+                              (Choose Bank or Finance)
+                            </span>
+                          </label>
+                          <select
+                            value={form.provider_type}
+                            onChange={(e) => setForm({ ...form, provider_type: e.target.value })}
+                            style={{ ...S.input, height: '42px', fontWeight: 800, borderColor: '#0284C7', background: isDark ? '#0f172a' : '#FFFFFF' }}
+                          >
+                            <option value="bank">1. bank (Commercial Bank Partner)</option>
+                            <option value="finance">2. finance (NBFC / Digital Lending Partner)</option>
+                          </select>
+                          <span style={{ fontSize: '11.5px', color: isDark ? '#94A3B8' : '#475569', marginTop: '4px', display: 'block', fontWeight: 600 }}>
+                            {form.provider_type === 'bank' 
+                              ? `✓ Product allocates to: ${form.loan_type === 'cibil' ? 'CIBIL-Based' : 'Income-Based'} → Bank Section` 
+                              : `✓ Product allocates to: ${form.loan_type === 'cibil' ? 'CIBIL-Based' : 'Income-Based'} → Finance Section`}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CARD NETWORK & VARIANT (ONLY SHOWN FOR CREDIT CARDS / NON-LOANS) */}
+                  {!isLoanCategory && (
+                    <>
+                      <div>
+                        <label style={S.label}>Card Network</label>
+                        <select value={form.card_network} onChange={(e) => setForm({ ...form, card_network: e.target.value })} style={{ ...S.input, height: '42px', fontWeight: 700 }}>
+                          {CARD_NETWORKS.map(net => <option key={net} value={net}>{net}</option>)}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={S.label}>Card Variant</label>
+                        <select value={form.card_variant} onChange={(e) => setForm({ ...form, card_variant: e.target.value })} style={{ ...S.input, height: '42px', fontWeight: 700 }}>
+                          {CARD_VARIANTS.map(v => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {/* LOAN-RELATED FIELDS (SHOWN WHEN LOAN CATEGORY) */}
+                  {isLoanCategory && (
+                    <>
+                      <div>
+                        <label style={S.label}>Minimum Loan Amount (₹)</label>
+                        <input
+                          type="number"
+                          placeholder="e.g. 50000"
+                          value={form.min_amount}
+                          onChange={(e) => setForm({ ...form, min_amount: e.target.value })}
+                          style={{ ...S.input, height: '42px' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={S.label}>Maximum Loan Amount (₹)</label>
+                        <input
+                          type="number"
+                          placeholder="e.g. 4000000"
+                          value={form.max_amount}
+                          onChange={(e) => setForm({ ...form, max_amount: e.target.value })}
+                          style={{ ...S.input, height: '42px' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={S.label}>Loan Tenure (Repayment Period) *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. 12 - 60 Months"
+                          value={form.time_period}
+                          onChange={(e) => setForm({ ...form, time_period: e.target.value })}
+                          style={{ ...S.input, height: '42px', fontWeight: 700 }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={S.label}>Disbursal / Approval Speed</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Instant (10 Seconds) or 24-48 Hours"
+                          value={form.disbursal_time}
+                          onChange={(e) => setForm({ ...form, disbursal_time: e.target.value })}
+                          style={{ ...S.input, height: '42px' }}
+                        />
+                      </div>
+                    </>
+                  )}
 
                   <div>
-                    <label style={S.label}>Card Variant</label>
-                    <select value={form.card_variant} onChange={(e) => setForm({ ...form, card_variant: e.target.value })} style={{ ...S.input, height: '42px', fontWeight: 700 }}>
-                      {CARD_VARIANTS.map(v => <option key={v} value={v}>{v}</option>)}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={S.label}>Card Image (Upload File or URL)</label>
+                    <label style={S.label}>{isLoanCategory ? 'Product / Loan Image (Upload File or URL)' : 'Card Image (Upload File or URL)'}</label>
                     <input
                       type="file"
                       accept="image/*"
@@ -1003,7 +1299,7 @@ export default function ManageAdminProducts() {
                     />
                     <input
                       type="text"
-                      placeholder="Or paste image URL (https://.../card.png)"
+                      placeholder={isLoanCategory ? "Or paste image URL (https://.../loan.png)" : "Or paste image URL (https://.../card.png)"}
                       value={form.image_url}
                       onChange={(e) => setForm({ ...form, image_url: e.target.value })}
                       style={{ ...S.input, height: '38px', marginTop: '6px' }}
@@ -1012,7 +1308,7 @@ export default function ManageAdminProducts() {
                       <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <img
                           src={cardImageFile ? URL.createObjectURL(cardImageFile) : getCleanImageUrl(form.image_url)}
-                          alt="Card Preview"
+                          alt="Preview"
                           style={{ width: '80px', height: '50px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                         />
                         <span style={{ fontSize: '12px', color: '#64748b' }}>
@@ -1022,21 +1318,29 @@ export default function ManageAdminProducts() {
                     )}
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '24px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 800, cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={form.is_lifetime_free}
-                        onChange={(e) => setForm({ ...form, is_lifetime_free: e.target.checked, annual_fee: e.target.checked ? 'Lifetime Free' : form.annual_fee })}
-                        style={{ width: '18px', height: '18px' }}
-                      />
-                      <span style={{ color: '#10B981' }}>Is Lifetime Free?</span>
-                    </label>
-                  </div>
+                  {!isLoanCategory && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '24px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 800, cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={form.is_lifetime_free}
+                          onChange={(e) => setForm({ ...form, is_lifetime_free: e.target.checked, annual_fee: e.target.checked ? 'Lifetime Free' : form.annual_fee })}
+                          style={{ width: '18px', height: '18px' }}
+                        />
+                        <span style={{ color: '#10B981' }}>Is Lifetime Free?</span>
+                      </label>
+                    </div>
+                  )}
 
                   <div style={{ gridColumn: 'span 2' }}>
-                    <label style={S.label}>Short Card Description</label>
-                    <textarea rows={3} placeholder="Write 1-2 line summary of the card..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} style={{ ...S.input }} />
+                    <label style={S.label}>{isLoanCategory ? 'Short Loan Description' : 'Short Card Description'}</label>
+                    <textarea
+                      rows={3}
+                      placeholder={isLoanCategory ? "Write 1-2 line summary of loan terms, speed, and borrower criteria..." : "Write 1-2 line summary of the card..."}
+                      value={form.description}
+                      onChange={(e) => setForm({ ...form, description: e.target.value })}
+                      style={{ ...S.input }}
+                    />
                   </div>
 
                   <div style={{ gridColumn: 'span 2' }}>
@@ -1066,14 +1370,63 @@ export default function ManageAdminProducts() {
               {/* TAB 2: FEES & ELIGIBILITY */}
               {modalTab === 'fees' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                  <div>
-                    <label style={S.label}>Joining Fee</label>
-                    <input type="text" placeholder="e.g. ₹0 or ₹500" value={form.joining_fee} onChange={(e) => setForm({ ...form, joining_fee: e.target.value })} style={{ ...S.input, height: '42px' }} />
-                  </div>
-                  <div>
-                    <label style={S.label}>Annual Fee</label>
-                    <input type="text" placeholder="e.g. ₹500 (Waived on ₹50k spend)" value={form.annual_fee} onChange={(e) => setForm({ ...form, annual_fee: e.target.value })} style={{ ...S.input, height: '42px' }} />
-                  </div>
+                  {isLoanCategory ? (
+                    <>
+                      <div>
+                        <label style={{ ...S.label, fontWeight: 800, color: isDark ? '#38BDF8' : '#0284C7' }}>
+                          Interest Rate (% p.a.) *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. 10.49% p.a. onwards"
+                          value={form.interest_rate}
+                          onChange={(e) => setForm({ ...form, interest_rate: e.target.value })}
+                          style={{ ...S.input, height: '42px', fontWeight: 700 }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ ...S.label, fontWeight: 800, color: isDark ? '#38BDF8' : '#0284C7' }}>
+                          Processing Fee *
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Up to 1.5% + GST or Flat ₹999"
+                          value={form.processing_fee}
+                          onChange={(e) => setForm({ ...form, processing_fee: e.target.value })}
+                          style={{ ...S.input, height: '42px', fontWeight: 700 }}
+                        />
+                      </div>
+
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <label style={S.label}>Foreclosure / Prepayment Charges (Optional)</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Zero charges after 12 EMIs or 2% on outstanding principal"
+                          value={form.foreclosure_charges}
+                          onChange={(e) => setForm({ ...form, foreclosure_charges: e.target.value })}
+                          style={{ ...S.input, height: '42px' }}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <label style={S.label}>Joining Fee</label>
+                        <input type="text" placeholder="e.g. ₹0 or ₹500" value={form.joining_fee} onChange={(e) => setForm({ ...form, joining_fee: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                      </div>
+                      <div>
+                        <label style={S.label}>Annual Fee</label>
+                        <input type="text" placeholder="e.g. ₹500 (Waived on ₹50k spend)" value={form.annual_fee} onChange={(e) => setForm({ ...form, annual_fee: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                      </div>
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <label style={S.label}>Interest Rate (Optional)</label>
+                        <input type="text" placeholder="e.g. 3.5% p.m." value={form.interest_rate} onChange={(e) => setForm({ ...form, interest_rate: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                      </div>
+                    </>
+                  )}
+
                   <div>
                     <label style={S.label}>Minimum Monthly Income (₹)</label>
                     <input type="number" placeholder="25000" value={form.min_income} onChange={(e) => setForm({ ...form, min_income: e.target.value })} style={{ ...S.input, height: '42px' }} />
@@ -1090,10 +1443,6 @@ export default function ManageAdminProducts() {
                     <label style={S.label}>Maximum Age</label>
                     <input type="number" value={form.max_age} onChange={(e) => setForm({ ...form, max_age: e.target.value })} style={{ ...S.input, height: '42px' }} />
                   </div>
-                  <div style={{ gridColumn: 'span 2' }}>
-                    <label style={S.label}>Interest Rate (Optional)</label>
-                    <input type="text" placeholder="e.g. 3.5% p.m." value={form.interest_rate} onChange={(e) => setForm({ ...form, interest_rate: e.target.value })} style={{ ...S.input, height: '42px' }} />
-                  </div>
                 </div>
               )}
 
@@ -1102,28 +1451,42 @@ export default function ManageAdminProducts() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                     <div>
-                      <label style={S.label}>Best For Category</label>
+                      <label style={S.label}>{isLoanCategory ? 'Loan Purpose / Category' : 'Best For Category'}</label>
                       <select value={form.best_for} onChange={(e) => setForm({ ...form, best_for: e.target.value })} style={{ ...S.input, height: '42px', fontWeight: 700 }}>
-                        {BEST_FOR_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        {(isLoanCategory ? LOAN_PURPOSE_OPTIONS : BEST_FOR_OPTIONS).map(opt => <option key={opt} value={opt}>{opt}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label style={S.label}>Reward Rate Tag</label>
-                      <input type="text" placeholder="e.g. 5% Cashback" value={form.compare_reward_rate} onChange={(e) => setForm({ ...form, compare_reward_rate: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                      <label style={S.label}>{isLoanCategory ? 'Disbursal Speed Tag' : 'Reward Rate Tag'}</label>
+                      <input
+                        type="text"
+                        placeholder={isLoanCategory ? "e.g. Instant 10-Sec Approval" : "e.g. 5% Cashback"}
+                        value={form.compare_reward_rate}
+                        onChange={(e) => setForm({ ...form, compare_reward_rate: e.target.value })}
+                        style={{ ...S.input, height: '42px' }}
+                      />
                     </div>
                     <div>
-                      <label style={S.label}>Lounge Access Tag</label>
-                      <input type="text" placeholder="e.g. 4 Passes/Year" value={form.compare_lounge} onChange={(e) => setForm({ ...form, compare_lounge: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                      <label style={S.label}>{isLoanCategory ? 'Loan Limit Tag' : 'Lounge Access Tag'}</label>
+                      <input
+                        type="text"
+                        placeholder={isLoanCategory ? "e.g. Up to ₹40 Lakhs" : "e.g. 4 Passes/Year"}
+                        value={form.compare_lounge}
+                        onChange={(e) => setForm({ ...form, compare_lounge: e.target.value })}
+                        style={{ ...S.input, height: '42px' }}
+                      />
                     </div>
                   </div>
 
-                  <div>
-                    <label style={S.label}>Welcome Benefits</label>
-                    <input type="text" placeholder="e.g. Amazon voucher worth ₹500" value={form.welcome_benefits} onChange={(e) => setForm({ ...form, welcome_benefits: e.target.value })} style={{ ...S.input, height: '42px' }} />
-                  </div>
+                  {!isLoanCategory && (
+                    <div>
+                      <label style={S.label}>Welcome Benefits</label>
+                      <input type="text" placeholder="e.g. Amazon voucher worth ₹500" value={form.welcome_benefits} onChange={(e) => setForm({ ...form, welcome_benefits: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                    </div>
+                  )}
 
                   <div>
-                    <label style={S.label}>Key Features (Bullets on Card List)</label>
+                    <label style={S.label}>{isLoanCategory ? 'Key Loan Highlights & Features (Bullets)' : 'Key Features (Bullets on Card List)'}</label>
                     {form.features.map((feat, idx) => (
                       <div key={idx} style={{ display: 'flex', gap: '10px', marginBottom: '8px' }}>
                         <input
@@ -1159,7 +1522,7 @@ export default function ManageAdminProducts() {
                   </div>
 
                   <div>
-                    <label style={S.label}>Benefit Cards (Title & Description)</label>
+                    <label style={S.label}>{isLoanCategory ? 'Detailed Loan Features (Title & Description)' : 'Benefit Cards (Title & Description)'}</label>
                     {form.benefits.map((b, idx) => (
                       <div key={idx} style={{ display: 'flex', gap: '10px', background: isDark ? '#1e293b' : '#f8fafc', padding: '10px', borderRadius: '10px', marginBottom: '8px' }}>
                         <input
@@ -1285,7 +1648,7 @@ export default function ManageAdminProducts() {
               {modalTab === 'marketing' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div>
-                    <label style={S.label}>Card Badge</label>
+                    <label style={S.label}>{isLoanCategory ? 'Loan Badge' : 'Card Badge'}</label>
                     <select value={form.badge} onChange={(e) => setForm({ ...form, badge: e.target.value })} style={{ ...S.input, height: '42px', fontWeight: 700 }}>
                       <option value="">-- No Badge --</option>
                       {BADGE_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
@@ -1310,14 +1673,14 @@ export default function ManageAdminProducts() {
 
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer', fontWeight: 600 }}>
                       <input type="checkbox" checked={form.is_popular} onChange={(e) => setForm({ ...form, is_popular: e.target.checked })} />
-                      <span>Popular Credit Card Section</span>
+                      <span>{isLoanCategory ? 'Popular Loan Section' : 'Popular Credit Card Section'}</span>
                     </label>
                   </div>
 
                   {/* APPLICATION LINKS (Home Page & Partner Page) */}
                   <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '14px', background: isDark ? '#0f172a' : '#f1f5f9', padding: '16px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
                     <div style={{ fontWeight: 800, fontSize: '13.5px', color: C.text, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      🔗 Credit Card Application Links
+                      {isLoanCategory ? '🔗 Loan Application Links' : '🔗 Credit Card Application Links'}
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -1325,7 +1688,7 @@ export default function ManageAdminProducts() {
                         <label style={S.label}>Home Page Link (Public Application URL)</label>
                         <input
                           type="url"
-                          placeholder="https://bank.com/apply/credit-card-home"
+                          placeholder={isLoanCategory ? "https://bank.com/apply/personal-loan-home" : "https://bank.com/apply/credit-card-home"}
                           value={form.public_url || ''}
                           onChange={(e) => setForm({ ...form, public_url: e.target.value })}
                           style={{ ...S.input, height: '42px' }}
@@ -1336,7 +1699,7 @@ export default function ManageAdminProducts() {
                         <label style={S.label}>Partner Page Link (Partner Portal URL)</label>
                         <input
                           type="url"
-                          placeholder="https://bank.com/apply/credit-card-partner"
+                          placeholder={isLoanCategory ? "https://bank.com/apply/personal-loan-partner" : "https://bank.com/apply/credit-card-partner"}
                           value={form.partner_url || ''}
                           onChange={(e) => setForm({ ...form, partner_url: e.target.value })}
                           style={{ ...S.input, height: '42px' }}
@@ -1395,21 +1758,23 @@ export default function ManageAdminProducts() {
               {/* TAB 7: LIVE PREVIEW */}
               {modalTab === 'preview' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: 800, margin: 0, color: C.textLight }}>Live Website Card Preview:</h4>
+                  <h4 style={{ fontSize: '14px', fontWeight: 800, margin: 0, color: C.textLight }}>
+                    {isLoanCategory ? 'Live Loan Product Preview:' : 'Live Website Card Preview:'}
+                  </h4>
                   
                   <div style={{
                     background: isDark ? '#1e293b' : '#ffffff',
                     borderRadius: '20px',
                     border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
                     padding: '20px',
-                    maxWidth: '400px',
+                    maxWidth: '420px',
                     margin: '0 auto',
                     width: '100%',
                     boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                       <span style={{ fontSize: '11px', fontWeight: 800, color: selectedBank?.theme_color || '#2563EB', textTransform: 'uppercase' }}>
-                        {form.sub_category}
+                        {form.sub_category} {isPersonalLoan ? `• ${form.loan_type === 'cibil' ? 'CIBIL-Based' : 'Income-Based'} • ${form.provider_type === 'bank' ? 'Bank' : 'Finance'}` : ''}
                       </span>
                       {form.badge && (
                         <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '12px', background: '#F59E0B20', color: '#D97706' }}>
@@ -1427,15 +1792,34 @@ export default function ManageAdminProducts() {
                         />
                       </div>
                       <div>
-                        <h3 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 4px 0' }}>{form.name || "Card Name"}</h3>
-                        <p style={{ fontSize: '12px', color: form.is_lifetime_free ? '#10B981' : '#64748b', margin: 0, fontWeight: 700 }}>
-                          {form.is_lifetime_free ? 'Lifetime Free' : form.annual_fee}
-                        </p>
+                        <h3 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 4px 0' }}>{form.name || (isLoanCategory ? "Loan Product Name" : "Card Name")}</h3>
+                        {isLoanCategory ? (
+                          <p style={{ fontSize: '12px', color: '#2563EB', margin: 0, fontWeight: 800 }}>
+                            {form.interest_rate || '10.49% p.a.'} {form.time_period ? `• ${form.time_period}` : ''}
+                          </p>
+                        ) : (
+                          <p style={{ fontSize: '12px', color: form.is_lifetime_free ? '#10B981' : '#64748b', margin: 0, fontWeight: 700 }}>
+                            {form.is_lifetime_free ? 'Lifetime Free' : form.annual_fee}
+                          </p>
+                        )}
                       </div>
                     </div>
 
+                    {isLoanCategory && (form.min_amount || form.max_amount || form.processing_fee) && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderRadius: '8px', background: isDark ? '#0f172a' : '#F1F5F9', marginBottom: '12px', fontSize: '11.5px', fontWeight: 700 }}>
+                        <div>
+                          <span style={{ color: '#64748b', display: 'block' }}>Loan Limit</span>
+                          <span>{form.max_amount ? `Up to ₹${Number(form.max_amount).toLocaleString('en-IN')}` : 'Flexible'}</span>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ color: '#64748b', display: 'block' }}>Processing Fee</span>
+                          <span>{form.processing_fee || 'Standard'}</span>
+                        </div>
+                      </div>
+                    )}
+
                     <p style={{ fontSize: '13px', color: isDark ? '#cbd5e1' : '#475569', margin: '0 0 12px 0', lineHeight: 1.4 }}>
-                      {form.description || "Card description goes here..."}
+                      {form.description || (isLoanCategory ? "Loan product description goes here..." : "Card description goes here...")}
                     </p>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px' }}>
@@ -1461,7 +1845,7 @@ export default function ManageAdminProducts() {
                         cursor: 'pointer'
                       }}
                     >
-                      Apply Now
+                      {form.button_text || 'Apply Now'}
                     </button>
                   </div>
                 </div>

@@ -86,6 +86,13 @@ export const INCOME_BANK_OPTIONS = [
  */
 export const isFinanceProduct = (p) => {
   if (!p) return false;
+
+  // 1. Explicit provider_type set in Super Admin / product data
+  const elig = (typeof p.eligibility === 'object' && p.eligibility !== null) ? p.eligibility : {};
+  const explicitProvider = String(p.provider_type || elig.provider_type || '').toLowerCase().trim();
+  if (explicitProvider === 'finance') return true;
+  if (explicitProvider === 'bank') return false;
+
   const bName = String(p.bank_name || '').toLowerCase();
   const bCode = String(p.bank_code || '').toLowerCase();
   const pName = String(p.name || '').toLowerCase();
@@ -124,6 +131,12 @@ export const isBankProduct = (p) => {
  */
 export const isCibilBankProduct = (p) => {
   if (!p) return false;
+
+  // 0. Explicit loan_type set in Super Admin / product data
+  const elig = (typeof p.eligibility === 'object' && p.eligibility !== null) ? p.eligibility : {};
+  const explicitLoanType = String(p.loan_type || elig.loan_type || elig.type || '').toLowerCase().trim();
+  if (explicitLoanType === 'cibil') return true;
+  if (explicitLoanType === 'income') return false;
 
   // 1. Stable UUID matching (verified against database)
   if (p.id && CIBIL_BANK_PRODUCT_IDS.includes(p.id)) return true;
@@ -174,6 +187,12 @@ export const isCibilBankProduct = (p) => {
 export const getLoanEligibilityType = (p) => {
   if (!p) return 'cibil';
 
+  // 0. Explicit loan_type set in Super Admin / product data
+  const elig = (typeof p.eligibility === 'object' && p.eligibility !== null) ? p.eligibility : {};
+  const explicitLoanType = String(p.loan_type || elig.loan_type || elig.type || '').toLowerCase().trim();
+  if (explicitLoanType === 'cibil') return 'cibil';
+  if (explicitLoanType === 'income') return 'income';
+
   // Bank Personal Loans: strict eligibility partitioning
   if (isBankProduct(p)) {
     return isCibilBankProduct(p) ? 'cibil' : 'income';
@@ -185,8 +204,7 @@ export const getLoanEligibilityType = (p) => {
   if (subCat.includes('income') || subCat.includes('salary')) return 'income';
 
   // 2. Explicit eligibility JSONB object in database
-  const elig = (typeof p.eligibility === 'object' && p.eligibility !== null) ? p.eligibility : {};
-  const basis = String(elig.loan_type || elig.type || elig.basis || elig.eligibility_type || '').toLowerCase();
+  const basis = String(elig.basis || elig.eligibility_type || '').toLowerCase();
   if (basis.includes('cibil')) return 'cibil';
   if (basis.includes('income') || basis.includes('salary')) return 'income';
 
