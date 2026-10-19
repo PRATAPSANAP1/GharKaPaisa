@@ -280,7 +280,13 @@ class FaceLivenessProvider {
         };
       }
     } catch (err) {
-      logger.error('[LIVENESS PROVIDER] Failed to issue temporary STS credentials:', err.message);
+      logger.error('[LIVENESS PROVIDER] Failed to issue temporary STS credentials', {
+        name: err.name,
+        code: err.Code || err.code || err.name,
+        message: err.message,
+        httpStatusCode: err.$metadata?.httpStatusCode,
+        requestId: err.$metadata?.requestId,
+      });
       return null;
     }
   }
