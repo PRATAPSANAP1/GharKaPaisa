@@ -41,21 +41,23 @@ export const BANK_OPTIONS = [
   'YES Bank'
 ];
 
+// Canonical ID for IDFC Personal Loan (the single real CIBIL-Based bank product in database)
+export const IDFC_PERSONAL_LOAN_ID = '621d282c-832e-4cce-8344-b4a80ddf6fc4';
+
 // Stable CIBIL Bank Personal Loan product IDs (verified from database)
+// HDFC PL (10sec) and IndusInd Bank VPL do not exist as records in the database currently.
 export const CIBIL_BANK_PRODUCT_IDS = [
-  'd8486f1f-fde2-4c37-ade0-e8c5277a75a3', // HDFC Personal Loan ("HDFC pl 10sec bank")
-  '621d282c-832e-4cce-8344-b4a80ddf6fc4', // IDFC Personal Loan ("IDFC Bank")
+  IDFC_PERSONAL_LOAN_ID,
 ];
 
 // Verified Slugs for CIBIL Bank Personal Loan products
 export const CIBIL_BANK_SLUGS = [
-  'hdfc-personal-loan',
   'hdfc-pl-10sec',
   'hdfc-pl-10sec-bank',
+  'hdfc-10sec-personal-loan',
   'idfc-personal-loan',
   'indusind-bank-vpl',
-  'indusind-vpl',
-  'indusind-personal-loan'
+  'indusind-vpl'
 ];
 
 // IndusInd Bank UUID from database banks table
@@ -64,16 +66,17 @@ export const INDUSIND_BANK_ID = '7eda6d99-10e2-4bf8-bbe5-9de0b1b0fc9c';
 // Bank dropdown and quick-filter chip options for CIBIL-Based Personal Loans
 export const CIBIL_BANK_OPTIONS = [
   'All Banks',
-  'HDFC Bank',
   'IDFC First Bank',
+  'HDFC Bank',
   'IndusInd Bank'
 ];
 
 // Bank dropdown and quick-filter chip options for Income-Based Personal Loans
 export const INCOME_BANK_OPTIONS = [
   'All Banks',
-  'Axis Bank',
+  'HDFC Bank',
   'ICICI Bank',
+  'Axis Bank',
   'Kotak Mahindra Bank',
   'State Bank of India'
 ];
@@ -115,9 +118,9 @@ export const isBankProduct = (p) => {
 
 /**
  * Check if a bank product belongs to the 3 designated CIBIL-Based products:
- *  1. IndusInd Bank VPL
- *  2. IDFC Bank (IDFC Personal Loan)
- *  3. HDFC pl 10sec bank (HDFC Personal Loan)
+ *  1. HDFC PL (10sec) — product-level match on '10sec' (NOT regular HDFC Personal Loan)
+ *  2. IndusInd Bank VPL — product-level match on 'vpl'
+ *  3. IDFC Personal Loan — canonical product ID 621d282c-832e-4cce-8344-b4a80ddf6fc4
  */
 export const isCibilBankProduct = (p) => {
   if (!p) return false;
@@ -129,44 +132,32 @@ export const isCibilBankProduct = (p) => {
   const slug = String(p.slug || '').toLowerCase().trim();
   if (slug && CIBIL_BANK_SLUGS.includes(slug)) return true;
 
-  const pName = String(p.name || '').toLowerCase();
-  const bName = String(p.bank_name || '').toLowerCase();
-  const bCode = String(p.bank_code || '').toUpperCase();
-  const bId = String(p.bank_id || '');
+  const pName = String(p.name || '').toLowerCase().trim();
 
-  // 3. IndusInd Bank VPL (by name, slug, or IndusInd personal loan)
+  // 3. HDFC PL (10sec) — product must specifically be the 10-second instant loan
+  // Note: Regular 'HDFC Personal Loan' is an Income-Based product requiring salary slips/ITR
+  if (
+    pName.includes('10sec') ||
+    pName.includes('10 sec') ||
+    pName.includes('10-sec')
+  ) {
+    return true;
+  }
+
+  // 4. IndusInd Bank VPL — product must specifically be the Verified Personal Loan (VPL)
   if (
     pName.includes('vpl') ||
-    slug.includes('vpl') ||
-    ((bCode === 'INDUSIND' || bName.includes('indusind') || bId === INDUSIND_BANK_ID) &&
-      (pName.includes('vpl') || pName.includes('personal loan') || p.category === 'personal_loan'))
+    slug.includes('vpl')
   ) {
-    if (p.category && p.category !== 'personal_loan' && !pName.includes('vpl')) {
-      return false;
-    }
     return true;
   }
 
-  // 4. IDFC Bank (IDFC Personal Loan)
+  // 5. IDFC Personal Loan — verified by ID, slug, or exact name
   if (
-    (bCode === 'IDFC' || bName.includes('idfc')) &&
-    (pName.includes('personal loan') || p.category === 'personal_loan')
+    p.id === IDFC_PERSONAL_LOAN_ID ||
+    slug === 'idfc-personal-loan' ||
+    (pName === 'idfc personal loan' && p.category === 'personal_loan')
   ) {
-    if (p.category && p.category !== 'personal_loan' && !pName.includes('personal loan')) {
-      return false;
-    }
-    return true;
-  }
-
-  // 5. HDFC pl 10sec bank / HDFC Personal Loan (exclude TATA cobrand)
-  if (
-    (bCode === 'HDFC' || bName.includes('hdfc')) &&
-    !pName.includes('tata') &&
-    (pName.includes('10sec') || pName.includes('10 sec') || pName.includes('personal loan') || p.category === 'personal_loan')
-  ) {
-    if (p.category && p.category !== 'personal_loan' && !pName.includes('10sec') && !pName.includes('personal loan')) {
-      return false;
-    }
     return true;
   }
 

@@ -611,9 +611,7 @@ export default function PartnerProducts({
                         p.bank_name?.toLowerCase().includes(query) ||
                         p.category?.toLowerCase().includes(query) ||
                         p.commission_value?.toString().includes(query) ||
-                        eligibilityText.toLowerCase().includes(query) ||
-                        (p.name.toLowerCase().includes('hdfc') && query.includes('10sec')) ||
-                        (p.name.toLowerCase().includes('indusind') && query.includes('vpl'));
+                        eligibilityText.toLowerCase().includes(query);
                         
     const pCat = (p.category || '').toLowerCase();
     let matchCategory = false;
