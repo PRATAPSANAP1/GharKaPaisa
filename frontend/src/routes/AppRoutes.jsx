@@ -28,6 +28,7 @@ import JoiningForm from '../modules/employee/profile/JoiningForm';
 import TermsAcceptance from '../modules/employee/profile/TermsAcceptance';
 import KYCSubmission from '../modules/employee/profile/KYCSubmission';
 import EmployeeCreditCards from '../modules/employee/credit-cards/EmployeeCreditCards';
+import EmployeePersonalLoanOptions from '../modules/employee/loans/EmployeePersonalLoanOptions';
 import EmployeeLoanOnCreditCard from '../modules/employee/credit-cards/EmployeeLoanOnCreditCard';
 import EmployeeSmartEmi from '../modules/employee/credit-cards/EmployeeSmartEmi';
 import EmployeeApplications from '../modules/employee/applications/EmployeeApplications';
@@ -325,6 +326,7 @@ const AppRoutes = () => {
             <Route path="/employee/smart-emi-on-credit-card" element={<EmployeeSmartEmi />} />
 
             <Route path="/employee/loans" element={<EmployeeCreditCards defaultCategory="loans" />} />
+            <Route path="/employee/loans/personal-loan" element={<EmployeePersonalLoanOptions />} />
             <Route path="/employee/loans/:loanTypeSlug" element={<PartnerEntityDetail />} />
             <Route path="/employee/loans/:loanTypeSlug/product" element={<PartnerEntityDetail />} />
 

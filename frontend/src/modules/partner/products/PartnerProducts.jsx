@@ -7,6 +7,7 @@ import { useActiveBanks } from '../../../contexts/BanksContext';
 import { getCleanImageUrl } from '../../../utils/urlHelper';
 import { useAuthStore } from '../../../app/store/authStore';
 import { usePartnerStore } from '../../../app/store/partnerStore';
+import { FINANCE_COMPANIES, isFinanceProduct, isBankProduct, getLoanEligibilityType } from '../../../utils/personalLoanHelpers';
 
 import { 
   MdFilterList, MdSearch, MdCheckCircle, MdLocalOffer, 
@@ -57,7 +58,21 @@ const getMarketingBadges = (p, isEmployee = false) => {
   return badges.slice(0, 2);
 };
 
-export default function PartnerProducts({ initialSearch = '', initialBank = '', initialCategory = '' }) {
+export default function PartnerProducts({ 
+  initialSearch = '', 
+  initialBank = '', 
+  initialCategory = '',
+  // Safe optional props for specialized flows
+  providerType = 'all', // 'bank' | 'finance' | 'all'
+  eligibilityType = null, // 'cibil' | 'income' | null
+  customBankOptions = null,
+  bankLabel = null,
+  allBanksLabel = null,
+  emptyStateMessage = null,
+  hideCategoryFilter = false,
+  allowEmptyFilterSelection = false,
+  onBankChange = null
+}) {
   const { t } = useTranslation();
   const { C, isDark } = useTheme();
   const S = makeS(C);
@@ -117,9 +132,13 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const isEmployee = user?.role === 'EMPLOYEE' || (location?.pathname && location.pathname.startsWith('/employee'));
+  const allDefaultBankValue = allBanksLabel || 'All Banks';
 
   // Dynamically compute list of all available banks from API, active DB context, and loaded products
   const bankOptions = useMemo(() => {
+    if (customBankOptions && Array.isArray(customBankOptions)) {
+      return customBankOptions;
+    }
     const list = new Set();
     
     // 1. Add active banks from database context
@@ -142,12 +161,20 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
     BANKS.forEach(b => list.add(b));
 
     const sorted = Array.from(list).filter(Boolean).sort((a, b) => a.localeCompare(b));
-    return ['All Banks', ...sorted];
-  }, [activeBanks, products]);
+    return [allDefaultBankValue, ...sorted];
+  }, [activeBanks, products, customBankOptions, allDefaultBankValue]);
 
   // Normalize bank name string
   const getNormalizedBank = (bankStr) => {
-    if (!bankStr || bankStr.toLowerCase() === 'all banks' || bankStr.toLowerCase() === 'all') return 'All Banks';
+    if (!bankStr || bankStr.toLowerCase() === 'all banks' || bankStr.toLowerCase() === 'all' || (allBanksLabel && bankStr === allBanksLabel)) return allDefaultBankValue;
+    
+    // Check custom options first if provided
+    if (customBankOptions && Array.isArray(customBankOptions)) {
+      const cleanCustom = bankStr.toLowerCase().trim();
+      const matchCustom = customBankOptions.find(b => b.toLowerCase().trim() === cleanCustom || cleanCustom.includes(b.toLowerCase().trim()));
+      if (matchCustom) return matchCustom;
+    }
+
     const cleanStr = decodeURIComponent(bankStr).toLowerCase().replace(/[-_%]/g, ' ').trim();
     if (cleanStr.includes('tata')) {
       if (cleanStr.includes('sbi')) return 'TATA CO-BRAND SBI BANK';
@@ -172,7 +199,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
 
   const [search, setSearch] = useState(() => initialSearch || searchParams.get('q') || searchParams.get('search') || "");
   const [activeCategory, setActiveCategory] = useState(() => initialCategory || searchParams.get('category') || "all");
-  const [activeBank, setActiveBank] = useState(() => getNormalizedBank(initialBank || searchParams.get('bank') || "All Banks"));
+  const [activeBank, setActiveBank] = useState(() => getNormalizedBank(initialBank || searchParams.get('bank') || allDefaultBankValue));
   const [featureFilter, setFeatureFilter] = useState("all"); // 'all', 'ltf', 'high_payout', 'high_approval'
   const [filterTab, setFilterTab] = useState("products"); // 'products' or 'banks'
   const [sortBy, setSortBy] = useState("featured");
@@ -183,8 +210,10 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
 
   // Sync initialBank, initialCategory, or initialSearch props
   useEffect(() => {
-    if (initialBank) setActiveBank(getNormalizedBank(initialBank));
-  }, [initialBank, activeBanks]);
+    if (initialBank !== undefined && initialBank !== null) {
+      setActiveBank(getNormalizedBank(initialBank));
+    }
+  }, [initialBank, activeBanks, allDefaultBankValue]);
 
   useEffect(() => {
     if (initialCategory) setActiveCategory(initialCategory);
@@ -198,6 +227,12 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
       if (q) setSearch(q);
     }
   }, [initialSearch, searchParams]);
+
+  useEffect(() => {
+    if (onBankChange && typeof onBankChange === 'function') {
+      onBankChange(activeBank);
+    }
+  }, [activeBank, onBankChange]);
 
   // Memoize active filters count for the badge
   const activeFiltersCount = useMemo(() => {
@@ -501,13 +536,26 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
 
   // Helper to check if a product belongs to selected bank filter
   const isProductOfBank = (p, bankFilter) => {
-    if (!bankFilter || bankFilter.toLowerCase() === 'all banks' || bankFilter.toLowerCase() === 'all') return true;
+    if (!bankFilter || bankFilter.toLowerCase() === 'all banks' || bankFilter.toLowerCase() === 'all' || (allBanksLabel && bankFilter === allBanksLabel)) return true;
     const filterLower = bankFilter.toLowerCase().trim();
     const pBankName = (p.bank_name || '').toLowerCase();
     const pBankCode = (p.bank_code || '').toLowerCase();
     const pBankSlug = (p.bank_slug || '').toLowerCase();
     const pName = (p.name || '').toLowerCase();
     const pBankId = p.bank_id || '';
+
+    // If matching a finance company in Finance mode
+    if (providerType === 'finance') {
+      const matchedCompany = FINANCE_COMPANIES.find(fc => 
+        fc.label.toLowerCase() === filterLower || 
+        fc.id.toLowerCase() === filterLower || 
+        filterLower.includes(fc.id) || 
+        fc.match.some(m => filterLower.includes(m))
+      );
+      if (matchedCompany) {
+        return matchedCompany.match.some(m => pBankName.includes(m) || pBankCode.includes(m) || pName.includes(m));
+      }
+    }
 
     if (filterLower.includes('tata')) {
       const isTataProduct = pBankId === '1eacfa67-1187-48c7-adde-8a6edcfe9969' || 
@@ -532,15 +580,15 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
            (pName && cleanFilterWord && pName.includes(cleanFilterWord));
   };
 
-  // Reset bank filter ONLY if products are loaded and no product matches selected bank
+  // Reset bank filter ONLY if products are loaded and no product matches selected bank (bypassed if allowEmptyFilterSelection is true)
   useEffect(() => {
-    if (activeBank !== 'All Banks' && products.length > 0) {
+    if (!allowEmptyFilterSelection && activeBank !== allDefaultBankValue && products.length > 0) {
       const hasMatchingProduct = products.some(p => isProductOfBank(p, activeBank));
       if (!hasMatchingProduct) {
-        setActiveBank('All Banks');
+        setActiveBank(allDefaultBankValue);
       }
     }
-  }, [activeBank, products]);
+  }, [activeBank, products, allowEmptyFilterSelection, allDefaultBankValue]);
 
   // Filter Logic
   const filteredProducts = (Array.isArray(products) ? products : []).filter(p => {
@@ -590,7 +638,23 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
       (featureFilter === 'high_payout' && parseFloat(p.commission_value || 0) >= 1000) ||
       (featureFilter === 'high_approval' && approvalRate >= 88);
     
-    return matchSearch && matchCategory && matchBank && matchCommission && matchApproval && matchFeature;
+    // Provider Filter (Bank vs Finance)
+    let matchProvider = true;
+    if (providerType === 'bank') {
+      matchProvider = isBankProduct(p);
+    } else if (providerType === 'finance') {
+      matchProvider = isFinanceProduct(p);
+    }
+
+    // Eligibility Filter (CIBIL vs Income)
+    let matchEligibility = true;
+    if (eligibilityType === 'cibil') {
+      matchEligibility = getLoanEligibilityType(p) === 'cibil';
+    } else if (eligibilityType === 'income') {
+      matchEligibility = getLoanEligibilityType(p) === 'income';
+    }
+
+    return matchSearch && matchCategory && matchBank && matchCommission && matchApproval && matchFeature && matchProvider && matchEligibility;
   });
 
   // Sort Logic
@@ -708,43 +772,45 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
       }}>
         {/* ─── TWO MAIN FILTER SELECT DROPDOWNS: ALL PRODUCTS & ALL BANKS ─── */}
         <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexDirection: 'column' }}>
-          <div>
-            <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '6px', display: 'block' }}>
-              {t("Product Category")}
-            </label>
-            <select
-              id="sidebar-select-products"
-              value={activeCategory}
-              onChange={(e) => {
-                setActiveCategory(e.target.value);
-              }}
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                borderRadius: '12px',
-                fontSize: '13px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                border: activeCategory !== 'all' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
-                background: activeCategory !== 'all' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
-                color: activeCategory !== 'all' ? '#FFFFFF' : C.text,
-                boxShadow: activeCategory !== 'all' ? `0 4px 12px ${C.primary}35` : 'none',
-                outline: 'none'
-              }}
-            >
-              <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>{t("All Products")}</option>
-              {(Array.isArray(CATEGORIES) ? CATEGORIES : []).filter(c => c.id !== 'all').map(cat => (
-                <option key={cat.id} value={cat.id} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
-                  {t(cat.label)}
-                </option>
-              ))}
-            </select>
-          </div>
+          {!hideCategoryFilter && (
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '6px', display: 'block' }}>
+                {t("Product Category")}
+              </label>
+              <select
+                id="sidebar-select-products"
+                value={activeCategory}
+                onChange={(e) => {
+                  setActiveCategory(e.target.value);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  border: activeCategory !== 'all' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
+                  background: activeCategory !== 'all' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
+                  color: activeCategory !== 'all' ? '#FFFFFF' : C.text,
+                  boxShadow: activeCategory !== 'all' ? `0 4px 12px ${C.primary}35` : 'none',
+                  outline: 'none'
+                }}
+              >
+                <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>{t("All Products")}</option>
+                {(Array.isArray(CATEGORIES) ? CATEGORIES : []).filter(c => c.id !== 'all').map(cat => (
+                  <option key={cat.id} value={cat.id} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
+                    {t(cat.label)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '6px', display: 'block' }}>
-              {t("Select Bank")}
+              {bankLabel || t("Select Bank")}
             </label>
             <select
               id="sidebar-select-banks"
@@ -760,17 +826,17 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                 fontWeight: 700,
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
-                border: activeBank !== 'All Banks' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
-                background: activeBank !== 'All Banks' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
-                color: activeBank !== 'All Banks' ? '#FFFFFF' : C.text,
-                boxShadow: activeBank !== 'All Banks' ? `0 4px 12px ${C.primary}35` : 'none',
+                border: activeBank !== allDefaultBankValue && activeBank !== 'All Banks' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
+                background: activeBank !== allDefaultBankValue && activeBank !== 'All Banks' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
+                color: activeBank !== allDefaultBankValue && activeBank !== 'All Banks' ? '#FFFFFF' : C.text,
+                boxShadow: activeBank !== allDefaultBankValue && activeBank !== 'All Banks' ? `0 4px 12px ${C.primary}35` : 'none',
                 outline: 'none'
               }}
             >
-              <option value="All Banks" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🏦 {t("All Banks")}</option>
-              {(Array.isArray(bankOptions) ? bankOptions : []).filter(b => b !== 'All Banks').map(bank => (
+              <option value={allDefaultBankValue} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>{allDefaultBankValue}</option>
+              {(Array.isArray(bankOptions) ? bankOptions : []).filter(b => b !== allDefaultBankValue && b !== 'All Banks').map(bank => (
                 <option key={bank} value={bank} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
-                  🏦 {bank}
+                  {bank}
                 </option>
               ))}
             </select>
@@ -1133,30 +1199,32 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
               {/* Row 2 on Mobile: Product Category & Select Bank Buttons */}
               <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                <select
-                  id="mobile-select-products"
-                  value={activeCategory}
-                  onChange={(e) => setActiveCategory(e.target.value)}
-                  style={{
-                    flex: 1,
-                    padding: '10px 12px',
-                    borderRadius: '12px',
-                    fontSize: '12.5px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    border: activeCategory !== 'all' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
-                    background: activeCategory !== 'all' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
-                    color: activeCategory !== 'all' ? '#FFFFFF' : C.text,
-                    outline: 'none'
-                  }}
-                >
-                  <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>{t("Products (All)")}</option>
-                  {(Array.isArray(CATEGORIES) ? CATEGORIES : []).filter(c => c.id !== 'all').map(cat => (
-                    <option key={cat.id} value={cat.id} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
-                      {t(cat.label)}
-                    </option>
-                  ))}
-                </select>
+                {!hideCategoryFilter && (
+                  <select
+                    id="mobile-select-products"
+                    value={activeCategory}
+                    onChange={(e) => setActiveCategory(e.target.value)}
+                    style={{
+                      flex: 1,
+                      padding: '10px 12px',
+                      borderRadius: '12px',
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      border: activeCategory !== 'all' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
+                      background: activeCategory !== 'all' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
+                      color: activeCategory !== 'all' ? '#FFFFFF' : C.text,
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>{t("Products (All)")}</option>
+                    {(Array.isArray(CATEGORIES) ? CATEGORIES : []).filter(c => c.id !== 'all').map(cat => (
+                      <option key={cat.id} value={cat.id} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
+                        {t(cat.label)}
+                      </option>
+                    ))}
+                  </select>
+                )}
 
                 <select
                   id="mobile-select-banks"
@@ -1169,16 +1237,16 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                     fontSize: '12.5px',
                     fontWeight: 700,
                     cursor: 'pointer',
-                    border: activeBank !== 'All Banks' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
-                    background: activeBank !== 'All Banks' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
-                    color: activeBank !== 'All Banks' ? '#FFFFFF' : C.text,
+                    border: activeBank !== allDefaultBankValue && activeBank !== 'All Banks' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
+                    background: activeBank !== allDefaultBankValue && activeBank !== 'All Banks' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
+                    color: activeBank !== allDefaultBankValue && activeBank !== 'All Banks' ? '#FFFFFF' : C.text,
                     outline: 'none'
                   }}
                 >
-                  <option value="All Banks" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🏦 {t("Banks (All)")}</option>
-                  {(Array.isArray(bankOptions) ? bankOptions : []).filter(b => b !== 'All Banks').map(bank => (
+                  <option value={allDefaultBankValue} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>{allDefaultBankValue}</option>
+                  {(Array.isArray(bankOptions) ? bankOptions : []).filter(b => b !== allDefaultBankValue && b !== 'All Banks').map(bank => (
                     <option key={bank} value={bank} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
-                      🏦 {bank}
+                      {bank}
                     </option>
                   ))}
                 </select>
@@ -1254,13 +1322,13 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                 </span>
               )}
 
-              {activeBank !== 'All Banks' && (
+              {activeBank !== allDefaultBankValue && activeBank !== 'All Banks' && (
                 <span style={{
                   fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '12px',
                   background: `${C.primary}18`, color: C.primary, display: 'inline-flex', alignItems: 'center', gap: '4px'
                 }}>
-                  {t("Bank:")} {activeBank}
-                  <MdClose size={12} style={{ cursor: 'pointer' }} onClick={() => setActiveBank('All Banks')} />
+                  {providerType === 'finance' ? t("Company:") : t("Bank:")} {activeBank}
+                  <MdClose size={12} style={{ cursor: 'pointer' }} onClick={() => setActiveBank(allDefaultBankValue)} />
                 </span>
               )}
 
@@ -1374,13 +1442,17 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
             }}>
               <MdSearch size={28} />
             </div>
-            <h3 style={{ fontSize: '17px', fontWeight: 700, color: C.text, margin: '0 0 4px' }}>{t("No products found")}</h3>
-            <p style={{ color: C.textMid, margin: '0 0 20px', fontSize: '13px' }}>{t("Try adjusting your filters or search terms.")}</p>
+            <h3 style={{ fontSize: '17px', fontWeight: 700, color: C.text, margin: '0 0 4px' }}>{emptyStateMessage || t("No products found")}</h3>
+            <p style={{ color: C.textMid, margin: '0 0 20px', fontSize: '13px' }}>{emptyStateMessage ? "No personal loan offers match this selection currently." : t("Try adjusting your filters or search terms.")}</p>
             <button
-              onClick={() => { setActiveCategory('all'); setActiveBank('All Banks'); setSearch(''); }}
+              onClick={() => { 
+                if (!hideCategoryFilter) setActiveCategory('all'); 
+                setActiveBank(allDefaultBankValue); 
+                setSearch(''); 
+              }}
               style={{ background: 'none', border: 'none', color: C.primary, fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}
             >
-              Clear all filters
+              {t("Clear all filters")}
             </button>
           </div>
         ) : (
@@ -1442,8 +1514,22 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                             textTransform: 'uppercase',
                             letterSpacing: '0.5px'
                           }}>
-                            {product.category?.replace(/_/g, ' ') || 'Finance'}
+                            {providerType !== 'all' 
+                              ? (isFinanceProduct(product) ? 'Finance' : 'Bank') 
+                              : (product.category?.replace(/_/g, ' ') || 'Finance')}
                           </span>
+                          {eligibilityType && (
+                            <span style={{
+                              fontSize: isMobile ? '10px' : '11px', fontWeight: 750,
+                              background: isDark ? '#064E3B' : '#ECFDF5',
+                              color: isDark ? '#34D399' : '#059669',
+                              border: `1px solid ${isDark ? '#059669' : '#A7F3D0'}`,
+                              padding: isMobile ? '3px 8px' : '4px 10px', borderRadius: '8px',
+                              letterSpacing: '0.3px'
+                            }}>
+                              {getLoanEligibilityType(product) === 'income' ? 'Income Based' : 'CIBIL Based'}
+                            </span>
+                          )}
                           {isSelectedForCompare && (
                             <span style={{
                               fontSize: isMobile ? '10px' : '11px', fontWeight: 800, color: '#fff',
