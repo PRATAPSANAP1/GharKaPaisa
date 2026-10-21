@@ -444,73 +444,109 @@ async function seedCibilPersonalLoanProducts() {
     };
 
     try {
-      const res = await query(`
-        INSERT INTO products (
-          bank_id, name, category, sub_category, description, features, eligibility,
-          commission_type, commission_value, min_age, max_age, min_income,
-          display_order, annual_fee, time_period, image_url,
-          short_description, commission_enabled, featured, public_visible,
-          partner_visible, eligibility_criteria, documents_required, benefits,
-          apply_button_text, seo_title, seo_description, seo_keywords,
-          status, is_active, slug, badge,
-          joining_fee, processing_fee, interest_rate,
-          compare_specs, fees_structure, features_list, benefits_list, required_documents,
-          visibility, seo_metadata
-        ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7,
-          $8, $9, $10, $11, $12,
-          $13, $14, $15, $16,
-          $17, $18, $19, $20,
-          $21, $22, $23, $24,
-          $25, $26, $27, $28,
-          $29, $30, $31, $32,
-          $33, $34, $35,
-          $36, $37, $38, $39, $40,
-          $41, $42
-        )
-        ON CONFLICT (bank_id, name) DO UPDATE SET
-          category = EXCLUDED.category,
-          sub_category = EXCLUDED.sub_category,
-          description = EXCLUDED.description,
-          features = EXCLUDED.features,
-          eligibility = EXCLUDED.eligibility,
-          display_order = EXCLUDED.display_order,
-          annual_fee = EXCLUDED.annual_fee,
-          time_period = EXCLUDED.time_period,
-          short_description = EXCLUDED.short_description,
-          public_visible = true,
-          partner_visible = true,
-          status = 'Active',
-          is_active = true,
-          badge = EXCLUDED.badge,
-          joining_fee = EXCLUDED.joining_fee,
-          processing_fee = EXCLUDED.processing_fee,
-          interest_rate = EXCLUDED.interest_rate,
-          compare_specs = EXCLUDED.compare_specs,
-          fees_structure = EXCLUDED.fees_structure,
-          features_list = EXCLUDED.features_list,
-          required_documents = EXCLUDED.required_documents,
-          visibility = EXCLUDED.visibility,
-          seo_metadata = EXCLUDED.seo_metadata
-        RETURNING id
-      `, [
-        bankId, p.name, p.category, p.sub_category, p.description,
-        JSON.stringify(p.features), JSON.stringify(eligibilityPayload),
-        'fixed', 1500, p.min_age, p.max_age, p.min_income,
-        p.display_order, p.annual_fee, p.time_period, null,
-        p.short_description, true, p.display_order <= 3, true,
-        true, p.eligibility_criteria, p.documents_required, JSON.stringify(p.features),
-        'Apply Now', `${p.name} - Apply Online | GharKaPaisa`, p.short_description, `${p.name}, personal loan, cibil loan`,
-        'Active', true, productSlug, p.badge,
-        'Nil', p.processing_fee, p.interest_rate,
-        JSON.stringify(compareSpecs), JSON.stringify(feesStructure),
-        JSON.stringify(p.features), JSON.stringify(p.features),
-        JSON.stringify(p.documents_required.split(', ')),
-        JSON.stringify(visibility), JSON.stringify(seoMetadata)
-      ]);
+      // 1. Check if product already exists by (bank_id, name), name, or slug
+      const { rows: existingProds } = await query(
+        `SELECT id, slug FROM products WHERE (bank_id = $1 AND LOWER(name) = LOWER($2)) OR LOWER(name) = LOWER($2) OR slug = $3 LIMIT 1`,
+        [bankId, p.name, productSlug]
+      );
 
-      if (res.rowCount > 0) {
+      let targetId = existingProds[0]?.id || null;
+      let finalSlug = productSlug;
+
+      // Check if target slug is already claimed by any other product
+      const { rows: slugConflicts } = await query(
+        `SELECT id FROM products WHERE slug = $1 ${targetId ? 'AND id != $2' : ''} LIMIT 1`,
+        targetId ? [productSlug, targetId] : [productSlug]
+      );
+      if (slugConflicts.length > 0) {
+        finalSlug = `${productSlug}-${p.bank_short_code.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+      }
+      seoMetadata.slug = finalSlug;
+
+      if (targetId) {
+        await query(`
+          UPDATE products SET
+            bank_id = $1,
+            name = $2,
+            category = $3,
+            sub_category = $4,
+            description = $5,
+            features = $6,
+            eligibility = $7,
+            display_order = $8,
+            annual_fee = $9,
+            time_period = $10,
+            short_description = $11,
+            public_visible = true,
+            partner_visible = true,
+            status = 'Active',
+            is_active = true,
+            badge = $12,
+            joining_fee = $13,
+            processing_fee = $14,
+            interest_rate = $15,
+            compare_specs = $16,
+            fees_structure = $17,
+            features_list = $18,
+            required_documents = $19,
+            visibility = $20,
+            seo_metadata = $21,
+            slug = $22
+          WHERE id = $23
+        `, [
+          bankId, p.name, p.category, p.sub_category, p.description,
+          JSON.stringify(p.features), JSON.stringify(eligibilityPayload),
+          p.display_order, p.annual_fee, p.time_period, p.short_description,
+          p.badge, 'Nil', p.processing_fee, p.interest_rate,
+          JSON.stringify(compareSpecs), JSON.stringify(feesStructure),
+          JSON.stringify(p.features), JSON.stringify(p.documents_required.split(', ')),
+          JSON.stringify(visibility), JSON.stringify(seoMetadata),
+          finalSlug, targetId
+        ]);
         insertedCount++;
+        logger.info(`[CIBIL PL Seeder] Updated product: ${p.name}`);
+      } else {
+        await query(`
+          INSERT INTO products (
+            bank_id, name, category, sub_category, description, features, eligibility,
+            commission_type, commission_value, min_age, max_age, min_income,
+            display_order, annual_fee, time_period, image_url,
+            short_description, commission_enabled, featured, public_visible,
+            partner_visible, eligibility_criteria, documents_required, benefits,
+            apply_button_text, seo_title, seo_description, seo_keywords,
+            status, is_active, slug, badge,
+            joining_fee, processing_fee, interest_rate,
+            compare_specs, fees_structure, features_list, benefits_list, required_documents,
+            visibility, seo_metadata
+          ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7,
+            $8, $9, $10, $11, $12,
+            $13, $14, $15, $16,
+            $17, $18, $19, $20,
+            $21, $22, $23, $24,
+            $25, $26, $27, $28,
+            $29, $30, $31, $32,
+            $33, $34, $35,
+            $36, $37, $38, $39, $40,
+            $41, $42
+          )
+        `, [
+          bankId, p.name, p.category, p.sub_category, p.description,
+          JSON.stringify(p.features), JSON.stringify(eligibilityPayload),
+          'fixed', 1500, p.min_age, p.max_age, p.min_income,
+          p.display_order, p.annual_fee, p.time_period, null,
+          p.short_description, true, p.display_order <= 3, true,
+          true, p.eligibility_criteria, p.documents_required, JSON.stringify(p.features),
+          'Apply Now', `${p.name} - Apply Online | GharKaPaisa`, p.short_description, `${p.name}, personal loan, cibil loan`,
+          'Active', true, finalSlug, p.badge,
+          'Nil', p.processing_fee, p.interest_rate,
+          JSON.stringify(compareSpecs), JSON.stringify(feesStructure),
+          JSON.stringify(p.features), JSON.stringify(p.features),
+          JSON.stringify(p.documents_required.split(', ')),
+          JSON.stringify(visibility), JSON.stringify(seoMetadata)
+        ]);
+        insertedCount++;
+        logger.info(`[CIBIL PL Seeder] Inserted product: ${p.name}`);
       }
     } catch (prodErr) {
       logger.warn(`[CIBIL PL Seeder] Error seeding ${p.name}:`, prodErr.message);
