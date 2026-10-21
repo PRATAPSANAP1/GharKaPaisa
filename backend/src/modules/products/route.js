@@ -69,6 +69,7 @@ router.patch('/:id/status', auth, authorize('ADMIN', 'SUPER_ADMIN'), productCtrl
 router.post('/:id/duplicate', auth, authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.duplicateProduct);
 router.delete('/:id', auth, authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.deleteProduct);
 router.post('/seed-new-banks', auth, authorize('SUPER_ADMIN'), productCtrl.seedNewBanksProducts);
+router.post('/seed-cibil-personal-loans', auth, authorize('SUPER_ADMIN'), productCtrl.seedCibilPersonalLoans);
 router.post('/commission', auth, authorize('SUPER_ADMIN'), commissionRules, validate, productCtrl.setCommission);
 
 // ── Admin Sub-Entity CRUD ────────────────────────────────────────
