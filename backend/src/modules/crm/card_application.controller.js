@@ -339,39 +339,45 @@ const listApplications = async (req, res, next) => {
   }
 };
 
-// Admin route to update direct lead status
+// Admin route to update direct lead status & loan workflow details
 const updateApplicationStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, notes, remarks, loan_amount, sanctioned_loan_amount, customer_name, mobile } = req.body;
 
-    if (!status) return error(res, 'Status is required', 400);
+    if (!status && !notes && !remarks) return error(res, 'Status or update fields required', 400);
+
+    const targetStatus = status ? status.trim() : 'verified';
 
     const { rows: [application] } = await query(
       `UPDATE direct_card_applications SET status = $1 WHERE id::text = $2 RETURNING *`,
-      [status.trim(), id]
+      [targetStatus, id]
     );
 
-    if (!application) {
-      const { rows: [mainApp] } = await query(
-        `UPDATE applications SET status = $1, updated_at = NOW() WHERE id::text = $2 RETURNING *`,
-        [status.trim(), id]
-      );
-      if (mainApp) {
-        return success(res, mainApp, 'Application status updated successfully');
-      }
-      return error(res, 'Application lead not found', 404);
-    }
-
+    // Also update main applications table if matching record exists
     try {
+      const parsedAmount = parseFloat(sanctioned_loan_amount || loan_amount || 0);
       await query(
-        `UPDATE applications SET status = $1, updated_at = NOW() 
-         WHERE (customer_name = $2 AND customer_mobile = $3) OR id::text = $4`,
-        [status.trim(), application.customer_name, application.mobile, id]
+        `UPDATE applications 
+         SET status = $1, 
+             notes = COALESCE($2, notes), 
+             remarks = COALESCE($3, remarks), 
+             loan_amount = CASE WHEN $4::numeric > 0 THEN $4::numeric ELSE loan_amount END,
+             updated_at = NOW() 
+         WHERE id::text = $5 OR (customer_name = $6 AND customer_mobile = $7)`,
+        [
+          targetStatus, 
+          notes || null, 
+          remarks || null, 
+          parsedAmount > 0 ? parsedAmount : null, 
+          id, 
+          customer_name || application?.customer_name || null, 
+          mobile || application?.mobile || null
+        ]
       );
     } catch (_) {}
 
-    return success(res, application, 'Application status updated successfully');
+    return success(res, application || { id, status: targetStatus }, 'Application updated successfully');
   } catch (err) {
     next(err);
   }
