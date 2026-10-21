@@ -21,6 +21,7 @@ class FaceLivenessProvider {
         clientOptions.credentials = {
           accessKeyId: process.env.AWS_ACCESS_KEY_ID,
           secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+          ...(process.env.AWS_SESSION_TOKEN ? { sessionToken: process.env.AWS_SESSION_TOKEN } : {}),
         };
       }
       this.rekognitionClient = new RekognitionClient(clientOptions);
@@ -219,10 +220,21 @@ class FaceLivenessProvider {
         clientOptions.credentials = {
           accessKeyId: process.env.AWS_ACCESS_KEY_ID,
           secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+          ...(process.env.AWS_SESSION_TOKEN ? { sessionToken: process.env.AWS_SESSION_TOKEN } : {}),
         };
       }
 
       const stsClient = new STSClient(clientOptions);
+
+      // Attempt to retrieve active credentials from the provider chain
+      let currentCreds = null;
+      try {
+        if (typeof stsClient.config.credentials === 'function') {
+          currentCreds = await stsClient.config.credentials();
+        }
+      } catch (e) {
+        // Provider chain could not be resolved directly
+      }
 
       // If an IAM role ARN for liveness streaming is configured, use AssumeRole
       if (process.env.AWS_LIVENESS_ROLE_ARN) {
@@ -257,8 +269,42 @@ class FaceLivenessProvider {
           sessionToken: creds.SessionToken,
           expiration: creds.Expiration,
         };
-      } else {
-        // Fallback to GetSessionToken for IAM user credentials
+      }
+
+      // If current credentials already contain a session token or start with ASIA,
+      // they are already temporary session credentials (e.g. from EC2 instance metadata, ECS task role, or AWS_SESSION_TOKEN).
+      // AWS STS strictly prohibits calling GetSessionToken with session credentials.
+      const hasSessionToken = !!(
+        process.env.AWS_SESSION_TOKEN ||
+        currentCreds?.sessionToken ||
+        currentCreds?.accessKeyId?.startsWith('ASIA') ||
+        process.env.AWS_ACCESS_KEY_ID?.startsWith('ASIA')
+      );
+
+      if (hasSessionToken) {
+        const accessKeyId = currentCreds?.accessKeyId || process.env.AWS_ACCESS_KEY_ID;
+        const secretAccessKey = currentCreds?.secretAccessKey || process.env.AWS_SECRET_ACCESS_KEY;
+        const sessionToken = currentCreds?.sessionToken || process.env.AWS_SESSION_TOKEN;
+        const expiration = currentCreds?.expiration || new Date(Date.now() + 900 * 1000).toISOString();
+
+        if (accessKeyId && secretAccessKey) {
+          logger.info('[LIVENESS PROVIDER] Using existing session credentials for liveness streaming', {
+            verificationSessionId: sessionId,
+            expiration,
+            credentialProviderInvoked: true,
+          });
+
+          return {
+            accessKeyId,
+            secretAccessKey,
+            sessionToken,
+            expiration,
+          };
+        }
+      }
+
+      // Fallback to GetSessionToken for long-term IAM user credentials (AKIA...)
+      try {
         const command = new GetSessionTokenCommand({
           DurationSeconds: 900,
         });
@@ -278,6 +324,30 @@ class FaceLivenessProvider {
           sessionToken: creds.SessionToken,
           expiration: creds.Expiration,
         };
+      } catch (gstErr) {
+        // If GetSessionToken fails because session credentials were used or not allowed, fallback gracefully to current credentials
+        if (
+          gstErr.message?.includes('Cannot call GetSessionToken with session credentials') ||
+          gstErr.name === 'AccessDenied' ||
+          gstErr.Code === 'AccessDenied'
+        ) {
+          const fallbackAccessKey = currentCreds?.accessKeyId || process.env.AWS_ACCESS_KEY_ID;
+          const fallbackSecretKey = currentCreds?.secretAccessKey || process.env.AWS_SECRET_ACCESS_KEY;
+          const fallbackToken = currentCreds?.sessionToken || process.env.AWS_SESSION_TOKEN;
+
+          if (fallbackAccessKey && fallbackSecretKey) {
+            logger.warn('[LIVENESS PROVIDER] GetSessionToken rejected session credentials, using current credentials for streaming', {
+              message: gstErr.message,
+            });
+            return {
+              accessKeyId: fallbackAccessKey,
+              secretAccessKey: fallbackSecretKey,
+              sessionToken: fallbackToken,
+              expiration: currentCreds?.expiration || new Date(Date.now() + 900 * 1000).toISOString(),
+            };
+          }
+        }
+        throw gstErr;
       }
     } catch (err) {
       logger.error('[LIVENESS PROVIDER] Failed to issue temporary STS credentials', {

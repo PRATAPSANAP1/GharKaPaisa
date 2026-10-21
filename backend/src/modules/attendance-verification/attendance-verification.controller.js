@@ -156,7 +156,7 @@ const getLivenessCredentials = async (req, res) => {
     const result = await service.getLivenessCredentials({ sessionId: session_id, reqUser: req.user });
     return success(res, result, 'Temporary AWS liveness credentials issued');
   } catch (err) {
-    logger.error('Error issuing liveness credentials:', err.message);
+    logger.error(`Error issuing liveness credentials: ${err.message}`);
     const statusCode = err.statusCode || 500;
     return res.status(statusCode).json({
       success: false,
