@@ -2336,7 +2336,12 @@ const listApplications = async (req, res, next) => {
 
     const { rows: [{ count }] } = await query(`
       SELECT COUNT(*) FROM (
-        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, COALESCE(a.assigned_to, pad.assigned_to) as assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, COALESCE(NULLIF(a.category::text, ''), p.category::text) as category, COALESCE(NULLIF(a.sub_category, ''), p.sub_category, (a.metadata->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(a.pan_check, ''), NULLIF(pad.pan_check, ''), 'no') as pan_check, COALESCE(NULLIF(a.bank_current_lead_status, ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(a.requery_date::text, ''), NULLIF(pad.requery_date::text, '')) as requery_date,
+        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, COALESCE(
+          NULLIF(to_jsonb(a)->>'assigned_to', ''),
+          NULLIF(to_jsonb(pad)->>'assigned_to', ''),
+          NULLIF(to_jsonb(a)->>'assigned_to_name', ''),
+          NULLIF(to_jsonb(pad)->>'assigned_to_name', '')
+        ) AS assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, COALESCE(NULLIF(a.category::text, ''), p.category::text) as category, COALESCE(NULLIF(a.sub_category, ''), p.sub_category, (a.metadata->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(a.pan_check, ''), NULLIF(pad.pan_check, ''), 'no') as pan_check, COALESCE(NULLIF(a.bank_current_lead_status, ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(a.requery_date::text, ''), NULLIF(pad.requery_date::text, '')) as requery_date,
         COALESCE(NULLIF(a.final_status, ''), NULLIF(pad.final_status, '')) as final_status,
         COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, '')) as decline_reason,
         COALESCE(NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as decline_code,
@@ -2344,11 +2349,11 @@ const listApplications = async (req, res, next) => {
         COALESCE(NULLIF(a.curing_designation, ''), NULLIF(pad.curing_designation, '')) as curing_designation,
         COALESCE(NULLIF(a.primary_decline_code, ''), NULLIF(pad.primary_decline_code, ''), NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as primary_decline_code,
         COALESCE(NULLIF(a.secondary_decline_code, ''), NULLIF(pad.secondary_decline_code, '')) as secondary_decline_code,
-        COALESCE(a.sales_claimed_by, pad.sales_claimed_by, '') as sales_claimed_by,
-        a.assigned_to_user_id,
-        a.assigned_to_employee_id,
-        a.assigned_by_user_id,
-        a.assigned_by_employee_id
+        COALESCE(to_jsonb(a)->>'sales_claimed_by', to_jsonb(pad)->>'sales_claimed_by', '') as sales_claimed_by,
+        NULLIF(to_jsonb(a)->>'assigned_to_user_id', '')::uuid as assigned_to_user_id,
+        NULLIF(to_jsonb(a)->>'assigned_to_employee_id', '')::uuid as assigned_to_employee_id,
+        NULLIF(to_jsonb(a)->>'assigned_by_user_id', '')::uuid as assigned_by_user_id,
+        NULLIF(to_jsonb(a)->>'assigned_by_employee_id', '')::uuid as assigned_by_employee_id
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
