@@ -30,6 +30,10 @@ const CIBIL_BANKS_AND_ENTITIES = [
   { name: 'IndusInd Bank', short_code: 'INDUSIND' },
   { name: 'IDFC First Bank', short_code: 'IDFC' },
   { name: 'HDFC Bank', short_code: 'HDFC' },
+  { name: 'ICICI Bank', short_code: 'ICICI' },
+  { name: 'Kotak Mahindra Bank', short_code: 'KOTAK' },
+  { name: 'Axis Bank', short_code: 'AXIS' },
+  { name: 'YES Bank', short_code: 'YES' },
   { name: 'Finable', short_code: 'FINABLE' },
   { name: 'Punawalla Finance', short_code: 'PUNAWALLA' },
   { name: 'Bajaj Finance', short_code: 'BAJAJ' },
@@ -169,7 +173,9 @@ const CIBIL_PERSONAL_LOAN_PRODUCTS = [
       'Convenient flexible EMI repayment options'
     ],
     eligibility_criteria: 'Salaried or self-employed with minimum monthly income ₹20,000 and CIBIL score 700+.',
-    documents_required: 'PAN Card, Aadhaar Card, 3 Months Bank Statement'
+    documents_required: 'PAN Card, Aadhaar Card, 3 Months Bank Statement',
+    partner_url: 'https://www.wishfin.com/prefr/home?source=Rey_june26_FW18',
+    public_url: 'https://www.wishfin.com/prefr/home?source=Rey_june26_FW18'
   },
   {
     bank_code: 'PUNAWALLA',
@@ -201,7 +207,9 @@ const CIBIL_PERSONAL_LOAN_PRODUCTS = [
       'Instant sanction letter delivered online'
     ],
     eligibility_criteria: 'Age 22-58 years with regular salary/income and credit score 710+.',
-    documents_required: 'PAN Card, Aadhaar Card, Latest Salary Slips'
+    documents_required: 'PAN Card, Aadhaar Card, Latest Salary Slips',
+    partner_url: 'https://instant-pocket-loan.poonawallafincorp.com/?redirectto=primepl&utm_DSA_Code=PUP00228&UTM_Partner_Name=WISHFIN&UTM_Partner_Medium=SMS&UTM_Partner_AgentCode=PFLWISHFIN&UTM_Partner_ReferenceID=WF_FW_REY_PR_26',
+    public_url: 'https://instant-pocket-loan.poonawallafincorp.com/?redirectto=primepl&utm_DSA_Code=PUP00228&UTM_Partner_Name=WISHFIN&UTM_Partner_Medium=SMS&UTM_Partner_AgentCode=PFLWISHFIN&UTM_Partner_ReferenceID=WF_FW_REY_PR_26'
   },
   {
     bank_code: 'BAJAJ',
@@ -233,7 +241,9 @@ const CIBIL_PERSONAL_LOAN_PRODUCTS = [
       'Disbursal within 24 hours of approval'
     ],
     eligibility_criteria: 'CIBIL score 720+ with steady employment and verified bank statements.',
-    documents_required: 'PAN Card, Aadhaar Card, Salary Slips, Bank Statement'
+    documents_required: 'PAN Card, Aadhaar Card, Salary Slips, Bank Statement',
+    partner_url: 'https://www.bajajfinserv.in/personal-loan',
+    public_url: 'https://www.bajajfinserv.in/personal-loan'
   },
   {
     bank_code: 'KREDITBEE',
@@ -265,7 +275,9 @@ const CIBIL_PERSONAL_LOAN_PRODUCTS = [
       'Minimal documentation via video KYC'
     ],
     eligibility_criteria: 'Age 21-55 years with monthly income ₹15,000+ and valid PAN/Aadhaar.',
-    documents_required: 'PAN Card, Aadhaar Card, Selfie Video KYC'
+    documents_required: 'PAN Card, Aadhaar Card, Selfie Video KYC',
+    partner_url: 'https://www.wishfin.com/kreditbee/home?source=fin41',
+    public_url: 'https://www.wishfin.com/kreditbee/home?source=fin41'
   },
   {
     bank_code: 'TATACAPITAL',
@@ -297,7 +309,9 @@ const CIBIL_PERSONAL_LOAN_PRODUCTS = [
       'Flexible repayment options up to 6 years'
     ],
     eligibility_criteria: 'Salaried/Self-employed with CIBIL score 720+ and minimum 1 year work experience.',
-    documents_required: 'PAN Card, Aadhaar Card, 3 Months Salary Slips, Bank Statement'
+    documents_required: 'PAN Card, Aadhaar Card, 3 Months Salary Slips, Bank Statement',
+    partner_url: 'https://www.wishfin.com/tata/home?source=FWRey_July&utm_source=FW38&utm_medium=SMS&utm_campaign=promotion&utm_content=check_offer&utm_term=tata',
+    public_url: 'https://www.wishfin.com/tata/home?source=FWRey_July&utm_source=FW38&utm_medium=SMS&utm_campaign=promotion&utm_content=check_offer&utm_term=tata'
   },
   {
     bank_code: 'UNITY',
@@ -329,7 +343,9 @@ const CIBIL_PERSONAL_LOAN_PRODUCTS = [
       'Dedicated customer support and doorstep assistance'
     ],
     eligibility_criteria: 'Age 21-60 with regular monthly income ₹20,000+ and credit score 700+.',
-    documents_required: 'PAN Card, Aadhaar Card, Bank Statement'
+    documents_required: 'PAN Card, Aadhaar Card, Bank Statement',
+    partner_url: 'https://loans.theunitybank.com/unity-pl-ui/page/exclusion/login/logindetails?utm_source=Partner&utm_medium=Wishfin&utm_campaign=finwizz11',
+    public_url: 'https://loans.theunitybank.com/unity-pl-ui/page/exclusion/login/logindetails?utm_source=Partner&utm_medium=Wishfin&utm_campaign=finwizz11'
   },
   {
     bank_code: 'RAMFINCORP',
@@ -361,7 +377,474 @@ const CIBIL_PERSONAL_LOAN_PRODUCTS = [
       'Flexible tenure and competitive rates'
     ],
     eligibility_criteria: 'Indian resident with monthly income ₹20,000+ and credit score 690+.',
-    documents_required: 'PAN Card, Aadhaar Card, Bank Statement'
+    partner_url: 'https://applyonline.ramfincorp.com/?utm_source=Wishfin49&utm_campaign=default_campaign&utm_medium=default_medium&utm_trackingid=FW_30',
+    public_url: 'https://applyonline.ramfincorp.com/?utm_source=Wishfin49&utm_campaign=default_campaign&utm_medium=default_medium&utm_trackingid=FW_30'
+  },
+
+  // ─── GROUP 3: INCOME BASED - BANK (7 Products) ──────────────────────────
+  {
+    bank_code: 'HDFC',
+    bank_name: 'HDFC Bank',
+    name: 'HDFC Personal Loan',
+    category: 'personal_loan',
+    sub_category: 'Personal Loan',
+    loan_type: 'income',
+    provider_type: 'bank',
+    short_description: 'Low-interest salary & income based personal loan from HDFC Bank with high loan amounts.',
+    description: 'HDFC Personal Loan offers flexible funding up to ₹40 Lakhs based on verified salary slips and ITR documents with preferential rates for corporate employees.',
+    annual_fee: '10.50% p.a.',
+    interest_rate: '10.50% p.a.',
+    processing_fee: 'Up to 1.5% + GST',
+    time_period: '12 - 72 Months',
+    disbursal_time: 'Within 24 Hours',
+    min_amount: '50000',
+    max_amount: '4000000',
+    min_income: 25000,
+    min_age: 21,
+    max_age: 60,
+    cibil_required: 700,
+    badge: 'High Value',
+    display_order: 11,
+    features: [
+      'Loan amounts up to ₹40 Lakhs based on income proof',
+      'Flexible repayment tenure up to 6 years (72 months)',
+      'Special discounted interest rates for salaried employees',
+      'Easy digital verification of salary slips & bank statements'
+    ],
+    eligibility_criteria: 'Salaried/self-employed with minimum monthly income ₹25,000 and valid income proof.',
+    documents_required: 'PAN Card, Aadhaar Card, 3 Months Salary Slips, 6 Months Bank Statement'
+  },
+  {
+    bank_code: 'INDUSIND',
+    bank_name: 'IndusInd Bank',
+    name: 'IndusInd Personal Loan',
+    category: 'personal_loan',
+    sub_category: 'Personal Loan',
+    loan_type: 'income',
+    provider_type: 'bank',
+    short_description: 'Fast digital personal loan from IndusInd Bank with quick salary slip evaluation.',
+    description: 'IndusInd Bank Income Personal Loan offers collateral-free financing tailored to your income profile with instant online documentation and quick disbursal.',
+    annual_fee: '10.49% p.a.',
+    interest_rate: '10.49% p.a.',
+    processing_fee: 'Up to 2.0% + GST',
+    time_period: '12 - 60 Months',
+    disbursal_time: 'Within 24 Hours',
+    min_amount: '50000',
+    max_amount: '2500000',
+    min_income: 25000,
+    min_age: 21,
+    max_age: 60,
+    cibil_required: 700,
+    badge: 'Fast Processing',
+    display_order: 12,
+    features: [
+      'Multi-purpose personal loan based on verified earnings',
+      'Minimal paperwork with digital salary slip upload',
+      'Competitive interest rates starting at 10.49% p.a.',
+      'Flexible tenure choices from 1 to 5 years'
+    ],
+    eligibility_criteria: 'Indian citizen aged 21-60 with regular monthly salary ₹25,000+.',
+    documents_required: 'PAN Card, Aadhaar Card, Salary Slips, Bank Statement'
+  },
+  {
+    bank_code: 'YES',
+    bank_name: 'YES Bank',
+    name: 'YES Bank Personal Loan',
+    category: 'personal_loan',
+    sub_category: 'Personal Loan',
+    loan_type: 'income',
+    provider_type: 'bank',
+    short_description: 'Competitive personal loans from YES Bank with flexible repayment and attractive interest rates.',
+    description: 'YES Bank Personal Loan provides swift funding for personal, medical, or lifestyle expenses with transparent terms and flexible tenures up to 60 months.',
+    annual_fee: '10.99% p.a.',
+    interest_rate: '10.99% p.a.',
+    processing_fee: 'Up to 2.0% + GST',
+    time_period: '12 - 60 Months',
+    disbursal_time: 'Within 24 Hours',
+    min_amount: '100000',
+    max_amount: '4000000',
+    min_income: 25000,
+    min_age: 21,
+    max_age: 60,
+    cibil_required: 700,
+    badge: 'Flexible EMI',
+    display_order: 13,
+    features: [
+      'High loan quantum up to ₹40 Lakhs based on income',
+      'Quick digital sanction and paperless document verification',
+      'Flexible EMI tenure up to 5 years',
+      'Transparent charges with no hidden fees'
+    ],
+    eligibility_criteria: 'Salaried individual earning minimum ₹25,000/month with valid KYC.',
+    documents_required: 'PAN Card, Aadhaar Card, 3 Months Salary Slips, 3 Months Bank Statement'
+  },
+  {
+    bank_code: 'ICICI',
+    bank_name: 'ICICI Bank',
+    name: 'ICICI Bank Personal Loan',
+    category: 'personal_loan',
+    sub_category: 'Personal Loan',
+    loan_type: 'income',
+    provider_type: 'bank',
+    short_description: 'Instant paperless income loan from ICICI Bank with flexible tenure up to 72 months.',
+    description: 'ICICI Bank Personal Loan offers convenient digital borrowing based on income verification with pre-approved offers for corporate salary account holders.',
+    annual_fee: '10.65% p.a.',
+    interest_rate: '10.65% p.a.',
+    processing_fee: 'Up to 2.25% + GST',
+    time_period: '12 - 72 Months',
+    disbursal_time: 'Within 24 Hours',
+    min_amount: '50000',
+    max_amount: '5000000',
+    min_income: 30000,
+    min_age: 23,
+    max_age: 58,
+    cibil_required: 700,
+    badge: 'Popular Bank',
+    display_order: 14,
+    features: [
+      'Loan amounts up to ₹50 Lakhs based on income proof',
+      'Repayment tenure from 12 to 72 months',
+      'Special terms for ICICI salary account holders',
+      'End-to-end digital paperless processing'
+    ],
+    eligibility_criteria: 'Salaried employee with monthly take-home salary ₹30,000+.',
+    documents_required: 'PAN Card, Aadhaar Card, 3 Months Salary Slips, 6 Months Bank Statement'
+  },
+  {
+    bank_code: 'KOTAK',
+    bank_name: 'Kotak Mahindra Bank',
+    name: 'Kotak Personal Loan',
+    category: 'personal_loan',
+    sub_category: 'Personal Loan',
+    loan_type: 'income',
+    provider_type: 'bank',
+    short_description: 'Quick online personal loan from Kotak Mahindra Bank with minimal documentation.',
+    description: 'Kotak Personal Loan provides fast access to funds for medical emergencies, weddings, home improvement, or travel based on verified income.',
+    annual_fee: '10.99% p.a.',
+    interest_rate: '10.99% p.a.',
+    processing_fee: 'Up to 2.5% + GST',
+    time_period: '12 - 60 Months',
+    disbursal_time: 'Within 24 Hours',
+    min_amount: '50000',
+    max_amount: '4000000',
+    min_income: 25000,
+    min_age: 21,
+    max_age: 58,
+    cibil_required: 700,
+    badge: 'Quick Disbursal',
+    display_order: 15,
+    features: [
+      'Quick loan disbursal into bank account within 24 hours',
+      'Loans up to ₹40 Lakhs tailored to your income level',
+      'Minimal documentation with simple online verification',
+      'Flexible tenures from 12 to 60 months'
+    ],
+    eligibility_criteria: 'Salaried individual earning ₹25,000+ (for Kotak account holders) or ₹30,000+ (others).',
+    documents_required: 'PAN Card, Aadhaar Card, 3 Months Salary Slips, Bank Statement'
+  },
+  {
+    bank_code: 'AXIS',
+    bank_name: 'Axis Bank',
+    name: 'Axis Bank Personal Loan',
+    category: 'personal_loan',
+    sub_category: 'Personal Loan',
+    loan_type: 'income',
+    provider_type: 'bank',
+    short_description: 'Attractive interest rates & transparent terms on Axis Bank Personal Loans.',
+    description: 'Axis Bank Personal Loan gives you instant digital liquidity based on your income documents with zero prepayment charges on select tenures.',
+    annual_fee: '10.49% p.a.',
+    interest_rate: '10.49% p.a.',
+    processing_fee: 'Up to 2.0% + GST',
+    time_period: '12 - 60 Months',
+    disbursal_time: 'Within 24 Hours',
+    min_amount: '50000',
+    max_amount: '4000000',
+    min_income: 25000,
+    min_age: 21,
+    max_age: 60,
+    cibil_required: 700,
+    badge: 'Transparent Rates',
+    display_order: 16,
+    features: [
+      'Borrow up to ₹40 Lakhs based on salary and income track record',
+      'Repayment tenure ranging from 12 to 60 months',
+      '100% digital application and document upload',
+      'Part-prepayment option available'
+    ],
+    eligibility_criteria: 'Salaried employee with monthly net income ₹25,000+ and age 21-60.',
+    documents_required: 'PAN Card, Aadhaar Card, Salary Slips, 6 Months Bank Statement'
+  },
+  {
+    bank_code: 'IDFC',
+    bank_name: 'IDFC First Bank',
+    name: 'IDFC First Personal Loan',
+    category: 'personal_loan',
+    sub_category: 'Personal Loan',
+    loan_type: 'income',
+    provider_type: 'bank',
+    short_description: 'Transparent personal loan from IDFC First Bank with zero foreclosure fees on select terms.',
+    description: 'IDFC First Bank Personal Loan offers customer-friendly personal loans based on income verification with competitive interest rates and flexible tenures.',
+    annual_fee: '10.49% p.a.',
+    interest_rate: '10.49% p.a.',
+    processing_fee: 'Up to 2.0% + GST',
+    time_period: '12 - 60 Months',
+    disbursal_time: 'Within 24 Hours',
+    min_amount: '50000',
+    max_amount: '4000000',
+    min_income: 25000,
+    min_age: 21,
+    max_age: 60,
+    cibil_required: 700,
+    badge: 'Customer First',
+    display_order: 17,
+    features: [
+      'Transparent pricing with competitive interest rates',
+      'Higher eligibility based on complete household income',
+      'Flexible tenures up to 5 years',
+      'Quick paperless digital approval'
+    ],
+    eligibility_criteria: 'Indian citizen with monthly income ₹25,000+ and active banking account.',
+    documents_required: 'PAN Card, Aadhaar Card, 3 Months Salary Slips, Bank Statement'
+  },
+
+  // ─── GROUP 4: INCOME BASED - FINANCE (7 Products with UTM links) ───────
+  {
+    bank_code: 'FINABLE',
+    bank_name: 'Finable',
+    name: 'Finable Income Loan',
+    category: 'personal_loan',
+    sub_category: 'Personal Loan',
+    loan_type: 'income',
+    provider_type: 'finance',
+    short_description: 'Quick salary-based personal loan from Finable with easy document verification.',
+    description: 'Finable Income Personal Loan provides immediate digital cash transfers directly to your bank account with streamlined salary slip evaluation.',
+    annual_fee: '11.99% p.a.',
+    interest_rate: '11.99% p.a.',
+    processing_fee: 'Up to 2.0% + GST',
+    time_period: '6 - 36 Months',
+    disbursal_time: 'Within 2 Hours',
+    min_amount: '25000',
+    max_amount: '1000000',
+    min_income: 15000,
+    min_age: 21,
+    max_age: 58,
+    cibil_required: 650,
+    badge: 'Fast Cash',
+    display_order: 18,
+    partner_url: 'https://www.wishfin.com/prefr/home?source=Rey_june26_FW18',
+    public_url: 'https://www.wishfin.com/prefr/home?source=Rey_june26_FW18',
+    features: [
+      'Instant income verification via digital net-banking/salary slip',
+      'Collateral-free cash disbursed to savings account in hours',
+      'Affordable interest rates for salaried workforce',
+      'Flexible EMIs with convenient auto-debit'
+    ],
+    eligibility_criteria: 'Salaried individual earning minimum ₹15,000/month with valid KYC.',
+    documents_required: 'PAN Card, Aadhaar Card, 3 Months Salary Slips / Bank Statement'
+  },
+  {
+    bank_code: 'PUNAWALLA',
+    bank_name: 'Punawalla Finance',
+    name: 'Punawalla Income Loan',
+    category: 'personal_loan',
+    sub_category: 'Personal Loan',
+    loan_type: 'income',
+    provider_type: 'finance',
+    short_description: 'Fast digital personal loans from Poonawalla Fincorp based on salary & income proof.',
+    description: 'Poonawalla Fincorp Personal Loan offers swift funding up to ₹30 Lakhs with minimum documentation, attractive interest rates, and transparent digital process.',
+    annual_fee: '9.99% p.a.',
+    interest_rate: '9.99% p.a.',
+    processing_fee: 'Up to 2.0% + GST',
+    time_period: '12 - 60 Months',
+    disbursal_time: 'Within 24 Hours',
+    min_amount: '50000',
+    max_amount: '3000000',
+    min_income: 20000,
+    min_age: 22,
+    max_age: 58,
+    cibil_required: 680,
+    badge: 'Top NBFC',
+    display_order: 19,
+    partner_url: 'https://instant-pocket-loan.poonawallafincorp.com/?redirectto=primepl&utm_DSA_Code=PUP00228&UTM_Partner_Name=WISHFIN&UTM_Partner_Medium=SMS&UTM_Partner_AgentCode=PFLWISHFIN&UTM_Partner_ReferenceID=WF_FW_REY_PR_26',
+    public_url: 'https://instant-pocket-loan.poonawallafincorp.com/?redirectto=primepl&utm_DSA_Code=PUP00228&UTM_Partner_Name=WISHFIN&UTM_Partner_Medium=SMS&UTM_Partner_AgentCode=PFLWISHFIN&UTM_Partner_ReferenceID=WF_FW_REY_PR_26',
+    features: [
+      'High loan amounts up to ₹30 Lakhs based on income proof',
+      'Industry-leading low interest rates starting at 9.99% p.a.',
+      'Zero hidden charges with 100% transparent fee structure',
+      'Flexible tenures up to 60 months'
+    ],
+    eligibility_criteria: 'Salaried individual with monthly income ₹20,000+ and age 22-58.',
+    documents_required: 'PAN Card, Aadhaar Card, 3 Months Salary Slips, Bank Statement'
+  },
+  {
+    bank_code: 'BAJAJ',
+    bank_name: 'Bajaj Finance',
+    name: 'Bajaj Finance Income Loan',
+    category: 'personal_loan',
+    sub_category: 'Personal Loan',
+    loan_type: 'income',
+    provider_type: 'finance',
+    short_description: 'Instant paperless personal loan from Bajaj Finserv with pre-approved income offers.',
+    description: 'Bajaj Finance Personal Loan offers funds up to ₹40 Lakhs with quick approval, flexi loan facility, and convenient EMIs for salaried and professional borrowers.',
+    annual_fee: '11.00% p.a.',
+    interest_rate: '11.00% p.a.',
+    processing_fee: 'Up to 3.0% + GST',
+    time_period: '12 - 96 Months',
+    disbursal_time: 'Instant (10 Seconds)',
+    min_amount: '50000',
+    max_amount: '4000000',
+    min_income: 25000,
+    min_age: 21,
+    max_age: 67,
+    cibil_required: 685,
+    badge: 'Flexi Loan',
+    display_order: 20,
+    partner_url: 'https://www.bajajfinserv.in/personal-loan',
+    public_url: 'https://www.bajajfinserv.in/personal-loan',
+    features: [
+      'Flexi Hybrid loan option to reduce monthly EMIs up to 45%',
+      'Extended tenure options up to 96 months',
+      'Speedy disbursal within 24 hours of approval',
+      'Minimal paperwork for salaried professionals'
+    ],
+    eligibility_criteria: 'Indian citizen aged 21-67 with regular monthly salary ₹25,000+.',
+    documents_required: 'PAN Card, Aadhaar Card, Salary Slips (2 Months), Bank Statement (3 Months)'
+  },
+  {
+    bank_code: 'KREDITBEE',
+    bank_name: 'KreditBee',
+    name: 'KreditBee Income Loan',
+    category: 'personal_loan',
+    sub_category: 'Personal Loan',
+    loan_type: 'income',
+    provider_type: 'finance',
+    short_description: 'Fast digital personal loans up to ₹5 Lakhs for salaried employees from KreditBee.',
+    description: 'KreditBee provides instant personal loans directly to your bank account with fast income proof verification and flexible repayment options.',
+    annual_fee: '13.00% p.a.',
+    interest_rate: '13.00% p.a.',
+    processing_fee: 'Up to 2.5% + GST',
+    time_period: '3 - 24 Months',
+    disbursal_time: 'Within 15 Minutes',
+    min_amount: '10000',
+    max_amount: '500000',
+    min_income: 15000,
+    min_age: 21,
+    max_age: 50,
+    cibil_required: 650,
+    badge: '15-Min Loan',
+    display_order: 21,
+    partner_url: 'https://www.wishfin.com/kreditbee/home?source=fin41',
+    public_url: 'https://www.wishfin.com/kreditbee/home?source=fin41',
+    features: [
+      'Funds disbursed directly to account within 15 minutes',
+      'Low minimum income threshold starting from ₹15,000/month',
+      '100% digital paperless onboarding via app / web',
+      'Repayment options from 3 to 24 months'
+    ],
+    eligibility_criteria: 'Salaried individual aged 21-50 with monthly income ₹15,000+.',
+    documents_required: 'PAN Card, Aadhaar Card, Salary Slip / Net-Banking Statement'
+  },
+  {
+    bank_code: 'TATACAPITAL',
+    bank_name: 'Tata Capital',
+    name: 'Tata Capital Income Loan',
+    category: 'personal_loan',
+    sub_category: 'Personal Loan',
+    loan_type: 'income',
+    provider_type: 'finance',
+    short_description: 'Trusted personal loans from Tata Capital with multi-purpose funding up to ₹35 Lakhs.',
+    description: 'Tata Capital Personal Loan offers transparent terms, flexible EMIs, and rapid approval based on income documentation with the trust of Tata.',
+    annual_fee: '10.99% p.a.',
+    interest_rate: '10.99% p.a.',
+    processing_fee: 'Up to 2.5% + GST',
+    time_period: '12 - 72 Months',
+    disbursal_time: 'Within 24 Hours',
+    min_amount: '40000',
+    max_amount: '3500000',
+    min_income: 20000,
+    min_age: 21,
+    max_age: 58,
+    cibil_required: 700,
+    badge: 'Tata Trust',
+    display_order: 22,
+    partner_url: 'https://www.wishfin.com/tata/home?source=FWRey_July&utm_source=FW38&utm_medium=SMS&utm_campaign=promotion&utm_content=check_offer&utm_term=tata',
+    public_url: 'https://www.wishfin.com/tata/home?source=FWRey_July&utm_source=FW38&utm_medium=SMS&utm_campaign=promotion&utm_content=check_offer&utm_term=tata',
+    features: [
+      'Trusted financial partner with zero hidden costs',
+      'High loan value up to ₹35 Lakhs based on salary',
+      'Repayment tenure up to 6 years (72 months)',
+      'Prepayment and part-prepayment flexibility'
+    ],
+    eligibility_criteria: 'Salaried individual earning minimum ₹20,000/month with valid KYC.',
+    documents_required: 'PAN Card, Aadhaar Card, Salary Slips (3 Months), Bank Statement'
+  },
+  {
+    bank_code: 'UNITY',
+    bank_name: 'Unity',
+    name: 'Unity Income Loan',
+    category: 'personal_loan',
+    sub_category: 'Personal Loan',
+    loan_type: 'income',
+    provider_type: 'finance',
+    short_description: 'Fast digital personal loan from Unity Bank with easy salary verification.',
+    description: 'Unity Small Finance Bank provides accessible personal loans with quick document checks, competitive interest rates, and simple repayment schedules.',
+    annual_fee: '12.00% p.a.',
+    interest_rate: '12.00% p.a.',
+    processing_fee: 'Up to 2.0% + GST',
+    time_period: '6 - 36 Months',
+    disbursal_time: 'Within 24 Hours',
+    min_amount: '25000',
+    max_amount: '1500000',
+    min_income: 18000,
+    min_age: 21,
+    max_age: 60,
+    cibil_required: 680,
+    badge: 'Easy Approval',
+    display_order: 23,
+    partner_url: 'https://loans.theunitybank.com/unity-pl-ui/page/exclusion/login/logindetails?utm_source=Partner&utm_medium=Wishfin&utm_campaign=finwizz11',
+    public_url: 'https://loans.theunitybank.com/unity-pl-ui/page/exclusion/login/logindetails?utm_source=Partner&utm_medium=Wishfin&utm_campaign=finwizz11',
+    features: [
+      'Simple paperless digital personal loan journey',
+      'Fast turnaround time with income proof verification',
+      'Transparent terms and affordable monthly EMIs',
+      'Flexible repayment options up to 36 months'
+    ],
+    eligibility_criteria: 'Indian citizen with monthly income ₹18,000+ and age 21-60.',
+    documents_required: 'PAN Card, Aadhaar Card, Salary Slips, Bank Statement'
+  },
+  {
+    bank_code: 'RAMFINCORP',
+    bank_name: 'Ram Fincorp',
+    name: 'Ram Fincorp Income Loan',
+    category: 'personal_loan',
+    sub_category: 'Personal Loan',
+    loan_type: 'income',
+    provider_type: 'finance',
+    short_description: 'Convenient and flexible income based personal loans from Ram Fincorp.',
+    description: 'Ram Fincorp offers quick personal loans designed for urgent financial needs with minimal verification delays and flexible repayment tenures.',
+    annual_fee: '12.50% p.a.',
+    interest_rate: '12.50% p.a.',
+    processing_fee: 'Up to 2.0% + GST',
+    time_period: '6 - 36 Months',
+    disbursal_time: 'Within 24 Hours',
+    min_amount: '20000',
+    max_amount: '2000000',
+    min_income: 18000,
+    min_age: 21,
+    max_age: 60,
+    cibil_required: 670,
+    badge: 'Fast Cash',
+    display_order: 24,
+    partner_url: 'https://applyonline.ramfincorp.com/?utm_source=Wishfin49&utm_campaign=default_campaign&utm_medium=default_medium&utm_trackingid=FW_30',
+    public_url: 'https://applyonline.ramfincorp.com/?utm_source=Wishfin49&utm_campaign=default_campaign&utm_medium=default_medium&utm_trackingid=FW_30',
+    features: [
+      'Quick personal loan disbursal with minimal paperwork',
+      'Tailored loan amounts based on income slips',
+      'Hassle-free digital application and verification',
+      'Flexible tenure and competitive rates'
+    ],
+    eligibility_criteria: 'Indian resident with monthly income ₹18,000+ and valid KYC.',
+    documents_required: 'PAN Card, Aadhaar Card, Bank Statement, Salary Proof'
   }
 ];
 
@@ -395,7 +878,7 @@ async function seedCibilPersonalLoanProducts() {
   let insertedCount = 0;
   let updatedCount = 0;
 
-  // 3. Insert or Update all 10 products
+  // 3. Insert or Update all Personal Loan products
   for (const p of CIBIL_PERSONAL_LOAN_PRODUCTS) {
     const bankId = bankMap[p.bank_code.toUpperCase()] || bankMap[p.bank_name.toLowerCase().trim()];
     if (!bankId) {
@@ -459,7 +942,7 @@ async function seedCibilPersonalLoanProducts() {
         targetId ? [productSlug, targetId] : [productSlug]
       );
       if (slugConflicts.length > 0) {
-        finalSlug = `${productSlug}-${p.bank_short_code.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+        finalSlug = `${productSlug}-${p.bank_code.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
       }
       seoMetadata.slug = finalSlug;
 
@@ -491,8 +974,10 @@ async function seedCibilPersonalLoanProducts() {
             required_documents = $19,
             visibility = $20,
             seo_metadata = $21,
-            slug = $22
-          WHERE id = $23
+            slug = $22,
+            partner_url = $23,
+            public_url = $24
+          WHERE id = $25
         `, [
           bankId, p.name, p.category, p.sub_category, p.description,
           JSON.stringify(p.features), JSON.stringify(eligibilityPayload),
@@ -501,7 +986,7 @@ async function seedCibilPersonalLoanProducts() {
           JSON.stringify(compareSpecs), JSON.stringify(feesStructure),
           JSON.stringify(p.features), JSON.stringify(p.documents_required.split(', ')),
           JSON.stringify(visibility), JSON.stringify(seoMetadata),
-          finalSlug, targetId
+          finalSlug, p.partner_url || null, p.public_url || null, targetId
         ]);
         insertedCount++;
         logger.info(`[CIBIL PL Seeder] Updated product: ${p.name}`);
@@ -517,7 +1002,7 @@ async function seedCibilPersonalLoanProducts() {
             status, is_active, slug, badge,
             joining_fee, processing_fee, interest_rate,
             compare_specs, fees_structure, features_list, benefits_list, required_documents,
-            visibility, seo_metadata
+            visibility, seo_metadata, partner_url, public_url
           ) VALUES (
             $1, $2, $3, $4, $5, $6, $7,
             $8, $9, $10, $11, $12,
@@ -528,7 +1013,7 @@ async function seedCibilPersonalLoanProducts() {
             $29, $30, $31, $32,
             $33, $34, $35,
             $36, $37, $38, $39, $40,
-            $41, $42
+            $41, $42, $43, $44
           )
         `, [
           bankId, p.name, p.category, p.sub_category, p.description,
@@ -543,7 +1028,8 @@ async function seedCibilPersonalLoanProducts() {
           JSON.stringify(compareSpecs), JSON.stringify(feesStructure),
           JSON.stringify(p.features), JSON.stringify(p.features),
           JSON.stringify(p.documents_required.split(', ')),
-          JSON.stringify(visibility), JSON.stringify(seoMetadata)
+          JSON.stringify(visibility), JSON.stringify(seoMetadata),
+          p.partner_url || null, p.public_url || null
         ]);
         insertedCount++;
         logger.info(`[CIBIL PL Seeder] Inserted product: ${p.name}`);

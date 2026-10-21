@@ -48,6 +48,89 @@ const MiniChart = ({ color }) => (
   </svg>
 );
 
+const PL_SUBCATEGORY_CONFIGS = {
+  cibil_bank: {
+    id: 'cibil_bank',
+    loan_type: 'cibil',
+    provider_type: 'bank',
+    title: 'CIBIL Based → Bank',
+    shortTitle: 'CIBIL Bank',
+    tag: '1. CIBIL Based > 1. Bank',
+    desc: 'Pre-approved commercial bank loans based on CIBIL score (3 Banks)',
+    color: '#2563EB',
+    bg: '#EFF6FF',
+    border: '#BFDBFE',
+    items: [
+      { name: 'IndusInd Bank', short_code: 'INDUSIND', sub_product: 'Indusind bank VPL', match: b => (b.short_code || '').toUpperCase() === 'INDUSIND' || (b.name || '').toLowerCase().includes('indusind') },
+      { name: 'IDFC First Bank', short_code: 'IDFC', sub_product: 'IDFC bank', match: b => (b.short_code || '').toUpperCase() === 'IDFC' || (b.name || '').toLowerCase().includes('idfc') },
+      { name: 'HDFC Bank', short_code: 'HDFC', sub_product: 'HDFC PL 10 sec', match: b => (b.short_code || '').toUpperCase() === 'HDFC' || (b.name || '').toLowerCase().includes('hdfc') }
+    ]
+  },
+  cibil_finance: {
+    id: 'cibil_finance',
+    loan_type: 'cibil',
+    provider_type: 'finance',
+    title: 'CIBIL Based → Finance',
+    shortTitle: 'CIBIL Finance',
+    tag: '1. CIBIL Based > 2. Finance',
+    desc: 'NBFC & Digital lending partners based on CIBIL score (7 NBFCs)',
+    color: '#7C3AED',
+    bg: '#F5F3FF',
+    border: '#DDD6FE',
+    items: [
+      { name: 'Finable', short_code: 'FINABLE', sub_product: 'Finable Personal Loan', match: b => (b.short_code || '').toUpperCase() === 'FINABLE' || (b.name || '').toLowerCase().includes('finable') || (b.name || '').toLowerCase().includes('prefr') },
+      { name: 'Punawalla Finance', short_code: 'PUNAWALLA', sub_product: 'Punawalla Personal Loan', match: b => ['PUNAWALLA', 'POONAWALLA'].includes((b.short_code || '').toUpperCase()) || /punawalla|poonawalla/i.test(b.name || '') },
+      { name: 'Bajaj Finance', short_code: 'BAJAJ', sub_product: 'Bajaj Finance Personal Loan', match: b => ['BAJAJ', 'BAJAJ_FINANCE'].includes((b.short_code || '').toUpperCase()) || (b.name || '').toLowerCase().includes('bajaj') },
+      { name: 'KreditBee', short_code: 'KREDITBEE', sub_product: 'KreditBee Instant Loan', match: b => (b.short_code || '').toUpperCase() === 'KREDITBEE' || /kredit\s*bee/i.test(b.name || '') },
+      { name: 'Tata Capital', short_code: 'TATACAPITAL', sub_product: 'Tata Capital Personal Loan', match: b => ['TATACAPITAL', 'TATA_CAPITAL'].includes((b.short_code || '').toUpperCase()) || /tata\s*capital/i.test(b.name || '') },
+      { name: 'Unity', short_code: 'UNITY', sub_product: 'Unity Personal Loan', match: b => ['UNITY', 'UNITY_BANK'].includes((b.short_code || '').toUpperCase()) || (b.name || '').toLowerCase().includes('unity') },
+      { name: 'Ram Fincorp', short_code: 'RAMFINCORP', sub_product: 'Ram Fincorp Personal Loan', match: b => ['RAMFINCORP', 'RAM_FINCORP'].includes((b.short_code || '').toUpperCase()) || /ram\s*fin/i.test(b.name || '') }
+    ]
+  },
+  income_bank: {
+    id: 'income_bank',
+    loan_type: 'income',
+    provider_type: 'bank',
+    title: 'Income Based → Bank',
+    shortTitle: 'Income Bank',
+    tag: '2. Income Based > 1. Bank',
+    desc: 'Salary & ITR proof commercial bank loans (7 Banks)',
+    color: '#059669',
+    bg: '#ECFDF5',
+    border: '#A7F3D0',
+    items: [
+      { name: 'HDFC Bank', short_code: 'HDFC', sub_product: 'HDFC Personal Loan', match: b => (b.short_code || '').toUpperCase() === 'HDFC' || (b.name || '').toLowerCase().includes('hdfc') },
+      { name: 'IndusInd Bank', short_code: 'INDUSIND', sub_product: 'IndusInd Personal Loan', match: b => (b.short_code || '').toUpperCase() === 'INDUSIND' || (b.name || '').toLowerCase().includes('indusind') },
+      { name: 'YES Bank', short_code: 'YES', sub_product: 'YES Bank Personal Loan', match: b => (b.short_code || '').toUpperCase() === 'YES' || /yes\s*bank/i.test(b.name || '') },
+      { name: 'ICICI Bank', short_code: 'ICICI', sub_product: 'ICICI Bank Personal Loan', match: b => (b.short_code || '').toUpperCase() === 'ICICI' || (b.name || '').toLowerCase().includes('icici') },
+      { name: 'Kotak Mahindra Bank', short_code: 'KOTAK', sub_product: 'Kotak Personal Loan', match: b => (b.short_code || '').toUpperCase() === 'KOTAK' || (b.name || '').toLowerCase().includes('kotak') },
+      { name: 'Axis Bank', short_code: 'AXIS', sub_product: 'Axis Bank Personal Loan', match: b => (b.short_code || '').toUpperCase() === 'AXIS' || (b.name || '').toLowerCase().includes('axis') },
+      { name: 'IDFC First Bank', short_code: 'IDFC', sub_product: 'IDFC First Personal Loan', match: b => (b.short_code || '').toUpperCase() === 'IDFC' || (b.name || '').toLowerCase().includes('idfc') }
+    ]
+  },
+  income_finance: {
+    id: 'income_finance',
+    loan_type: 'income',
+    provider_type: 'finance',
+    title: 'Income Based → Finance',
+    shortTitle: 'Income Finance',
+    tag: '2. Income Based > 2. Finance',
+    desc: 'Salary & ITR proof NBFC / Digital loans (7 NBFCs)',
+    color: '#D97706',
+    bg: '#FFFBEB',
+    border: '#FDE68A',
+    items: [
+      { name: 'Finable', short_code: 'FINABLE', sub_product: 'Finable Income Loan', match: b => (b.short_code || '').toUpperCase() === 'FINABLE' || (b.name || '').toLowerCase().includes('finable') || (b.name || '').toLowerCase().includes('prefr') },
+      { name: 'Punawalla Finance', short_code: 'PUNAWALLA', sub_product: 'Punawalla Income Loan', match: b => ['PUNAWALLA', 'POONAWALLA'].includes((b.short_code || '').toUpperCase()) || /punawalla|poonawalla/i.test(b.name || '') },
+      { name: 'Bajaj Finance', short_code: 'BAJAJ', sub_product: 'Bajaj Finance Income Loan', match: b => ['BAJAJ', 'BAJAJ_FINANCE'].includes((b.short_code || '').toUpperCase()) || (b.name || '').toLowerCase().includes('bajaj') },
+      { name: 'KreditBee', short_code: 'KREDITBEE', sub_product: 'KreditBee Income Loan', match: b => (b.short_code || '').toUpperCase() === 'KREDITBEE' || /kredit\s*bee/i.test(b.name || '') },
+      { name: 'Tata Capital', short_code: 'TATACAPITAL', sub_product: 'Tata Capital Income Loan', match: b => ['TATACAPITAL', 'TATA_CAPITAL'].includes((b.short_code || '').toUpperCase()) || /tata\s*capital/i.test(b.name || '') },
+      { name: 'Unity', short_code: 'UNITY', sub_product: 'Unity Income Loan', match: b => ['UNITY', 'UNITY_BANK'].includes((b.short_code || '').toUpperCase()) || (b.name || '').toLowerCase().includes('unity') },
+      { name: 'Ram Fincorp', short_code: 'RAMFINCORP', sub_product: 'Ram Fincorp Income Loan', match: b => ['RAMFINCORP', 'RAM_FINCORP'].includes((b.short_code || '').toUpperCase()) || /ram\s*fin/i.test(b.name || '') }
+    ]
+  }
+};
+
 const CategoryWiseBankSelector = ({
   allBanks = [],
   categoryAssignments = [],
@@ -55,49 +138,48 @@ const CategoryWiseBankSelector = ({
 }) => {
   const [activeTab, setActiveTab] = useState('credit_card');
   const [searchQuery, setSearchQuery] = useState('');
-  const [plSubFilter, setPlSubFilter] = useState('all'); // 'all' | 'bank' | 'finance'
-  const [showAllBanksFallback, setShowAllBanksFallback] = useState(false);
+  
+  // Personal Loan Hierarchical Subcategory Selection
+  const [plLoanType, setPlLoanType] = useState('cibil'); // 'cibil' | 'income'
+  const [plProviderType, setPlProviderType] = useState('bank'); // 'bank' | 'finance'
 
+  // Top level categories: show ONLY category names
   const categories = [
     { 
       id: 'credit_card', 
       label: 'Credit Card', 
       badge: 'CC',
-      icon: <CreditCard size={14} />,
       color: '#2563EB', 
       bg: '#EFF6FF',
-      activeBorder: '#2563EB',
-      desc: 'Credit Card Applications' 
+      hasSubcategories: false,
+      desc: 'Credit Card Partner Banks' 
     },
     { 
       id: 'personal_loan', 
       label: 'Personal Loan', 
       badge: 'PL',
-      icon: <Banknote size={14} />,
       color: '#059669', 
       bg: '#ECFDF5',
-      activeBorder: '#059669',
-      desc: 'Personal Loan Applications (Bank & Finance/NBFC Partners)' 
+      hasSubcategories: true,
+      desc: 'Personal Loan (CIBIL / Income × Bank / Finance)' 
     },
     { 
       id: 'loc_eoc', 
       label: 'LOC / EOC', 
       badge: 'LOC',
-      icon: <RefreshCw size={14} />,
       color: '#7C3AED', 
       bg: '#F5F3FF',
-      activeBorder: '#7C3AED',
-      desc: 'Loan on Credit Card & Smart EMI Applications' 
+      hasSubcategories: false,
+      desc: 'Loan on Credit Card & Smart EMI Partner Banks' 
     },
     { 
       id: 'business_loan', 
       label: 'Business Loan', 
       badge: 'BL',
-      icon: <Briefcase size={14} />,
       color: '#D97706', 
       bg: '#FFFBEB',
-      activeBorder: '#D97706',
-      desc: 'Business & Commercial Loan Applications' 
+      hasSubcategories: false,
+      desc: 'Business Loan Partner Institutions' 
     }
   ];
 
@@ -105,31 +187,13 @@ const CategoryWiseBankSelector = ({
     const name = String(b?.name || '').toLowerCase();
     const code = String(b?.short_code || '').toUpperCase();
     return (
-      code === 'FINABLE' || name.includes('finable') ||
+      code === 'FINABLE' || name.includes('finable') || name.includes('prefr') ||
       code === 'PUNAWALLA' || code === 'POONAWALLA' || name.includes('punawalla') || name.includes('poonawalla') ||
       code === 'BAJAJ' || code === 'BAJAJ_FINANCE' || name.includes('bajaj') ||
       code === 'KREDITBEE' || name.includes('kreditbee') || name.includes('kredit bee') ||
       code === 'TATACAPITAL' || code === 'TATA_CAPITAL' || name.includes('tata capital') ||
       code === 'UNITY' || code === 'UNITY_BANK' || name.includes('unity') ||
       code === 'RAMFINCORP' || code === 'RAM_FINCORP' || name.includes('ram fincorp') || name.includes('ramfin')
-    );
-  };
-
-  const isPersonalLoanBank = (b) => {
-    const name = String(b?.name || '').toLowerCase();
-    const code = String(b?.short_code || '').toUpperCase();
-    return (
-      code === 'INDUSIND' || name.includes('indusind') ||
-      code === 'IDFC' || name.includes('idfc') ||
-      code === 'HDFC' || name.includes('hdfc') ||
-      code === 'ICICI' || name.includes('icici') ||
-      code === 'AXIS' || name.includes('axis') ||
-      code === 'KOTAK' || name.includes('kotak') ||
-      code === 'SBI' || name.includes('state bank') ||
-      code === 'YES' || name.includes('yes bank') ||
-      code === 'FEDERAL' || name.includes('federal') ||
-      code === 'BOB' || name.includes('baroda') ||
-      code === 'PNB' || name.includes('punjab national')
     );
   };
 
@@ -168,33 +232,45 @@ const CategoryWiseBankSelector = ({
     return true;
   };
 
+  // Helper to build designated subcategory bank list
+  const getPersonalLoanSubcategoryBanks = (subKey) => {
+    const subConfig = PL_SUBCATEGORY_CONFIGS[subKey];
+    if (!subConfig) return [];
+    const banks = Array.isArray(allBanks) ? allBanks : [];
+
+    return subConfig.items.map(def => {
+      const matched = banks.find(def.match);
+      return {
+        id: matched?.id || `pl-item-${def.short_code}`,
+        name: matched?.name || def.name,
+        short_code: matched?.short_code || def.short_code,
+        logo_url: matched?.logo_url || null,
+        sub_product: def.sub_product,
+        provider_type: subConfig.provider_type,
+        loan_type: subConfig.loan_type,
+        is_fallback: !matched?.id
+      };
+    });
+  };
+
+  // Active subcategory key for Personal Loan
+  const activePlSubKey = `${plLoanType}_${plProviderType}`;
+  const activePlSubConfig = PL_SUBCATEGORY_CONFIGS[activePlSubKey] || PL_SUBCATEGORY_CONFIGS.cibil_bank;
+
+  // Compute displayed institutions
   const getBanksForCategory = (catId) => {
     const banks = Array.isArray(allBanks) ? allBanks : [];
-    if (showAllBanksFallback) {
-      return banks;
-    }
     switch (catId) {
-      case 'personal_loan': {
-        const plBanks = banks.filter(b => {
-          const isVirtualLoc = (b?.short_code || '').toUpperCase() === 'LOC_EOC' || b?.is_loc_eoc || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b?.name || '');
-          if (isVirtualLoc) return false;
-          if (Array.isArray(b?.categories) && (b.categories.includes('personal_loan') || b.categories.includes('loan'))) return true;
-          return isFinanceNBFC(b) || isPersonalLoanBank(b) || (b?.name || '').toLowerCase().includes('loan');
-        });
-        if (plSubFilter === 'bank') {
-          return plBanks.filter(b => !isFinanceNBFC(b));
-        }
-        if (plSubFilter === 'finance') {
-          return plBanks.filter(b => isFinanceNBFC(b));
-        }
-        return plBanks;
-      }
+      case 'personal_loan':
+        // When clicking Personal Loan subcategory, show ONLY its designated banks
+        return getPersonalLoanSubcategoryBanks(activePlSubKey);
       case 'loc_eoc':
         return banks.filter(b => isLocEocBank(b));
       case 'business_loan':
         return banks.filter(b => isBusinessLoanBank(b));
       case 'credit_card':
       default:
+        // Default: show credit card category banks
         return banks.filter(b => isCreditCardBank(b));
     }
   };
@@ -217,24 +293,29 @@ const CategoryWiseBankSelector = ({
     onChange(next);
   };
 
-  const handleSelectAll = (cat, banksToSelect) => {
-    const otherCatItems = (Array.isArray(categoryAssignments) ? categoryAssignments : []).filter(
-      item => (item.category || 'credit_card').toLowerCase() !== cat
-    );
-    const existingInThisCat = (Array.isArray(categoryAssignments) ? categoryAssignments : []).filter(
-      item => (item.category || 'credit_card').toLowerCase() === cat
-    );
-    const existingIds = new Set(existingInThisCat.map(i => i.bank_id || i.id));
+  const handleSelectAllInView = (cat, banksToSelect) => {
+    const otherItems = (Array.isArray(categoryAssignments) ? categoryAssignments : []).filter(item => {
+      // Keep all assignments from other categories
+      return (item.category || 'credit_card').toLowerCase() !== cat;
+    });
+    const currentCatItems = (Array.isArray(categoryAssignments) ? categoryAssignments : []).filter(item => {
+      return (item.category || 'credit_card').toLowerCase() === cat;
+    });
+
+    const existingIds = new Set(currentCatItems.map(i => i.bank_id || i.id));
     const toAdd = banksToSelect
       .filter(b => !existingIds.has(b.id))
       .map(b => ({ category: cat, bank_id: b.id }));
-    onChange([...otherCatItems, ...existingInThisCat, ...toAdd]);
+
+    onChange([...otherItems, ...currentCatItems, ...toAdd]);
   };
 
-  const handleClearAll = (cat) => {
-    const next = (Array.isArray(categoryAssignments) ? categoryAssignments : []).filter(
-      item => (item.category || 'credit_card').toLowerCase() !== cat
-    );
+  const handleClearInView = (cat, banksToClear) => {
+    const idsToClear = new Set(banksToClear.map(b => b.id));
+    const next = (Array.isArray(categoryAssignments) ? categoryAssignments : []).filter(item => {
+      if ((item.category || 'credit_card').toLowerCase() !== cat) return true;
+      return !idsToClear.has(item.bank_id || item.id);
+    });
     onChange(next);
   };
 
@@ -242,12 +323,13 @@ const CategoryWiseBankSelector = ({
   const currentCategoryBanks = getBanksForCategory(activeTab);
   const filteredBanks = currentCategoryBanks.filter(b => 
     (b.name || '').toLowerCase().includes((searchQuery || '').toLowerCase()) || 
-    (b.short_code || '').toLowerCase().includes((searchQuery || '').toLowerCase())
+    (b.short_code || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
+    (b.sub_product || '').toLowerCase().includes((searchQuery || '').toLowerCase())
   );
 
   const getBankBadgeMeta = (catId, bank) => {
     if (catId === 'personal_loan') {
-      if (isFinanceNBFC(bank)) {
+      if (bank.provider_type === 'finance' || isFinanceNBFC(bank)) {
         return { label: '💼 Finance / NBFC', bg: '#F5F3FF', color: '#6D28D9', border: '#DDD6FE' };
       }
       return { label: '🏦 Bank Partner', bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' };
@@ -265,38 +347,25 @@ const CategoryWiseBankSelector = ({
     return { label: '💳 Card Issuer', bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' };
   };
 
+  // Helper count for a given PL subcategory
+  const getSubcategorySelectedCount = (subKey) => {
+    const subBanks = getPersonalLoanSubcategoryBanks(subKey);
+    return subBanks.filter(b => isSelected('personal_loan', b.id)).length;
+  };
+
   return (
-    <div style={{ background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "12px", padding: "16px", marginTop: "8px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
-        <div>
-          <label style={{ fontSize: "14px", fontWeight: 700, color: "#0F172A", display: "flex", alignItems: "center", gap: "6px" }}>
-            Assign Access (Category & Bank pairs) *
-          </label>
-          <span style={{ fontSize: "12px", color: "#64748B" }}>
-            Select institutions independently under each category. Permissions will be strictly scoped.
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowAllBanksFallback(prev => !prev)}
-          style={{
-            fontSize: "11px",
-            fontWeight: 600,
-            padding: "4px 8px",
-            borderRadius: "6px",
-            border: "1px solid #CBD5E1",
-            background: showAllBanksFallback ? "#EEF2FF" : "#FFFFFF",
-            color: showAllBanksFallback ? "#4F46E5" : "#64748B",
-            cursor: "pointer"
-          }}
-          title="Toggle between curated category banks and all registered institutions"
-        >
-          {showAllBanksFallback ? 'Viewing: All Banks' : 'Viewing: Curated Category Banks'}
-        </button>
+    <div style={{ background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "14px", padding: "16px", marginTop: "8px" }}>
+      <div style={{ marginBottom: "12px" }}>
+        <label style={{ fontSize: "14px", fontWeight: 800, color: "#0F172A", display: "flex", alignItems: "center", gap: "6px" }}>
+          Assign Category & Bank Access *
+        </label>
+        <span style={{ fontSize: "12px", color: "#64748B" }}>
+          Select category below to view and assign partner institutions. Default shows Credit Card category banks.
+        </span>
       </div>
 
-      {/* Category Tabs */}
-      <div style={{ display: "flex", gap: "8px", borderBottom: "1.5px solid #E2E8F0", paddingBottom: "10px", marginBottom: "12px", overflowX: "auto" }}>
+      {/* ── TOP CATEGORY BAR (Category Names ONLY) ── */}
+      <div style={{ display: "flex", gap: "8px", borderBottom: "1.5px solid #E2E8F0", paddingBottom: "10px", marginBottom: "14px", overflowX: "auto" }}>
         {categories.map(cat => {
           const count = (Array.isArray(categoryAssignments) ? categoryAssignments : []).filter(
             item => (item.category || 'credit_card').toLowerCase() === cat.id
@@ -311,10 +380,10 @@ const CategoryWiseBankSelector = ({
                 setSearchQuery('');
               }}
               style={{
-                padding: "8px 12px",
+                padding: "8px 16px",
                 borderRadius: "8px",
                 fontSize: "13px",
-                fontWeight: 700,
+                fontWeight: 800,
                 cursor: "pointer",
                 border: "1.5px solid",
                 borderColor: isActive ? cat.color : "#CBD5E1",
@@ -322,19 +391,19 @@ const CategoryWiseBankSelector = ({
                 color: isActive ? cat.color : "#475569",
                 display: "flex",
                 alignItems: "center",
-                gap: "7px",
+                gap: "8px",
                 whiteSpace: "nowrap",
-                transition: "all 0.15s"
+                transition: "all 0.15s ease",
+                boxShadow: isActive ? "0 1px 3px rgba(0,0,0,0.06)" : "none"
               }}
             >
-              <span style={{ display: "flex", alignItems: "center" }}>{cat.icon}</span>
               <span>{cat.label}</span>
               <span style={{
                 background: isActive ? cat.color : "#E2E8F0",
                 color: isActive ? "#FFFFFF" : "#475569",
                 fontSize: "11px",
                 fontWeight: 800,
-                padding: "1px 6px",
+                padding: "1px 7px",
                 borderRadius: "10px"
               }}>
                 {count}
@@ -344,102 +413,215 @@ const CategoryWiseBankSelector = ({
         })}
       </div>
 
-      {/* Category Header Controls */}
+      {/* ── SUBCATEGORY SELECTION FOR PERSONAL LOAN ── */}
+      {activeTab === 'personal_loan' && (
+        <div style={{
+          background: "#FFFFFF",
+          border: "1.5px solid #05966930",
+          borderRadius: "12px",
+          padding: "14px",
+          marginBottom: "14px",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px", flexWrap: "wrap", gap: "6px" }}>
+            <span style={{ fontSize: "12px", fontWeight: 800, color: "#065F46", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              Personal Loan Subcategories (Click subcategory to show its banks)
+            </span>
+            <span style={{ fontSize: "11px", color: "#64748B", fontWeight: 600 }}>
+              Active Subcategory: <strong style={{ color: activePlSubConfig.color }}>{activePlSubConfig.title}</strong>
+            </span>
+          </div>
+
+          {/* 4 Direct Subcategory Quick-Select Tabs */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "8px", marginBottom: "12px" }}>
+            {Object.entries(PL_SUBCATEGORY_CONFIGS).map(([key, config]) => {
+              const isCurrent = activePlSubKey === key;
+              const selectedCount = getSubcategorySelectedCount(key);
+              return (
+                <button
+                  type="button"
+                  key={key}
+                  onClick={() => {
+                    setPlLoanType(config.loan_type);
+                    setPlProviderType(config.provider_type);
+                    setSearchQuery('');
+                  }}
+                  style={{
+                    padding: "9px 12px",
+                    borderRadius: "10px",
+                    border: `1.5px solid ${isCurrent ? config.color : "#E2E8F0"}`,
+                    background: isCurrent ? config.bg : "#F8FAFC",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "3px",
+                    transition: "all 0.15s ease"
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: "12.5px", fontWeight: 800, color: isCurrent ? config.color : "#1E293B" }}>
+                      {config.title}
+                    </span>
+                    <span style={{
+                      fontSize: "10.5px",
+                      fontWeight: 800,
+                      padding: "1px 6px",
+                      borderRadius: "6px",
+                      background: isCurrent ? config.color : "#E2E8F0",
+                      color: isCurrent ? "#FFFFFF" : "#64748B"
+                    }}>
+                      {selectedCount} / {config.items.length}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: "11px", color: isCurrent ? "#334155" : "#64748B" }}>
+                    {config.desc}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Hierarchical Two-Step Question Selector */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", paddingTop: "8px", borderTop: "1px dashed #E2E8F0" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ fontSize: "11.5px", fontWeight: 700, color: "#475569" }}>1. Which Type?</span>
+              <div style={{ display: "flex", gap: "4px" }}>
+                <button
+                  type="button"
+                  onClick={() => setPlLoanType('cibil')}
+                  style={{
+                    padding: "4px 10px",
+                    fontSize: "11.5px",
+                    fontWeight: plLoanType === 'cibil' ? 800 : 600,
+                    borderRadius: "6px",
+                    border: `1px solid ${plLoanType === 'cibil' ? '#2563EB' : '#CBD5E1'}`,
+                    background: plLoanType === 'cibil' ? '#EFF6FF' : '#FFFFFF',
+                    color: plLoanType === 'cibil' ? '#1D4ED8' : '#475569',
+                    cursor: "pointer"
+                  }}
+                >
+                  📊 1. CIBIL Based
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlLoanType('income')}
+                  style={{
+                    padding: "4px 10px",
+                    fontSize: "11.5px",
+                    fontWeight: plLoanType === 'income' ? 800 : 600,
+                    borderRadius: "6px",
+                    border: `1px solid ${plLoanType === 'income' ? '#059669' : '#CBD5E1'}`,
+                    background: plLoanType === 'income' ? '#ECFDF5' : '#FFFFFF',
+                    color: plLoanType === 'income' ? '#047857' : '#475569',
+                    cursor: "pointer"
+                  }}
+                >
+                  💵 2. Income Based
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ fontSize: "11.5px", fontWeight: 700, color: "#475569" }}>2. In Which?</span>
+              <div style={{ display: "flex", gap: "4px" }}>
+                <button
+                  type="button"
+                  onClick={() => setPlProviderType('bank')}
+                  style={{
+                    padding: "4px 10px",
+                    fontSize: "11.5px",
+                    fontWeight: plProviderType === 'bank' ? 800 : 600,
+                    borderRadius: "6px",
+                    border: `1px solid ${plProviderType === 'bank' ? '#2563EB' : '#CBD5E1'}`,
+                    background: plProviderType === 'bank' ? '#EFF6FF' : '#FFFFFF',
+                    color: plProviderType === 'bank' ? '#1D4ED8' : '#475569',
+                    cursor: "pointer"
+                  }}
+                >
+                  🏦 1. Bank
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlProviderType('finance')}
+                  style={{
+                    padding: "4px 10px",
+                    fontSize: "11.5px",
+                    fontWeight: plProviderType === 'finance' ? 800 : 600,
+                    borderRadius: "6px",
+                    border: `1px solid ${plProviderType === 'finance' ? '#7C3AED' : '#CBD5E1'}`,
+                    background: plProviderType === 'finance' ? '#F5F3FF' : '#FFFFFF',
+                    color: plProviderType === 'finance' ? '#6D28D9' : '#475569',
+                    cursor: "pointer"
+                  }}
+                >
+                  💼 2. Finance
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CONTROLS & ACTION BUTTONS ── */}
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", gap: "10px", flexWrap: "wrap" }}>
           <div>
-            <span style={{ fontSize: "12px", color: "#64748B", fontWeight: 600 }}>
-              {currentCategory.desc} ({
-                (Array.isArray(categoryAssignments) ? categoryAssignments : []).filter(
-                  item => (item.category || 'credit_card').toLowerCase() === currentCategory.id
-                ).length
-              } selected)
+            <span style={{ fontSize: "12px", color: "#64748B", fontWeight: 700 }}>
+              {activeTab === 'personal_loan' ? (
+                <>Showing: <span style={{ color: activePlSubConfig.color }}>{activePlSubConfig.title}</span> ({filteredBanks.length} items)</>
+              ) : (
+                <>{currentCategory.desc} ({filteredBanks.length} available)</>
+              )}
             </span>
           </div>
 
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             <button
               type="button"
-              onClick={() => handleSelectAll(currentCategory.id, filteredBanks)}
-              style={{ padding: "4px 10px", fontSize: "12px", fontWeight: 600, background: "#EFF6FF", color: "#2563EB", border: "1px solid #BFDBFE", borderRadius: "6px", cursor: "pointer" }}
+              onClick={() => handleSelectAllInView(currentCategory.id, filteredBanks)}
+              style={{
+                padding: "5px 12px",
+                fontSize: "12px",
+                fontWeight: 700,
+                background: "#EFF6FF",
+                color: "#2563EB",
+                border: "1px solid #BFDBFE",
+                borderRadius: "6px",
+                cursor: "pointer"
+              }}
             >
               Select All ({filteredBanks.length})
             </button>
             <button
               type="button"
-              onClick={() => handleClearAll(currentCategory.id)}
-              style={{ padding: "4px 10px", fontSize: "12px", fontWeight: 600, background: "#F1F5F9", color: "#64748B", border: "1px solid #CBD5E1", borderRadius: "6px", cursor: "pointer" }}
+              onClick={() => handleClearInView(currentCategory.id, filteredBanks)}
+              style={{
+                padding: "5px 12px",
+                fontSize: "12px",
+                fontWeight: 700,
+                background: "#F1F5F9",
+                color: "#64748B",
+                border: "1px solid #CBD5E1",
+                borderRadius: "6px",
+                cursor: "pointer"
+              }}
             >
-              Clear All
+              Clear Visible
             </button>
           </div>
         </div>
-
-        {/* Sub-filters for Personal Loan Tab */}
-        {activeTab === 'personal_loan' && !showAllBanksFallback && (
-          <div style={{ display: "flex", gap: "6px", marginBottom: "10px", flexWrap: "wrap" }}>
-            <button
-              type="button"
-              onClick={() => setPlSubFilter('all')}
-              style={{
-                fontSize: "11px",
-                fontWeight: plSubFilter === 'all' ? 700 : 500,
-                padding: "3px 9px",
-                borderRadius: "6px",
-                border: "1px solid",
-                borderColor: plSubFilter === 'all' ? "#059669" : "#CBD5E1",
-                background: plSubFilter === 'all' ? "#ECFDF5" : "#FFFFFF",
-                color: plSubFilter === 'all' ? "#047857" : "#475569",
-                cursor: "pointer"
-              }}
-            >
-              All Providers
-            </button>
-            <button
-              type="button"
-              onClick={() => setPlSubFilter('bank')}
-              style={{
-                fontSize: "11px",
-                fontWeight: plSubFilter === 'bank' ? 700 : 500,
-                padding: "3px 9px",
-                borderRadius: "6px",
-                border: "1px solid",
-                borderColor: plSubFilter === 'bank' ? "#2563EB" : "#CBD5E1",
-                background: plSubFilter === 'bank' ? "#EFF6FF" : "#FFFFFF",
-                color: plSubFilter === 'bank' ? "#1D4ED8" : "#475569",
-                cursor: "pointer"
-              }}
-            >
-              🏦 Bank Partners (IndusInd, IDFC, HDFC...)
-            </button>
-            <button
-              type="button"
-              onClick={() => setPlSubFilter('finance')}
-              style={{
-                fontSize: "11px",
-                fontWeight: plSubFilter === 'finance' ? 700 : 500,
-                padding: "3px 9px",
-                borderRadius: "6px",
-                border: "1px solid",
-                borderColor: plSubFilter === 'finance' ? "#7C3AED" : "#CBD5E1",
-                background: plSubFilter === 'finance' ? "#F5F3FF" : "#FFFFFF",
-                color: plSubFilter === 'finance' ? "#6D28D9" : "#475569",
-                cursor: "pointer"
-              }}
-            >
-              💼 Finance / NBFC (Finable, Bajaj, KreditBee...)
-            </button>
-          </div>
-        )}
 
         {/* Search Bar */}
         <div style={{ position: "relative", marginBottom: "12px" }}>
           <input
             type="text"
-            placeholder={`Search institutions under ${currentCategory.label}...`}
+            placeholder={activeTab === 'personal_loan' 
+              ? `Search within ${activePlSubConfig.title}...` 
+              : `Search institutions under ${currentCategory.label}...`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ width: "100%", padding: "8px 12px 8px 34px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "13px", outline: "none", boxSizing: "border-box" }}
+            style={{ width: "100%", padding: "8px 12px 8px 34px", border: "1px solid #CBD5E1", borderRadius: "8px", fontSize: "13px", outline: "none", boxSizing: "border-box" }}
           />
           <span style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", pointerEvents: "none" }}>
             <Search size={14} color="#9CA3AF" />
@@ -456,7 +638,7 @@ const CategoryWiseBankSelector = ({
         </div>
 
         {/* Bank Grid */}
-        <div style={{ maxHeight: "250px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", paddingRight: "4px" }}>
+        <div style={{ maxHeight: "280px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", paddingRight: "4px" }}>
           {filteredBanks.map(bank => {
             const checked = isSelected(currentCategory.id, bank.id);
             const badgeMeta = getBankBadgeMeta(currentCategory.id, bank);
@@ -473,27 +655,31 @@ const CategoryWiseBankSelector = ({
                   border: `1.5px solid ${checked ? currentCategory.color : "#CBD5E1"}`,
                   background: checked ? currentCategory.bg : "#FFFFFF",
                   cursor: "pointer",
-                  transition: "all 0.15s"
+                  transition: "all 0.15s ease"
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
                   {bank.logo_url ? (
-                    <img src={bank.logo_url} alt={bank.name} style={{ width: "22px", height: "22px", objectFit: "contain", flexShrink: 0 }} />
+                    <img src={bank.logo_url} alt={bank.name} style={{ width: "24px", height: "24px", objectFit: "contain", flexShrink: 0 }} />
                   ) : (
-                    <div style={{ width: "22px", height: "22px", background: "#DBEAFE", borderRadius: "4px", fontSize: "10px", fontWeight: 800, color: "#1E40AF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <div style={{ width: "24px", height: "24px", background: "#DBEAFE", borderRadius: "6px", fontSize: "10px", fontWeight: 800, color: "#1E40AF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       {bank.short_code?.substring(0, 2) || 'BK'}
                     </div>
                   )}
                   <div style={{ minWidth: 0, overflow: "hidden" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                      <span style={{ fontSize: "13px", fontWeight: 600, color: "#1E293B", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+                      <span style={{ fontSize: "13px", fontWeight: 700, color: "#1E293B", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
                         {bank.name}
                       </span>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "2px" }}>
-                      {bank.short_code && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "2px", flexWrap: "wrap" }}>
+                      {bank.sub_product ? (
+                        <span style={{ fontSize: "10.5px", color: "#047857", fontWeight: 700 }}>
+                          {bank.sub_product}
+                        </span>
+                      ) : bank.short_code ? (
                         <span style={{ fontSize: "10px", color: "#64748B", fontWeight: 600 }}>{bank.short_code}</span>
-                      )}
+                      ) : null}
                       <span style={{
                         background: badgeMeta.bg,
                         color: badgeMeta.color,
@@ -521,7 +707,7 @@ const CategoryWiseBankSelector = ({
 
         {filteredBanks.length === 0 && (
           <div style={{ textAlign: "center", padding: "20px", color: "#94A3B8", fontSize: "13px" }}>
-            No institutions found matching &quot;{searchQuery}&quot; under {currentCategory.label}.
+            No institutions found matching &quot;{searchQuery}&quot; under {activeTab === 'personal_loan' ? activePlSubConfig.title : currentCategory.label}.
           </div>
         )}
       </div>

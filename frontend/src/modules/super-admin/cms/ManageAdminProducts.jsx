@@ -11,7 +11,10 @@ import {
   isCibilBankProduct, 
   getLoanEligibilityType,
   CIBIL_BANK_PRESET_PRODUCTS,
-  CIBIL_FINANCE_PRESET_PRODUCTS
+  CIBIL_FINANCE_PRESET_PRODUCTS,
+  INCOME_BANK_PRESET_PRODUCTS,
+  INCOME_FINANCE_PRESET_PRODUCTS,
+  getFinanceDirectUrl
 } from "../../../utils/personalLoanHelpers";
 import { 
   MdAdd, MdSearch, MdEdit, MdDelete, MdVisibility,
@@ -302,6 +305,8 @@ export default function ManageAdminProducts() {
       slug: autoSlug,
       meta_title: `${preset.name} - Apply Online | GharKaPaisa`,
       meta_description: preset.description,
+      public_url: preset.public_url || preset.partner_url || getBankApplyLink(preset.name, preset.bank_code || preset.bank_name, preset) || "",
+      partner_url: preset.partner_url || getBankApplyLink(preset.name, preset.bank_code || preset.bank_name, preset) || "",
       show_on_website: true,
       show_in_partner: true,
       button_text: 'Apply Now',
@@ -1370,12 +1375,12 @@ export default function ManageAdminProducts() {
                             border: `1.5px dashed ${isDark ? '#38bdf8' : '#0284c7'}`,
                             borderRadius: '12px'
                           }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '4px' }}>
                               <span style={{ fontSize: '12px', fontWeight: 900, color: isDark ? '#38BDF8' : '#0369A1' }}>
-                                ⚡ Click to Pre-fill & Add CIBIL Finance Product (7 designated products):
+                                ⚡ Click to Pre-fill CIBIL Finance Product (7 designated products with UTM links):
                               </span>
                               <span style={{ fontSize: '11px', color: isDark ? '#94A3B8' : '#64748B', fontWeight: 600 }}>
-                                Auto-fills name, partner, criteria & specs
+                                Pre-fills Direct Link & Linked Share UTMs
                               </span>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '8px' }}>
@@ -1410,6 +1415,124 @@ export default function ManageAdminProducts() {
                                     </span>
                                     <span style={{ fontSize: '10.5px', color: isDark ? '#94A3B8' : '#64748B' }}>
                                       {prod.interest_rate} • {prod.disbursal_time}
+                                    </span>
+                                    <span style={{ fontSize: '9.5px', color: '#059669', fontWeight: 700, marginTop: '2px' }}>
+                                      🔗 UTM Link Ready
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* PRESET PRODUCT QUICK-FILL: INCOME-BASED BANK (7 PRODUCTS) */}
+                        {form.loan_type === 'income' && form.provider_type === 'bank' && (
+                          <div style={{
+                            padding: '12px 14px',
+                            background: isDark ? '#0f172a' : '#FFFFFF',
+                            border: `1.5px dashed ${isDark ? '#38bdf8' : '#0284c7'}`,
+                            borderRadius: '12px'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '4px' }}>
+                              <span style={{ fontSize: '12px', fontWeight: 900, color: isDark ? '#38BDF8' : '#0369A1' }}>
+                                ⚡ Click to Pre-fill Income Bank Product (7 designated banks: HDFC, Indusind, Yes, ICICI, Kotak, AXIS, IDFC):
+                              </span>
+                              <span style={{ fontSize: '11px', color: isDark ? '#94A3B8' : '#64748B', fontWeight: 600 }}>
+                                Auto-fills name, bank, criteria & specs
+                              </span>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '8px' }}>
+                              {INCOME_BANK_PRESET_PRODUCTS.map((prod, idx) => {
+                                const isCurrent = form.name.toLowerCase() === prod.name.toLowerCase();
+                                return (
+                                  <button
+                                    type="button"
+                                    key={prod.name}
+                                    onClick={() => handleApplyPresetProduct(prod)}
+                                    style={{
+                                      padding: '8px 10px',
+                                      borderRadius: '10px',
+                                      border: isCurrent ? '2px solid #0284C7' : `1px solid ${isDark ? '#334155' : '#E2E8F0'}`,
+                                      background: isCurrent ? (isDark ? '#0369a120' : '#E0F2FE') : (isDark ? '#1e293b' : '#F8FAFC'),
+                                      cursor: 'pointer',
+                                      textAlign: 'left',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: '2px',
+                                      transition: 'all 0.15s ease'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                      <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#0284C7' }}>
+                                        #{idx + 1} Bank
+                                      </span>
+                                      {isCurrent && <span style={{ fontSize: '9.5px', color: '#0284C7', fontWeight: 900 }}>✓ Selected</span>}
+                                    </div>
+                                    <span style={{ fontSize: '12.5px', fontWeight: 800, color: isDark ? '#F8FAFC' : '#0F172A' }}>
+                                      {prod.name}
+                                    </span>
+                                    <span style={{ fontSize: '10.5px', color: isDark ? '#94A3B8' : '#64748B' }}>
+                                      {prod.bank_name} • {prod.interest_rate}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* PRESET PRODUCT QUICK-FILL: INCOME-BASED FINANCE (7 PRODUCTS) */}
+                        {form.loan_type === 'income' && form.provider_type === 'finance' && (
+                          <div style={{
+                            padding: '12px 14px',
+                            background: isDark ? '#0f172a' : '#FFFFFF',
+                            border: `1.5px dashed ${isDark ? '#38bdf8' : '#0284c7'}`,
+                            borderRadius: '12px'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '4px' }}>
+                              <span style={{ fontSize: '12px', fontWeight: 900, color: isDark ? '#38BDF8' : '#0369A1' }}>
+                                ⚡ Click to Pre-fill Income Finance Product (7 designated products with UTM links):
+                              </span>
+                              <span style={{ fontSize: '11px', color: isDark ? '#94A3B8' : '#64748B', fontWeight: 600 }}>
+                                Pre-fills Direct Link & Linked Share UTMs
+                              </span>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '8px' }}>
+                              {INCOME_FINANCE_PRESET_PRODUCTS.map((prod, idx) => {
+                                const isCurrent = form.name.toLowerCase() === prod.name.toLowerCase();
+                                return (
+                                  <button
+                                    type="button"
+                                    key={prod.name}
+                                    onClick={() => handleApplyPresetProduct(prod)}
+                                    style={{
+                                      padding: '8px 10px',
+                                      borderRadius: '10px',
+                                      border: isCurrent ? '2px solid #0284C7' : `1px solid ${isDark ? '#334155' : '#E2E8F0'}`,
+                                      background: isCurrent ? (isDark ? '#0369a120' : '#E0F2FE') : (isDark ? '#1e293b' : '#F8FAFC'),
+                                      cursor: 'pointer',
+                                      textAlign: 'left',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: '2px',
+                                      transition: 'all 0.15s ease'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                      <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#0284C7' }}>
+                                        #{idx + 1} Finance
+                                      </span>
+                                      {isCurrent && <span style={{ fontSize: '9.5px', color: '#0284C7', fontWeight: 900 }}>✓ Selected</span>}
+                                    </div>
+                                    <span style={{ fontSize: '12.5px', fontWeight: 800, color: isDark ? '#F8FAFC' : '#0F172A' }}>
+                                      {prod.name}
+                                    </span>
+                                    <span style={{ fontSize: '10.5px', color: isDark ? '#94A3B8' : '#64748B' }}>
+                                      {prod.interest_rate} • {prod.disbursal_time}
+                                    </span>
+                                    <span style={{ fontSize: '9.5px', color: '#059669', fontWeight: 700, marginTop: '2px' }}>
+                                      🔗 UTM Link Ready
                                     </span>
                                   </button>
                                 );

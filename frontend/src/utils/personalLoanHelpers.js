@@ -79,11 +79,69 @@ export const CIBIL_BANK_OPTIONS = [
 export const INCOME_BANK_OPTIONS = [
   'All Banks',
   'HDFC Bank',
+  'IndusInd Bank',
+  'YES Bank',
   'ICICI Bank',
-  'Axis Bank',
   'Kotak Mahindra Bank',
-  'State Bank of India'
+  'Axis Bank',
+  'IDFC First Bank'
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OFFICIAL & PARTNER UTM TRACKING LINKS FOR FINANCE / NBFC LOANS
+// ─────────────────────────────────────────────────────────────────────────────
+export const FINANCE_PRODUCT_LINKS = {
+  'tata': 'https://www.wishfin.com/tata/home?source=FWRey_July&utm_source=FW38&utm_medium=SMS&utm_campaign=promotion&utm_content=check_offer&utm_term=tata',
+  'tata-capital': 'https://www.wishfin.com/tata/home?source=FWRey_July&utm_source=FW38&utm_medium=SMS&utm_campaign=promotion&utm_content=check_offer&utm_term=tata',
+  'tata capital': 'https://www.wishfin.com/tata/home?source=FWRey_July&utm_source=FW38&utm_medium=SMS&utm_campaign=promotion&utm_content=check_offer&utm_term=tata',
+  'tata on fly': 'https://www.wishfin.com/tata/home?source=FWRey_July&utm_source=FW38&utm_medium=SMS&utm_campaign=promotion&utm_content=check_offer&utm_term=tata',
+  'tata on fly-utm': 'https://www.wishfin.com/tata/home?source=FWRey_July&utm_source=FW38&utm_medium=SMS&utm_campaign=promotion&utm_content=check_offer&utm_term=tata',
+
+  'prefr': 'https://www.wishfin.com/prefr/home?source=Rey_june26_FW18',
+  'prefr utm': 'https://www.wishfin.com/prefr/home?source=Rey_june26_FW18',
+  'finable': 'https://www.wishfin.com/prefr/home?source=Rey_june26_FW18',
+  'finaable': 'https://www.wishfin.com/prefr/home?source=Rey_june26_FW18',
+
+  'ramfincorp': 'https://applyonline.ramfincorp.com/?utm_source=Wishfin49&utm_campaign=default_campaign&utm_medium=default_medium&utm_trackingid=FW_30',
+  'ram fincorp': 'https://applyonline.ramfincorp.com/?utm_source=Wishfin49&utm_campaign=default_campaign&utm_medium=default_medium&utm_trackingid=FW_30',
+  'ramfincorp utm': 'https://applyonline.ramfincorp.com/?utm_source=Wishfin49&utm_campaign=default_campaign&utm_medium=default_medium&utm_trackingid=FW_30',
+
+  'kreditbee': 'https://www.wishfin.com/kreditbee/home?source=fin41',
+  'kreditbee link-utm': 'https://www.wishfin.com/kreditbee/home?source=fin41',
+  'kredit bee': 'https://www.wishfin.com/kreditbee/home?source=fin41',
+
+  'unity': 'https://loans.theunitybank.com/unity-pl-ui/page/exclusion/login/logindetails?utm_source=Partner&utm_medium=Wishfin&utm_campaign=finwizz11',
+  'unity bank': 'https://loans.theunitybank.com/unity-pl-ui/page/exclusion/login/logindetails?utm_source=Partner&utm_medium=Wishfin&utm_campaign=finwizz11',
+
+  'poonawalla': 'https://instant-pocket-loan.poonawallafincorp.com/?redirectto=primepl&utm_DSA_Code=PUP00228&UTM_Partner_Name=WISHFIN&UTM_Partner_Medium=SMS&UTM_Partner_AgentCode=PFLWISHFIN&UTM_Partner_ReferenceID=WF_FW_REY_PR_26',
+  'poonawalla utm': 'https://instant-pocket-loan.poonawallafincorp.com/?redirectto=primepl&utm_DSA_Code=PUP00228&UTM_Partner_Name=WISHFIN&UTM_Partner_Medium=SMS&UTM_Partner_AgentCode=PFLWISHFIN&UTM_Partner_ReferenceID=WF_FW_REY_PR_26',
+  'punawalla': 'https://instant-pocket-loan.poonawallafincorp.com/?redirectto=primepl&utm_DSA_Code=PUP00228&UTM_Partner_Name=WISHFIN&UTM_Partner_Medium=SMS&UTM_Partner_AgentCode=PFLWISHFIN&UTM_Partner_ReferenceID=WF_FW_REY_PR_26',
+  'punawalla finance': 'https://instant-pocket-loan.poonawallafincorp.com/?redirectto=primepl&utm_DSA_Code=PUP00228&UTM_Partner_Name=WISHFIN&UTM_Partner_Medium=SMS&UTM_Partner_AgentCode=PFLWISHFIN&UTM_Partner_ReferenceID=WF_FW_REY_PR_26',
+
+  'bajaj': 'https://www.bajajfinserv.in/personal-loan',
+  'bajaj finance': 'https://www.bajajfinserv.in/personal-loan'
+};
+
+/**
+ * Resolve direct UTM application link for a Finance product.
+ */
+export const getFinanceDirectUrl = (productOrName) => {
+  if (!productOrName) return null;
+  const pName = typeof productOrName === 'string' 
+    ? productOrName 
+    : (productOrName.name || productOrName.bank_name || productOrName.bank_code || '');
+  const n = pName.toLowerCase().trim();
+
+  if (n.includes('tata') || n.includes('fly')) return FINANCE_PRODUCT_LINKS['tata'];
+  if (n.includes('prefr') || n.includes('finable') || n.includes('finaable')) return FINANCE_PRODUCT_LINKS['prefr'];
+  if (n.includes('ramfin') || n.includes('ram fincorp')) return FINANCE_PRODUCT_LINKS['ramfincorp'];
+  if (n.includes('kredit') || n.includes('kreditbee')) return FINANCE_PRODUCT_LINKS['kreditbee'];
+  if (n.includes('unity')) return FINANCE_PRODUCT_LINKS['unity'];
+  if (n.includes('poonawalla') || n.includes('punawalla')) return FINANCE_PRODUCT_LINKS['poonawalla'];
+  if (n.includes('bajaj')) return FINANCE_PRODUCT_LINKS['bajaj'];
+
+  return null;
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PRESET PRODUCT DEFINITIONS FOR CIBIL-BASED LOANS
@@ -177,6 +235,8 @@ export const CIBIL_FINANCE_PRESET_PRODUCTS = [
     bank_code: 'FINABLE',
     loan_type: 'cibil',
     provider_type: 'finance',
+    partner_url: FINANCE_PRODUCT_LINKS['prefr'],
+    public_url: FINANCE_PRODUCT_LINKS['prefr'],
     description: 'Finable provides paperless instant personal loans directly to your bank account with streamlined CIBIL credit score evaluation, transparent pricing, and flexible repayment EMIs.',
     annual_fee: '11.99% p.a.',
     interest_rate: '11.99% p.a.',
@@ -203,6 +263,8 @@ export const CIBIL_FINANCE_PRESET_PRODUCTS = [
     bank_code: 'PUNAWALLA',
     loan_type: 'cibil',
     provider_type: 'finance',
+    partner_url: FINANCE_PRODUCT_LINKS['poonawalla'],
+    public_url: FINANCE_PRODUCT_LINKS['poonawalla'],
     description: 'Punawalla Finance offers instant sanction personal loans with high approval rates on credit scores, competitive interest rates, and zero hidden charges for personal and professional needs.',
     annual_fee: '11.50% p.a.',
     interest_rate: '11.50% p.a.',
@@ -229,6 +291,8 @@ export const CIBIL_FINANCE_PRESET_PRODUCTS = [
     bank_code: 'BAJAJ',
     loan_type: 'cibil',
     provider_type: 'finance',
+    partner_url: FINANCE_PRODUCT_LINKS['bajaj'],
+    public_url: FINANCE_PRODUCT_LINKS['bajaj'],
     description: 'Bajaj Finance provides high-value personal loans with instant online approval, flexible Flexi-hybrid repayment, and quick disbursal directly to your account within 24 hours.',
     annual_fee: '11.00% p.a.',
     interest_rate: '11.00% p.a.',
@@ -255,6 +319,8 @@ export const CIBIL_FINANCE_PRESET_PRODUCTS = [
     bank_code: 'KREDITBEE',
     loan_type: 'cibil',
     provider_type: 'finance',
+    partner_url: FINANCE_PRODUCT_LINKS['kreditbee'],
+    public_url: FINANCE_PRODUCT_LINKS['kreditbee'],
     description: 'KreditBee offers instant personal loans for salaried and self-employed individuals with quick CIBIL verification, online KYC, and direct money transfer to your bank account.',
     annual_fee: '12.50% p.a.',
     interest_rate: '12.50% p.a.',
@@ -281,6 +347,8 @@ export const CIBIL_FINANCE_PRESET_PRODUCTS = [
     bank_code: 'TATACAPITAL',
     loan_type: 'cibil',
     provider_type: 'finance',
+    partner_url: FINANCE_PRODUCT_LINKS['tata'],
+    public_url: FINANCE_PRODUCT_LINKS['tata'],
     description: 'Tata Capital offers multi-purpose personal loans for medical emergencies, travel, weddings, or home renovation with fast CIBIL-score verification and flexible repayment tenures up to 6 years.',
     annual_fee: '10.99% p.a.',
     interest_rate: '10.99% p.a.',
@@ -307,6 +375,8 @@ export const CIBIL_FINANCE_PRESET_PRODUCTS = [
     bank_code: 'UNITY',
     loan_type: 'cibil',
     provider_type: 'finance',
+    partner_url: FINANCE_PRODUCT_LINKS['unity'],
+    public_url: FINANCE_PRODUCT_LINKS['unity'],
     description: 'Unity provides hassle-free personal loans with swift credit assessment based on CIBIL score, transparent fees, and rapid disbursal directly to your account.',
     annual_fee: '12.00% p.a.',
     interest_rate: '12.00% p.a.',
@@ -333,6 +403,8 @@ export const CIBIL_FINANCE_PRESET_PRODUCTS = [
     bank_code: 'RAMFINCORP',
     loan_type: 'cibil',
     provider_type: 'finance',
+    partner_url: FINANCE_PRODUCT_LINKS['ramfincorp'],
+    public_url: FINANCE_PRODUCT_LINKS['ramfincorp'],
     description: 'Ram Fincorp offers quick personal loans designed for urgent financial needs with minimal verification delays, prompt CIBIL assessment, and flexible repayment tenures.',
     annual_fee: '12.50% p.a.',
     interest_rate: '12.50% p.a.',
@@ -345,6 +417,394 @@ export const CIBIL_FINANCE_PRESET_PRODUCTS = [
     min_age: 21,
     max_age: 60,
     cibil_required: 690,
+    badge: 'Fast Approval',
+    features: [
+      'Quick personal loan disbursal with minimal paperwork',
+      'Tailored loan amounts for diverse financial needs',
+      'Hassle-free digital application and verification',
+      'Flexible tenure and competitive rates'
+    ]
+  }
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRESET PRODUCT DEFINITIONS FOR INCOME-BASED LOANS (BANK & FINANCE)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const INCOME_BANK_PRESET_PRODUCTS = [
+  {
+    name: 'HDFC',
+    bank_name: 'HDFC Bank',
+    bank_code: 'HDFC',
+    loan_type: 'income',
+    provider_type: 'bank',
+    description: 'HDFC Bank Income-based Personal Loan offers quick sanction up to ₹40 Lakhs for salaried individuals with low interest rates, flexible tenure up to 5 years, and paperless salary verification.',
+    annual_fee: '10.50% p.a.',
+    interest_rate: '10.50% p.a.',
+    processing_fee: 'Up to 2.50% + GST',
+    time_period: '12 - 60 Months',
+    disbursal_time: 'Within 24 Hours',
+    min_amount: '50000',
+    max_amount: '4000000',
+    min_income: 25000,
+    min_age: 21,
+    max_age: 60,
+    cibil_required: 700,
+    badge: 'Top Salaried',
+    features: [
+      'Competitive interest rates for salaried employees',
+      'Instant sanction with NetBanking statement upload',
+      'Flexible repayment tenure up to 60 months',
+      'Special discounted rates for top corporate employees'
+    ]
+  },
+  {
+    name: 'Indusind',
+    bank_name: 'IndusInd Bank',
+    bank_code: 'INDUSIND',
+    loan_type: 'income',
+    provider_type: 'bank',
+    description: 'IndusInd Bank Income-based Personal Loan provides tailor-made financing for salaried and self-employed professionals with swift income assessment and direct account crediting.',
+    annual_fee: '10.49% p.a.',
+    interest_rate: '10.49% p.a.',
+    processing_fee: 'Up to 2.0% + GST',
+    time_period: '12 - 60 Months',
+    disbursal_time: 'Within 24 Hours',
+    min_amount: '30000',
+    max_amount: '2500000',
+    min_income: 25000,
+    min_age: 21,
+    max_age: 60,
+    cibil_required: 680,
+    badge: 'Quick Sanction',
+    features: [
+      'Flexible loan amounts up to ₹25 Lakhs',
+      'Simple income proof via NetBanking or ITR',
+      'Customized monthly EMI repayment options',
+      'Doorstep document assistance for fast approval'
+    ]
+  },
+  {
+    name: 'Yes',
+    bank_name: 'YES Bank',
+    bank_code: 'YES',
+    loan_type: 'income',
+    provider_type: 'bank',
+    description: 'YES Bank Personal Loan offers hassle-free funding for medical emergencies, travel, weddings, or business needs based on salary and income records with 1-minute in-principle approval.',
+    annual_fee: '10.99% p.a.',
+    interest_rate: '10.99% p.a.',
+    processing_fee: 'Up to 2.0% + GST',
+    time_period: '12 - 60 Months',
+    disbursal_time: 'Same Day Disbursal',
+    min_amount: '100000',
+    max_amount: '4000000',
+    min_income: 25000,
+    min_age: 21,
+    max_age: 60,
+    cibil_required: 680,
+    badge: '1-Min Approval',
+    features: [
+      '1-minute in-principle online loan approval',
+      'No collateral or guarantor required',
+      'Attractive interest rates for salaried applicants',
+      'Part-prepayment and easy foreclosure options'
+    ]
+  },
+  {
+    name: 'ICICI',
+    bank_name: 'ICICI Bank',
+    bank_code: 'ICICI',
+    loan_type: 'income',
+    provider_type: 'bank',
+    description: 'ICICI Bank Income-based Personal Loan delivers instant digital sanction up to ₹50 Lakhs with minimum paperwork and salary verification for salaried customers.',
+    annual_fee: '10.75% p.a.',
+    interest_rate: '10.75% p.a.',
+    processing_fee: 'Up to 2.0% + GST',
+    time_period: '12 - 72 Months',
+    disbursal_time: 'Within 2 Hours',
+    min_amount: '50000',
+    max_amount: '5000000',
+    min_income: 30000,
+    min_age: 21,
+    max_age: 58,
+    cibil_required: 700,
+    badge: 'High Value',
+    features: [
+      'High loan sanction up to ₹50 Lakhs',
+      'Flexible repayment tenure up to 72 months',
+      'Pre-approved offers for salary account holders',
+      '100% paperless e-sign digital loan journey'
+    ]
+  },
+  {
+    name: 'Kotak',
+    bank_name: 'Kotak Mahindra Bank',
+    bank_code: 'KOTAK',
+    loan_type: 'income',
+    provider_type: 'bank',
+    description: 'Kotak Mahindra Bank Personal Loan provides fast online approval and funds in account in under 3 seconds after digital verification of salary slips and income proof.',
+    annual_fee: '10.99% p.a.',
+    interest_rate: '10.99% p.a.',
+    processing_fee: 'Up to 2.5% + GST',
+    time_period: '12 - 60 Months',
+    disbursal_time: 'Instant (10 Seconds)',
+    min_amount: '50000',
+    max_amount: '4000000',
+    min_income: 25000,
+    min_age: 21,
+    max_age: 60,
+    cibil_required: 680,
+    badge: 'Instant Cash',
+    features: [
+      'Super-fast disbursal in 3 seconds post verification',
+      'Minimal paperwork for salaried professionals',
+      'Attractive interest rates and transparent fees',
+      'Flexible EMI tenure options up to 5 years'
+    ]
+  },
+  {
+    name: 'AXIS',
+    bank_name: 'Axis Bank',
+    bank_code: 'AXIS',
+    loan_type: 'income',
+    provider_type: 'bank',
+    description: 'Axis Bank 24x7 Personal Loan delivers end-to-end digital approval for salaried applicants based on income and bank statement verification with instant funds crediting.',
+    annual_fee: '10.75% p.a.',
+    interest_rate: '10.75% p.a.',
+    processing_fee: 'Up to 2.0% + GST',
+    time_period: '12 - 60 Months',
+    disbursal_time: 'Same Day Disbursal',
+    min_amount: '50000',
+    max_amount: '4000000',
+    min_income: 25000,
+    min_age: 21,
+    max_age: 60,
+    cibil_required: 700,
+    badge: '24x7 Digital',
+    features: [
+      'End-to-end paperless digital process',
+      'Disbursal within minutes of income verification',
+      'Flexible repayment tenure up to 5 years',
+      'Zero prepayment charges after select period'
+    ]
+  },
+  {
+    name: 'IDFC',
+    bank_name: 'IDFC First Bank',
+    bank_code: 'IDFC',
+    loan_type: 'income',
+    provider_type: 'bank',
+    description: 'IDFC FIRST Bank Income-based Personal Loan offers attractive interest rates, zero foreclosure charges on select tenures, and flexible loan amounts for salaried individuals.',
+    annual_fee: '10.49% p.a.',
+    interest_rate: '10.49% p.a.',
+    processing_fee: 'Up to 2.0% + GST',
+    time_period: '12 - 60 Months',
+    disbursal_time: 'Within 2 Hours',
+    min_amount: '50000',
+    max_amount: '4000000',
+    min_income: 25000,
+    min_age: 21,
+    max_age: 60,
+    cibil_required: 700,
+    badge: 'Zero Foreclosure',
+    features: [
+      'Zero foreclosure charges after 3 EMIs',
+      'Instant sanction with online salary slip upload',
+      'Competitive interest rates starting at 10.49%',
+      'Flexible EMI options up to 60 months'
+    ]
+  }
+];
+
+export const INCOME_FINANCE_PRESET_PRODUCTS = [
+  {
+    name: 'Finable',
+    bank_name: 'Finable',
+    bank_code: 'FINABLE',
+    loan_type: 'income',
+    provider_type: 'finance',
+    partner_url: FINANCE_PRODUCT_LINKS['prefr'],
+    public_url: FINANCE_PRODUCT_LINKS['prefr'],
+    description: 'Finable Income-based Personal Loan provides paperless instant cash directly to your bank account with streamlined salary evaluation, transparent pricing, and flexible repayment EMIs.',
+    annual_fee: '11.99% p.a.',
+    interest_rate: '11.99% p.a.',
+    processing_fee: 'Up to 2.0% + GST',
+    time_period: '6 - 36 Months',
+    disbursal_time: 'Instant (10 Seconds)',
+    min_amount: '25000',
+    max_amount: '1000000',
+    min_income: 20000,
+    min_age: 21,
+    max_age: 58,
+    cibil_required: 680,
+    badge: 'Salary Approved',
+    features: [
+      'Digital personal loan with rapid salary verification',
+      'Collateral-free instant online cash transfer',
+      'Transparent charges with no hidden fees',
+      'Convenient flexible EMI repayment options'
+    ]
+  },
+  {
+    name: 'Punawalla Finance',
+    bank_name: 'Punawalla Finance',
+    bank_code: 'PUNAWALLA',
+    loan_type: 'income',
+    provider_type: 'finance',
+    partner_url: FINANCE_PRODUCT_LINKS['poonawalla'],
+    public_url: FINANCE_PRODUCT_LINKS['poonawalla'],
+    description: 'Punawalla Finance offers instant sanction personal loans for salaried and self-employed individuals with high approval rates on salary slips and competitive interest rates.',
+    annual_fee: '11.50% p.a.',
+    interest_rate: '11.50% p.a.',
+    processing_fee: 'Up to 1.5% + GST',
+    time_period: '12 - 60 Months',
+    disbursal_time: 'Within 2 Hours',
+    min_amount: '50000',
+    max_amount: '3000000',
+    min_income: 25000,
+    min_age: 22,
+    max_age: 58,
+    cibil_required: 680,
+    badge: 'Quick Disbursal',
+    features: [
+      'Fast-track loan approval powered by salary verification',
+      'High sanction limits with minimal documentation',
+      'Zero foreclosure charges after qualifying period',
+      'Instant sanction letter delivered online'
+    ]
+  },
+  {
+    name: 'Bajaj Finance',
+    bank_name: 'Bajaj Finance',
+    bank_code: 'BAJAJ',
+    loan_type: 'income',
+    provider_type: 'finance',
+    partner_url: FINANCE_PRODUCT_LINKS['bajaj'],
+    public_url: FINANCE_PRODUCT_LINKS['bajaj'],
+    description: 'Bajaj Finance provides high-value personal loans with instant online approval, flexible Flexi-hybrid repayment, and quick disbursal based on monthly income and salary proofs.',
+    annual_fee: '11.00% p.a.',
+    interest_rate: '11.00% p.a.',
+    processing_fee: 'Up to 2.0% + GST',
+    time_period: '12 - 72 Months',
+    disbursal_time: 'Instant (10 Seconds)',
+    min_amount: '50000',
+    max_amount: '4000000',
+    min_income: 25000,
+    min_age: 21,
+    max_age: 60,
+    cibil_required: 680,
+    badge: 'Flexi Loan',
+    features: [
+      'Flexi-loan facility with withdraw & repay on-demand',
+      'Quick online approval for salaried applicants',
+      'Up to ₹40 Lakhs pre-approved credit line',
+      'Disbursal within 24 hours of approval'
+    ]
+  },
+  {
+    name: 'KreditBee',
+    bank_name: 'KreditBee',
+    bank_code: 'KREDITBEE',
+    loan_type: 'income',
+    provider_type: 'finance',
+    partner_url: FINANCE_PRODUCT_LINKS['kreditbee'],
+    public_url: FINANCE_PRODUCT_LINKS['kreditbee'],
+    description: 'KreditBee offers instant personal loans for salaried and self-employed individuals with quick salary slip verification, online KYC, and direct money transfer to your bank account.',
+    annual_fee: '12.50% p.a.',
+    interest_rate: '12.50% p.a.',
+    processing_fee: 'Up to 2.5% + GST',
+    time_period: '3 - 24 Months',
+    disbursal_time: 'Instant (10 Seconds)',
+    min_amount: '10000',
+    max_amount: '500000',
+    min_income: 15000,
+    min_age: 21,
+    max_age: 55,
+    cibil_required: 650,
+    badge: '10-Min Disbursal',
+    features: [
+      '100% digital process completed in 10 minutes',
+      'Direct bank transfer upon salary verification',
+      'Flexible micro-ticket and personal loan options',
+      'Minimal documentation via video KYC'
+    ]
+  },
+  {
+    name: 'Tata Capital',
+    bank_name: 'Tata Capital',
+    bank_code: 'TATACAPITAL',
+    loan_type: 'income',
+    provider_type: 'finance',
+    partner_url: FINANCE_PRODUCT_LINKS['tata'],
+    public_url: FINANCE_PRODUCT_LINKS['tata'],
+    description: 'Tata Capital offers multi-purpose personal loans for salaried individuals with fast income verification and flexible repayment tenures up to 6 years.',
+    annual_fee: '10.99% p.a.',
+    interest_rate: '10.99% p.a.',
+    processing_fee: 'Up to 1.75% + GST',
+    time_period: '12 - 72 Months',
+    disbursal_time: 'Within 2 Hours',
+    min_amount: '50000',
+    max_amount: '3500000',
+    min_income: 25000,
+    min_age: 21,
+    max_age: 58,
+    cibil_required: 680,
+    badge: 'Tata Trust',
+    features: [
+      'Trusted Tata brand with customized loan offerings',
+      'Instant digital sanction based on income proofs',
+      'Competitive interest rates starting at 10.99%',
+      'Flexible repayment options up to 6 years'
+    ]
+  },
+  {
+    name: 'Unity',
+    bank_name: 'Unity',
+    bank_code: 'UNITY',
+    loan_type: 'income',
+    provider_type: 'finance',
+    partner_url: FINANCE_PRODUCT_LINKS['unity'],
+    public_url: FINANCE_PRODUCT_LINKS['unity'],
+    description: 'Unity provides hassle-free personal loans with swift income assessment based on salary proofs, transparent fees, and rapid disbursal directly to your account.',
+    annual_fee: '12.00% p.a.',
+    interest_rate: '12.00% p.a.',
+    processing_fee: 'Up to 2.0% + GST',
+    time_period: '12 - 48 Months',
+    disbursal_time: 'Same Day Disbursal',
+    min_amount: '25000',
+    max_amount: '1500000',
+    min_income: 20000,
+    min_age: 21,
+    max_age: 60,
+    cibil_required: 680,
+    badge: 'Easy EMI',
+    features: [
+      'Simple and quick digital personal loan',
+      'Fast turnaround time with income verification',
+      'Transparent terms and affordable monthly EMIs',
+      'Dedicated customer support and doorstep assistance'
+    ]
+  },
+  {
+    name: 'Ram Fincorp',
+    bank_name: 'Ram Fincorp',
+    bank_code: 'RAMFINCORP',
+    loan_type: 'income',
+    provider_type: 'finance',
+    partner_url: FINANCE_PRODUCT_LINKS['ramfincorp'],
+    public_url: FINANCE_PRODUCT_LINKS['ramfincorp'],
+    description: 'Ram Fincorp offers quick personal loans designed for urgent financial needs with minimal verification delays, prompt salary assessment, and flexible repayment tenures.',
+    annual_fee: '12.50% p.a.',
+    interest_rate: '12.50% p.a.',
+    processing_fee: 'Up to 2.0% + GST',
+    time_period: '6 - 36 Months',
+    disbursal_time: 'Within 24 Hours',
+    min_amount: '20000',
+    max_amount: '2000000',
+    min_income: 20000,
+    min_age: 21,
+    max_age: 60,
+    cibil_required: 680,
     badge: 'Fast Approval',
     features: [
       'Quick personal loan disbursal with minimal paperwork',
