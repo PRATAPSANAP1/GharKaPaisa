@@ -24,11 +24,11 @@ const poolOptions = process.env.DATABASE_URL
     };
 
 // Enhanced Connection Pool Settings for High Availability and Connection Resiliency
-poolOptions.max = Math.max(parseInt(process.env.DB_POOL_MAX) || 30, 25);
+poolOptions.max = Math.max(parseInt(process.env.DB_POOL_MAX) || 40, 30);
 poolOptions.min = (process.env.NODE_ENV === 'test' || process.env.SKIP_DB === 'true') ? 0 : (parseInt(process.env.DB_POOL_MIN) || 2);
 poolOptions.idleTimeoutMillis = parseInt(process.env.DB_IDLE_TIMEOUT) || parseInt(process.env.DB_IDLE_TIMEOUT_MS) || 30000;
-poolOptions.connectionTimeoutMillis = parseInt(process.env.DB_CONN_TIMEOUT) || parseInt(process.env.DB_CONNECTION_TIMEOUT_MS) || 15000;
-poolOptions.acquireTimeoutMillis = parseInt(process.env.DB_ACQUIRE_TIMEOUT) || 15000;
+poolOptions.connectionTimeoutMillis = parseInt(process.env.DB_CONN_TIMEOUT) || parseInt(process.env.DB_CONNECTION_TIMEOUT_MS) || 20000;
+poolOptions.acquireTimeoutMillis = parseInt(process.env.DB_ACQUIRE_TIMEOUT) || 20000;
 poolOptions.query_timeout = parseInt(process.env.DB_QUERY_TIMEOUT) || 45000;
 poolOptions.allowExitOnIdle = false;
 poolOptions.keepAlive = true;

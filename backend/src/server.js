@@ -415,6 +415,14 @@ const startServer = async () => {
       logger.warn('CIBIL Personal Loan auto seed note:', plErr.message);
     }
 
+    // Always ensure CRM Application query optimization indexes exist on boot
+    try {
+      const { migrateApplicationQueryIndexes } = require('./database/migrations/migrate_application_query_indexes.js');
+      await migrateApplicationQueryIndexes();
+    } catch (idxErr) {
+      logger.warn('Application query indexes auto migration note:', idxErr.message);
+    }
+
     // Always ensure Bulk SMS tables exist on boot
     try {
       const migrateBulkSms = require('./database/migrations/migrate_bulk_sms.js');
