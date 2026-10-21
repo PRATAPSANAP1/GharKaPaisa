@@ -63,7 +63,8 @@ const listAllBanks = async (req, res, next) => {
     const dataQuery = `
       SELECT 
         b.*,
-        COUNT(p.id)::int as products_count
+        COUNT(p.id)::int as products_count,
+        ARRAY_REMOVE(ARRAY_AGG(DISTINCT p.category::text), NULL) as categories
       FROM banks b
       LEFT JOIN products p ON p.bank_id = b.id
       ${whereClause}

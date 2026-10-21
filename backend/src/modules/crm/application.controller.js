@@ -1840,6 +1840,8 @@ const listApplications = async (req, res, next) => {
             return `(${bankMatch} AND ${locEocAppSQL})`;
           } else if (cat === 'credit_card') {
             return `(${bankMatch} AND ${creditCardAppSQL})`;
+          } else if (cat === 'personal_loan' || cat === 'loan') {
+            return `(${bankMatch} AND (LOWER(COALESCE(combined.category::text, '')) LIKE '%loan%' OR LOWER(COALESCE(combined.category::text, '')) LIKE '%personal%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))`;
           } else {
             return `(${bankMatch} AND LOWER(COALESCE(combined.category::text, '')) = '${cat}')`;
           }

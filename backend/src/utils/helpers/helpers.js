@@ -107,6 +107,10 @@ const normalizeAssignmentCategory = (cat) => {
   const c = String(cat).trim().toLowerCase().replace(/[\s\/-]+/g, '_');
   if (['credit_card', 'creditcard', 'cards', 'card'].includes(c)) return 'credit_card';
   if (['loc_eoc', 'loceoc', 'loc', 'eoc', 'loan_on_credit_card', 'smart_emi', 'loan_on_card', 'card_on_loan'].includes(c)) return 'loc_eoc';
+  if (['personal_loan', 'personalloan', 'pl', 'personal', 'cibil_loan', 'cibil', 'loan', 'loans'].includes(c)) return 'personal_loan';
+  if (['business_loan', 'businessloan', 'bl', 'business'].includes(c)) return 'business_loan';
+  if (['home_loan', 'homeloan', 'hl', 'home'].includes(c)) return 'home_loan';
+  if (['insurance'].includes(c)) return 'insurance';
   return c;
 };
 

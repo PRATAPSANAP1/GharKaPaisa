@@ -27,7 +27,9 @@ import {
   XCircle,
   HelpCircle,
   ArrowRight,
-  Filter
+  Filter,
+  Banknote,
+  Briefcase
 } from 'lucide-react';
 
 const MiniChart = ({ color }) => (
@@ -53,16 +55,149 @@ const CategoryWiseBankSelector = ({
 }) => {
   const [activeTab, setActiveTab] = useState('credit_card');
   const [searchQuery, setSearchQuery] = useState('');
+  const [plSubFilter, setPlSubFilter] = useState('all'); // 'all' | 'bank' | 'finance'
+  const [showAllBanksFallback, setShowAllBanksFallback] = useState(false);
 
   const categories = [
-    { id: 'credit_card', label: 'Credit Card', desc: 'Credit Card Applications' },
-    { id: 'loc_eoc', label: 'LOC/EOC', desc: 'Loan on Credit Card & Smart EMI Applications' }
+    { 
+      id: 'credit_card', 
+      label: 'Credit Card', 
+      badge: 'CC',
+      icon: <CreditCard size={14} />,
+      color: '#2563EB', 
+      bg: '#EFF6FF',
+      activeBorder: '#2563EB',
+      desc: 'Credit Card Applications' 
+    },
+    { 
+      id: 'personal_loan', 
+      label: 'Personal Loan', 
+      badge: 'PL',
+      icon: <Banknote size={14} />,
+      color: '#059669', 
+      bg: '#ECFDF5',
+      activeBorder: '#059669',
+      desc: 'Personal Loan Applications (Bank & Finance/NBFC Partners)' 
+    },
+    { 
+      id: 'loc_eoc', 
+      label: 'LOC / EOC', 
+      badge: 'LOC',
+      icon: <RefreshCw size={14} />,
+      color: '#7C3AED', 
+      bg: '#F5F3FF',
+      activeBorder: '#7C3AED',
+      desc: 'Loan on Credit Card & Smart EMI Applications' 
+    },
+    { 
+      id: 'business_loan', 
+      label: 'Business Loan', 
+      badge: 'BL',
+      icon: <Briefcase size={14} />,
+      color: '#D97706', 
+      bg: '#FFFBEB',
+      activeBorder: '#D97706',
+      desc: 'Business & Commercial Loan Applications' 
+    }
   ];
 
-  const standardBanks = (Array.isArray(allBanks) ? allBanks : []).filter(b => {
-    const isVirtualLocBank = (b.short_code || '').toUpperCase() === 'LOC_EOC' || b.is_loc_eoc || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '');
-    return !isVirtualLocBank;
-  });
+  const isFinanceNBFC = (b) => {
+    const name = String(b?.name || '').toLowerCase();
+    const code = String(b?.short_code || '').toUpperCase();
+    return (
+      code === 'FINABLE' || name.includes('finable') ||
+      code === 'PUNAWALLA' || code === 'POONAWALLA' || name.includes('punawalla') || name.includes('poonawalla') ||
+      code === 'BAJAJ' || code === 'BAJAJ_FINANCE' || name.includes('bajaj') ||
+      code === 'KREDITBEE' || name.includes('kreditbee') || name.includes('kredit bee') ||
+      code === 'TATACAPITAL' || code === 'TATA_CAPITAL' || name.includes('tata capital') ||
+      code === 'UNITY' || code === 'UNITY_BANK' || name.includes('unity') ||
+      code === 'RAMFINCORP' || code === 'RAM_FINCORP' || name.includes('ram fincorp') || name.includes('ramfin')
+    );
+  };
+
+  const isPersonalLoanBank = (b) => {
+    const name = String(b?.name || '').toLowerCase();
+    const code = String(b?.short_code || '').toUpperCase();
+    return (
+      code === 'INDUSIND' || name.includes('indusind') ||
+      code === 'IDFC' || name.includes('idfc') ||
+      code === 'HDFC' || name.includes('hdfc') ||
+      code === 'ICICI' || name.includes('icici') ||
+      code === 'AXIS' || name.includes('axis') ||
+      code === 'KOTAK' || name.includes('kotak') ||
+      code === 'SBI' || name.includes('state bank') ||
+      code === 'YES' || name.includes('yes bank') ||
+      code === 'FEDERAL' || name.includes('federal') ||
+      code === 'BOB' || name.includes('baroda') ||
+      code === 'PNB' || name.includes('punjab national')
+    );
+  };
+
+  const isLocEocBank = (b) => {
+    const name = String(b?.name || '').toLowerCase();
+    const code = String(b?.short_code || '').toUpperCase();
+    return (
+      code === 'LOC_EOC' || b?.is_loc_eoc || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(name) ||
+      (Array.isArray(b?.categories) && (b.categories.includes('loc_eoc') || b.categories.includes('loan_on_credit_card') || b.categories.includes('smart_emi'))) ||
+      ['HDFC', 'ICICI', 'SBI', 'AXIS', 'KOTAK', 'INDUSIND', 'IDFC', 'RBL', 'AU'].includes(code) ||
+      name.includes('hdfc') || name.includes('icici') || name.includes('sbi') || name.includes('axis') || name.includes('kotak')
+    );
+  };
+
+  const isBusinessLoanBank = (b) => {
+    const name = String(b?.name || '').toLowerCase();
+    const code = String(b?.short_code || '').toUpperCase();
+    return (
+      (Array.isArray(b?.categories) && b.categories.includes('business_loan')) ||
+      code === 'BAJAJ' || code === 'BAJAJ_FINANCE' || name.includes('bajaj') ||
+      code === 'TATACAPITAL' || code === 'TATA_CAPITAL' || name.includes('tata capital') ||
+      code === 'POONAWALLA' || code === 'PUNAWALLA' || name.includes('poonawalla') || name.includes('punawalla') ||
+      code === 'HDFC' || name.includes('hdfc') ||
+      code === 'ICICI' || name.includes('icici') ||
+      code === 'KOTAK' || name.includes('kotak') ||
+      code === 'AXIS' || name.includes('axis') ||
+      code === 'INDUSIND' || name.includes('indusind')
+    );
+  };
+
+  const isCreditCardBank = (b) => {
+    const isVirtualLocBank = (b?.short_code || '').toUpperCase() === 'LOC_EOC' || b?.is_loc_eoc || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b?.name || '');
+    if (isVirtualLocBank) return false;
+    if (Array.isArray(b?.categories) && b.categories.includes('credit_card')) return true;
+    if (isFinanceNBFC(b)) return false;
+    return true;
+  };
+
+  const getBanksForCategory = (catId) => {
+    const banks = Array.isArray(allBanks) ? allBanks : [];
+    if (showAllBanksFallback) {
+      return banks;
+    }
+    switch (catId) {
+      case 'personal_loan': {
+        const plBanks = banks.filter(b => {
+          const isVirtualLoc = (b?.short_code || '').toUpperCase() === 'LOC_EOC' || b?.is_loc_eoc || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b?.name || '');
+          if (isVirtualLoc) return false;
+          if (Array.isArray(b?.categories) && (b.categories.includes('personal_loan') || b.categories.includes('loan'))) return true;
+          return isFinanceNBFC(b) || isPersonalLoanBank(b) || (b?.name || '').toLowerCase().includes('loan');
+        });
+        if (plSubFilter === 'bank') {
+          return plBanks.filter(b => !isFinanceNBFC(b));
+        }
+        if (plSubFilter === 'finance') {
+          return plBanks.filter(b => isFinanceNBFC(b));
+        }
+        return plBanks;
+      }
+      case 'loc_eoc':
+        return banks.filter(b => isLocEocBank(b));
+      case 'business_loan':
+        return banks.filter(b => isBusinessLoanBank(b));
+      case 'credit_card':
+      default:
+        return banks.filter(b => isCreditCardBank(b));
+    }
+  };
 
   const isSelected = (cat, bankId) => {
     return (Array.isArray(categoryAssignments) ? categoryAssignments : []).some(
@@ -82,12 +217,18 @@ const CategoryWiseBankSelector = ({
     onChange(next);
   };
 
-  const handleSelectAll = (cat) => {
+  const handleSelectAll = (cat, banksToSelect) => {
     const otherCatItems = (Array.isArray(categoryAssignments) ? categoryAssignments : []).filter(
       item => (item.category || 'credit_card').toLowerCase() !== cat
     );
-    const newCatItems = standardBanks.map(b => ({ category: cat, bank_id: b.id }));
-    onChange([...otherCatItems, ...newCatItems]);
+    const existingInThisCat = (Array.isArray(categoryAssignments) ? categoryAssignments : []).filter(
+      item => (item.category || 'credit_card').toLowerCase() === cat
+    );
+    const existingIds = new Set(existingInThisCat.map(i => i.bank_id || i.id));
+    const toAdd = banksToSelect
+      .filter(b => !existingIds.has(b.id))
+      .map(b => ({ category: cat, bank_id: b.id }));
+    onChange([...otherCatItems, ...existingInThisCat, ...toAdd]);
   };
 
   const handleClearAll = (cat) => {
@@ -97,14 +238,65 @@ const CategoryWiseBankSelector = ({
     onChange(next);
   };
 
+  const currentCategory = categories.find(c => c.id === activeTab) || categories[0];
+  const currentCategoryBanks = getBanksForCategory(activeTab);
+  const filteredBanks = currentCategoryBanks.filter(b => 
+    (b.name || '').toLowerCase().includes((searchQuery || '').toLowerCase()) || 
+    (b.short_code || '').toLowerCase().includes((searchQuery || '').toLowerCase())
+  );
+
+  const getBankBadgeMeta = (catId, bank) => {
+    if (catId === 'personal_loan') {
+      if (isFinanceNBFC(bank)) {
+        return { label: '💼 Finance / NBFC', bg: '#F5F3FF', color: '#6D28D9', border: '#DDD6FE' };
+      }
+      return { label: '🏦 Bank Partner', bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' };
+    }
+    if (catId === 'loc_eoc') {
+      const isVirtual = (bank.short_code || '').toUpperCase() === 'LOC_EOC' || bank.is_loc_eoc;
+      if (isVirtual) {
+        return { label: '🔄 Program Entity', bg: '#ECFDF5', color: '#047857', border: '#A7F3D0' };
+      }
+      return { label: '💳 LOC Bank', bg: '#F5F3FF', color: '#6D28D9', border: '#DDD6FE' };
+    }
+    if (catId === 'business_loan') {
+      return { label: '🏢 Business Loan', bg: '#FFFBEB', color: '#B45309', border: '#FDE68A' };
+    }
+    return { label: '💳 Card Issuer', bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' };
+  };
+
   return (
     <div style={{ background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "12px", padding: "16px", marginTop: "8px" }}>
-      <div style={{ marginBottom: "12px" }}>
-        <label style={{ fontSize: "14px", fontWeight: 700, color: "#0F172A", display: "block" }}>Assign Access (Category & Bank pairs) *</label>
-        <span style={{ fontSize: "12px", color: "#64748B" }}>Select banks independently under each product category</span>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
+        <div>
+          <label style={{ fontSize: "14px", fontWeight: 700, color: "#0F172A", display: "flex", alignItems: "center", gap: "6px" }}>
+            Assign Access (Category & Bank pairs) *
+          </label>
+          <span style={{ fontSize: "12px", color: "#64748B" }}>
+            Select institutions independently under each category. Permissions will be strictly scoped.
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowAllBanksFallback(prev => !prev)}
+          style={{
+            fontSize: "11px",
+            fontWeight: 600,
+            padding: "4px 8px",
+            borderRadius: "6px",
+            border: "1px solid #CBD5E1",
+            background: showAllBanksFallback ? "#EEF2FF" : "#FFFFFF",
+            color: showAllBanksFallback ? "#4F46E5" : "#64748B",
+            cursor: "pointer"
+          }}
+          title="Toggle between curated category banks and all registered institutions"
+        >
+          {showAllBanksFallback ? 'Viewing: All Banks' : 'Viewing: Curated Category Banks'}
+        </button>
       </div>
 
-      <div style={{ display: "flex", gap: "8px", borderBottom: "1.5px solid #E2E8F0", paddingBottom: "10px", marginBottom: "12px" }}>
+      {/* Category Tabs */}
+      <div style={{ display: "flex", gap: "8px", borderBottom: "1.5px solid #E2E8F0", paddingBottom: "10px", marginBottom: "12px", overflowX: "auto" }}>
         {categories.map(cat => {
           const count = (Array.isArray(categoryAssignments) ? categoryAssignments : []).filter(
             item => (item.category || 'credit_card').toLowerCase() === cat.id
@@ -114,26 +306,31 @@ const CategoryWiseBankSelector = ({
             <button
               key={cat.id}
               type="button"
-              onClick={() => setActiveTab(cat.id)}
+              onClick={() => {
+                setActiveTab(cat.id);
+                setSearchQuery('');
+              }}
               style={{
-                padding: "8px 14px",
+                padding: "8px 12px",
                 borderRadius: "8px",
                 fontSize: "13px",
                 fontWeight: 700,
                 cursor: "pointer",
-                border: "1px solid",
-                borderColor: isActive ? "#2563EB" : "#CBD5E1",
-                background: isActive ? "#EFF6FF" : "#FFFFFF",
-                color: isActive ? "#1D4ED8" : "#475569",
+                border: "1.5px solid",
+                borderColor: isActive ? cat.color : "#CBD5E1",
+                background: isActive ? cat.bg : "#FFFFFF",
+                color: isActive ? cat.color : "#475569",
                 display: "flex",
                 alignItems: "center",
-                gap: "8px",
+                gap: "7px",
+                whiteSpace: "nowrap",
                 transition: "all 0.15s"
               }}
             >
+              <span style={{ display: "flex", alignItems: "center" }}>{cat.icon}</span>
               <span>{cat.label}</span>
               <span style={{
-                background: isActive ? "#2563EB" : "#E2E8F0",
+                background: isActive ? cat.color : "#E2E8F0",
                 color: isActive ? "#FFFFFF" : "#475569",
                 fontSize: "11px",
                 fontWeight: 800,
@@ -147,103 +344,191 @@ const CategoryWiseBankSelector = ({
         })}
       </div>
 
-      {categories.filter(cat => cat.id === activeTab).map(cat => {
-        const catAssignments = (Array.isArray(categoryAssignments) ? categoryAssignments : []).filter(
-          item => (item.category || 'credit_card').toLowerCase() === cat.id
-        );
-        const filteredBanks = standardBanks.filter(b => 
-          (b.name || '').toLowerCase().includes((searchQuery || '').toLowerCase()) || 
-          (b.short_code || '').toLowerCase().includes((searchQuery || '').toLowerCase())
-        );
-
-        return (
-          <div key={cat.id}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", gap: "10px", flexWrap: "wrap" }}>
-              <span style={{ fontSize: "12px", color: "#64748B", fontWeight: 600 }}>
-                {cat.desc} ({catAssignments.length} selected)
-              </span>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button
-                  type="button"
-                  onClick={() => handleSelectAll(cat.id)}
-                  style={{ padding: "4px 10px", fontSize: "12px", fontWeight: 600, background: "#EFF6FF", color: "#2563EB", border: "1px solid #BFDBFE", borderRadius: "6px", cursor: "pointer" }}
-                >
-                  Select All
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleClearAll(cat.id)}
-                  style={{ padding: "4px 10px", fontSize: "12px", fontWeight: 600, background: "#F1F5F9", color: "#64748B", border: "1px solid #CBD5E1", borderRadius: "6px", cursor: "pointer" }}
-                >
-                  Clear All
-                </button>
-              </div>
-            </div>
-
-            <div style={{ position: "relative", marginBottom: "12px" }}>
-              <input
-                type="text"
-                placeholder={`Search banks under ${cat.label}...`}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ width: "100%", padding: "8px 12px 8px 34px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "13px", outline: "none", boxSizing: "border-box" }}
-              />
-              <span style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", pointerEvents: "none" }}>
-                <Search size={14} color="#9CA3AF" />
-              </span>
-            </div>
-
-            <div style={{ maxHeight: "200px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", paddingRight: "4px" }}>
-              {filteredBanks.map(bank => {
-                const checked = isSelected(cat.id, bank.id);
-                return (
-                  <div
-                    key={bank.id}
-                    onClick={() => handleToggle(cat.id, bank.id)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "8px 12px",
-                      borderRadius: "8px",
-                      border: `1px solid ${checked ? (cat.id === 'loc_eoc' ? "#059669" : "#2563EB") : "#CBD5E1"}`,
-                      background: checked ? (cat.id === 'loc_eoc' ? "#ECFDF5" : "#EFF6FF") : "#FFFFFF",
-                      cursor: "pointer",
-                      transition: "all 0.15s"
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      {bank.logo_url ? (
-                        <img src={bank.logo_url} alt={bank.name} style={{ width: "20px", height: "20px", objectFit: "contain" }} />
-                      ) : (
-                        <div style={{ width: "20px", height: "20px", background: "#DBEAFE", borderRadius: "4px", fontSize: "10px", fontWeight: 800, color: "#1E40AF", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          {bank.short_code?.substring(0, 2) || 'BK'}
-                        </div>
-                      )}
-                      <div>
-                        <span style={{ fontSize: "13px", fontWeight: 600, color: "#1E293B" }}>{bank.name}</span>
-                        {bank.short_code && (
-                          <span style={{ fontSize: "10px", color: "#64748B", display: "block" }}>{bank.short_code}</span>
-                        )}
-                      </div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => {}}
-                      style={{ cursor: "pointer" }}
-                    />
-                  </div>
-                );
-              })}
-            </div>
+      {/* Category Header Controls */}
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", gap: "10px", flexWrap: "wrap" }}>
+          <div>
+            <span style={{ fontSize: "12px", color: "#64748B", fontWeight: 600 }}>
+              {currentCategory.desc} ({
+                (Array.isArray(categoryAssignments) ? categoryAssignments : []).filter(
+                  item => (item.category || 'credit_card').toLowerCase() === currentCategory.id
+                ).length
+              } selected)
+            </span>
           </div>
-        );
-      })}
+
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <button
+              type="button"
+              onClick={() => handleSelectAll(currentCategory.id, filteredBanks)}
+              style={{ padding: "4px 10px", fontSize: "12px", fontWeight: 600, background: "#EFF6FF", color: "#2563EB", border: "1px solid #BFDBFE", borderRadius: "6px", cursor: "pointer" }}
+            >
+              Select All ({filteredBanks.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => handleClearAll(currentCategory.id)}
+              style={{ padding: "4px 10px", fontSize: "12px", fontWeight: 600, background: "#F1F5F9", color: "#64748B", border: "1px solid #CBD5E1", borderRadius: "6px", cursor: "pointer" }}
+            >
+              Clear All
+            </button>
+          </div>
+        </div>
+
+        {/* Sub-filters for Personal Loan Tab */}
+        {activeTab === 'personal_loan' && !showAllBanksFallback && (
+          <div style={{ display: "flex", gap: "6px", marginBottom: "10px", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => setPlSubFilter('all')}
+              style={{
+                fontSize: "11px",
+                fontWeight: plSubFilter === 'all' ? 700 : 500,
+                padding: "3px 9px",
+                borderRadius: "6px",
+                border: "1px solid",
+                borderColor: plSubFilter === 'all' ? "#059669" : "#CBD5E1",
+                background: plSubFilter === 'all' ? "#ECFDF5" : "#FFFFFF",
+                color: plSubFilter === 'all' ? "#047857" : "#475569",
+                cursor: "pointer"
+              }}
+            >
+              All Providers
+            </button>
+            <button
+              type="button"
+              onClick={() => setPlSubFilter('bank')}
+              style={{
+                fontSize: "11px",
+                fontWeight: plSubFilter === 'bank' ? 700 : 500,
+                padding: "3px 9px",
+                borderRadius: "6px",
+                border: "1px solid",
+                borderColor: plSubFilter === 'bank' ? "#2563EB" : "#CBD5E1",
+                background: plSubFilter === 'bank' ? "#EFF6FF" : "#FFFFFF",
+                color: plSubFilter === 'bank' ? "#1D4ED8" : "#475569",
+                cursor: "pointer"
+              }}
+            >
+              🏦 Bank Partners (IndusInd, IDFC, HDFC...)
+            </button>
+            <button
+              type="button"
+              onClick={() => setPlSubFilter('finance')}
+              style={{
+                fontSize: "11px",
+                fontWeight: plSubFilter === 'finance' ? 700 : 500,
+                padding: "3px 9px",
+                borderRadius: "6px",
+                border: "1px solid",
+                borderColor: plSubFilter === 'finance' ? "#7C3AED" : "#CBD5E1",
+                background: plSubFilter === 'finance' ? "#F5F3FF" : "#FFFFFF",
+                color: plSubFilter === 'finance' ? "#6D28D9" : "#475569",
+                cursor: "pointer"
+              }}
+            >
+              💼 Finance / NBFC (Finable, Bajaj, KreditBee...)
+            </button>
+          </div>
+        )}
+
+        {/* Search Bar */}
+        <div style={{ position: "relative", marginBottom: "12px" }}>
+          <input
+            type="text"
+            placeholder={`Search institutions under ${currentCategory.label}...`}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ width: "100%", padding: "8px 12px 8px 34px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "13px", outline: "none", boxSizing: "border-box" }}
+          />
+          <span style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", pointerEvents: "none" }}>
+            <Search size={14} color="#9CA3AF" />
+          </span>
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#9CA3AF" }}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Bank Grid */}
+        <div style={{ maxHeight: "250px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", paddingRight: "4px" }}>
+          {filteredBanks.map(bank => {
+            const checked = isSelected(currentCategory.id, bank.id);
+            const badgeMeta = getBankBadgeMeta(currentCategory.id, bank);
+            return (
+              <div
+                key={bank.id}
+                onClick={() => handleToggle(currentCategory.id, bank.id)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  border: `1.5px solid ${checked ? currentCategory.color : "#CBD5E1"}`,
+                  background: checked ? currentCategory.bg : "#FFFFFF",
+                  cursor: "pointer",
+                  transition: "all 0.15s"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                  {bank.logo_url ? (
+                    <img src={bank.logo_url} alt={bank.name} style={{ width: "22px", height: "22px", objectFit: "contain", flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ width: "22px", height: "22px", background: "#DBEAFE", borderRadius: "4px", fontSize: "10px", fontWeight: 800, color: "#1E40AF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {bank.short_code?.substring(0, 2) || 'BK'}
+                    </div>
+                  )}
+                  <div style={{ minWidth: 0, overflow: "hidden" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                      <span style={{ fontSize: "13px", fontWeight: 600, color: "#1E293B", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+                        {bank.name}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "2px" }}>
+                      {bank.short_code && (
+                        <span style={{ fontSize: "10px", color: "#64748B", fontWeight: 600 }}>{bank.short_code}</span>
+                      )}
+                      <span style={{
+                        background: badgeMeta.bg,
+                        color: badgeMeta.color,
+                        border: `1px solid ${badgeMeta.border}`,
+                        borderRadius: "3px",
+                        padding: "0px 4px",
+                        fontSize: "9px",
+                        fontWeight: 700
+                      }}>
+                        {badgeMeta.label}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => {}}
+                  style={{ cursor: "pointer", accentColor: currentCategory.color, marginLeft: "8px", flexShrink: 0 }}
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        {filteredBanks.length === 0 && (
+          <div style={{ textAlign: "center", padding: "20px", color: "#94A3B8", fontSize: "13px" }}>
+            No institutions found matching &quot;{searchQuery}&quot; under {currentCategory.label}.
+          </div>
+        )}
+      </div>
 
       {(Array.isArray(categoryAssignments) ? categoryAssignments : []).length === 0 && (
-        <div style={{ fontSize: "12px", color: "#EF4444", marginTop: "8px", fontWeight: 500, display: "flex", alignItems: "center", gap: "4px" }}>
-          <AlertTriangle size={14} /> At least one bank must be selected under Credit Card or LOC/EOC.
+        <div style={{ fontSize: "12px", color: "#EF4444", marginTop: "10px", fontWeight: 500, display: "flex", alignItems: "center", gap: "4px" }}>
+          <AlertTriangle size={14} /> At least one institution must be selected under a product category.
         </div>
       )}
     </div>
@@ -374,8 +659,9 @@ export default function SuperAdminDashboard() {
     });
     setEditBankSearchQuery('');
     if (allBanks.length === 0) {
-      api.get('/banks').then(res => {
-        if (res.data && res.data.data) setAllBanks(res.data.data);
+      api.get('/banks?limit=1000').then(res => {
+        const banksList = res.data && res.data.data ? (Array.isArray(res.data.data) ? res.data.data : res.data.data.rows || []) : [];
+        if (banksList.length > 0) setAllBanks(banksList);
       }).catch(err => console.error(err));
     }
     setShowEditModal(true);
@@ -1220,13 +1506,32 @@ export default function SuperAdminDashboard() {
                           const isExpanded = !!expandedAdminBanks[adminKey];
 
                           const renderBankBadge = (b, i) => {
-                            const catLabel = (b.category === 'loc_eoc' || b.is_loc_eoc) ? 'LOC/EOC' : 'CC';
-                            const badgeBg = (b.category === 'loc_eoc' || b.is_loc_eoc) ? '#ECFDF5' : '#EFF6FF';
-                            const badgeColor = (b.category === 'loc_eoc' || b.is_loc_eoc) ? '#047857' : '#1D4ED8';
-                            const borderCol = (b.category === 'loc_eoc' || b.is_loc_eoc) ? '#A7F3D0' : '#BFDBFE';
+                            const cat = String(b.category || (b.is_loc_eoc ? 'loc_eoc' : 'credit_card')).toLowerCase();
+                            let catLabel = 'CC';
+                            let badgeBg = '#EFF6FF';
+                            let badgeColor = '#1D4ED8';
+                            let borderCol = '#BFDBFE';
+
+                            if (cat === 'personal_loan' || cat === 'loan') {
+                              catLabel = 'PL';
+                              badgeBg = '#ECFDF5';
+                              badgeColor = '#047857';
+                              borderCol = '#A7F3D0';
+                            } else if (cat === 'loc_eoc' || b.is_loc_eoc) {
+                              catLabel = 'LOC';
+                              badgeBg = '#F5F3FF';
+                              badgeColor = '#6D28D9';
+                              borderCol = '#DDD6FE';
+                            } else if (cat === 'business_loan') {
+                              catLabel = 'BL';
+                              badgeBg = '#FFFBEB';
+                              badgeColor = '#B45309';
+                              borderCol = '#FDE68A';
+                            }
+
                             return (
                               <span key={i} style={{ background: badgeBg, color: badgeColor, border: `1px solid ${borderCol}`, borderRadius: "4px", padding: "1px 5px", fontSize: "10px", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "3px" }}>
-                                {b.short_code || b.name} <span style={{ opacity: 0.75, fontSize: "9px" }}>({catLabel})</span>
+                                {b.short_code || b.name} <span style={{ opacity: 0.85, fontSize: "9px", fontWeight: 700 }}>({catLabel})</span>
                               </span>
                             );
                           };
@@ -1760,8 +2065,9 @@ export default function SuperAdminDashboard() {
                   onChange={(e) => {
                     handleChange(e);
                     if (['Operational Head', 'Backend', 'Administrative Operator', 'Administrative Sales Executive', 'PAN Checker', 'Remark Operator', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'Querable Operator', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'Queryable Operator', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR', 'Physical Curable Operator', 'PHYSICAL CURABLE OPERATOR', 'PHYSICAL_CURABLE_OPERATOR', 'Digital Curable Operator', 'DIGITAL CURABLE OPERATOR', 'DIGITAL_CURABLE_OPERATOR', 'Email Curable Operator', 'EMAIL CURABLE OPERATOR', 'EMAIL_CURABLE_OPERATOR', 'Physical Curable', 'Digital Curable', 'Email Curable'].includes(e.target.value) && allBanks.length === 0) {
-                      api.get('/banks').then(res => {
-                        if (res.data && res.data.data) setAllBanks(res.data.data);
+                      api.get('/banks?limit=1000').then(res => {
+                        const banksList = res.data && res.data.data ? (Array.isArray(res.data.data) ? res.data.data : res.data.data.rows || []) : [];
+                        if (banksList.length > 0) setAllBanks(banksList);
                       }).catch(err => console.error(err));
                     }
                   }}
@@ -1922,8 +2228,9 @@ export default function SuperAdminDashboard() {
                       const val = e.target.value;
                       setEditForm({ ...editForm, designation: val });
                       if (['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR', 'KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR', 'Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'Querable Operator', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'Queryable Operator', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR', 'Physical Curable Operator', 'PHYSICAL CURABLE OPERATOR', 'PHYSICAL_CURABLE_OPERATOR', 'Digital Curable Operator', 'DIGITAL CURABLE OPERATOR', 'DIGITAL_CURABLE_OPERATOR', 'Email Curable Operator', 'EMAIL CURABLE OPERATOR', 'EMAIL_CURABLE_OPERATOR', 'Physical Curable', 'Digital Curable', 'Email Curable'].includes(val) && allBanks.length === 0) {
-                        api.get('/banks').then(res => {
-                          if (res.data && res.data.data) setAllBanks(res.data.data);
+                        api.get('/banks?limit=1000').then(res => {
+                          const banksList = res.data && res.data.data ? (Array.isArray(res.data.data) ? res.data.data : res.data.data.rows || []) : [];
+                          if (banksList.length > 0) setAllBanks(banksList);
                         }).catch(err => console.error(err));
                       }
                     }}

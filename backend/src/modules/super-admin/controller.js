@@ -468,7 +468,7 @@ const listAdmins = async (req, res, next) => {
       if (!adminBankMap[a.admin_id]) {
         adminBankMap[a.admin_id] = [];
         adminBankIdMap[a.admin_id] = [];
-        adminCategoryMap[a.admin_id] = { credit_card: [], loc_eoc: [] };
+        adminCategoryMap[a.admin_id] = { credit_card: [], loc_eoc: [], personal_loan: [], business_loan: [] };
       }
       const cat = normalizeAssignmentCategory(a.category);
       const isLocEoc = cat === 'loc_eoc' || (a.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(a.bank_name || '');
@@ -493,7 +493,7 @@ const listAdmins = async (req, res, next) => {
         has_loc_eoc: hasLocEoc,
         hasLocEoc: hasLocEoc,
         assigned_banks: assigned,
-        category_assignments: adminCategoryMap[a._id] || { credit_card: [], loc_eoc: [] },
+        category_assignments: adminCategoryMap[a._id] || { credit_card: [], loc_eoc: [], personal_loan: [], business_loan: [] },
         bank_ids: adminBankIdMap[a._id] || []
       };
     }));
