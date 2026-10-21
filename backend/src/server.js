@@ -407,6 +407,14 @@ const startServer = async () => {
       logger.warn('Smart EMI / LOCC auto seed note:', emiErr.message);
     }
 
+    // Always ensure CIBIL-Based Personal Loan products (3 Bank + 7 Finance) are seeded on boot
+    try {
+      const { seedCibilPersonalLoanProducts } = require('./database/seeds/seed-cibil-personal-loans.js');
+      await seedCibilPersonalLoanProducts();
+    } catch (plErr) {
+      logger.warn('CIBIL Personal Loan auto seed note:', plErr.message);
+    }
+
     // Always ensure Bulk SMS tables exist on boot
     try {
       const migrateBulkSms = require('./database/migrations/migrate_bulk_sms.js');

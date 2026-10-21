@@ -86,7 +86,7 @@ function IncomeWalletIcon({ size = 42 }) {
 const QUICK_FINANCE_CHIPS = [
   'All Finance Companies',
   'Finable',
-  'Poonawalla Finance',
+  'Punawalla Finance',
   'Bajaj Finance',
   'KreditBee',
   'Tata Capital',

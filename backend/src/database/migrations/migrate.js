@@ -4904,6 +4904,15 @@ const migrate = async () => {
     logger.error('Failed to run Smart EMI and LOCC full seeder:', smartEmiSeedErr.message);
   }
 
+  // ── Seed CIBIL Personal Loan Products (3 Bank + 7 Finance) ──
+  try {
+    const { seedCibilPersonalLoanProducts } = require('../seeds/seed-cibil-personal-loans');
+    await seedCibilPersonalLoanProducts();
+    logger.info('[Migration] Successfully verified CIBIL Personal Loan canonical products.');
+  } catch (cibilSeedErr) {
+    logger.error('Failed to run CIBIL Personal Loan seeder in migration:', cibilSeedErr.message);
+  }
+
   const { migrateSmartEmiAndLoccSchema } = require('./migrate_smart_emi_locc_and_reports');
   await migrateSmartEmiAndLoccSchema();
 

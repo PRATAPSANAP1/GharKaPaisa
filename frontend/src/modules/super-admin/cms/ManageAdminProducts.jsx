@@ -9,7 +9,9 @@ import {
   isFinanceProduct, 
   isBankProduct, 
   isCibilBankProduct, 
-  getLoanEligibilityType 
+  getLoanEligibilityType,
+  CIBIL_BANK_PRESET_PRODUCTS,
+  CIBIL_FINANCE_PRESET_PRODUCTS
 } from "../../../utils/personalLoanHelpers";
 import { 
   MdAdd, MdSearch, MdEdit, MdDelete, MdVisibility,
@@ -242,6 +244,73 @@ export default function ManageAdminProducts() {
 
   const isLoanCategory = activeCategory === 'loans' || form.category === 'loans' || form.category === 'personal_loan';
   const isPersonalLoan = isLoanCategory && form.sub_category === 'Personal Loan';
+
+  const [seedingLoans, setSeedingLoans] = useState(false);
+
+  const handleSeedCibilLoans = async () => {
+    if (!window.confirm("Seed / provision all 10 canonical CIBIL Personal Loan products (3 Bank + 7 Finance)?")) return;
+    setSeedingLoans(true);
+    try {
+      const res = await api.post('/products/seed-cibil-personal-loans');
+      if (res.data?.success) {
+        triggerToast("Successfully provisioned all 10 CIBIL Personal Loan products!", "success");
+        fetchProducts();
+      } else {
+        triggerToast(res.data?.message || "Failed to seed CIBIL products", "error");
+      }
+    } catch (e) {
+      triggerToast(e.response?.data?.message || "Failed to seed CIBIL products", "error");
+    } finally {
+      setSeedingLoans(false);
+    }
+  };
+
+  const handleApplyPresetProduct = (preset) => {
+    // Find matching bank id
+    const matchedBank = banks.find(b => 
+      (preset.bank_code && (b.short_code || '').toUpperCase() === preset.bank_code.toUpperCase()) ||
+      (preset.bank_name && (b.name || '').toLowerCase().includes(preset.bank_name.toLowerCase())) ||
+      (preset.name && (b.name || '').toLowerCase().includes(preset.name.toLowerCase()))
+    );
+
+    const autoSlug = preset.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+    setForm(prev => ({
+      ...prev,
+      name: preset.name,
+      bank_id: matchedBank ? matchedBank.id : prev.bank_id,
+      category: activeCategory === 'loans' ? 'loans' : 'personal_loan',
+      sub_category: 'Personal Loan',
+      loan_type: preset.loan_type,
+      provider_type: preset.provider_type,
+      description: preset.description,
+      min_amount: preset.min_amount,
+      max_amount: preset.max_amount,
+      interest_rate: preset.interest_rate,
+      annual_fee: preset.interest_rate,
+      processing_fee: preset.processing_fee,
+      joining_fee: preset.processing_fee,
+      time_period: preset.time_period,
+      disbursal_time: preset.disbursal_time,
+      min_age: preset.min_age,
+      max_age: preset.max_age,
+      min_income: preset.min_income,
+      cibil_required: preset.cibil_required,
+      badge: preset.badge,
+      features: preset.features,
+      benefits: preset.features.map(f => ({ title: 'Key Feature', description: f })),
+      slug: autoSlug,
+      meta_title: `${preset.name} - Apply Online | GharKaPaisa`,
+      meta_description: preset.description,
+      show_on_website: true,
+      show_in_partner: true,
+      button_text: 'Apply Now',
+      status: 'Active',
+      is_active: true
+    }));
+
+    triggerToast(`Loaded template for "${preset.name}"! Bank set to ${matchedBank?.name || preset.bank_name}`, 'success');
+  };
 
   const openAddModal = () => {
     setEditItem(null);
@@ -712,17 +781,38 @@ export default function ManageAdminProducts() {
           </p>
         </div>
 
-        <button
-          onClick={openAddModal}
-          style={{
-            padding: '10px 20px', borderRadius: '12px', border: 'none',
-            background: 'linear-gradient(135deg, #2563EB, #1D4ED8)', color: '#FFFFFF',
-            fontWeight: 800, fontSize: '13.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px'
-          }}
-        >
-          <MdAdd size={20} />
-          <span>Add {categoryTitle}</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {isLoanCategory && (
+            <button
+              type="button"
+              onClick={handleSeedCibilLoans}
+              disabled={seedingLoans}
+              title="Automatically insert/ensure all 10 canonical CIBIL Personal Loan products (3 Bank + 7 Finance)"
+              style={{
+                padding: '10px 18px', borderRadius: '12px', border: 'none',
+                background: 'linear-gradient(135deg, #0284C7, #0369A1)',
+                color: '#FFFFFF', fontWeight: 800, fontSize: '13px', cursor: seedingLoans ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', gap: '6px',
+                boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)',
+                transition: 'all 0.2s'
+              }}
+            >
+              <span>{seedingLoans ? '⏳ Provisioning...' : '⚡ Seed All 10 CIBIL Products'}</span>
+            </button>
+          )}
+
+          <button
+            onClick={openAddModal}
+            style={{
+              padding: '10px 20px', borderRadius: '12px', border: 'none',
+              background: 'linear-gradient(135deg, #2563EB, #1D4ED8)', color: '#FFFFFF',
+              fontWeight: 800, fontSize: '13.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px'
+            }}
+          >
+            <MdAdd size={20} />
+            <span>Add {categoryTitle}</span>
+          </button>
+        </div>
       </div>
 
       {/* SEARCH & FILTER CONTROLS */}
@@ -1216,6 +1306,117 @@ export default function ManageAdminProducts() {
                               : `✓ Product allocates to: ${form.loan_type === 'cibil' ? 'CIBIL-Based' : 'Income-Based'} → Finance Section`}
                           </span>
                         </div>
+
+                        {/* PRESET PRODUCT QUICK-FILL TEMPLATES */}
+                        {form.loan_type === 'cibil' && form.provider_type === 'bank' && (
+                          <div style={{
+                            padding: '12px 14px',
+                            background: isDark ? '#0f172a' : '#FFFFFF',
+                            border: `1.5px dashed ${isDark ? '#38bdf8' : '#0284c7'}`,
+                            borderRadius: '12px'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                              <span style={{ fontSize: '12px', fontWeight: 900, color: isDark ? '#38BDF8' : '#0369A1' }}>
+                                ⚡ Click to Pre-fill & Add CIBIL Bank Product (3 designated products):
+                              </span>
+                              <span style={{ fontSize: '11px', color: isDark ? '#94A3B8' : '#64748B', fontWeight: 600 }}>
+                                Auto-fills name, bank, criteria & specs
+                              </span>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                              {CIBIL_BANK_PRESET_PRODUCTS.map((prod, idx) => {
+                                const isCurrent = form.name.toLowerCase() === prod.name.toLowerCase();
+                                return (
+                                  <button
+                                    type="button"
+                                    key={prod.name}
+                                    onClick={() => handleApplyPresetProduct(prod)}
+                                    style={{
+                                      padding: '10px 12px',
+                                      borderRadius: '10px',
+                                      border: isCurrent ? '2px solid #0284C7' : `1px solid ${isDark ? '#334155' : '#E2E8F0'}`,
+                                      background: isCurrent ? (isDark ? '#0369a120' : '#E0F2FE') : (isDark ? '#1e293b' : '#F8FAFC'),
+                                      cursor: 'pointer',
+                                      textAlign: 'left',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: '4px',
+                                      transition: 'all 0.15s ease'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#0284C7' }}>
+                                        #{idx + 1} Bank
+                                      </span>
+                                      {isCurrent && <span style={{ fontSize: '10px', color: '#0284C7', fontWeight: 900 }}>✓ Selected</span>}
+                                    </div>
+                                    <span style={{ fontSize: '13px', fontWeight: 800, color: isDark ? '#F8FAFC' : '#0F172A' }}>
+                                      {prod.name}
+                                    </span>
+                                    <span style={{ fontSize: '11px', color: isDark ? '#94A3B8' : '#64748B' }}>
+                                      {prod.bank_name} • {prod.interest_rate}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {form.loan_type === 'cibil' && form.provider_type === 'finance' && (
+                          <div style={{
+                            padding: '12px 14px',
+                            background: isDark ? '#0f172a' : '#FFFFFF',
+                            border: `1.5px dashed ${isDark ? '#38bdf8' : '#0284c7'}`,
+                            borderRadius: '12px'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                              <span style={{ fontSize: '12px', fontWeight: 900, color: isDark ? '#38BDF8' : '#0369A1' }}>
+                                ⚡ Click to Pre-fill & Add CIBIL Finance Product (7 designated products):
+                              </span>
+                              <span style={{ fontSize: '11px', color: isDark ? '#94A3B8' : '#64748B', fontWeight: 600 }}>
+                                Auto-fills name, partner, criteria & specs
+                              </span>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '8px' }}>
+                              {CIBIL_FINANCE_PRESET_PRODUCTS.map((prod, idx) => {
+                                const isCurrent = form.name.toLowerCase() === prod.name.toLowerCase();
+                                return (
+                                  <button
+                                    type="button"
+                                    key={prod.name}
+                                    onClick={() => handleApplyPresetProduct(prod)}
+                                    style={{
+                                      padding: '8px 10px',
+                                      borderRadius: '10px',
+                                      border: isCurrent ? '2px solid #0284C7' : `1px solid ${isDark ? '#334155' : '#E2E8F0'}`,
+                                      background: isCurrent ? (isDark ? '#0369a120' : '#E0F2FE') : (isDark ? '#1e293b' : '#F8FAFC'),
+                                      cursor: 'pointer',
+                                      textAlign: 'left',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: '2px',
+                                      transition: 'all 0.15s ease'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                      <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#0284C7' }}>
+                                        #{idx + 1} Finance
+                                      </span>
+                                      {isCurrent && <span style={{ fontSize: '9.5px', color: '#0284C7', fontWeight: 900 }}>✓ Selected</span>}
+                                    </div>
+                                    <span style={{ fontSize: '12.5px', fontWeight: 800, color: isDark ? '#F8FAFC' : '#0F172A' }}>
+                                      {prod.name}
+                                    </span>
+                                    <span style={{ fontSize: '10.5px', color: isDark ? '#94A3B8' : '#64748B' }}>
+                                      {prod.interest_rate} • {prod.disbursal_time}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

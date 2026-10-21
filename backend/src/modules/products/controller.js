@@ -1370,6 +1370,17 @@ const seedNewBanksProducts = async (req, res, next) => {
   }
 };
 
+// POST /products/seed-cibil-personal-loans
+const seedCibilPersonalLoans = async (req, res, next) => {
+  try {
+    const { seedCibilPersonalLoanProducts } = require('../../database/seeds/seed-cibil-personal-loans');
+    const result = await seedCibilPersonalLoanProducts();
+    return success(res, result, 'CIBIL Personal Loan products seeded successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   listProducts,
   getProduct,
@@ -1393,6 +1404,7 @@ module.exports = {
   updateFeatured,
   duplicateProduct,
   bulkSetCommission,
-  seedNewBanksProducts
+  seedNewBanksProducts,
+  seedCibilPersonalLoans
 };
 
