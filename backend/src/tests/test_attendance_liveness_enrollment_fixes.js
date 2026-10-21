@@ -310,7 +310,7 @@ async function runTestSuite() {
       employee_id: 'emp-uuid-1',
       status: 'PASSED',
       liveness_status: 'PASSED',
-      matched_building_name: 'Main Office Building (Pune)',
+      matched_building_name: session.matched_building_name || 'Main Office Building (Pune)',
       expires_at: new Date(Date.now() + 10 * 60 * 1000)
     };
 
@@ -320,7 +320,7 @@ async function runTestSuite() {
       passedResult = {
         success: true,
         status: 'PASSED',
-        verification: { liveness: 'PASSED', face: 'PASSED', location: 'PASSED', building: passedSession.matched_building_name },
+        verification: { liveness: 'PASSED', face: 'PASSED', location: 'PASSED', building: passedSession.matched_building_name || 'Main Office Building (Pune)' },
         isIdempotentReplay: true,
       };
     }
