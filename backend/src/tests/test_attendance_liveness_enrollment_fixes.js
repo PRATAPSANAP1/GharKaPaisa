@@ -158,7 +158,7 @@ async function runTestSuite() {
     faceLivenessProvider.rekognitionClient = {
       send: async () => ({
         Status: 'SUCCEEDED',
-        Confidence: 77.61947631835938,
+        Confidence: 55.0,
         ReferenceImage: { Bytes: Buffer.from('fake-ref-image') }
       })
     };
@@ -167,13 +167,13 @@ async function runTestSuite() {
 
     assert.strictEqual(result.awsEvaluationCompleted, true, 'AWS evaluation job must be marked completed');
     assert.strictEqual(result.awsEvaluationStatus, 'SUCCEEDED', 'AWS status must be SUCCEEDED');
-    assert.strictEqual(result.isLive, false, 'isLive must be false when confidence 77.6% < 85.0% threshold');
+    assert.strictEqual(result.isLive, false, 'isLive must be false when confidence 55.0% < threshold');
     assert.strictEqual(result.status, 'LIVENESS_FAILED', 'Status must be LIVENESS_FAILED');
     assert.strictEqual(result.decisionReason, 'CONFIDENCE_BELOW_THRESHOLD', 'Decision reason must specify confidence below threshold');
-    assert.strictEqual(result.confidenceThreshold, 85.0, 'Default confidence threshold must be 85.0');
+    assert.strictEqual(result.confidenceThreshold, 70.0, 'Default confidence threshold must be 70.0');
     assert.strictEqual(!!result.referenceImageBuffer, true, 'Reference image should be preserved');
 
-    console.log('✅ TEST 1 PASSED: Evaluation completed (SUCCEEDED) correctly identified as LIVENESS_FAILED due to 77.6% < 85.0% threshold.');
+    console.log('✅ TEST 1 PASSED: Evaluation completed (SUCCEEDED) correctly identified as LIVENESS_FAILED due to confidence below threshold.');
   }
 
   // ── TEST 2: AWS Evaluation Passed and Liveness Passed ──
@@ -201,27 +201,27 @@ async function runTestSuite() {
   // ── TEST 3: Confidence Values Near Configured Threshold & Env Override ──
   console.log('\n--- TEST 3: Confidence values near configured threshold & env override ---');
   {
-    // Test exactly 85.0%
+    // Test exactly 70.0%
     faceLivenessProvider.rekognitionClient = {
       send: async () => ({
         Status: 'SUCCEEDED',
-        Confidence: 85.0,
+        Confidence: 70.0,
         ReferenceImage: { Bytes: Buffer.from('img') }
       })
     };
     const exactResult = await faceLivenessProvider.getLivenessSessionResult('session-exact');
-    assert.strictEqual(exactResult.isLive, true, 'Exact 85.0% threshold must pass');
+    assert.strictEqual(exactResult.isLive, true, 'Exact 70.0% threshold must pass');
 
-    // Test 84.99%
+    // Test 69.99%
     faceLivenessProvider.rekognitionClient = {
       send: async () => ({
         Status: 'SUCCEEDED',
-        Confidence: 84.99,
+        Confidence: 69.99,
         ReferenceImage: { Bytes: Buffer.from('img') }
       })
     };
     const justBelowResult = await faceLivenessProvider.getLivenessSessionResult('session-below');
-    assert.strictEqual(justBelowResult.isLive, false, '84.99% must fail anti-spoofing threshold');
+    assert.strictEqual(justBelowResult.isLive, false, '69.99% must fail anti-spoofing threshold');
     assert.strictEqual(justBelowResult.decisionReason, 'CONFIDENCE_BELOW_THRESHOLD');
 
     // Test custom threshold via environment variable
@@ -238,7 +238,7 @@ async function runTestSuite() {
     assert.strictEqual(customResult.isLive, true, '81.0% >= custom 80.0% threshold must pass');
     delete process.env.AWS_LIVENESS_CONFIDENCE_THRESHOLD; // restore default
 
-    console.log('✅ TEST 3 PASSED: Boundary checks (85.0% pass, 84.99% fail) and environment threshold overrides verified.');
+    console.log('✅ TEST 3 PASSED: Boundary checks (70.0% pass, 69.99% fail) and environment threshold overrides verified.');
   }
 
   // ── TEST 4: Database Persistence of Terminal States ──

@@ -139,8 +139,8 @@ class FaceLivenessProvider {
         };
       }
 
-      // Configure liveness confidence threshold (defaults to AWS-recommended 85.0%)
-      const defaultThreshold = 85.0;
+      // Configure liveness confidence threshold (defaults to 70.0% for mobile attendance check-ins, overridable via ENV)
+      const defaultThreshold = 70.0;
       const parsedThreshold = process.env.AWS_LIVENESS_CONFIDENCE_THRESHOLD
         ? parseFloat(process.env.AWS_LIVENESS_CONFIDENCE_THRESHOLD)
         : defaultThreshold;
