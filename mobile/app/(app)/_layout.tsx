@@ -203,6 +203,16 @@ export default function AppLayout() {
       <Tabs.Screen name="security" options={{ href: null }} />
       <Tabs.Screen name="work" options={{ href: null }} />
       <Tabs.Screen name="attendance" options={{ href: null }} />
+      
+      {/* Missing High-Priority Screens from Audit */}
+      <Tabs.Screen name="category-overview" options={{ href: null }} />
+      <Tabs.Screen name="product-management" options={{ href: null }} />
+      <Tabs.Screen name="product-links" options={{ href: null }} />
+      <Tabs.Screen name="admin-partners" options={{ href: null }} />
+      <Tabs.Screen name="admin-withdrawals" options={{ href: null }} />
+      <Tabs.Screen name="view-messages" options={{ href: null }} />
+      <Tabs.Screen name="referral-analytics" options={{ href: null }} />
+      <Tabs.Screen name="bulk-sms-dashboard" options={{ href: null }} />
     </Tabs>
   );
 }
