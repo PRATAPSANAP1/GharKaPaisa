@@ -294,6 +294,9 @@ const createProduct = async (req, res, next) => {
       public_url, partner_url, joining_fee, processing_fee, interest_rate
     } = body;
     let image_url = body.image_url;
+    const safeJoiningFee = joining_fee !== undefined ? joining_fee : (body.joining_fee !== undefined ? body.joining_fee : null);
+    const safeProcessingFee = processing_fee !== undefined ? processing_fee : (body.processing_fee !== undefined ? body.processing_fee : null);
+    const safeInterestRate = interest_rate !== undefined ? interest_rate : (body.interest_rate !== undefined ? body.interest_rate : null);
 
     // Handle features and eligibility parsing
     let parsedFeatures = body.features;
@@ -371,7 +374,7 @@ const createProduct = async (req, res, next) => {
       fees_charges || null, apply_button_text || 'Apply Now', seo_title || null, seo_description || null, seo_keywords || null,
       priority || 0, status || 'Active', isActive, req.user?.id || null, productSlug,
       card_network || null, card_variant || null, best_for || null, welcome_benefits || null, isLtf, badge || null, isRec, isTrend,
-      public_url || null, partner_url || null, joining_fee || null, processing_fee || null, interest_rate || null
+      public_url || null, partner_url || null, safeJoiningFee || null, safeProcessingFee || null, safeInterestRate || null
     ]);
 
     await logAction(req, 'CREATE_PRODUCT', p.id, { name, category, commission_value });
@@ -396,9 +399,12 @@ const updateProduct = async (req, res, next) => {
       seo_title, seo_description, seo_keywords, priority, status,
       public_url, partner_url, sub_category,
       card_network, card_variant, best_for, welcome_benefits, badge,
-      joining_fee, processing_fee
+      joining_fee, processing_fee, interest_rate
     } = body;
     let image_url = body.image_url;
+    const safeJoiningFee = joining_fee !== undefined ? joining_fee : (body.joining_fee !== undefined ? body.joining_fee : null);
+    const safeProcessingFee = processing_fee !== undefined ? processing_fee : (body.processing_fee !== undefined ? body.processing_fee : null);
+    const safeInterestRate = interest_rate !== undefined ? interest_rate : (body.interest_rate !== undefined ? body.interest_rate : null);
 
     const { rows: [existing] } = await query(`SELECT * FROM products WHERE id = $1`, [id]);
     if (!existing) return notFound(res, 'Product not found');
@@ -550,9 +556,9 @@ const updateProduct = async (req, res, next) => {
       max_age ? parseInt(max_age) : null,
       min_income ? parseFloat(min_income) : null,
       validOpHeadId,
-      joining_fee || null,
-      processing_fee || null,
-      interest_rate || null,
+      safeJoiningFee || null,
+      safeProcessingFee || null,
+      safeInterestRate || null,
       sub_category || null,
       id
     ]);

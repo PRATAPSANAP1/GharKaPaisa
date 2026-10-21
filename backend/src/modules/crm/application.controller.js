@@ -5006,18 +5006,6 @@ const updateApplicationDetails = async (req, res, next) => {
     if (effectiveDeclineCode !== undefined || derivedCuringDesignation !== undefined || effectiveSecondaryDeclineCode !== undefined) {
       try {
         await client.query('SAVEPOINT curing_sp');
-        await client.query(`
-          ALTER TABLE applications 
-            ADD COLUMN IF NOT EXISTS decline_code VARCHAR(100),
-            ADD COLUMN IF NOT EXISTS decline_description TEXT,
-            ADD COLUMN IF NOT EXISTS curing_designation VARCHAR(100),
-            ADD COLUMN IF NOT EXISTS primary_decline_code VARCHAR(100),
-            ADD COLUMN IF NOT EXISTS primary_decline_description TEXT,
-            ADD COLUMN IF NOT EXISTS primary_curing_designation VARCHAR(100),
-            ADD COLUMN IF NOT EXISTS secondary_decline_code VARCHAR(100),
-            ADD COLUMN IF NOT EXISTS secondary_decline_description TEXT,
-            ADD COLUMN IF NOT EXISTS secondary_curing_designation VARCHAR(100)
-        `);
         const isNone = !effectiveDeclineCode || String(effectiveDeclineCode).trim().toUpperCase() === 'NONE';
         const codeToSet = isNone ? 'None' : String(effectiveDeclineCode).trim();
         const descToSet = isNone ? 'None' : (derivedDeclineDesc || null);
@@ -5028,23 +5016,39 @@ const updateApplicationDetails = async (req, res, next) => {
         const secDescToSet = effectiveSecondaryDeclineCode !== undefined ? (isSecNone ? 'None' : (derivedSecondaryDeclineDesc || null)) : null;
         const secCuringToSet = effectiveSecondaryDeclineCode !== undefined ? (isSecNone ? null : (derivedSecondaryCuringDesignation || null)) : null;
 
-        await client.query(`
-          UPDATE applications SET
-            decline_code = $1,
-            decline_description = $2,
-            curing_designation = $3,
-            primary_decline_code = $1,
-            primary_decline_description = $2,
-            primary_curing_designation = $3,
-            secondary_decline_code = CASE WHEN $4::text IS NOT NULL THEN $4 ELSE secondary_decline_code END,
-            secondary_decline_description = CASE WHEN $4::text IS NOT NULL THEN $5 ELSE secondary_decline_description END,
-            secondary_curing_designation = CASE WHEN $4::text IS NOT NULL THEN $6 ELSE secondary_curing_designation END
-          WHERE id = $7
-        `, [codeToSet, descToSet, curingToSet, secCodeToSet, secDescToSet, secCuringToSet, app.id]);
+        try {
+          await client.query(`
+            UPDATE applications SET
+              decline_code = $1::varchar,
+              decline_description = $2::text,
+              curing_designation = $3::varchar,
+              primary_decline_code = $1::varchar,
+              primary_decline_description = $2::text,
+              primary_curing_designation = $3::varchar,
+              secondary_decline_code = CASE WHEN $4::text IS NOT NULL THEN $4::varchar ELSE secondary_decline_code END,
+              secondary_decline_description = CASE WHEN $4::text IS NOT NULL THEN $5::text ELSE secondary_decline_description END,
+              secondary_curing_designation = CASE WHEN $4::text IS NOT NULL THEN $6::varchar ELSE secondary_curing_designation END
+            WHERE id = $7
+          `, [codeToSet, descToSet, curingToSet, secCodeToSet, secDescToSet, secCuringToSet, app.id]);
+        } catch (updateErr) {
+          if (updateErr.code === '42703') {
+            await client.query('ROLLBACK TO SAVEPOINT curing_sp');
+            await client.query('SAVEPOINT curing_sp');
+            await client.query(`
+              UPDATE applications SET
+                decline_code = $1::varchar,
+                decline_description = $2::text,
+                curing_designation = $3::varchar
+              WHERE id = $4
+            `, [codeToSet, descToSet, curingToSet, app.id]);
+          } else {
+            throw updateErr;
+          }
+        }
         await client.query('RELEASE SAVEPOINT curing_sp');
       } catch (curingErr) {
         await client.query('ROLLBACK TO SAVEPOINT curing_sp').catch(() => {});
-        logger.warn('Failed to update decline_code/curing_designation on applications:', curingErr.message);
+        logger.warn(`Failed to update decline_code/curing_designation on applications: ${curingErr.message}`);
       }
     }
 

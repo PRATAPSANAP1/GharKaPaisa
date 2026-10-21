@@ -431,6 +431,14 @@ const startServer = async () => {
       logger.warn('Bulk SMS auto migration note:', smsErr.message);
     }
 
+    // Always ensure HDFC Curing Designations & Decline Code schema exists on boot
+    try {
+      const { migrateHdfcCuringDesignations } = require('./database/migrations/migrate_hdfc_curing_designations.js');
+      await migrateHdfcCuringDesignations();
+    } catch (curingErr) {
+      logger.warn('HDFC Curing Designations auto migration note:', curingErr.message);
+    }
+
     // Always ensure Sales Operator Claim columns exist on boot
     try {
       const { migrateSalesOperatorClaim } = require('./database/migrations/migrate_sales_operator_claim.js');

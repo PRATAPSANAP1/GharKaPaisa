@@ -1,7 +1,7 @@
 const winston = require('winston');
 const path = require('path');
 
-const { combine, timestamp, printf, colorize, errors } = winston.format;
+const { combine, timestamp, printf, colorize, errors, splat } = winston.format;
 
 const logFormat = printf(({ level, message, timestamp, stack, ...meta }) => {
   let log = `${timestamp} [${level.toUpperCase()}]: ${stack || message}`;
@@ -13,6 +13,7 @@ const logger = winston.createLogger({
   level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
   format: combine(
     errors({ stack: true }),
+    splat(),
     timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     logFormat
   ),
