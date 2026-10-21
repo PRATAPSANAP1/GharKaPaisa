@@ -791,45 +791,23 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
 
   // ALL VERIFICATIONS PASSED (Liveness, Face Match, Building Geofence Location)!
   const matchedBuildingName = geoResult.building?.name || 'Main Office Building (Pune)';
-  const matchedBuildingId = geoResult.building?.id || null;
+  const matchedBuildingCode =
+    geoResult.building?.code ||
+    geoResult.building?.building_code ||
+    geoResult.building?.name ||
+    null;
 
-  try {
-    await query(
-      `UPDATE attendance_verification_sessions 
-       SET face_status = 'PASSED', 
-           location_status = 'PASSED',
-           environment_status = 'PASSED',
-           matched_building_id = $1,
-           matched_building_name = $2,
-           location_lat = $3,
-           location_lng = $4,
-           location_accuracy = $5,
-           status = 'PASSED', 
-           completed_at = NOW(), 
-           updated_at = NOW() 
-       WHERE id = $6`,
-      [matchedBuildingId, matchedBuildingName, latitude || null, longitude || null, accuracy || null, sessionId]
-    ).catch(err => {
-      // Fallback if matched_building columns don't exist yet
-      logger.warn('[ATTENDANCE] matched_building columns may not exist in UPDATE, using fallback:', err.message);
-      return query(
-        `UPDATE attendance_verification_sessions 
-         SET face_status = 'PASSED', 
-             location_status = 'PASSED',
-             environment_status = 'PASSED',
-             location_lat = $1,
-             location_lng = $2,
-             location_accuracy = $3,
-             status = 'PASSED', 
-             completed_at = NOW(), 
-             updated_at = NOW() 
-         WHERE id = $4`,
-        [latitude || null, longitude || null, accuracy || null, sessionId]
-      );
-    });
-  } catch (e) {
-    logger.error('[ATTENDANCE] Failed to update verification session:', e.message);
-  }
+  await query(
+    `UPDATE attendance_verification_sessions
+     SET face_status = 'PASSED',
+         environment_status = 'PASSED',
+         matched_environment_code = $1,
+         status = 'PASSED',
+         completed_at = NOW(),
+         updated_at = NOW()
+     WHERE id = $2`,
+    [matchedBuildingCode, sessionId]
+  );
 
   await logAction(reqUser, 'ATTENDANCE_FACE_MATCH_SUCCESS', authEmpId, {
     session_id: sessionId,
