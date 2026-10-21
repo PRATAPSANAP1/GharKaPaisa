@@ -2239,6 +2239,7 @@ const listApplications = async (req, res, next) => {
           NULLIF(COALESCE(to_jsonb(a)->>'assigned_at', to_jsonb(pad)->>'assigned_at', ''), '')::timestamptz as assigned_at,
           COALESCE(NULLIF(to_jsonb(a)->>'assignment_notes', ''), NULLIF(to_jsonb(pad)->>'assignment_notes', '')) as assignment_notes
         FROM applications a
+        LEFT JOIN physical_application_details pad ON pad.application_id = a.id
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
