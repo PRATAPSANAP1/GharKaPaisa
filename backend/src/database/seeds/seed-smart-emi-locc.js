@@ -209,8 +209,17 @@ async function seedSmartEmiAndLoccProducts() {
         [prodSlug, targetBankId, prod.name]
       );
 
-      if (existingProds.length > 0) {
-        const existingId = existingProds[0].id;
+      const existingId = existingProds[0]?.id || null;
+      let finalSlug = prodSlug;
+      const { rows: conflictProds } = await query(
+        `SELECT id FROM products WHERE slug = $1 ${existingId ? 'AND id != $2' : ''} LIMIT 1`,
+        existingId ? [prodSlug, existingId] : [prodSlug]
+      );
+      if (conflictProds.length > 0) {
+        finalSlug = `${prodSlug}-${prod.short_code.toLowerCase()}`;
+      }
+
+      if (existingId) {
         await query(`
           UPDATE products SET
             bank_id = $1,
@@ -233,7 +242,7 @@ async function seedSmartEmiAndLoccProducts() {
         `, [
           targetBankId, prod.name, prod.category, prod.sub_category, prod.description, prod.short_description,
           prod.annual_fee, prod.joining_fee, prod.interest_rate, prod.time_period, prod.badge,
-          featuresJson, prod.eligibility_criteria, prodSlug, existingId
+          featuresJson, prod.eligibility_criteria, finalSlug, existingId
         ]);
         updatedCount++;
         logger.info(`  Updated Product: ${prod.name} (Category: ${prod.category}, Subcategory: ${prod.sub_category})`);
@@ -253,7 +262,7 @@ async function seedSmartEmiAndLoccProducts() {
         `, [
           targetBankId, prod.name, prod.category, prod.sub_category, prod.description, prod.short_description,
           prod.annual_fee, prod.joining_fee, prod.interest_rate, prod.time_period, prod.badge,
-          featuresJson, prod.eligibility_criteria, prodSlug
+          featuresJson, prod.eligibility_criteria, finalSlug
         ]);
         insertedCount++;
         logger.info(`  Inserted Product: ${prod.name} (Category: ${prod.category}, Subcategory: ${prod.sub_category})`);
