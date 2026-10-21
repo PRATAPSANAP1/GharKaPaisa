@@ -184,9 +184,9 @@ const checkIn = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
       record = updRec;
     }
 
-    // Mark verification session as consumed atomically
+    // Mark verification session as consumed atomically (keep status = 'PASSED', record consumed_at)
     const { rowCount } = await client.query(
-      `UPDATE attendance_verification_sessions SET status = 'CONSUMED', consumed_at = NOW(), updated_at = NOW() WHERE id = $1 AND consumed_at IS NULL`,
+      `UPDATE attendance_verification_sessions SET status = 'PASSED', consumed_at = NOW(), updated_at = NOW() WHERE id = $1 AND consumed_at IS NULL`,
       [session.id]
     );
 
@@ -211,6 +211,13 @@ const checkIn = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
     return record;
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
+    logger.error('[ATTENDANCE SERVICE CHECK-IN ERROR]', {
+      message: err.message,
+      code: err.code,
+      detail: err.detail,
+      table: err.table,
+      constraint: err.constraint,
+    });
     throw err;
   } finally {
     client.release();
@@ -308,9 +315,9 @@ const checkOut = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
       [existing.id]
     );
 
-    // Mark verification session as consumed atomically
+    // Mark verification session as consumed atomically (keep status = 'PASSED', record consumed_at)
     const { rowCount } = await client.query(
-      `UPDATE attendance_verification_sessions SET status = 'CONSUMED', consumed_at = NOW(), updated_at = NOW() WHERE id = $1 AND consumed_at IS NULL`,
+      `UPDATE attendance_verification_sessions SET status = 'PASSED', consumed_at = NOW(), updated_at = NOW() WHERE id = $1 AND consumed_at IS NULL`,
       [session.id]
     );
 
@@ -334,6 +341,13 @@ const checkOut = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
     return updated;
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
+    logger.error('[ATTENDANCE SERVICE CHECK-OUT ERROR]', {
+      message: err.message,
+      code: err.code,
+      detail: err.detail,
+      table: err.table,
+      constraint: err.constraint,
+    });
     throw err;
   } finally {
     client.release();

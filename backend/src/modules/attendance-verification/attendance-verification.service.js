@@ -156,7 +156,7 @@ const initiateLivenessSession = async ({ sessionId, reqUser }) => {
   }
 
   const { rows: [session] } = await query(
-    `SELECT id, employee_id, status, liveness_status, expires_at 
+    `SELECT id, employee_id, status, liveness_status, expires_at, consumed_at 
      FROM attendance_verification_sessions 
      WHERE id = $1 LIMIT 1`,
     [sessionId]
@@ -173,6 +173,13 @@ const initiateLivenessSession = async ({ sessionId, reqUser }) => {
     const error = new Error('Unauthorized to access this verification session');
     error.statusCode = 403;
     error.reason = 'FORBIDDEN';
+    throw error;
+  }
+
+  if (session.consumed_at || session.status === 'CONSUMED') {
+    const error = new Error('Verification session has already been consumed. Please start a new verification session.');
+    error.statusCode = 410;
+    error.reason = 'SESSION_ALREADY_CONSUMED';
     throw error;
   }
 
@@ -242,7 +249,7 @@ const getLivenessCredentials = async ({ sessionId, reqUser }) => {
   }
 
   const { rows: [session] } = await query(
-    `SELECT id, employee_id, status, expires_at 
+    `SELECT id, employee_id, status, expires_at, consumed_at 
      FROM attendance_verification_sessions 
      WHERE id = $1 LIMIT 1`,
     [sessionId]
@@ -252,6 +259,13 @@ const getLivenessCredentials = async ({ sessionId, reqUser }) => {
     const error = new Error('Verification session not found or unauthorized');
     error.statusCode = 403;
     error.reason = 'FORBIDDEN';
+    throw error;
+  }
+
+  if (session.consumed_at || session.status === 'CONSUMED') {
+    const error = new Error('Verification session has already been consumed');
+    error.statusCode = 410;
+    error.reason = 'SESSION_ALREADY_CONSUMED';
     throw error;
   }
 
@@ -309,7 +323,7 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
   }
 
   const { rows: [session] } = await query(
-    `SELECT id, employee_id, status, liveness_status, face_status, environment_status, failure_reason, expires_at 
+    `SELECT id, employee_id, status, liveness_status, face_status, environment_status, failure_reason, expires_at, consumed_at 
      FROM attendance_verification_sessions WHERE id = $1 LIMIT 1`,
     [sessionId]
   );
@@ -336,7 +350,30 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
     throw error;
   }
 
-  // Idempotency check: If session already reached terminal state, return existing outcome without re-invoking AWS
+  // Reject consumed sessions immediately so they cannot be reused or replayed
+  if (session.consumed_at || session.status === 'CONSUMED') {
+    const errorMsg = 'This verification session has already been used for attendance. Please start a new verification session.';
+    const error = new Error(errorMsg);
+    error.statusCode = 410;
+    error.reason = 'SESSION_ALREADY_CONSUMED';
+    error.diagnostic = {
+      endpoint: '/api/v1/attendance/verification/liveness/result',
+      sessionId: sessionId,
+      employeeId: authEmpId,
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
+      accuracy: accuracy ?? null,
+      livenessStatus: session.liveness_status || 'PASSED',
+      faceStatus: session.face_status || 'PASSED',
+      environmentStatus: session.environment_status || 'PASSED',
+      reason: 'SESSION_ALREADY_CONSUMED',
+      message: errorMsg,
+    };
+    logger.warn('[ATTENDANCE DIAGNOSTIC REJECTION]', error.diagnostic);
+    throw error;
+  }
+
+  // Idempotency check: If session already reached terminal state and is not consumed, return existing outcome without re-invoking AWS
   if (session.status === 'PASSED') {
     logger.info(`[ATTENDANCE VERIFICATION] Idempotent replay for already PASSED session ${sessionId}`);
     return {
@@ -350,14 +387,6 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
       },
       isIdempotentReplay: true,
     };
-  }
-
-  if (session.status === 'CONSUMED') {
-    const errorMsg = 'This verification session has already been used for attendance check-in.';
-    const error = new Error(errorMsg);
-    error.statusCode = 410;
-    error.reason = 'SESSION_ALREADY_CONSUMED';
-    throw error;
   }
 
   if (session.status === 'LIVENESS_FAILED' || session.status === 'FAILED' || session.liveness_status === 'FAILED') {
@@ -849,7 +878,7 @@ const completeAttendanceVerification = async ({ sessionId, reqUser }) => {
   }
 
   const { rows: [session] } = await query(
-    `SELECT id, employee_id, status, liveness_status, face_status, environment_status, expires_at 
+    `SELECT id, employee_id, status, liveness_status, face_status, environment_status, expires_at, consumed_at 
      FROM attendance_verification_sessions 
      WHERE id = $1 LIMIT 1`,
     [sessionId]
@@ -859,6 +888,13 @@ const completeAttendanceVerification = async ({ sessionId, reqUser }) => {
     const error = new Error('Attendance verification session not found or unauthorized');
     error.statusCode = 404;
     error.reason = 'SESSION_NOT_FOUND';
+    throw error;
+  }
+
+  if (session.consumed_at || session.status === 'CONSUMED') {
+    const error = new Error('This verification session has already been used for attendance. Please start a new verification session.');
+    error.statusCode = 410;
+    error.reason = 'SESSION_ALREADY_CONSUMED';
     throw error;
   }
 
@@ -892,7 +928,7 @@ const getVerificationSessionStatus = async ({ sessionId, reqUser }) => {
   }
 
   const { rows: [session] } = await query(
-    `SELECT id, employee_id, status, liveness_status, face_status, environment_status, matched_environment_code, failure_reason, expires_at, completed_at, created_at 
+    `SELECT id, employee_id, status, liveness_status, face_status, environment_status, matched_environment_code, failure_reason, expires_at, completed_at, consumed_at, created_at 
      FROM attendance_verification_sessions 
      WHERE id = $1 LIMIT 1`,
     [sessionId]

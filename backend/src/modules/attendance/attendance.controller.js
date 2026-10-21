@@ -17,7 +17,7 @@ const checkIn = async (req, res) => {
     });
     return success(res, result, 'Attendance Check-In marked successfully');
   } catch (err) {
-    logger.error('Attendance Check-In error:', err.message);
+    logger.error('Attendance Check-In error:', err);
     return error(res, err.message, err.statusCode || 500, err.code || null);
   }
 };
@@ -36,7 +36,7 @@ const checkOut = async (req, res) => {
     });
     return success(res, result, 'Attendance Check-Out marked successfully');
   } catch (err) {
-    logger.error('Attendance Check-Out error:', err.message);
+    logger.error('Attendance Check-Out error:', err);
     return error(res, err.message, err.statusCode || 500, err.code || null);
   }
 };
