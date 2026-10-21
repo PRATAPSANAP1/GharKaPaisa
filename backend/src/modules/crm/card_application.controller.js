@@ -218,8 +218,18 @@ const listApplications = async (req, res, next) => {
     const baseTableSql = `(
       SELECT 
         id::text as id,
+        'LOCE' || substring(replace(id::text, '-', ''), 1, 8) as app_number,
         customer_name,
         mobile,
+        NULL::text as pan_number,
+        NULL::text as dob,
+        NULL::text as resident_pincode,
+        NULL::text as employer_name,
+        NULL::text as designation,
+        NULL::text as monthly_income,
+        0::numeric as loan_amount,
+        0::numeric as credit_limit,
+        'Direct Link' as source,
         bank_name,
         card_name,
         COALESCE(
@@ -246,14 +256,30 @@ const listApplications = async (req, res, next) => {
           category,
           'credit_card'
         ) as category,
+        CASE 
+          WHEN LOWER(COALESCE(card_name, '')) LIKE '%smartemi%' 
+            OR LOWER(COALESCE(card_name, '')) LIKE '%smart emi%' 
+            OR LOWER(COALESCE(category, '')) IN ('smart_emi', 'eoc', 'emi') THEN 'EOC'
+          ELSE 'LOC'
+        END as sub_category,
         status,
         created_at
       FROM direct_card_applications
       UNION ALL
       SELECT 
         a.id::text as id,
+        COALESCE(a.app_number, 'LOAN' || substring(replace(a.id::text, '-', ''), 1, 8)) as app_number,
         COALESCE(NULLIF(a.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
         COALESCE(NULLIF(a.customer_mobile, ''), NULLIF(c.mobile, ''), '') as mobile,
+        COALESCE(c.pan_number, '') as pan_number,
+        c.dob::text as dob,
+        COALESCE(c.pincode, '') as resident_pincode,
+        COALESCE(c.employer, '') as employer_name,
+        NULL::text as designation,
+        COALESCE(c.monthly_income::text, '') as monthly_income,
+        COALESCE(a.loan_amount, a.approved_amount, 0)::numeric as loan_amount,
+        COALESCE(a.credit_limit, 0)::numeric as credit_limit,
+        COALESCE(a.source, 'Partner Portal') as source,
         COALESCE(b.name, 'Partner Bank') as bank_name,
         COALESCE(p.name, 'LOC/EOC Loan') as card_name,
         COALESCE(
@@ -284,6 +310,19 @@ const listApplications = async (req, res, next) => {
           to_jsonb(a)->>'category', 
           'loc_eoc'
         ) as category,
+        COALESCE(
+          CASE 
+            WHEN LOWER(COALESCE(p.sub_category, '')) IN ('eoc', 'smart emi', 'smart_emi', 'emi') THEN 'EOC'
+            WHEN LOWER(COALESCE(p.sub_category, '')) IN ('loc', 'loan on credit card', 'loan_on_credit_card') THEN 'LOC'
+            WHEN LOWER(COALESCE(p.category::text, '')) LIKE '%personal%' THEN 'Personal Loan'
+            WHEN LOWER(COALESCE(p.category::text, '')) LIKE '%car%' THEN 'Car Loan'
+            WHEN LOWER(COALESCE(p.category::text, '')) LIKE '%home%' THEN 'Home Loan'
+            WHEN LOWER(COALESCE(p.category::text, '')) LIKE '%business%' THEN 'Business Loan'
+            WHEN LOWER(COALESCE(p.category::text, '')) LIKE '%education%' THEN 'Education Loan'
+            ELSE 'Personal Loan'
+          END,
+          'Personal Loan'
+        ) as sub_category,
         a.status::text as status,
         a.created_at
       FROM applications a
@@ -291,7 +330,7 @@ const listApplications = async (req, res, next) => {
       LEFT JOIN banks b ON b.id = COALESCE(a.bank_id, p.bank_id)
       LEFT JOIN customers c ON c.id = a.customer_id
       WHERE (
-        p.category::text IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loc', 'eoc', 'loan', 'loans', 'personal_loan')
+        p.category::text IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loc', 'eoc', 'loan', 'loans', 'personal_loan', 'home_loan', 'car_loan', 'business_loan', 'education_loan')
         OR p.sub_category IN ('loc', 'eoc', 'LOC', 'EOC', 'Loan on Credit Card', 'Smart EMI', 'EMI on Credit Card', 'loan_on_credit_card', 'smart_emi')
         OR to_jsonb(a)->>'category' IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loc', 'eoc', 'loan', 'loans')
         OR to_jsonb(a)->>'product_category' IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loc', 'eoc')
@@ -311,6 +350,48 @@ const listApplications = async (req, res, next) => {
         AND d2.created_at >= a.created_at - INTERVAL '1 hour'
         AND d2.created_at <= a.created_at + INTERVAL '1 hour'
       )
+      UNION ALL
+      SELECT
+        la.id::text as id,
+        'LOAN' || substring(replace(la.id::text, '-', ''), 1, 8) as app_number,
+        COALESCE(la.customer_name, 'Customer') as customer_name,
+        COALESCE(la.mobile, '') as mobile,
+        NULL::text as pan_number,
+        NULL::text as dob,
+        COALESCE(la.pincode, '') as resident_pincode,
+        COALESCE(la.employer_name, '') as employer_name,
+        NULL::text as designation,
+        COALESCE(la.monthly_income::text, '') as monthly_income,
+        COALESCE(la.loan_amount, 0)::numeric as loan_amount,
+        0::numeric as credit_limit,
+        'CRM Punch' as source,
+        'Partner Bank' as bank_name,
+        COALESCE(
+          CASE 
+            WHEN LOWER(COALESCE(la.loan_type_slug, '')) LIKE '%personal%' THEN 'Personal Loan'
+            WHEN LOWER(COALESCE(la.loan_type_slug, '')) LIKE '%car%' THEN 'Car Loan'
+            WHEN LOWER(COALESCE(la.loan_type_slug, '')) LIKE '%home%' THEN 'Home Loan'
+            WHEN LOWER(COALESCE(la.loan_type_slug, '')) LIKE '%business%' THEN 'Business Loan'
+            WHEN LOWER(COALESCE(la.loan_type_slug, '')) LIKE '%education%' THEN 'Education Loan'
+            ELSE 'Loan Application'
+          END,
+          'Loan Application'
+        ) as card_name,
+        'loan' as category,
+        COALESCE(
+          CASE 
+            WHEN LOWER(COALESCE(la.loan_type_slug, '')) LIKE '%personal%' THEN 'Personal Loan'
+            WHEN LOWER(COALESCE(la.loan_type_slug, '')) LIKE '%car%' THEN 'Car Loan'
+            WHEN LOWER(COALESCE(la.loan_type_slug, '')) LIKE '%home%' THEN 'Home Loan'
+            WHEN LOWER(COALESCE(la.loan_type_slug, '')) LIKE '%business%' THEN 'Business Loan'
+            WHEN LOWER(COALESCE(la.loan_type_slug, '')) LIKE '%education%' THEN 'Education Loan'
+            ELSE 'Personal Loan'
+          END,
+          'Personal Loan'
+        ) as sub_category,
+        COALESCE(la.status, 'new')::text as status,
+        la.created_at
+      FROM loan_applications la
     ) direct_card_applications`;
 
     const countQuery = `

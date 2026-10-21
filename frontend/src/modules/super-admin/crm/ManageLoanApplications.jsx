@@ -20,262 +20,7 @@ const PAN_CHECK_REMARK_OPTIONS = [
   { code: 'PINCODE_UNSERVICED', label: 'Resident Pincode Unserviced by Bank' }
 ];
 
-// High-fidelity sample data matching reference designs
-const SAMPLE_LOAN_APPLICATIONS = [
-  {
-    id: '34111979',
-    app_number: 'LOAN34111979',
-    customer_name: 'Ashok Kumar',
-    mobile: '9928938075',
-    pan_number: 'ABCDE1234F',
-    dob: '1990-04-12',
-    mother_name: 'Savitri Devi',
-    resident_pincode: '411001',
-    employer_name: 'TCS Technologies',
-    designation: 'Senior Software Engineer',
-    monthly_income: '65,000',
-    existing_card_last4: '4812',
-    credit_limit: '2,50,000',
-    category: 'Loan',
-    sub_category: 'Personal Loan',
-    loan_type: 'Personal Loan',
-    bank_name: 'HDFC Bank',
-    card_name: 'HDFC Bank Instant & Jumbo Loan',
-    loan_amount: '5,00,000',
-    status: 'verified',
-    created_at: '2026-10-21T09:30:00.000Z',
-    date_display: '21 Oct 2026',
-    source: 'Direct Link'
-  },
-  {
-    id: '34111890',
-    app_number: 'LOAN34111890',
-    customer_name: 'Priya Sharma',
-    mobile: '9823456789',
-    pan_number: 'BPQPS4567K',
-    dob: '1993-08-22',
-    mother_name: 'Kamla Sharma',
-    resident_pincode: '411014',
-    employer_name: 'Infosys Ltd',
-    designation: 'Team Lead',
-    monthly_income: '85,000',
-    existing_card_last4: '9012',
-    credit_limit: '4,00,000',
-    category: 'Loan',
-    sub_category: 'Car Loan',
-    loan_type: 'Car Loan',
-    bank_name: 'ICICI Bank',
-    card_name: 'ICICI Bank Auto Drive Loan',
-    loan_amount: '8,50,000',
-    status: 'in_review',
-    created_at: '2026-10-20T11:15:00.000Z',
-    date_display: '20 Oct 2026',
-    source: 'Partner Portal'
-  },
-  {
-    id: '34111765',
-    app_number: 'LOAN34111765',
-    customer_name: 'Rohit Deshmukh',
-    mobile: '9811223344',
-    pan_number: 'CRTPD7890M',
-    dob: '1988-11-05',
-    mother_name: 'Sunita Deshmukh',
-    resident_pincode: '411028',
-    employer_name: 'Wipro Technologies',
-    designation: 'Project Manager',
-    monthly_income: '1,20,000',
-    existing_card_last4: '3344',
-    credit_limit: '6,00,000',
-    category: 'Loan',
-    sub_category: 'Home Loan',
-    loan_type: 'Home Loan',
-    bank_name: 'SBI Bank',
-    card_name: 'SBI Home Advantage Loan',
-    loan_amount: '25,00,000',
-    status: 'new',
-    created_at: '2026-10-19T14:20:00.000Z',
-    date_display: '19 Oct 2026',
-    source: 'Website Punching'
-  },
-  {
-    id: '34111674',
-    app_number: 'LOAN34111674',
-    customer_name: 'Sneha Patil',
-    mobile: '9870011223',
-    pan_number: 'DJYPP2345N',
-    dob: '1991-03-17',
-    mother_name: 'Asha Patil',
-    resident_pincode: '411038',
-    employer_name: 'Patil Enterprises',
-    designation: 'Business Owner',
-    monthly_income: '1,50,000',
-    existing_card_last4: '6789',
-    credit_limit: '3,00,000',
-    category: 'Loan',
-    sub_category: 'Business Loan',
-    loan_type: 'Business Loan',
-    bank_name: 'Axis Bank',
-    card_name: 'Axis MSME Growth Capital',
-    loan_amount: '10,00,000',
-    status: 'verified',
-    created_at: '2026-10-19T16:00:00.000Z',
-    date_display: '19 Oct 2026',
-    source: 'Direct Link'
-  },
-  {
-    id: '34111650',
-    app_number: 'LOAN34111650',
-    customer_name: 'Amit Verma',
-    mobile: '9765432109',
-    pan_number: 'EKMPV6789P',
-    dob: '1995-07-30',
-    mother_name: 'Meena Verma',
-    resident_pincode: '411045',
-    employer_name: 'Cognizant',
-    designation: 'Software Associate',
-    monthly_income: '45,000',
-    existing_card_last4: '1122',
-    credit_limit: '1,50,000',
-    category: 'Loan',
-    sub_category: 'Education Loan',
-    loan_type: 'Education Loan',
-    bank_name: 'Bank of Baroda',
-    card_name: 'BOB Scholar Global Loan',
-    loan_amount: '7,50,000',
-    status: 'rejected',
-    created_at: '2026-10-18T10:45:00.000Z',
-    date_display: '18 Oct 2026',
-    source: 'Partner Portal'
-  }
-];
-
-const SAMPLE_LOC_EOC_APPLICATIONS = [
-  {
-    id: '34111220',
-    app_number: 'LOCE34111220',
-    customer_name: 'Neha Joshi',
-    mobile: '9988776655',
-    pan_number: 'GHJKL1234F',
-    dob: '1992-06-18',
-    mother_name: 'Rekha Joshi',
-    resident_pincode: '411004',
-    employer_name: 'Capgemini India',
-    designation: 'Senior Consultant',
-    monthly_income: '95,000',
-    existing_card_last4: '4812',
-    credit_limit: '2,50,000',
-    category: 'LOC/EOC',
-    sub_category: 'LOC',
-    type: 'LOC',
-    bank_name: 'HDFC Bank',
-    card_name: 'HDFC Bank Instant & Jumbo Loan',
-    loan_amount: '1,00,000',
-    status: 'verified',
-    created_at: '2026-10-21T12:00:00.000Z',
-    date_display: '21 Oct 2026',
-    source: 'Direct Link'
-  },
-  {
-    id: '34111189',
-    app_number: 'LOCE34111189',
-    customer_name: 'Rohit Patil',
-    mobile: '9845123456',
-    pan_number: 'POIUY5678Q',
-    dob: '1994-12-02',
-    mother_name: 'Lata Patil',
-    resident_pincode: '411011',
-    employer_name: 'Accenture India',
-    designation: 'Analyst',
-    monthly_income: '55,000',
-    existing_card_last4: '8899',
-    credit_limit: '1,50,000',
-    category: 'LOC/EOC',
-    sub_category: 'EOC',
-    type: 'EOC',
-    bank_name: 'Bajaj Finserv',
-    card_name: 'Smart EMI Instant Conversion',
-    loan_amount: '50,000',
-    status: 'in_review',
-    created_at: '2026-10-20T15:30:00.000Z',
-    date_display: '20 Oct 2026',
-    source: 'Direct Link'
-  },
-  {
-    id: '34111102',
-    app_number: 'LOCE34111102',
-    customer_name: 'Kiran More',
-    mobile: '9765432198',
-    pan_number: 'LKJHGF9876R',
-    dob: '1989-09-15',
-    mother_name: 'Sharda More',
-    resident_pincode: '411027',
-    employer_name: 'Tech Mahindra',
-    designation: 'Lead Architect',
-    monthly_income: '1,35,000',
-    existing_card_last4: '7744',
-    credit_limit: '4,50,000',
-    category: 'LOC/EOC',
-    sub_category: 'LOC',
-    type: 'LOC',
-    bank_name: 'ICICI Bank',
-    card_name: 'Insta Loan on Credit Card',
-    loan_amount: '2,00,000',
-    status: 'new',
-    created_at: '2026-10-19T09:20:00.000Z',
-    date_display: '19 Oct 2026',
-    source: 'Website Punching'
-  },
-  {
-    id: '34111055',
-    app_number: 'LOAE34111055',
-    customer_name: 'Pooja Sharma',
-    mobile: '9833445566',
-    pan_number: 'MNBVC3456S',
-    dob: '1996-02-28',
-    mother_name: 'Gita Sharma',
-    resident_pincode: '411033',
-    employer_name: 'Zensar Technologies',
-    designation: 'QA Engineer',
-    monthly_income: '60,000',
-    existing_card_last4: '2211',
-    credit_limit: '2,00,000',
-    category: 'LOC/EOC',
-    sub_category: 'EOC',
-    type: 'EOC',
-    bank_name: 'SBI Card',
-    card_name: 'Encash Smart EMI',
-    loan_amount: '75,000',
-    status: 'disbursed',
-    created_at: '2026-10-19T13:40:00.000Z',
-    date_display: '19 Oct 2026',
-    source: 'Partner Portal'
-  },
-  {
-    id: '34111001',
-    app_number: 'LOCE34111001',
-    customer_name: 'Sahil Khan',
-    mobile: '9819283746',
-    pan_number: 'ZXCVB6543T',
-    dob: '1991-05-10',
-    mother_name: 'Farida Khan',
-    resident_pincode: '411048',
-    employer_name: 'Barclays Global',
-    designation: 'Financial Analyst',
-    monthly_income: '80,000',
-    existing_card_last4: '9900',
-    credit_limit: '3,00,000',
-    category: 'LOC/EOC',
-    sub_category: 'LOC',
-    type: 'LOC',
-    bank_name: 'Axis Bank',
-    card_name: 'Instant Credit Line',
-    loan_amount: '1,50,000',
-    status: 'rejected',
-    created_at: '2026-10-18T17:10:00.000Z',
-    date_display: '18 Oct 2026',
-    source: 'Direct Link'
-  }
-];
+// Connected to Live Backend Database
 
 export default function ManageLoanApplications() {
   const { isDark } = useTheme();
@@ -317,39 +62,39 @@ export default function ManageLoanApplications() {
   // Detailed Process Form State
   const [processForm, setProcessForm] = useState({
     id: null,
-    app_number: 'LOCE34111979',
+    app_number: '',
     category: 'Loan on Credit Card (LOC)',
-    bank_name: 'HDFC Bank',
-    scheme_name: 'HDFC Bank Instant & Jumbo Loan',
-    customer_name: 'ASHOK KUMAR',
-    mobile: '9928938075',
-    pan_number: 'ABCDE1234F',
-    dob: '1990-04-12',
-    mother_name: 'Savitri Devi',
-    resident_pincode: '411001',
-    employer_name: 'TCS Technologies',
-    designation: 'Senior Software Engineer',
-    gross_monthly_income: '65000',
-    existing_card_last4: '4812',
-    credit_limit: '250000',
-    requested_loan_amount: '150000',
+    bank_name: '',
+    scheme_name: '',
+    customer_name: '',
+    mobile: '',
+    pan_number: '',
+    dob: '',
+    mother_name: '',
+    resident_pincode: '',
+    employer_name: '',
+    designation: '',
+    gross_monthly_income: '',
+    existing_card_last4: '',
+    credit_limit: '',
+    requested_loan_amount: '',
     pan_check_comments: 'Clean PAN & Good CIBIL Score',
 
     // Step 2 Fields
-    sanctioned_loan_amount: '150000',
+    sanctioned_loan_amount: '',
     interest_rate: '12.5',
     tenure_months: '24',
-    monthly_emi: '7097',
+    monthly_emi: '',
     processing_fee: '1499',
-    disbursed_amount: '148501',
-    repayment_account_no: '50100234918231',
-    repayment_ifsc: 'HDFC0000123',
-    bank_reference_no: 'LN981293819',
+    disbursed_amount: '',
+    repayment_account_no: '',
+    repayment_ifsc: '',
+    bank_reference_no: '',
 
     // Step 3 Fields
-    status: 'verified',
+    status: 'new',
     final_stage: 'Loan QD Verification',
-    disbursal_utr: 'UTR98129381923',
+    disbursal_utr: '',
     decline_reason: '',
     curable_notes: ''
   });
@@ -365,18 +110,61 @@ export default function ManageLoanApplications() {
       .catch(() => {});
   }, []);
 
-  // Fetch Leads from Backend
+  // Fetch Applications directly from Database via Backend APIs
   const fetchLeads = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/card-applications', {
-        params: { page: 1, limit: 100, category: 'loan_applications' }
-      });
-      if (res.data?.success && Array.isArray(res.data.data)) {
-        setApiLeads(res.data.data);
+      const [cardRes, loanRes] = await Promise.allSettled([
+        api.get('/card-applications', {
+          params: { page: 1, limit: 1000, category: 'loan_applications' }
+        }),
+        api.get('/crm/loan-applications', {
+          params: { page: 1, limit: 1000 }
+        })
+      ]);
+
+      let combined = [];
+
+      if (cardRes.status === 'fulfilled' && cardRes.value?.data?.success && Array.isArray(cardRes.value.data.data)) {
+        combined = [...cardRes.value.data.data];
       }
+
+      if (loanRes.status === 'fulfilled' && loanRes.value?.data?.success && Array.isArray(loanRes.value.data.data)) {
+        const existingIds = new Set(combined.map(c => String(c.id)));
+        loanRes.value.data.data.forEach(item => {
+          if (!existingIds.has(String(item.id))) {
+            const slug = (item.loan_type_slug || '').toLowerCase();
+            let subCat = 'Personal Loan';
+            if (slug.includes('car')) subCat = 'Car Loan';
+            else if (slug.includes('home')) subCat = 'Home Loan';
+            else if (slug.includes('business')) subCat = 'Business Loan';
+            else if (slug.includes('education')) subCat = 'Education Loan';
+
+            combined.push({
+              id: item.id,
+              app_number: item.app_number || `LOAN${String(item.id).substring(0, 8)}`,
+              customer_name: item.customer_name,
+              mobile: item.mobile,
+              bank_name: item.bank_name || 'Partner Bank',
+              card_name: item.loan_type_slug ? item.loan_type_slug.replace(/[-_]/g, ' ').toUpperCase() : 'Personal Loan',
+              category: 'loan',
+              sub_category: subCat,
+              status: item.status || 'new',
+              created_at: item.created_at,
+              pan_number: item.pan_number,
+              loan_amount: item.loan_amount,
+              monthly_income: item.monthly_income,
+              employer_name: item.employer_name,
+              pincode: item.pincode,
+              source: 'CRM Punch'
+            });
+          }
+        });
+      }
+
+      setApiLeads(combined);
     } catch (e) {
-      console.warn('Notice loading API card-applications:', e?.message);
+      console.warn('Notice loading database applications:', e?.message);
     } finally {
       setLoading(false);
     }
@@ -386,87 +174,125 @@ export default function ManageLoanApplications() {
     fetchLeads();
   }, []);
 
-  // Combined Dataset
+  // Map real database records into standard application model (No static mock data)
   const allApplications = useMemo(() => {
-    const mappedApi = (apiLeads || []).map(item => {
+    return (apiLeads || []).map(item => {
       const cat = (item.category || '').toLowerCase();
       const cName = (item.card_name || '').toLowerCase();
-      const isEmi = cat.includes('emi') || cat === 'eoc' || cName.includes('emi');
-      const isLoc = cat.includes('credit_card') || cat === 'loc' || cName.includes('loan') || cName.includes('insta');
-      const isGeneralLoc = cat === 'loc_eoc';
+      const subCat = (item.sub_category || '').toLowerCase();
       
+      const isEmi = cat.includes('emi') || cat === 'eoc' || cName.includes('emi') || subCat.includes('eoc');
+      const isLoc = cat.includes('credit_card') || cat === 'loc' || cName.includes('loan on credit card') || cName.includes('loan on card') || subCat.includes('loc');
+      const isLocEoc = cat === 'loc_eoc' || isEmi || isLoc;
+
       let category = 'Loan';
       let subCategory = 'Personal Loan';
       let type = 'Loan';
 
-      if (isEmi) {
+      if (isLocEoc) {
         category = 'LOC/EOC';
-        subCategory = 'EOC';
-        type = 'EOC';
-      } else if (isLoc || isGeneralLoc) {
-        category = 'LOC/EOC';
-        subCategory = 'LOC';
-        type = 'LOC';
+        if (isEmi) {
+          subCategory = 'EOC';
+          type = 'EOC';
+        } else {
+          subCategory = 'LOC';
+          type = 'LOC';
+        }
+      } else {
+        if (cName.includes('car') || subCat.includes('car')) subCategory = 'Car Loan';
+        else if (cName.includes('home') || subCat.includes('home')) subCategory = 'Home Loan';
+        else if (cName.includes('business') || subCat.includes('business')) subCategory = 'Business Loan';
+        else if (cName.includes('education') || subCat.includes('education')) subCategory = 'Education Loan';
+        else if (cName.includes('personal') || subCat.includes('personal')) subCategory = 'Personal Loan';
+        else if (item.sub_category) subCategory = item.sub_category;
+        else subCategory = 'Personal Loan';
+        type = subCategory;
       }
+
+      const numAmount = Number(item.loan_amount || item.requested_loan_amount || 0);
+      const cleanAmount = numAmount > 0 ? numAmount.toLocaleString('en-IN') : '';
 
       return {
         id: item.id,
-        app_number: item.app_number || `LOAN${item.id}`,
+        app_number: item.app_number || (category === 'LOC/EOC' ? `LOCE${String(item.id).substring(0, 8)}` : `LOAN${String(item.id).substring(0, 8)}`),
         customer_name: item.customer_name || 'Customer',
         mobile: item.mobile || '',
-        pan_number: item.pan_number || 'ABCDE1234F',
-        dob: item.dob || '1992-05-14',
-        mother_name: item.mother_name || 'Mother',
-        resident_pincode: item.resident_pincode || '411001',
-        employer_name: item.company_name || 'Tech Services',
-        designation: item.designation || 'Executive',
-        monthly_income: item.gross_monthly_income ? Number(item.gross_monthly_income).toLocaleString('en-IN') : '65,000',
-        existing_card_last4: item.existing_card_last4 || '4812',
-        credit_limit: item.credit_limit ? Number(item.credit_limit).toLocaleString('en-IN') : '2,50,000',
+        pan_number: item.pan_number || '',
+        dob: item.dob || '',
+        mother_name: item.mother_name || '',
+        resident_pincode: item.resident_pincode || item.pincode || '',
+        employer_name: item.employer_name || item.company_name || '',
+        designation: item.designation || '',
+        monthly_income: item.monthly_income ? Number(item.monthly_income).toLocaleString('en-IN') : '',
+        existing_card_last4: item.existing_card_last4 || '',
+        credit_limit: item.credit_limit ? Number(item.credit_limit).toLocaleString('en-IN') : '',
         category: category,
         sub_category: subCategory,
         loan_type: subCategory,
         type: type,
         bank_name: item.bank_name || 'Partner Bank',
-        card_name: item.card_name || 'Loan Product',
-        loan_amount: item.requested_loan_amount ? Number(item.requested_loan_amount).toLocaleString('en-IN') : '5,00,000',
-        status: (item.status || 'verified').toLowerCase(),
+        card_name: item.card_name || (category === 'LOC/EOC' ? 'Loan on Credit Card' : 'Personal Loan'),
+        loan_amount: cleanAmount || '0',
+        raw_amount: numAmount,
+        status: (item.status || 'new').toLowerCase(),
         created_at: item.created_at || new Date().toISOString(),
         date_display: item.created_at 
           ? new Date(item.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-          : '21 Oct 2026',
-        source: item.processed_by || 'Direct Link',
+          : '',
+        source: item.source || item.processed_by || 'Direct Link',
         raw: item
       };
     });
-
-    const combined = [...mappedApi];
-    SAMPLE_LOAN_APPLICATIONS.forEach(s => {
-      if (!combined.some(c => c.app_number === s.app_number)) combined.push(s);
-    });
-    SAMPLE_LOC_EOC_APPLICATIONS.forEach(s => {
-      if (!combined.some(c => c.app_number === s.app_number)) combined.push(s);
-    });
-    return combined;
   }, [apiLeads]);
 
-  // Counts & Stats
+  // Counts & Stats computed strictly from live database applications
   const counts = useMemo(() => {
+    const loanApps = allApplications.filter(a => a.category === 'Loan');
+    const locEocApps = allApplications.filter(a => a.category === 'LOC/EOC');
+
+    const loansStatuses = {
+      all: loanApps.length,
+      new: loanApps.filter(a => a.status === 'new').length,
+      in_review: loanApps.filter(a => a.status === 'in_review' || a.status === 'in review' || a.status === 'pending').length,
+      verified: loanApps.filter(a => a.status === 'verified' || a.status === 'approved').length,
+      disbursed: loanApps.filter(a => a.status === 'disbursed').length,
+      rejected: loanApps.filter(a => a.status === 'rejected' || a.status === 'declined').length
+    };
+
+    const locEocStatuses = {
+      all: locEocApps.length,
+      new: locEocApps.filter(a => a.status === 'new').length,
+      in_review: locEocApps.filter(a => a.status === 'in_review' || a.status === 'in review' || a.status === 'pending').length,
+      verified: locEocApps.filter(a => a.status === 'verified' || a.status === 'approved').length,
+      disbursed: locEocApps.filter(a => a.status === 'disbursed').length,
+      rejected: locEocApps.filter(a => a.status === 'rejected' || a.status === 'declined').length
+    };
+
+    const disbursedTotal = allApplications
+      .filter(a => a.status === 'disbursed')
+      .reduce((acc, curr) => acc + (curr.raw_amount || 0), 0);
+
+    const disbursedDisplay = disbursedTotal > 0 
+      ? (disbursedTotal >= 100000 ? `₹ ${(disbursedTotal / 100000).toFixed(1)} L` : `₹ ${disbursedTotal.toLocaleString('en-IN')}`)
+      : '₹ 0';
+
     return {
-      total: allApplications.length >= 330 ? allApplications.length : 330,
-      totalLoan: 210,
-      totalLocEoc: 120,
-      allLoans: 210,
-      personalLoan: 85,
-      carLoan: 40,
-      homeLoan: 35,
-      businessLoan: 30,
-      educationLoan: 12,
-      otherLoan: 8,
-      locCount: 70,
-      eocCount: 50,
-      loansStatuses: { all: 210, new: 56, in_review: 48, verified: 72, disbursed: 20, rejected: 14 },
-      locEocStatuses: { all: 120, new: 38, in_review: 26, verified: 36, disbursed: 16, rejected: 4 }
+      total: allApplications.length,
+      verifiedTotal: allApplications.filter(a => a.status === 'verified' || a.status === 'approved').length,
+      disbursedAmount: disbursedDisplay,
+      totalLoan: loanApps.length,
+      totalLocEoc: locEocApps.length,
+      allLoans: loanApps.length,
+      personalLoan: loanApps.filter(a => a.sub_category === 'Personal Loan').length,
+      carLoan: loanApps.filter(a => a.sub_category === 'Car Loan').length,
+      homeLoan: loanApps.filter(a => a.sub_category === 'Home Loan').length,
+      businessLoan: loanApps.filter(a => a.sub_category === 'Business Loan').length,
+      educationLoan: loanApps.filter(a => a.sub_category === 'Education Loan').length,
+      otherLoan: loanApps.filter(a => !['Personal Loan', 'Car Loan', 'Home Loan', 'Business Loan', 'Education Loan'].includes(a.sub_category)).length,
+      locCount: locEocApps.filter(a => a.type === 'LOC').length,
+      eocCount: locEocApps.filter(a => a.type === 'EOC').length,
+      loansStatuses,
+      locEocStatuses
     };
   }, [allApplications]);
 
@@ -562,40 +388,40 @@ export default function ManageLoanApplications() {
         ? 'Loan on Credit Card (LOC)' 
         : (app.loan_type || app.sub_category || 'Personal Loan');
 
-    const cleanReqAmount = (app.loan_amount || '150000').replace(/\D/g, '');
-    const cleanLimit = (app.credit_limit || '250000').replace(/\D/g, '');
+    const cleanReqAmount = String(app.raw_amount || (app.loan_amount || '').replace(/\D/g, '') || '');
+    const cleanLimit = String(app.credit_limit || '').replace(/\D/g, '');
 
     setProcessForm({
       id: app.id,
-      app_number: app.app_number || 'LOCE34111979',
+      app_number: app.app_number || `LOAN${app.id}`,
       category: categoryLabel,
-      bank_name: app.bank_name || 'HDFC Bank',
-      scheme_name: app.card_name || `${app.bank_name || 'HDFC Bank'} Instant & Jumbo Loan`,
-      customer_name: (app.customer_name || 'ASHOK KUMAR').toUpperCase(),
-      mobile: app.mobile || '9928938075',
-      pan_number: app.pan_number || 'ABCDE1234F',
-      dob: app.dob || '1990-04-12',
-      mother_name: app.mother_name || 'Mother Name',
-      resident_pincode: app.resident_pincode || '411001',
-      employer_name: app.employer_name || 'TCS Technologies',
-      designation: app.designation || 'Senior Software Engineer',
-      gross_monthly_income: (app.monthly_income || '65000').replace(/\D/g, ''),
-      existing_card_last4: app.existing_card_last4 || '4812',
-      credit_limit: cleanLimit || '250000',
-      requested_loan_amount: cleanReqAmount || '150000',
+      bank_name: app.bank_name || 'Partner Bank',
+      scheme_name: app.card_name || 'Loan Scheme',
+      customer_name: (app.customer_name || '').toUpperCase(),
+      mobile: app.mobile || '',
+      pan_number: app.pan_number || '',
+      dob: app.dob || '',
+      mother_name: app.mother_name || '',
+      resident_pincode: app.resident_pincode || '',
+      employer_name: app.employer_name || '',
+      designation: app.designation || '',
+      gross_monthly_income: String(app.monthly_income || '').replace(/\D/g, ''),
+      existing_card_last4: app.existing_card_last4 || '',
+      credit_limit: cleanLimit,
+      requested_loan_amount: cleanReqAmount,
       pan_check_comments: 'Clean PAN & Good CIBIL Score',
-      sanctioned_loan_amount: cleanReqAmount || '150000',
+      sanctioned_loan_amount: cleanReqAmount,
       interest_rate: '12.5',
       tenure_months: '24',
-      monthly_emi: '7097',
+      monthly_emi: '',
       processing_fee: '1499',
-      disbursed_amount: String(Math.max(0, Number(cleanReqAmount || 150000) - 1499)),
-      repayment_account_no: '50100234918231',
-      repayment_ifsc: 'HDFC0000123',
-      bank_reference_no: app.app_number || 'LN981293819',
-      status: app.status || 'verified',
+      disbursed_amount: cleanReqAmount ? String(Math.max(0, Number(cleanReqAmount) - 1499)) : '',
+      repayment_account_no: '',
+      repayment_ifsc: '',
+      bank_reference_no: app.app_number || '',
+      status: app.status || 'new',
       final_stage: 'Loan QD Verification',
-      disbursal_utr: 'UTR98129381923',
+      disbursal_utr: '',
       decline_reason: '',
       curable_notes: ''
     });
@@ -711,8 +537,9 @@ export default function ManageLoanApplications() {
       background: bgMain,
       color: textDark,
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      padding: '24px',
-      boxSizing: 'border-box'
+      padding: '16px',
+      boxSizing: 'border-box',
+      zoom: 0.8
     }}>
 
       {/* ── TOP BREADCRUMB & SUPER ADMIN PROFILE BAR ── */}
@@ -2602,7 +2429,25 @@ export default function ManageLoanApplications() {
                     </tr>
                   </thead>
                   <tbody style={{ fontSize: '13.5px', color: textDark }}>
-                    {filteredApplications.map((app, idx) => (
+                    {loading ? (
+                      <tr>
+                        <td colSpan={8} style={{ padding: '40px 20px', textAlign: 'center', color: textMuted }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '18px', height: '18px', border: '2px solid #2563EB', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                            <span>Loading applications from database...</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : filteredApplications.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} style={{ padding: '48px 20px', textAlign: 'center', color: textMuted }}>
+                          <FileText size={32} style={{ margin: '0 auto 10px', opacity: 0.4 }} />
+                          <div style={{ fontWeight: 600, fontSize: '15px' }}>No loan applications found in database</div>
+                          <div style={{ fontSize: '12px', marginTop: '4px' }}>New applications created via CRM or customer forms will appear here in real-time.</div>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredApplications.map((app, idx) => (
                       <tr 
                         key={app.id || idx}
                         style={{ borderBottom: `1px solid ${borderCol}` }}
@@ -2683,7 +2528,8 @@ export default function ManageLoanApplications() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -2965,7 +2811,25 @@ export default function ManageLoanApplications() {
                   </tr>
                 </thead>
                 <tbody style={{ fontSize: '13.5px', color: textDark }}>
-                  {paginatedApplications.map((app, idx) => (
+                  {loading ? (
+                    <tr>
+                      <td colSpan={8} style={{ padding: '40px 20px', textAlign: 'center', color: textMuted }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '18px', height: '18px', border: '2px solid #2563EB', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                          <span>Loading loans from database...</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : paginatedApplications.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} style={{ padding: '48px 20px', textAlign: 'center', color: textMuted }}>
+                        <FileText size={32} style={{ margin: '0 auto 10px', opacity: 0.4 }} />
+                        <div style={{ fontWeight: 600, fontSize: '15px' }}>No loan records found</div>
+                        <div style={{ fontSize: '12px', marginTop: '4px' }}>Try adjusting your filters or search query.</div>
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedApplications.map((app, idx) => (
                     <tr 
                       key={app.id || idx}
                       style={{ borderBottom: `1px solid ${borderCol}` }}
@@ -2985,7 +2849,7 @@ export default function ManageLoanApplications() {
                         {app.bank_name}
                       </td>
                       <td style={{ padding: '16px 20px', fontWeight: 800 }}>
-                        ₹{app.loan_amount}
+                        ₹ {app.loan_amount}
                       </td>
                       <td style={{ padding: '16px 20px' }}>
                         {renderStatusBadge(app.status)}
@@ -3033,7 +2897,8 @@ export default function ManageLoanApplications() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -3447,7 +3312,25 @@ export default function ManageLoanApplications() {
                   </tr>
                 </thead>
                 <tbody style={{ fontSize: '13.5px', color: textDark }}>
-                  {paginatedApplications.map((app, idx) => (
+                  {loading ? (
+                    <tr>
+                      <td colSpan={8} style={{ padding: '40px 20px', textAlign: 'center', color: textMuted }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '18px', height: '18px', border: '2px solid #2563EB', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                          <span>Loading LOC/EOC applications from database...</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : paginatedApplications.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} style={{ padding: '48px 20px', textAlign: 'center', color: textMuted }}>
+                        <CreditCard size={32} style={{ margin: '0 auto 10px', opacity: 0.4 }} />
+                        <div style={{ fontWeight: 600, fontSize: '15px' }}>No LOC / EOC records found</div>
+                        <div style={{ fontSize: '12px', marginTop: '4px' }}>Try adjusting your filters or search query.</div>
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedApplications.map((app, idx) => (
                     <tr 
                       key={app.id || idx}
                       style={{ borderBottom: `1px solid ${borderCol}` }}
@@ -3475,7 +3358,7 @@ export default function ManageLoanApplications() {
                         {app.bank_name}
                       </td>
                       <td style={{ padding: '16px 20px', fontWeight: 800 }}>
-                        ₹{app.credit_limit || app.loan_amount}
+                        ₹ {app.credit_limit || app.loan_amount}
                       </td>
                       <td style={{ padding: '16px 20px' }}>
                         {renderStatusBadge(app.status)}
@@ -3523,7 +3406,8 @@ export default function ManageLoanApplications() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  ))
+                  )}
                 </tbody>
               </table>
             </div>
