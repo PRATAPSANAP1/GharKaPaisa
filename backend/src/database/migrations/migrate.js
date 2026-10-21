@@ -5022,6 +5022,14 @@ const migrate = async () => {
     logger.error('Office Building Geofences migration error note:', geoErr.message);
   }
 
+  // Matched Building Columns Migration (standalone fallback)
+  try {
+    const { migrate: migrateMatchedBuildingColumns } = require('./migrate_matched_building_columns');
+    await migrateMatchedBuildingColumns();
+  } catch (mbErr) {
+    logger.error('Matched Building Columns migration error note:', mbErr.message);
+  }
+
   // LOC/EOC Category Migration
   try {
     const { migrateLocEocCategory } = require('./migrate_loc_eoc_category');

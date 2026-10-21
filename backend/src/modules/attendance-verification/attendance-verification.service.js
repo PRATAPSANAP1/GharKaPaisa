@@ -310,10 +310,18 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
 
   const { rows: [session] } = await query(
     `SELECT id, employee_id, status, liveness_status, face_status, environment_status, failure_reason,
-            matched_building_id, matched_building_name, expires_at 
+            COALESCE(matched_building_id::text, NULL) as matched_building_id, COALESCE(matched_building_name, NULL) as matched_building_name, expires_at 
      FROM attendance_verification_sessions WHERE id = $1 LIMIT 1`,
     [sessionId]
-  );
+  ).catch(err => {
+      // Fallback if matched_building columns don't exist yet (migration not run)
+      logger.warn('[ATTENDANCE] matched_building columns may not exist, using fallback query:', err.message);
+      return query(
+        `SELECT id, employee_id, status, liveness_status, face_status, environment_status, failure_reason, expires_at 
+         FROM attendance_verification_sessions WHERE id = $1 LIMIT 1`,
+        [sessionId]
+      );
+    });
 
   if (!session || session.employee_id !== authEmpId) {
     const errorMsg = 'Attendance verification session not found or unauthorized';
@@ -801,8 +809,27 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, latitude, 
            updated_at = NOW() 
        WHERE id = $6`,
       [matchedBuildingId, matchedBuildingName, latitude || null, longitude || null, accuracy || null, sessionId]
-    );
-  } catch (e) {}
+    ).catch(err => {
+      // Fallback if matched_building columns don't exist yet
+      logger.warn('[ATTENDANCE] matched_building columns may not exist in UPDATE, using fallback:', err.message);
+      return query(
+        `UPDATE attendance_verification_sessions 
+         SET face_status = 'PASSED', 
+             location_status = 'PASSED',
+             environment_status = 'PASSED',
+             location_lat = $1,
+             location_lng = $2,
+             location_accuracy = $3,
+             status = 'PASSED', 
+             completed_at = NOW(), 
+             updated_at = NOW() 
+         WHERE id = $4`,
+        [latitude || null, longitude || null, accuracy || null, sessionId]
+      );
+    });
+  } catch (e) {
+    logger.error('[ATTENDANCE] Failed to update verification session:', e.message);
+  }
 
   await logAction(reqUser, 'ATTENDANCE_FACE_MATCH_SUCCESS', authEmpId, {
     session_id: sessionId,
