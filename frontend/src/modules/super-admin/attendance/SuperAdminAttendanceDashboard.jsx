@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTheme } from '../../../contexts/ThemeContext';
 import LoadingLogo from '../../../components/Loader/LoadingLogo';
 import { 
@@ -12,6 +13,10 @@ import api from '../../../services/api';
 
 export default function SuperAdminAttendanceDashboard() {
   const { C, isDark } = useTheme();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTab = searchParams.get('tab');
+  const urlStart = searchParams.get('startDate') || searchParams.get('start_date');
+  const urlEnd = searchParams.get('endDate') || searchParams.get('end_date');
 
   // Responsive state
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -22,16 +27,20 @@ export default function SuperAdminAttendanceDashboard() {
   }, []);
 
   // Main Tabs: 'today' | 'history' | 'reports' | 'buildings'
-  const [activeTab, setActiveTab] = useState('today');
+  const [activeTab, setActiveTab] = useState(urlTab || 'today');
 
   // Filter States
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [startDate, setStartDate] = useState(() => {
+    if (urlStart) return urlStart;
     const d = new Date();
     d.setDate(d.getDate() - 30);
     return d.toISOString().split('T')[0];
   });
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(() => {
+    if (urlEnd) return urlEnd;
+    return new Date().toISOString().split('T')[0];
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -1032,6 +1041,161 @@ export default function SuperAdminAttendanceDashboard() {
         background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px',
         padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px'
       }}>
+        {/* Quick Date Presets Bar (History & Reports Tabs) */}
+        {activeTab !== 'today' && activeTab !== 'buildings' && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '10px',
+            paddingBottom: '12px',
+            borderBottom: `1px solid ${C.border}`
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <FaCalendarAlt size={12} color={C.teal} /> Quick Presets:
+              </span>
+
+              {/* Special Requested Preset: 18 Sep – 30 Sep */}
+              <button
+                type="button"
+                onClick={() => {
+                  setStartDate('2026-09-18');
+                  setEndDate('2026-09-30');
+                  setPage(1);
+                }}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  border: startDate === '2026-09-18' && endDate === '2026-09-30'
+                    ? `1.5px solid ${C.teal}`
+                    : `1px solid ${C.border}`,
+                  background: startDate === '2026-09-18' && endDate === '2026-09-30'
+                    ? `${C.teal}20`
+                    : C.inputBg,
+                  color: startDate === '2026-09-18' && endDate === '2026-09-30'
+                    ? C.teal
+                    : C.text,
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: startDate === '2026-09-18' && endDate === '2026-09-30'
+                    ? `0 2px 8px ${C.teal}25`
+                    : 'none',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <span>★ 18 Sep – 30 Sep</span>
+              </button>
+
+              {/* September Full Month */}
+              <button
+                type="button"
+                onClick={() => {
+                  setStartDate('2026-09-01');
+                  setEndDate('2026-09-30');
+                  setPage(1);
+                }}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  border: startDate === '2026-09-01' && endDate === '2026-09-30'
+                    ? `1.5px solid ${C.teal}`
+                    : `1px solid ${C.border}`,
+                  background: startDate === '2026-09-01' && endDate === '2026-09-30'
+                    ? `${C.teal}20`
+                    : C.inputBg,
+                  color: startDate === '2026-09-01' && endDate === '2026-09-30'
+                    ? C.teal
+                    : C.text,
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                September 2026
+              </button>
+
+              {/* October Month */}
+              <button
+                type="button"
+                onClick={() => {
+                  setStartDate('2026-10-01');
+                  setEndDate('2026-10-31');
+                  setPage(1);
+                }}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  border: startDate === '2026-10-01' && endDate === '2026-10-31'
+                    ? `1.5px solid ${C.teal}`
+                    : `1px solid ${C.border}`,
+                  background: startDate === '2026-10-01' && endDate === '2026-10-31'
+                    ? `${C.teal}20`
+                    : C.inputBg,
+                  color: startDate === '2026-10-01' && endDate === '2026-10-31'
+                    ? C.teal
+                    : C.text,
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                October 2026
+              </button>
+
+              {/* Last 30 Days */}
+              <button
+                type="button"
+                onClick={() => {
+                  const endD = new Date();
+                  const startD = new Date();
+                  startD.setDate(startD.getDate() - 30);
+                  setEndDate(endD.toISOString().split('T')[0]);
+                  setStartDate(startD.toISOString().split('T')[0]);
+                  setPage(1);
+                }}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  border: `1px solid ${C.border}`,
+                  background: C.inputBg,
+                  color: C.text,
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                Last 30 Days
+              </button>
+            </div>
+
+            {/* Active Range Indicator Pill */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              fontWeight: 800,
+              color: C.teal,
+              background: `${C.teal}15`,
+              padding: '5px 12px',
+              borderRadius: '8px',
+              border: `1px solid ${C.teal}30`
+            }}>
+              <span>Period:</span>
+              <span style={{ color: C.text }}>{startDate} to {endDate}</span>
+            </div>
+          </div>
+        )}
+
         <div style={{
           display: 'grid',
           gridTemplateColumns: isMobile ? '1fr' : activeTab === 'reports' ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)',
@@ -1295,6 +1459,104 @@ export default function SuperAdminAttendanceDashboard() {
           </div>
         )}
       </div>
+
+      {/* ── SPECIAL BANNER FOR 18 SEP - 30 SEP REPORT ── */}
+      {activeTab === 'reports' && startDate === '2026-09-18' && endDate === '2026-09-30' && (
+        <div style={{
+          background: isDark
+            ? 'linear-gradient(135deg, rgba(13, 148, 136, 0.2), rgba(37, 99, 235, 0.15))'
+            : 'linear-gradient(135deg, #ECFDF5, #EFF6FF)',
+          border: '1.5px solid rgba(13, 148, 136, 0.35)',
+          borderRadius: '14px',
+          padding: '16px 20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '14px',
+          boxShadow: '0 4px 14px rgba(13, 148, 136, 0.08)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '12px',
+              background: '#0D9488',
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              boxShadow: '0 4px 10px rgba(13, 148, 136, 0.3)'
+            }}>
+              <FaCalendarAlt size={20} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '15px', fontWeight: 900, color: C.text }}>
+                  Employee Attendance Report: 18 Sep 2026 – 30 Sep 2026
+                </span>
+                <span style={{
+                  padding: '2px 8px',
+                  borderRadius: '10px',
+                  background: '#0D9488',
+                  color: '#FFFFFF',
+                  fontSize: '11px',
+                  fontWeight: 800
+                }}>
+                  ACTIVE REPORT
+                </span>
+              </div>
+              <div style={{ fontSize: '12.5px', color: C.textLight, marginTop: '2px' }}>
+                Total Records: <strong style={{ color: C.text }}>{reportsData.summary?.total_records || 0}</strong> | Present: <strong style={{ color: '#10B981' }}>{reportsData.summary?.present_count || 0}</strong> | Working Duration: <strong style={{ color: C.text }}>{reportsData.summary?.total_working_duration || '0h 0m'}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              onClick={() => handleExport('xlsx')}
+              disabled={exporting}
+              style={{
+                padding: '9px 18px',
+                borderRadius: '8px',
+                border: 'none',
+                background: '#1D4ED8',
+                color: '#FFFFFF',
+                fontSize: '12px',
+                fontWeight: 800,
+                cursor: exporting ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 2px 8px rgba(29, 78, 216, 0.3)'
+              }}
+            >
+              <FaFileExcel size={14} /> {exporting ? 'Generating...' : 'Download Excel (.xlsx)'}
+            </button>
+            <button
+              onClick={() => handleExport('csv')}
+              disabled={exporting}
+              style={{
+                padding: '9px 18px',
+                borderRadius: '8px',
+                border: 'none',
+                background: '#059669',
+                color: '#FFFFFF',
+                fontSize: '12px',
+                fontWeight: 800,
+                cursor: exporting ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 2px 8px rgba(5, 150, 105, 0.3)'
+              }}
+            >
+              <FaFileCsv size={14} /> {exporting ? 'Generating...' : 'Download CSV (.csv)'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── MAIN ATTENDANCE TABLE ── */}
       <div style={{

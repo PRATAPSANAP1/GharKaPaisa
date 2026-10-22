@@ -528,7 +528,10 @@ const getPartnerShareTracking = async (req, res, next) => {
       return error(res, 'Partner profile not found', 404);
     }
 
-    let where = `WHERE l.partner_id = $1 AND l.source = 'partner_share'`;
+    // Share-link leads are written with source 'linked_share' / 'share_link'
+    // (see submitShareLead + updateApplyTokenDetails). 'partner_share' is kept
+    // for historical rows only.
+    let where = `WHERE l.partner_id = $1 AND (l.source IN ('partner_share', 'linked_share', 'share_link') OR l.process_type = 'linked_share')`;
     const values = [partner.id];
     let idx = 2;
 
