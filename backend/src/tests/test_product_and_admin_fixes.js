@@ -32,10 +32,10 @@ console.log('✔ Product controller fee destructuring is fully defensive against
 console.log('\n--- TEST 2: Bank Assignment WHERE NOT EXISTS Query Safety ---');
 const insertQuery = `
   INSERT INTO admin_bank_assignments (admin_id, bank_id, category, is_active, created_by)
-  SELECT $1, $2, $3, TRUE, $4
+  SELECT $1, $2, $3::varchar, TRUE, $4
   WHERE NOT EXISTS (
     SELECT 1 FROM admin_bank_assignments
-    WHERE admin_id = $1 AND bank_id = $2 AND COALESCE(category, 'credit_card') = $3
+    WHERE admin_id = $1 AND bank_id = $2 AND COALESCE(category, 'credit_card'::varchar)::varchar = $3::varchar
   )
 `;
 assert.ok(!insertQuery.includes('ON CONFLICT (admin_id, bank_id)'), 'Query must not use legacy ON CONFLICT (admin_id, bank_id)');

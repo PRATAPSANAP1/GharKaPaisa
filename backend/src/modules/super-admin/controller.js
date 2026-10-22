@@ -97,7 +97,7 @@ const insertBankAssignment = async (adminId, bankId, category, createdById, clie
 
   // 1. Check if the assignment already exists
   let checkRes = await qFn(
-    `SELECT id FROM admin_bank_assignments WHERE admin_id = $1 AND bank_id = $2 AND COALESCE(category, 'credit_card') = $3 LIMIT 1`,
+    `SELECT id FROM admin_bank_assignments WHERE admin_id = $1 AND bank_id = $2 AND COALESCE(category, 'credit_card'::varchar)::varchar = $3::varchar LIMIT 1`,
     [adminId, bankId, cat]
   );
   if (!checkRes.rows || checkRes.rows.length === 0) {
@@ -118,10 +118,10 @@ const insertBankAssignment = async (adminId, bankId, category, createdById, clie
   try {
     return await qFn(
       `INSERT INTO admin_bank_assignments (admin_id, bank_id, category, is_active, created_by)
-       SELECT $1, $2, $3, TRUE, $4
+       SELECT $1, $2, $3::varchar, TRUE, $4
        WHERE NOT EXISTS (
          SELECT 1 FROM admin_bank_assignments
-         WHERE admin_id = $1 AND bank_id = $2 AND COALESCE(category, 'credit_card') = $3
+         WHERE admin_id = $1 AND bank_id = $2 AND COALESCE(category, 'credit_card'::varchar)::varchar = $3::varchar
        )`,
       [adminId, bankId, cat, validCreatedBy]
     );
