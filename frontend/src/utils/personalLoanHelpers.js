@@ -127,8 +127,8 @@ export const FINANCE_PRODUCT_LINKS = {
  */
 export const getFinanceDirectUrl = (productOrName) => {
   if (!productOrName) return null;
-  const pName = typeof productOrName === 'string' 
-    ? productOrName 
+  const pName = typeof productOrName === 'string'
+    ? productOrName
     : (productOrName.name || productOrName.bank_name || productOrName.bank_code || '');
   const n = pName.toLowerCase().trim();
 

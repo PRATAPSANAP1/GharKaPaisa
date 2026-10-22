@@ -916,6 +916,7 @@ export default function EmployeePersonalLoanOptions() {
         <PartnerProducts
           key={`${providerType}-${eligibilityType}`}
           initialCategory="personal_loan"
+          initialSubCategory="personal-loan"
           providerType={providerType}
           eligibilityType={eligibilityType}
           customBankOptions={activeBankOptions}
@@ -924,6 +925,9 @@ export default function EmployeePersonalLoanOptions() {
           emptyStateMessage={isFinance 
             ? 'No Personal Loan offers available for this company yet.' 
             : 'No Personal Loan offers available for this bank yet.'}
+          emptyStateSubtitle={isFinance
+            ? 'Try selecting All Finance Companies or checking other options.'
+            : 'Try selecting All Banks or checking other options.'}
           hideCategoryFilter={true}
           allowEmptyFilterSelection={true}
           initialBank={selectedBank}
