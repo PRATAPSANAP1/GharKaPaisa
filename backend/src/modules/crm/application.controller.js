@@ -6840,7 +6840,7 @@ const claimApplicationRequest = async (req, res, next) => {
 
     // Row-lock application for concurrency protection
     const cleanId = String(id).trim();
-    const { rows: [app] } = await client.query(`
+    let { rows: [app] } = await client.query(`
       SELECT a.*,
         p.bank_id as product_bank_id,
         b.id as resolved_bank_id,
@@ -6854,9 +6854,46 @@ const claimApplicationRequest = async (req, res, next) => {
       LEFT JOIN products p ON p.id = a.product_id
       LEFT JOIN banks b ON b.id = COALESCE(a.bank_id, p.bank_id)
       LEFT JOIN physical_application_details pad ON pad.application_id = a.id
-      WHERE a.id::text = $1 OR a.app_number = $1
+      WHERE LOWER(a.id::text) = LOWER($1) 
+         OR a.app_number ILIKE $1 
+         OR a.app_number ILIKE REPLACE($1, 'APP', '')
+         OR ('APP' || a.id::text) = $1
+         OR (a.bank_application_number IS NOT NULL AND a.bank_application_number ILIKE $1)
+         OR (a.bank_ref_number IS NOT NULL AND a.bank_ref_number ILIKE $1)
+         OR (a.lead_id IS NOT NULL AND a.lead_id::text = $1)
+         OR (a.tracking_token IS NOT NULL AND a.tracking_token = $1)
       FOR UPDATE OF a
     `, [cleanId]);
+
+    if (!app) {
+      // Fallback lookup via physical_application_details
+      const { rows: [pdRec] } = await client.query(`
+        SELECT application_id FROM physical_application_details 
+        WHERE id::text = $1 OR bank_application_number ILIKE $1 OR bank_ref_number ILIKE $1 
+        LIMIT 1
+      `, [cleanId]).catch(() => ({ rows: [] }));
+
+      if (pdRec?.application_id) {
+        const { rows: [appFromPd] } = await client.query(`
+          SELECT a.*,
+            p.bank_id as product_bank_id,
+            b.id as resolved_bank_id,
+            b.short_code as bank_code,
+            b.name as bank_name,
+            COALESCE(to_jsonb(a)->>'sales_claimed_by', to_jsonb(pad)->>'sales_claimed_by', '') as existing_claimed_by,
+            COALESCE(to_jsonb(a)->>'sales_claimed_by_name', to_jsonb(pad)->>'sales_claimed_by_name', '') as existing_claimed_by_name,
+            COALESCE(to_jsonb(a)->>'sales_claimed_by_code', to_jsonb(pad)->>'sales_claimed_by_code', '') as existing_claimed_by_code,
+            COALESCE(to_jsonb(a)->>'sales_claimed_at', to_jsonb(pad)->>'sales_claimed_at', NULL) as existing_claimed_at
+          FROM applications a 
+          LEFT JOIN products p ON p.id = a.product_id
+          LEFT JOIN banks b ON b.id = COALESCE(a.bank_id, p.bank_id)
+          LEFT JOIN physical_application_details pad ON pad.application_id = a.id
+          WHERE a.id = $1
+          FOR UPDATE OF a
+        `, [pdRec.application_id]);
+        app = appFromPd;
+      }
+    }
 
     if (!app) {
       await client.query('ROLLBACK');

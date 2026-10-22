@@ -368,7 +368,26 @@ export default function ManageApplications() {
 
     try {
       setClaimingId(app.id);
-      const res = await api.post(`/applications/${app.id}/claim-request`);
+      let res;
+      const targetId = app.id || app.app_number;
+      try {
+        res = await api.post(`/applications/${encodeURIComponent(targetId)}/claim-request`);
+      } catch (firstErr) {
+        if (firstErr?.response?.status === 404) {
+          const fallbackId = (app.app_number && app.app_number !== targetId) ? app.app_number : targetId;
+          try {
+            res = await api.post(`/admin/applications/${encodeURIComponent(fallbackId)}/claim-request`);
+          } catch (secondErr) {
+            if (secondErr?.response?.status === 404 && app.app_number && app.app_number !== targetId) {
+              res = await api.post(`/applications/${encodeURIComponent(app.app_number)}/claim-request`);
+            } else {
+              throw secondErr;
+            }
+          }
+        } else {
+          throw firstErr;
+        }
+      }
       if (res.data?.success) {
         alert(res.data?.message || `Application #${app.app_number || app.id} claimed successfully!`);
         const claimData = res.data?.data || {};

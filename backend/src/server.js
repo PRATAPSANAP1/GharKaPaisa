@@ -249,6 +249,11 @@ app.use('/team', apiRouter);
 app.use('/messenger', messengerRoute);
 app.use('/api/v1/messenger', messengerRoute);
 
+// Top-level aliases for applications endpoints (ensures claim-request resolves with or without /api/v1)
+const { applicationRouter } = require('./modules/crm/route.js');
+app.use('/applications', applicationRouter);
+app.use('/admin/applications', applicationRouter);
+
 // ── Test Routes ────────────────────────────────────────────────
 if (process.env.NODE_ENV !== 'production' && process.env.ENABLE_TEST_EMAIL_ROUTE === 'true') {
   const testEmailRoutes = require('./routes/settings/testEmail.routes.js');
