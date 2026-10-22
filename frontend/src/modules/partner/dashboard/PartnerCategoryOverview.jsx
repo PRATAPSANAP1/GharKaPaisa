@@ -13,6 +13,7 @@ import api from '../../../services/api';
 
 // Embedded Sub-Components
 import PartnerProducts from '../products/PartnerProducts';
+import { isProductOfSubCategory } from '../../../utils/personalLoanHelpers';
 import PartnerApplications from '../leads/PartnerApplications';
 import PartnerCrm from '../leads/PartnerCrm';
 import PartnerVault from '../profile/PartnerVault';
@@ -384,15 +385,9 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
     ];
 
     return categories.map(cat => {
-      const dbMatchCount = (Array.isArray(allProducts) ? allProducts : []).filter(p => {
-        const pCat = (p.category || '').toLowerCase();
-        const pSub = (p.sub_category || '').toLowerCase();
-        const pName = (p.name || '').toLowerCase();
-        const target = cat.slug.replace(/-/g, ' ');
-        return pCat.includes('loan') && (pCat.includes(target) || pSub.includes(target) || pName.includes(target) || pCat.includes(cat.title.toLowerCase()));
-      }).length;
-
-      const offerCount = dbMatchCount > 0 ? dbMatchCount : cat.defaultOffers;
+      const dbMatchCount = (Array.isArray(allProducts) ? allProducts : []).filter(p => isProductOfSubCategory(p, cat.slug)).length;
+      const hasLoadedProducts = Array.isArray(allProducts) && allProducts.length > 0;
+      const offerCount = hasLoadedProducts ? dbMatchCount : cat.defaultOffers;
       return {
         ...cat,
         rawCount: offerCount,
@@ -411,15 +406,9 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
     ];
 
     return categories.map(cat => {
-      const dbMatchCount = (Array.isArray(allProducts) ? allProducts : []).filter(p => {
-        const pCat = (p.category || '').toLowerCase();
-        const pSub = (p.sub_category || '').toLowerCase();
-        const pName = (p.name || '').toLowerCase();
-        const target = cat.slug.replace(/-/g, ' ');
-        return pCat.includes('insurance') && (pCat.includes(target) || pSub.includes(target) || pName.includes(target) || pCat.includes(cat.title.toLowerCase()));
-      }).length;
-
-      const offerCount = dbMatchCount > 0 ? dbMatchCount : cat.defaultOffers;
+      const dbMatchCount = (Array.isArray(allProducts) ? allProducts : []).filter(p => isProductOfSubCategory(p, cat.slug)).length;
+      const hasLoadedProducts = Array.isArray(allProducts) && allProducts.length > 0;
+      const offerCount = hasLoadedProducts ? dbMatchCount : cat.defaultOffers;
       return {
         ...cat,
         rawCount: offerCount,

@@ -126,11 +126,12 @@ export default function PartnerEntityDetail() {
         </div>
       </div>
 
-      {/* ── WORKSPACE CONTENT AREA: FULL PARTNER PRODUCTS CATALOG WITH PRE-APPLIED BANK FILTER ── */}
+      {/* ── WORKSPACE CONTENT AREA: FULL PARTNER PRODUCTS CATALOG WITH PRE-APPLIED BANK & SUBCATEGORY FILTER ── */}
       <main style={{ width: '100%' }}>
         <PartnerProducts 
-          initialBank={entitySlug} 
+          initialBank={targetCategory === 'credit_card' ? entitySlug : 'All Banks'} 
           initialCategory={targetCategory} 
+          initialSubCategory={targetCategory !== 'credit_card' ? entitySlug : ''}
         />
       </main>
 

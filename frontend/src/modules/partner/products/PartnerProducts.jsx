@@ -7,7 +7,8 @@ import { useActiveBanks } from '../../../contexts/BanksContext';
 import { getCleanImageUrl } from '../../../utils/urlHelper';
 import { useAuthStore } from '../../../app/store/authStore';
 import { usePartnerStore } from '../../../app/store/partnerStore';
-import { FINANCE_COMPANIES, isFinanceProduct, isBankProduct, getLoanEligibilityType } from '../../../utils/personalLoanHelpers';
+import { FINANCE_COMPANIES, isFinanceProduct, isBankProduct, getLoanEligibilityType, isProductOfSubCategory } from '../../../utils/personalLoanHelpers';
+export { isProductOfSubCategory };
 
 import { 
   MdFilterList, MdSearch, MdCheckCircle, MdLocalOffer, 
@@ -62,6 +63,7 @@ export default function PartnerProducts({
   initialSearch = '', 
   initialBank = '', 
   initialCategory = '',
+  initialSubCategory = '',
   // Safe optional props for specialized flows
   providerType = 'all', // 'bank' | 'finance' | 'all'
   eligibilityType = null, // 'cibil' | 'income' | null
@@ -205,6 +207,7 @@ export default function PartnerProducts({
 
   const [search, setSearch] = useState(() => initialSearch || searchParams.get('q') || searchParams.get('search') || "");
   const [activeCategory, setActiveCategory] = useState(() => initialCategory || searchParams.get('category') || "all");
+  const [activeSubCategory, setActiveSubCategory] = useState(() => initialSubCategory || searchParams.get('sub_category') || searchParams.get('subCategory') || searchParams.get('type') || "");
   const [activeBank, setActiveBank] = useState(() => getNormalizedBank(initialBank || searchParams.get('bank') || allDefaultBankValue));
   const [featureFilter, setFeatureFilter] = useState("all"); // 'all', 'ltf', 'high_payout', 'high_approval'
   const [filterTab, setFilterTab] = useState("products"); // 'products' or 'banks'
@@ -226,6 +229,12 @@ export default function PartnerProducts({
   }, [initialCategory]);
 
   useEffect(() => {
+    if (initialSubCategory !== undefined && initialSubCategory !== null) {
+      setActiveSubCategory(initialSubCategory);
+    }
+  }, [initialSubCategory]);
+
+  useEffect(() => {
     if (initialSearch) {
       setSearch(initialSearch);
     } else {
@@ -244,15 +253,16 @@ export default function PartnerProducts({
   const activeFiltersCount = useMemo(() => {
     let count = 0;
     if (activeCategory !== 'all') count++;
+    if (activeSubCategory && activeSubCategory !== 'all') count++;
     if (activeBank !== 'All Banks') count++;
     if (featureFilter !== 'all') count++;
     if (minCommission !== 0) count++;
     if (minApproval !== 0) count++;
     if (search.trim() !== '') count++;
     return count;
-  }, [activeCategory, activeBank, featureFilter, minCommission, minApproval, search]);
+  }, [activeCategory, activeSubCategory, activeBank, featureFilter, minCommission, minApproval, search]);
 
-  // Sync category from URL search query parameter or navigation state
+  // Sync category & subcategory from URL search query parameter or navigation state
   useEffect(() => {
     const cat = searchParams.get('category') || location.state?.category;
     if (cat) {
@@ -262,12 +272,16 @@ export default function PartnerProducts({
         setActiveCategory(cat);
       }
     }
+    const subCat = searchParams.get('sub_category') || searchParams.get('subCategory') || searchParams.get('type') || location.state?.sub_category;
+    if (subCat) {
+      setActiveSubCategory(subCat);
+    }
   }, [searchParams, location.state]);
 
   // Reset pagination when any filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, activeCategory, activeBank, filterTab, sortBy, minCommission, minApproval, cardsPerPage]);
+  }, [search, activeCategory, activeSubCategory, activeBank, filterTab, sortBy, minCommission, minApproval, cardsPerPage]);
 
   // Apply Modal state
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -632,6 +646,9 @@ export default function PartnerProducts({
     }
 
     const matchBank = isProductOfBank(p, activeBank);
+
+    // Subcategory Filter (Home Loan, Business Loan, Personal Loan, etc.)
+    const matchSubCategory = !activeSubCategory || activeSubCategory === 'all' || isProductOfSubCategory(p, activeSubCategory);
     
     // Commission Filter
     const matchCommission = parseFloat(p.commission_value || 0) >= minCommission;
@@ -663,7 +680,7 @@ export default function PartnerProducts({
       matchEligibility = getLoanEligibilityType(p) === 'income';
     }
 
-    return matchSearch && matchCategory && matchBank && matchCommission && matchApproval && matchFeature && matchProvider && matchEligibility;
+    return matchSearch && matchCategory && matchSubCategory && matchBank && matchCommission && matchApproval && matchFeature && matchProvider && matchEligibility;
   });
 
   // Sort Logic
@@ -850,6 +867,47 @@ export default function PartnerProducts({
               ))}
             </select>
           </div>
+
+          {((activeCategory && (activeCategory.includes('loan') || activeCategory === 'loans')) || Boolean(activeSubCategory)) && (
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '6px', display: 'block' }}>
+                {t("Loan Subcategory")}
+              </label>
+              <select
+                id="sidebar-select-subcategory"
+                value={activeSubCategory || 'all'}
+                onChange={(e) => {
+                  const val = e.target.value === 'all' ? '' : e.target.value;
+                  setActiveSubCategory(val);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  border: activeSubCategory && activeSubCategory !== 'all' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
+                  background: activeSubCategory && activeSubCategory !== 'all' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
+                  color: activeSubCategory && activeSubCategory !== 'all' ? '#FFFFFF' : C.text,
+                  boxShadow: activeSubCategory && activeSubCategory !== 'all' ? `0 4px 12px ${C.primary}35` : 'none',
+                  outline: 'none'
+                }}
+              >
+                <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>All Loan Types</option>
+                <option value="home-loan" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>Home Loan</option>
+                <option value="personal-loan" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>Personal Loan</option>
+                <option value="business-loan" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>Business Loan</option>
+                <option value="loan-against-property" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>Loan Against Property</option>
+                <option value="gold-loan" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>Gold Loan</option>
+                <option value="vehicle-loan" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>Vehicle / Car Loan</option>
+                <option value="loan-on-credit-card" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>Loan on Credit Card</option>
+                <option value="smart-emi" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>Smart EMI</option>
+                <option value="loc-eoc" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>LOC / EOC</option>
+              </select>
+            </div>
+          )}
         </div>
 
         <div style={{ height: 1, background: C.border, margin: '0 0 20px' }} />
@@ -995,6 +1053,7 @@ export default function PartnerProducts({
         <button
           onClick={() => {
             setActiveCategory('all');
+            setActiveSubCategory('');
             setActiveBank('All Banks');
             setFeatureFilter('all');
             setMinCommission(0);
@@ -1331,6 +1390,16 @@ export default function PartnerProducts({
                 </span>
               )}
 
+              {activeSubCategory && activeSubCategory !== 'all' && (
+                <span style={{
+                  fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '12px',
+                  background: `${C.primary}18`, color: C.primary, display: 'inline-flex', alignItems: 'center', gap: '4px'
+                }}>
+                  {t("Subcategory:")} {activeSubCategory.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                  <MdClose size={12} style={{ cursor: 'pointer' }} onClick={() => setActiveSubCategory('')} />
+                </span>
+              )}
+
               {activeBank !== allDefaultBankValue && activeBank !== 'All Banks' && (
                 <span style={{
                   fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '12px',
@@ -1376,6 +1445,7 @@ export default function PartnerProducts({
               <button
                 onClick={() => {
                   setActiveCategory('all');
+                  setActiveSubCategory('');
                   setActiveBank('All Banks');
                   setFeatureFilter('all');
                   setMinCommission(0);
@@ -1451,11 +1521,16 @@ export default function PartnerProducts({
             }}>
               <MdSearch size={28} />
             </div>
-            <h3 style={{ fontSize: '17px', fontWeight: 700, color: C.text, margin: '0 0 4px' }}>{emptyStateMessage || t("No products found")}</h3>
-            <p style={{ color: C.textMid, margin: '0 0 20px', fontSize: '13px' }}>{emptyStateMessage ? "No personal loan offers match this selection currently." : t("Try adjusting your filters or search terms.")}</p>
+            <h3 style={{ fontSize: '17px', fontWeight: 700, color: C.text, margin: '0 0 4px' }}>
+              {emptyStateMessage || (activeSubCategory ? `No ${activeSubCategory.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} Offers Found` : t("No products found"))}
+            </h3>
+            <p style={{ color: C.textMid, margin: '0 0 20px', fontSize: '13px' }}>
+              {emptyStateMessage || (activeSubCategory ? `Currently there are no active ${activeSubCategory.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} offers available. Please check back later or explore other loan categories.` : t("Try adjusting your filters or search terms."))}
+            </p>
             <button
               onClick={() => { 
                 if (!hideCategoryFilter) setActiveCategory('all'); 
+                setActiveSubCategory('');
                 setActiveBank(allDefaultBankValue); 
                 setSearch(''); 
               }}

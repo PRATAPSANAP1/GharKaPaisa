@@ -983,3 +983,267 @@ export const getLoanEligibilityType = (p) => {
 
   return 'cibil';
 };
+
+/**
+ * Checks whether a given product belongs to a specified subcategory.
+ * Applies comprehensive rules for loan subcategories (home-loan, personal-loan, business-loan, lap, etc.)
+ * as well as insurance subcategories and generic slug matching.
+ *
+ * @param {Object} p - The product object
+ * @param {string} subCat - The subcategory slug or label (e.g. 'home-loan', 'personal-loan')
+ * @returns {boolean}
+ */
+export const isProductOfSubCategory = (p, subCat) => {
+  if (!subCat || subCat === 'all' || String(subCat).toLowerCase() === 'all') return true;
+  if (!p) return false;
+
+  const rawSlug = String(subCat).toLowerCase().trim();
+  const slug = rawSlug.replace(/[-_]/g, ' ').trim();
+  const pCat = String(p.category || '').toLowerCase().trim();
+  const pSub = String(p.sub_category || '').toLowerCase().trim();
+  const pName = String(p.name || '').toLowerCase().trim();
+
+  // 1. HOME LOAN
+  if (rawSlug === 'home-loan' || rawSlug === 'home_loan' || rawSlug === 'home' || slug === 'home loan') {
+    return (
+      pCat === 'home_loan' ||
+      pCat.includes('home_loan') ||
+      pCat.includes('homeloan') ||
+      pSub.includes('home loan') ||
+      pSub === 'home' ||
+      pName.includes('home loan') ||
+      pName.includes('housing loan') ||
+      pName.includes('home purchase') ||
+      pName.includes('home construction') ||
+      pName.includes('plot loan')
+    );
+  }
+
+  // 2. PERSONAL LOAN
+  if (rawSlug === 'personal-loan' || rawSlug === 'personal_loan' || rawSlug === 'personal' || slug === 'personal loan') {
+    // Exclude credit card loans, loc/eoc, smart emi, home loans, car loans, business loans
+    const isLocEocOrCardLoan = (
+      ['loan_on_credit_card', 'loc_eoc', 'smart_emi', 'loc', 'eoc', 'card_on_loan'].includes(pCat) ||
+      pSub.includes('credit card') ||
+      pSub.includes('loc') ||
+      pSub.includes('eoc') ||
+      pSub.includes('smart emi') ||
+      pName.includes('on credit card') ||
+      pName.includes('smart emi') ||
+      pName.includes('limit to cash') ||
+      pName.includes('encash')
+    );
+    if (isLocEocOrCardLoan) return false;
+
+    if (pCat === 'home_loan' || pCat.includes('home_loan') || pName.includes('home loan')) return false;
+    if (pCat === 'business_loan' || pCat.includes('business') || pName.includes('business loan')) return false;
+    if (pCat === 'used_car_loan' || pCat.includes('car') || pName.includes('car loan')) return false;
+    if (pCat.includes('gold') || pName.includes('gold loan')) return false;
+
+    return (
+      pCat === 'personal_loan' ||
+      pCat === 'instant_loan' ||
+      pCat.includes('personal') ||
+      pSub.includes('personal') ||
+      pName.includes('personal loan') ||
+      pName.includes('xpress credit') ||
+      pName.includes('cash loan')
+    );
+  }
+
+  // 3. BUSINESS LOAN / MSME / SME
+  if (
+    rawSlug === 'business-loan' ||
+    rawSlug === 'business_loan' ||
+    rawSlug === 'business' ||
+    slug === 'business loan' ||
+    slug === 'msme loan' ||
+    slug === 'sme loan'
+  ) {
+    return (
+      pCat === 'business_loan' ||
+      pCat.includes('business') ||
+      pSub.includes('business') ||
+      pSub.includes('msme') ||
+      pSub.includes('sme') ||
+      pName.includes('business loan') ||
+      pName.includes('msme') ||
+      pName.includes('sme loan') ||
+      pName.includes('commercial loan')
+    );
+  }
+
+  // 4. LOAN AGAINST PROPERTY (LAP / LAC)
+  if (
+    rawSlug === 'loan-against-property' ||
+    rawSlug === 'lap' ||
+    rawSlug === 'lac' ||
+    slug === 'loan against property' ||
+    slug === 'lap'
+  ) {
+    return (
+      pCat === 'lac' ||
+      pCat.includes('property') ||
+      pCat.includes('lap') ||
+      pSub.includes('property') ||
+      pSub.includes('lap') ||
+      pName.includes('against property') ||
+      pName.includes('loan against property') ||
+      pName.includes('mortgage') ||
+      pName.includes('lap')
+    );
+  }
+
+  // 5. VEHICLE / CAR / AUTO / BIKE / TWO WHEELER LOAN
+  if (
+    rawSlug === 'vehicle-loan' ||
+    rawSlug === 'car-loan' ||
+    rawSlug === 'auto-loan' ||
+    rawSlug === 'bike-loan' ||
+    rawSlug === 'used-car-loan' ||
+    slug.includes('vehicle') ||
+    slug.includes('car loan') ||
+    slug.includes('bike')
+  ) {
+    return (
+      pCat === 'used_car_loan' ||
+      pCat.includes('car') ||
+      pCat.includes('vehicle') ||
+      pCat.includes('auto') ||
+      pCat.includes('bike') ||
+      pSub.includes('car') ||
+      pSub.includes('vehicle') ||
+      pSub.includes('auto') ||
+      pSub.includes('bike') ||
+      pName.includes('car loan') ||
+      pName.includes('vehicle loan') ||
+      pName.includes('auto loan') ||
+      pName.includes('bike loan') ||
+      pName.includes('two wheeler')
+    );
+  }
+
+  // 6. GOLD LOAN
+  if (rawSlug === 'gold-loan' || rawSlug === 'gold_loan' || rawSlug === 'gold' || slug === 'gold loan') {
+    return (
+      pCat.includes('gold') ||
+      pSub.includes('gold') ||
+      pName.includes('gold loan') ||
+      pName.includes('gold')
+    );
+  }
+
+  // 7. EDUCATION LOAN
+  if (
+    rawSlug === 'education-loan' ||
+    rawSlug === 'edu-loan' ||
+    rawSlug === 'education_loan' ||
+    slug === 'education loan'
+  ) {
+    return (
+      pCat === 'education_loan' ||
+      pCat.includes('education') ||
+      pSub.includes('education') ||
+      pSub.includes('student') ||
+      pName.includes('education loan') ||
+      pName.includes('student loan')
+    );
+  }
+
+  // 8. LOAN ON CREDIT CARD / SMART EMI / LOC / EOC
+  if (
+    rawSlug === 'loan-on-credit-card' ||
+    rawSlug === 'smart-emi' ||
+    rawSlug === 'loc-eoc' ||
+    rawSlug === 'loc' ||
+    rawSlug === 'eoc' ||
+    slug.includes('credit card') ||
+    slug.includes('smart emi') ||
+    slug === 'loc' ||
+    slug === 'eoc'
+  ) {
+    return (
+      ['loan_on_credit_card', 'smart_emi', 'loc_eoc', 'loc', 'eoc', 'card_on_loan'].includes(pCat) ||
+      pSub.includes('credit card') ||
+      pSub.includes('loc') ||
+      pSub.includes('eoc') ||
+      pSub.includes('smart emi') ||
+      pName.includes('on credit card') ||
+      pName.includes('dial-a-loan') ||
+      pName.includes('instant personal loan on card') ||
+      pName.includes('insta loan') ||
+      pName.includes('jumbo loan') ||
+      pName.includes('split-n-pay') ||
+      pName.includes('encash')
+    );
+  }
+
+  // 9. HEALTH INSURANCE
+  if (rawSlug === 'health-insurance' || rawSlug === 'health' || slug === 'health insurance') {
+    return (
+      pCat === 'health_insurance' ||
+      pCat.includes('health') ||
+      pSub.includes('health') ||
+      pName.includes('health') ||
+      pName.includes('mediclaim') ||
+      pName.includes('hospital')
+    );
+  }
+
+  // 10. LIFE INSURANCE
+  if (rawSlug === 'life-insurance' || rawSlug === 'life' || slug === 'life insurance') {
+    return (
+      pCat === 'life_insurance' ||
+      pCat.includes('life') ||
+      pSub.includes('life') ||
+      pName.includes('life insurance') ||
+      pName.includes('life plan')
+    );
+  }
+
+  // 11. GENERAL / MOTOR / VEHICLE INSURANCE
+  if (
+    rawSlug === 'general-insurance' ||
+    rawSlug === 'motor-insurance' ||
+    rawSlug === 'car-insurance' ||
+    slug.includes('general') ||
+    slug.includes('motor')
+  ) {
+    return (
+      pCat === 'general_insurance' ||
+      pCat.includes('general') ||
+      pCat.includes('motor') ||
+      pCat.includes('vehicle') ||
+      pSub.includes('general') ||
+      pSub.includes('motor') ||
+      pSub.includes('vehicle') ||
+      pName.includes('motor') ||
+      pName.includes('general') ||
+      pName.includes('vehicle insurance') ||
+      pName.includes('car insurance')
+    );
+  }
+
+  // 12. TERM INSURANCE
+  if (rawSlug === 'term-insurance' || rawSlug === 'term' || slug === 'term insurance') {
+    return (
+      pCat.includes('term') ||
+      pSub.includes('term') ||
+      pName.includes('term insurance') ||
+      pName.includes('term plan')
+    );
+  }
+
+  // 13. FALLBACK / GENERAL MATCH
+  if (pSub && (pSub.toLowerCase() === slug || pSub.toLowerCase().replace(/[-_]/g, ' ') === slug)) return true;
+  if (pCat && (pCat.toLowerCase() === rawSlug || pCat.toLowerCase().replace(/[-_]/g, ' ') === slug)) return true;
+
+  const words = slug.split(/\s+/).filter(w => w.length > 2 && w !== 'loan' && w !== 'insurance');
+  if (words.length > 0) {
+    const allWordsMatch = words.every(w => pCat.includes(w) || pSub.includes(w) || pName.includes(w));
+    if (allWordsMatch) return true;
+  }
+
+  return false;
+};
+
