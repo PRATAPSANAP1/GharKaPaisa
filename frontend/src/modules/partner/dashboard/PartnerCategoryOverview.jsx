@@ -188,7 +188,12 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
     const fetchDatabaseBanks = async () => {
       setLoadingBanks(true);
       try {
-        const res = await api.get('/banks', { params: { limit: 100 } });
+        const res = await api.get('/banks', { 
+          params: { 
+            limit: 100,
+            category: activeCategory === 'credit_card' ? 'credit_card' : undefined
+          } 
+        });
         const list = res.data?.data || res.data?.banks || (Array.isArray(res.data) ? res.data : []);
         if (Array.isArray(list) && list.length > 0 && isMounted) {
           setDbBanks(list);
@@ -201,7 +206,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
     };
     fetchDatabaseBanks();
     return () => { isMounted = false; };
-  }, []);
+  }, [activeCategory]);
 
   // Fetch all products live for global product search
   useEffect(() => {
@@ -228,7 +233,18 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
         const bName = b.name || b.bank_name || 'Bank';
         const bShort = b.short_code || '';
         const bSlug = (bShort || toSlug(bName)).toLowerCase();
-        const pCount = parseInt(b.products_count || b.card_count || b.cards_count || 0, 10);
+
+        let pCount = parseInt(b.products_count || b.card_count || b.cards_count || 0, 10);
+        if (Array.isArray(allProducts) && allProducts.length > 0) {
+          const cardProductsForBank = allProducts.filter(p => 
+            (p.bank_id === b.id || (p.bank_code && p.bank_code.toLowerCase() === bSlug)) && 
+            ['credit_card', 'co_branded_card', 'fd_card'].includes((p.category || '').toLowerCase())
+          );
+          if (cardProductsForBank.length > 0) {
+            pCount = cardProductsForBank.length;
+          }
+        }
+
         const dbLogo = b.logo_url || b.logo;
         const staticLogo = getStaticBankLogo(bName, bShort);
 
@@ -236,6 +252,8 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
           id: b.id,
           name: bName,
           slug: bSlug,
+          short_code: bShort,
+          categories: Array.isArray(b.categories) ? b.categories : [],
           rawCount: pCount,
           activeCardsCount: pCount > 0 ? pCount.toLocaleString('en-IN') : '0',
           logo: dbLogo || staticLogo,
@@ -257,6 +275,8 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
           id: b.id,
           name: bName,
           slug: bSlug,
+          short_code: bShort,
+          categories: Array.isArray(b.categories) ? b.categories : [],
           rawCount: pCount,
           activeCardsCount: pCount > 0 ? pCount.toLocaleString('en-IN') : '0',
           logo: b.logo || b.image || staticLogo,
@@ -267,15 +287,44 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
     }
 
     return defaultCreditCardBanks;
-  }, [dbBanks, activeBanks]);
+  }, [dbBanks, activeBanks, allProducts]);
 
   const filteredBanks = useMemo(() => {
     let list = (Array.isArray(bankList) ? bankList : []).filter(b => {
       const bSlug = (b.slug || '').toLowerCase();
       const bName = (b.name || '').toLowerCase();
+      const bCode = (b.short_code || b.code || '').toUpperCase();
+
+      // Exclude LOC/EOC and loan on card
       if (bSlug.includes('loc_eoc') || bSlug.includes('loc-eoc') || bName.includes('loc/eoc') || bName.includes('loan on card') || bName.includes('smart emi')) {
         return false;
       }
+
+      // Exclude dedicated loan entities / NBFCs from Credit Cards:
+      // Bajaj Finance, Finable, KreditBee, Punawalla Finance, Ram Fincorp, Tata Capital, Unity
+      const isLoanOnlyBank = 
+        ['BAJAJ', 'BAJAJ_FINANCE', 'BA'].includes(bCode) || bName.includes('bajaj') ||
+        ['FINABLE', 'FI'].includes(bCode) || bName.includes('finable') || bName.includes('finaable') || bName.includes('prefr') ||
+        ['KREDITBEE', 'KR'].includes(bCode) || bName.includes('kreditbee') || bName.includes('kredit bee') ||
+        ['PUNAWALLA', 'POONAWALLA', 'PU'].includes(bCode) || bName.includes('punawalla') || bName.includes('poonawalla') ||
+        ['RAMFINCORP', 'RAM_FINCORP', 'RA'].includes(bCode) || bName.includes('ram fincorp') || bName.includes('ramfin') ||
+        ['TATACAPITAL', 'TATA_CAPITAL', 'TA'].includes(bCode) || (bName.includes('tata capital') && !bName.includes('sbi') && !bName.includes('hdfc')) ||
+        ['UNITY', 'UNITY_BANK', 'UN'].includes(bCode) || bName.includes('unity');
+
+      if (isLoanOnlyBank) {
+        return false;
+      }
+
+      // If bank has categories from DB, ensure it offers credit cards and isn't solely loans
+      if (Array.isArray(b.categories) && b.categories.length > 0) {
+        const hasCardCategory = b.categories.some(cat => 
+          ['credit_card', 'co_branded_card', 'fd_card', 'cards'].includes(String(cat).toLowerCase())
+        );
+        if (!hasCardCategory) {
+          return false;
+        }
+      }
+
       const q = searchQuery.toLowerCase().trim();
       const matchesQuery = !q || b.name.toLowerCase().includes(q) || b.slug.toLowerCase().includes(q);
       const matchesCategory = bankCategoryFilter === 'all' || 

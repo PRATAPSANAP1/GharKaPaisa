@@ -36,7 +36,7 @@ const mapBankRow = (bank) => {
 const listAllBanks = async (req, res, next) => {
   try {
     const { page, limit, offset } = getPaginationParams(req.query);
-    const { search, status } = req.query;
+    const { search, status, category } = req.query;
 
     let whereClause = 'WHERE 1=1';
     const values = [];
@@ -56,6 +56,25 @@ const listAllBanks = async (req, res, next) => {
       } else {
         whereClause += ` AND b.status = $${idx++}`;
         values.push(status);
+      }
+    }
+
+    if (category) {
+      if (category === 'credit_card' || category === 'cards') {
+        whereClause += ` AND EXISTS (
+          SELECT 1 FROM products p_cat 
+          WHERE p_cat.bank_id = b.id 
+            AND (p_cat.category IN ('credit_card', 'co_branded_card', 'fd_card') OR p_cat.category ILIKE '%card%')
+            AND (p_cat.status = 'Active' OR p_cat.is_active = true)
+        )`;
+      } else {
+        whereClause += ` AND EXISTS (
+          SELECT 1 FROM products p_cat 
+          WHERE p_cat.bank_id = b.id 
+            AND p_cat.category = $${idx++}
+            AND (p_cat.status = 'Active' OR p_cat.is_active = true)
+        )`;
+        values.push(category);
       }
     }
 
@@ -351,6 +370,29 @@ const deleteBank = async (req, res, next) => {
 // GET /api/v1/banks/active — Public, lightweight, no auth
 const getActiveBanks = async (req, res, next) => {
   try {
+    const { category } = req.query;
+    let categoryClause = '';
+    const values = [];
+
+    if (category) {
+      if (category === 'credit_card' || category === 'cards') {
+        categoryClause = ` AND EXISTS (
+          SELECT 1 FROM products p_cat 
+          WHERE p_cat.bank_id = b.id 
+            AND (p_cat.category IN ('credit_card', 'co_branded_card', 'fd_card') OR p_cat.category ILIKE '%card%')
+            AND (p_cat.status = 'Active' OR p_cat.is_active = true)
+        )`;
+      } else {
+        categoryClause = ` AND EXISTS (
+          SELECT 1 FROM products p_cat 
+          WHERE p_cat.bank_id = b.id 
+            AND p_cat.category = $1
+            AND (p_cat.status = 'Active' OR p_cat.is_active = true)
+        )`;
+        values.push(category);
+      }
+    }
+
     const { rows } = await query(`
       SELECT
         b.id,
@@ -361,10 +403,11 @@ const getActiveBanks = async (req, res, next) => {
         COUNT(p.id) FILTER (WHERE p.status = 'Active' OR p.is_active = true)::int as products_count
       FROM banks b
       LEFT JOIN products p ON p.bank_id = b.id
-      WHERE b.is_active = true OR b.status = 'Active'
+      WHERE (b.is_active = true OR b.status = 'Active')
+      ${categoryClause}
       GROUP BY b.id
       ORDER BY b.display_order ASC, b.name ASC
-    `);
+    `, values);
 
     const cloudfrontUrl =
       process.env.CLOUDFRONT_URL ||
