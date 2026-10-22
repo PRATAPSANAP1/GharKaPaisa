@@ -3,33 +3,96 @@ import api from './api';
 const attendanceService = {
   // Verification endpoints
   createVerificationSession: async () => {
-    const response = await api.post('/attendance/verification/session');
-    return response.data;
+    try {
+      const response = await api.post('/attendance/verification/session');
+      return response.data;
+    } catch (err) {
+      if (err.response?.status === 404) {
+        try {
+          const fallback1 = await api.post('/attendance/session');
+          return fallback1.data;
+        } catch (e1) {
+          if (e1.response?.status === 404) {
+            const fallback2 = await api.post('/attendance-verification/session');
+            return fallback2.data;
+          }
+          throw e1;
+        }
+      }
+      throw err;
+    }
   },
 
   initiateLivenessSession: async (sessionId) => {
-    const response = await api.post('/attendance/verification/liveness/session', {
-      session_id: sessionId,
-    });
-    return response.data;
+    const payload = { session_id: sessionId };
+    try {
+      const response = await api.post('/attendance/verification/liveness/session', payload);
+      return response.data;
+    } catch (err) {
+      if (err.response?.status === 404) {
+        try {
+          const fallback1 = await api.post('/attendance/liveness/session', payload);
+          return fallback1.data;
+        } catch (e1) {
+          if (e1.response?.status === 404) {
+            const fallback2 = await api.post('/attendance-verification/liveness/session', payload);
+            return fallback2.data;
+          }
+          throw e1;
+        }
+      }
+      throw err;
+    }
   },
 
   getLivenessCredentials: async (sessionId) => {
-    const response = await api.post('/attendance/verification/liveness/credentials', {
-      session_id: sessionId,
-    });
-    return response.data;
+    const payload = { session_id: sessionId };
+    try {
+      const response = await api.post('/attendance/verification/liveness/credentials', payload);
+      return response.data;
+    } catch (err) {
+      if (err.response?.status === 404) {
+        try {
+          const fallback1 = await api.post('/attendance/liveness/credentials', payload);
+          return fallback1.data;
+        } catch (e1) {
+          if (e1.response?.status === 404) {
+            const fallback2 = await api.post('/attendance-verification/liveness/credentials', payload);
+            return fallback2.data;
+          }
+          throw e1;
+        }
+      }
+      throw err;
+    }
   },
 
   validateLivenessResult: async (sessionId, providerSessionId, locationData = {}) => {
-    const response = await api.post('/attendance/verification/liveness/result', {
+    const payload = {
       session_id: sessionId,
       provider_session_id: providerSessionId,
       latitude: locationData.latitude ?? locationData.lat,
       longitude: locationData.longitude ?? locationData.lng,
       accuracy: locationData.accuracy,
-    });
-    return response.data;
+    };
+    try {
+      const response = await api.post('/attendance/verification/liveness/result', payload);
+      return response.data;
+    } catch (err) {
+      if (err.response?.status === 404) {
+        try {
+          const fallback1 = await api.post('/attendance/liveness/result', payload);
+          return fallback1.data;
+        } catch (e1) {
+          if (e1.response?.status === 404) {
+            const fallback2 = await api.post('/attendance-verification/liveness/result', payload);
+            return fallback2.data;
+          }
+          throw e1;
+        }
+      }
+      throw err;
+    }
   },
 
   // Office Building Geofence Endpoints
@@ -58,12 +121,30 @@ const attendanceService = {
     formData.append('session_id', sessionId);
     formData.append('face_image', faceFile);
 
-    const response = await api.post('/attendance/verification/complete', formData, {
+    const config = {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-    });
-    return response.data;
+    };
+
+    try {
+      const response = await api.post('/attendance/verification/complete', formData, config);
+      return response.data;
+    } catch (err) {
+      if (err.response?.status === 404) {
+        try {
+          const fallback1 = await api.post('/attendance/complete', formData, config);
+          return fallback1.data;
+        } catch (e1) {
+          if (e1.response?.status === 404) {
+            const fallback2 = await api.post('/attendance-verification/complete', formData, config);
+            return fallback2.data;
+          }
+          throw e1;
+        }
+      }
+      throw err;
+    }
   },
 
   // Biometric Enrollment Endpoints

@@ -28,42 +28,101 @@ export const getMyAttendanceSummary = async (params = {}) => {
  * Create a new Attendance Verification Session (5 min expiry)
  */
 export const createVerificationSession = async () => {
-  const response = await apiClient.post('/attendance/verification/session');
-  return response.data;
+  try {
+    const response = await apiClient.post('/attendance/verification/session');
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 404) {
+      try {
+        const fb1 = await apiClient.post('/attendance/session');
+        return fb1.data;
+      } catch (e1) {
+        if (e1.response?.status === 404) {
+          const fb2 = await apiClient.post('/attendance-verification/session');
+          return fb2.data;
+        }
+      }
+    }
+    throw error;
+  }
 };
 
 /**
  * Initiate Liveness Session
  */
 export const createLivenessSession = async (sessionId) => {
-  const response = await apiClient.post('/attendance/verification/liveness/session', {
-    session_id: sessionId,
-  });
-  return response.data;
+  const payload = { session_id: sessionId };
+  try {
+    const response = await apiClient.post('/attendance/verification/liveness/session', payload);
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 404) {
+      try {
+        const fb1 = await apiClient.post('/attendance/liveness/session', payload);
+        return fb1.data;
+      } catch (e1) {
+        if (e1.response?.status === 404) {
+          const fb2 = await apiClient.post('/attendance-verification/liveness/session', payload);
+          return fb2.data;
+        }
+      }
+    }
+    throw error;
+  }
 };
 
 /**
  * Fetch Temporary AWS Liveness Credentials for session
  */
 export const getLivenessCredentials = async (sessionId) => {
-  const response = await apiClient.post('/attendance/verification/liveness/credentials', {
-    session_id: sessionId,
-  });
-  return response.data;
+  const payload = { session_id: sessionId };
+  try {
+    const response = await apiClient.post('/attendance/verification/liveness/credentials', payload);
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 404) {
+      try {
+        const fb1 = await apiClient.post('/attendance/liveness/credentials', payload);
+        return fb1.data;
+      } catch (e1) {
+        if (e1.response?.status === 404) {
+          const fb2 = await apiClient.post('/attendance-verification/liveness/credentials', payload);
+          return fb2.data;
+        }
+      }
+    }
+    throw error;
+  }
 };
 
 /**
  * Validate AWS Rekognition Liveness Result + Execute KYC Face Matching + Geofence Verification
  */
 export const validateLivenessResult = async (sessionId, providerSessionId, locationData = {}) => {
-  const response = await apiClient.post('/attendance/verification/liveness/result', {
+  const payload = {
     session_id: sessionId,
     provider_session_id: providerSessionId,
     latitude: locationData.latitude ?? locationData.lat,
     longitude: locationData.longitude ?? locationData.lng,
     accuracy: locationData.accuracy,
-  });
-  return response.data;
+  };
+  try {
+    const response = await apiClient.post('/attendance/verification/liveness/result', payload);
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 404) {
+      try {
+        const fb1 = await apiClient.post('/attendance/liveness/result', payload);
+        return fb1.data;
+      } catch (e1) {
+        if (e1.response?.status === 404) {
+          const fb2 = await apiClient.post('/attendance-verification/liveness/result', payload);
+          return fb2.data;
+        }
+      }
+    }
+    throw error;
+  }
 };
 
 /**
@@ -83,12 +142,29 @@ export const completeVerificationPipeline = async (sessionId, imageUri) => {
     type: type,
   });
 
-  const response = await apiClient.post('/attendance/verification/complete', formData, {
+  const config = {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
-  });
-  return response.data;
+  };
+
+  try {
+    const response = await apiClient.post('/attendance/verification/complete', formData, config);
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 404) {
+      try {
+        const fb1 = await apiClient.post('/attendance/complete', formData, config);
+        return fb1.data;
+      } catch (e1) {
+        if (e1.response?.status === 404) {
+          const fb2 = await apiClient.post('/attendance-verification/complete', formData, config);
+          return fb2.data;
+        }
+      }
+    }
+    throw error;
+  }
 };
 
 /**

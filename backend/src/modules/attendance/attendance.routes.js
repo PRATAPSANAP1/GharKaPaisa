@@ -14,7 +14,9 @@ router.get('/my-summary', ctrl.getMySummary);
 
 // Biometric Face Enrollment routes & fallbacks
 const attendanceEnrollmentRoute = require('../attendance-enrollment/attendance-enrollment.routes.js');
+const attendanceVerificationRoute = require('../attendance-verification/attendance-verification.routes.js');
 router.use('/enrollment', attendanceEnrollmentRoute);
+router.use(['/verification', '/attendance-verification'], attendanceVerificationRoute);
 
 // Explicit route fallbacks for enrollment sessions and commits
 router.post(['/enrollment/session', '/enrollment/session/'], (req, res, next) => {
@@ -93,11 +95,11 @@ router.get(['/enrollment/reminders/:employeeId', '/enrollment/reminder/:employee
 const verificationCtrl = require('../attendance-verification/attendance-verification.controller');
 const { upload } = require('../../services/aws/s3.service');
 
-router.post(['/verification/session', '/verification-session', '/session'], verificationCtrl.createSession);
-router.post(['/verification/liveness/session', '/liveness/session'], verificationCtrl.createLivenessSession);
-router.post(['/verification/liveness/credentials', '/liveness/credentials'], verificationCtrl.getLivenessCredentials);
-router.post(['/verification/liveness/result', '/liveness/result'], verificationCtrl.validateLivenessResult);
-router.post(['/verification/complete', '/complete'], upload.single('face_image'), verificationCtrl.completeVerification);
-router.get(['/verification/session/:sessionId', '/session/:sessionId'], verificationCtrl.getSessionStatus);
+router.post(['/verification/session', '/verification/session/', '/verification-session', '/verification-session/', '/session', '/session/'], verificationCtrl.createSession);
+router.post(['/verification/liveness/session', '/verification/liveness/session/', '/liveness/session', '/liveness/session/'], verificationCtrl.createLivenessSession);
+router.post(['/verification/liveness/credentials', '/verification/liveness/credentials/', '/liveness/credentials', '/liveness/credentials/'], verificationCtrl.getLivenessCredentials);
+router.post(['/verification/liveness/result', '/verification/liveness/result/', '/liveness/result', '/liveness/result/'], verificationCtrl.validateLivenessResult);
+router.post(['/verification/complete', '/verification/complete/', '/complete', '/complete/'], upload.single('face_image'), verificationCtrl.completeVerification);
+router.get(['/verification/session/:sessionId', '/verification/session/:sessionId/', '/session/:sessionId', '/session/:sessionId/'], verificationCtrl.getSessionStatus);
 
 module.exports = router;

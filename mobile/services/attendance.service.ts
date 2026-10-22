@@ -154,6 +154,17 @@ export const createVerificationSession = async (): Promise<VerificationSession> 
     const response = await apiClient.post('/attendance/verification/session');
     return response.data;
   } catch (error: any) {
+    if (error.response?.status === 404) {
+      try {
+        const fb1 = await apiClient.post('/attendance/session');
+        return fb1.data;
+      } catch (e1: any) {
+        if (e1.response?.status === 404) {
+          const fb2 = await apiClient.post('/attendance-verification/session');
+          return fb2.data;
+        }
+      }
+    }
     throw error.response?.data || { success: false, message: 'Failed to create verification session' };
   }
 };
@@ -162,12 +173,22 @@ export const createVerificationSession = async (): Promise<VerificationSession> 
  * Initiate Liveness Session
  */
 export const createLivenessSession = async (sessionId: string): Promise<LivenessSession> => {
+  const payload = { session_id: sessionId };
   try {
-    const response = await apiClient.post('/attendance/verification/liveness/session', {
-      session_id: sessionId,
-    });
+    const response = await apiClient.post('/attendance/verification/liveness/session', payload);
     return response.data;
   } catch (error: any) {
+    if (error.response?.status === 404) {
+      try {
+        const fb1 = await apiClient.post('/attendance/liveness/session', payload);
+        return fb1.data;
+      } catch (e1: any) {
+        if (e1.response?.status === 404) {
+          const fb2 = await apiClient.post('/attendance-verification/liveness/session', payload);
+          return fb2.data;
+        }
+      }
+    }
     throw error.response?.data || { success: false, message: 'Failed to create liveness session' };
   }
 };
@@ -176,12 +197,22 @@ export const createLivenessSession = async (sessionId: string): Promise<Liveness
  * Fetch Temporary AWS Liveness Credentials for session
  */
 export const getLivenessCredentials = async (sessionId: string): Promise<LivenessCredentials> => {
+  const payload = { session_id: sessionId };
   try {
-    const response = await apiClient.post('/attendance/verification/liveness/credentials', {
-      session_id: sessionId,
-    });
+    const response = await apiClient.post('/attendance/verification/liveness/credentials', payload);
     return response.data;
   } catch (error: any) {
+    if (error.response?.status === 404) {
+      try {
+        const fb1 = await apiClient.post('/attendance/liveness/credentials', payload);
+        return fb1.data;
+      } catch (e1: any) {
+        if (e1.response?.status === 404) {
+          const fb2 = await apiClient.post('/attendance-verification/liveness/credentials', payload);
+          return fb2.data;
+        }
+      }
+    }
     throw error.response?.data || { success: false, message: 'Failed to fetch liveness credentials' };
   }
 };
@@ -194,16 +225,28 @@ export const validateLivenessResult = async (
   providerSessionId: string,
   locationData?: { latitude?: number; longitude?: number; accuracy?: number }
 ): Promise<VerificationResult> => {
+  const payload = {
+    session_id: sessionId,
+    provider_session_id: providerSessionId,
+    latitude: locationData?.latitude,
+    longitude: locationData?.longitude,
+    accuracy: locationData?.accuracy,
+  };
   try {
-    const response = await apiClient.post('/attendance/verification/liveness/result', {
-      session_id: sessionId,
-      provider_session_id: providerSessionId,
-      latitude: locationData?.latitude,
-      longitude: locationData?.longitude,
-      accuracy: locationData?.accuracy,
-    });
+    const response = await apiClient.post('/attendance/verification/liveness/result', payload);
     return response.data;
   } catch (error: any) {
+    if (error.response?.status === 404) {
+      try {
+        const fb1 = await apiClient.post('/attendance/liveness/result', payload);
+        return fb1.data;
+      } catch (e1: any) {
+        if (e1.response?.status === 404) {
+          const fb2 = await apiClient.post('/attendance-verification/liveness/result', payload);
+          return fb2.data;
+        }
+      }
+    }
     throw error.response?.data || { success: false, message: 'Failed to validate liveness result' };
   }
 };
@@ -215,27 +258,40 @@ export const completeVerificationPipeline = async (
   sessionId: string,
   imageUri: string
 ): Promise<VerificationResult> => {
+  const formData = new FormData();
+  formData.append('session_id', sessionId);
+
+  const filename = imageUri.split('/').pop() || `face_capture_${Date.now()}.jpg`;
+  const match = /\.(\w+)$/.exec(filename);
+  const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+  formData.append('face_image', {
+    uri: imageUri,
+    name: filename,
+    type: type,
+  } as any);
+
+  const config = {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  };
+
   try {
-    const formData = new FormData();
-    formData.append('session_id', sessionId);
-
-    const filename = imageUri.split('/').pop() || `face_capture_${Date.now()}.jpg`;
-    const match = /\.(\w+)$/.exec(filename);
-    const type = match ? `image/${match[1]}` : 'image/jpeg';
-
-    formData.append('face_image', {
-      uri: imageUri,
-      name: filename,
-      type: type,
-    } as any);
-
-    const response = await apiClient.post('/attendance/verification/complete', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const response = await apiClient.post('/attendance/verification/complete', formData, config);
     return response.data;
   } catch (error: any) {
+    if (error.response?.status === 404) {
+      try {
+        const fb1 = await apiClient.post('/attendance/complete', formData, config);
+        return fb1.data;
+      } catch (e1: any) {
+        if (e1.response?.status === 404) {
+          const fb2 = await apiClient.post('/attendance-verification/complete', formData, config);
+          return fb2.data;
+        }
+      }
+    }
     throw error.response?.data || { success: false, message: 'Failed to complete verification' };
   }
 };
