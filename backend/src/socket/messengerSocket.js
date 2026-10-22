@@ -86,6 +86,7 @@ async function init(io) {
         return next(new Error('Authentication token required in socket.handshake.auth'));
       }
       if (!JWT_SECRET) {
+        logger.error('[Socket Auth] CRITICAL: JWT_SECRET environment variable is missing for socket auth!');
         return next(new Error('Server configuration error'));
       }
       const cleanToken = token.replace(/^Bearer\s+/i, '');
@@ -93,8 +94,14 @@ async function init(io) {
       socket.user = decoded;
       return next();
     } catch (err) {
-      logger.warn('[Socket Auth] Token verification failed:', err.message);
-      return next(new Error('Unauthorized socket connection'));
+      logger.error(`[Socket Auth] Token verification failed: ${err.message}`);
+      const authError = new Error(`Authentication failed: ${err.message}`);
+      authError.data = {
+        code: err.name === 'TokenExpiredError' ? 'TOKEN_EXPIRED' : 'AUTH_FAILED',
+        name: err.name,
+        message: err.message
+      };
+      return next(authError);
     }
   });
 

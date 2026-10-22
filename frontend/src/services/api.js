@@ -49,9 +49,26 @@ export function setAccessToken(token) {
   inMemoryAccessToken = token;
   if (token) {
     try { localStorage.setItem('token', token); } catch (e) {}
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('auth:token_updated', { detail: { token } }));
+    }
   } else {
     try { localStorage.removeItem('token'); } catch (e) {}
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('auth:token_cleared'));
+    }
   }
+}
+
+export async function refreshAccessToken() {
+  const response = await axios.post(`${BASE_URL}/auth/refresh`, {}, { withCredentials: true });
+  if (response.data && response.data.success && response.data.token) {
+    const newToken = response.data.token;
+    setAccessToken(newToken);
+    api.defaults.headers.common['Authorization'] = 'Bearer ' + newToken;
+    return newToken;
+  }
+  throw new Error(response.data?.message || 'Refresh returned unsuccessful response');
 }
 
 export function getAccessToken() {
@@ -155,25 +172,11 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const response = await axios.post(`${BASE_URL}/auth/refresh`, {}, { withCredentials: true });
-        if (response.data && response.data.success) {
-          const newToken = response.data.token;
-          
-          setAccessToken(newToken);
-          
-          api.defaults.headers.common['Authorization'] = 'Bearer ' + newToken;
-          originalRequest.headers['Authorization'] = 'Bearer ' + newToken;
-          
-          processQueue(null, newToken);
-          isRefreshing = false;
-          
-          return api(originalRequest);
-        } else {
-          processQueue(new Error('Refresh returned unsuccessful response'), null);
-          isRefreshing = false;
-          clearSession();
-          return Promise.reject(err);
-        }
+        const newToken = await refreshAccessToken();
+        originalRequest.headers['Authorization'] = 'Bearer ' + newToken;
+        processQueue(null, newToken);
+        isRefreshing = false;
+        return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
         isRefreshing = false;
