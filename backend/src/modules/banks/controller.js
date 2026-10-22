@@ -64,14 +64,14 @@ const listAllBanks = async (req, res, next) => {
         whereClause += ` AND EXISTS (
           SELECT 1 FROM products p_cat 
           WHERE p_cat.bank_id = b.id 
-            AND (p_cat.category IN ('credit_card', 'co_branded_card', 'fd_card') OR p_cat.category ILIKE '%card%')
+            AND (p_cat.category::text IN ('credit_card', 'co_branded_card', 'fd_card') OR p_cat.category::text ILIKE '%card%')
             AND (p_cat.status = 'Active' OR p_cat.is_active = true)
         )`;
       } else {
         whereClause += ` AND EXISTS (
           SELECT 1 FROM products p_cat 
           WHERE p_cat.bank_id = b.id 
-            AND p_cat.category = $${idx++}
+            AND p_cat.category::text = $${idx++}
             AND (p_cat.status = 'Active' OR p_cat.is_active = true)
         )`;
         values.push(category);
@@ -379,14 +379,14 @@ const getActiveBanks = async (req, res, next) => {
         categoryClause = ` AND EXISTS (
           SELECT 1 FROM products p_cat 
           WHERE p_cat.bank_id = b.id 
-            AND (p_cat.category IN ('credit_card', 'co_branded_card', 'fd_card') OR p_cat.category ILIKE '%card%')
+            AND (p_cat.category::text IN ('credit_card', 'co_branded_card', 'fd_card') OR p_cat.category::text ILIKE '%card%')
             AND (p_cat.status = 'Active' OR p_cat.is_active = true)
         )`;
       } else {
         categoryClause = ` AND EXISTS (
           SELECT 1 FROM products p_cat 
           WHERE p_cat.bank_id = b.id 
-            AND p_cat.category = $1
+            AND p_cat.category::text = $1
             AND (p_cat.status = 'Active' OR p_cat.is_active = true)
         )`;
         values.push(category);
