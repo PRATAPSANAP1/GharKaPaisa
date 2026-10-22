@@ -43,13 +43,15 @@ async function processScheduledAnnouncements() {
         `, [targetUsers.length, ann.id]);
 
         if (targetUsers.length > 0) {
-          for (const uid of targetUsers) {
-            await query(`
-              INSERT INTO announcement_recipients (announcement_id, user_id, delivery_status, delivered_at)
-              VALUES ($1, $2, 'DELIVERED', NOW())
-              ON CONFLICT (announcement_id, user_id) DO NOTHING
-            `).catch(() => {});
-          }
+          // Bulk insert all recipients in a single query to eliminate pool exhaustion
+          await query(`
+            INSERT INTO announcement_recipients (announcement_id, user_id, delivery_status, delivered_at)
+            SELECT $1, u_id::uuid, 'DELIVERED', NOW()
+            FROM UNNEST($2::text[]) AS u_id
+            ON CONFLICT (announcement_id, user_id) DO NOTHING
+          `, [ann.id, targetUsers]).catch(recErr => {
+            logger.warn(`[Announcement Scheduler] Recipient batch insert note:`, recErr.message);
+          });
 
           await bulkNotify(targetUsers, ann.title, ann.short_description || ann.message, 'info', {
             category: 'announcement',

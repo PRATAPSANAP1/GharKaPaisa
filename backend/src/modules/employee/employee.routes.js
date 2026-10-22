@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { query } = require('../../config/database');
+const { query, getClient } = require('../../config/database');
 const jwtAuth = require('../../middleware/authentication/jwtAuth.middleware');
 const roleCheck = require('../../middleware/authorization/role.middleware');
 const logger = require('../../config/logger');
@@ -1270,7 +1270,7 @@ async function saveReportPhoto(file) {
 
 // ── 1. POST /api/v1/employee/sales-reports — Submit Daily Sales Report ──
 router.post('/sales-reports', resolveEmployee, upload.single('photo'), async (req, res, next) => {
-  const client = await pool.connect();
+  let client = null;
   try {
     const empId = req.employee.id;
     const { report_date, remark } = req.body;
@@ -1287,6 +1287,7 @@ router.post('/sales-reports', resolveEmployee, upload.single('photo'), async (re
     const totalCards = banks.reduce((sum, b) => sum + parseInt(b.cards_sold || 0), 0);
     const photoData = req.file ? await saveReportPhoto(req.file) : { url: null, key: null };
 
+    client = await getClient();
     await client.query('BEGIN');
 
     const reportRes = await client.query(`
@@ -1313,10 +1314,14 @@ router.post('/sales-reports', resolveEmployee, upload.single('photo'), async (re
       data: report
     });
   } catch (err) {
-    await client.query('ROLLBACK');
+    if (client) {
+      await client.query('ROLLBACK').catch(() => {});
+    }
     next(err);
   } finally {
-    client.release();
+    if (client) {
+      client.release();
+    }
   }
 });
 

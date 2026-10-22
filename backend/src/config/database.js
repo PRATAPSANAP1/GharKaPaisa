@@ -27,8 +27,10 @@ const poolOptions = process.env.DATABASE_URL
 poolOptions.max = Math.max(parseInt(process.env.DB_POOL_MAX) || 40, 30);
 poolOptions.min = (process.env.NODE_ENV === 'test' || process.env.SKIP_DB === 'true') ? 0 : (parseInt(process.env.DB_POOL_MIN) || 2);
 poolOptions.idleTimeoutMillis = parseInt(process.env.DB_IDLE_TIMEOUT) || parseInt(process.env.DB_IDLE_TIMEOUT_MS) || 30000;
-poolOptions.connectionTimeoutMillis = parseInt(process.env.DB_CONN_TIMEOUT) || parseInt(process.env.DB_CONNECTION_TIMEOUT_MS) || 20000;
-poolOptions.acquireTimeoutMillis = parseInt(process.env.DB_ACQUIRE_TIMEOUT) || 20000;
+// Enforce minimum 20000ms safe floor for connectionTimeoutMillis to protect against burst queueing
+const envConnTimeout = parseInt(process.env.DB_CONN_TIMEOUT) || parseInt(process.env.DB_CONNECTION_TIMEOUT_MS) || 20000;
+poolOptions.connectionTimeoutMillis = Math.max(envConnTimeout, 20000);
+poolOptions.acquireTimeoutMillis = Math.max(parseInt(process.env.DB_ACQUIRE_TIMEOUT) || 20000, 20000);
 poolOptions.query_timeout = parseInt(process.env.DB_QUERY_TIMEOUT) || 45000;
 poolOptions.allowExitOnIdle = false;
 poolOptions.keepAlive = true;
@@ -90,7 +92,15 @@ const query = async (text, params, retries = 2) => {
     const isDeadlock = err.code === '40P01' || (err.message && err.message.includes('deadlock detected'));
 
     if (isPoolExhausted || isTransientNetwork || isReservedSlots || isDeadlock) {
-      logger.warn(`DB Connection status on error (${isDeadlock ? 'Deadlock' : 'Network/Pool'}): Total=${currentPool.totalCount}, Idle=${currentPool.idleCount}, Waiting=${currentPool.waitingCount}`, { error: err.message });
+      logger.warn(`DB Connection status on error (${isDeadlock ? 'Deadlock' : (isPoolExhausted ? 'Pool Exhausted' : 'Network')}): Total=${currentPool.totalCount}, Idle=${currentPool.idleCount}, Waiting=${currentPool.waitingCount}`, { error: err.message });
+
+      // Circuit Breaker against Retry Storms:
+      // If the pool is exhausted and queries are waiting, retrying will only amplify queue saturation.
+      // Instead, fail fast so active queries can finish and release connections back to the pool.
+      if (isPoolExhausted && currentPool.idleCount === 0 && currentPool.waitingCount >= 3) {
+        logger.warn(`Pool saturated (total=${currentPool.totalCount}, idle=${currentPool.idleCount}, waiting=${currentPool.waitingCount}) — skipping query retry to allow active connections to finish and drain the pool.`, { error: err.message });
+        throw err;
+      }
 
       if (retries > 0) {
         const baseDelay = isDeadlock ? 50 : (isPoolExhausted ? 800 : 400);
@@ -98,11 +108,6 @@ const query = async (text, params, retries = 2) => {
         const backoff = baseDelay * Math.pow(2, attempt);
         const jitter = Math.random() * (isDeadlock ? 100 : 300);
         const delay = backoff + jitter;
-
-        if (isPoolExhausted && currentPool.waitingCount > currentPool.options.max * 3) {
-          logger.warn(`Pool severely saturated (waiting=${currentPool.waitingCount} > threshold=${currentPool.options.max * 3}) — skipping retry to avoid amplifying the storm`, { error: err.message });
-          throw err;
-        }
 
         logger.warn(`Transient DB error / Deadlock detected. Retrying in ${Math.round(delay)}ms (${retries} left)...`, { error: err.message });
         await new Promise((resolve) => setTimeout(resolve, delay));

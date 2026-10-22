@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { query } = require('../../config/database');
+const { query, getClient } = require('../../config/database');
 const logger = require('../../config/logger');
 
 /**
@@ -236,7 +236,7 @@ class OfflineQueueService {
    * Sync record to main attendance table
    */
   async syncToAttendanceTable(record) {
-    const client = await query('getClient');
+    const client = await getClient();
     try {
       await client.query('BEGIN');
 
