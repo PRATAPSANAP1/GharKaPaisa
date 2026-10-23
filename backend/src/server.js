@@ -50,7 +50,7 @@ const logsDir = path.join(__dirname, '../logs');
 if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
 
 const app = express();
-app.set('trust proxy', 1);
+app.set('trust proxy', true);
 
 const envOrigins = (process.env.FRONTEND_URL || '').split(',').map(o => o.trim()).filter(Boolean);
 const allowedOrigins = [

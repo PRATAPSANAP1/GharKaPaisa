@@ -146,6 +146,13 @@ api.interceptors.response.use(
       return Promise.reject({ message: 'Server unreachable', isNetworkError: true });
     }
 
+    // Handle 429 Too Many Requests
+    if (err.response.status === 429) {
+      const retryAfter = err.response.headers?.['retry-after'] || err.response.headers?.['Retry-After'];
+      console.warn(`[API] Rate limited (429) on ${originalRequest?.url}. Retry after: ${retryAfter || 'a moment'}`);
+      return Promise.reject(err);
+    }
+
     // Handle 401 Unauthorized and attempt token refresh
     if (err.response.status === 401 && !originalRequest._retry) {
       const requestUrl = originalRequest.url || '';
