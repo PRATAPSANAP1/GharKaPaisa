@@ -210,14 +210,9 @@ export default function AppLayout() {
       <Tabs.Screen name="product-links" options={{ href: null }} />
       <Tabs.Screen name="admin-partners" options={{ href: null }} />
       <Tabs.Screen name="admin-withdrawals" options={{ href: null }} />
-      <Tabs.Screen name="admin-dashboard" options={{ href: null }} />
       <Tabs.Screen name="view-messages" options={{ href: null }} />
       <Tabs.Screen name="referral-analytics" options={{ href: null }} />
       <Tabs.Screen name="bulk-sms-dashboard" options={{ href: null }} />
-      <Tabs.Screen name="manage-commissions" options={{ href: null }} />
-      <Tabs.Screen name="commission-rules" options={{ href: null }} />
-      <Tabs.Screen name="hr-candidates" options={{ href: null }} />
-      <Tabs.Screen name="partner-referrals" options={{ href: null }} />
     </Tabs>
   );
 }

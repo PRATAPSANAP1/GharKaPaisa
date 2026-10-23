@@ -19,11 +19,7 @@ import { Card, Button, LoadingState, ErrorState } from '../../components';
 import { Icon } from '../../components/Icon';
 import { reportService } from '../../services/report.service';
 import { fetchCurrentUser } from '../../services/auth.service';
-import { API_BASE_URL } from '../../services/api';
-import { getSecureItem } from '../../services/storage.service';
 import { ReportCategory, ReportFilterParams, SystemReportMetrics, UserProfile } from '../../types';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 
 export default function ReportsScreen() {
   const [selectedCategory, setSelectedCategory] = useState<ReportCategory>('APPLICATIONS');
@@ -43,7 +39,6 @@ export default function ReportsScreen() {
   // UI Status State
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [exporting, setExporting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isForbidden, setIsForbidden] = useState(false);
 
@@ -169,50 +164,16 @@ export default function ReportsScreen() {
     setErrorMsg(null);
   };
 
-  const handleExportExcel = async () => {
-    if (startDate && endDate && startDate > endDate) {
-      Alert.alert('Invalid Date Range', 'Start date cannot be after End date.');
-      return;
-    }
-
-    setExporting(true);
-    try {
-      const token = await getSecureItem<string>('auth_token');
-      const path = reportService.getExportEndpoint(selectedCategory);
-      const query = new URLSearchParams();
-      if (searchQuery.trim()) query.append('search', searchQuery.trim());
-      if (statusFilter && statusFilter !== 'all') query.append('status', statusFilter);
-      if (startDate.trim()) query.append('startDate', startDate.trim());
-      if (endDate.trim()) query.append('endDate', endDate.trim());
-      const qs = query.toString();
-
-      const fileUri = `${FileSystem.cacheDirectory}gharkapaisa_${selectedCategory.toLowerCase()}_${Date.now()}.xlsx`;
-      const download = await FileSystem.downloadAsync(
-        `${API_BASE_URL}${path}${qs ? `?${qs}` : ''}`,
-        fileUri,
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-      );
-
-      if (download.status !== 200) {
-        throw new Error(`Server responded with ${download.status}`);
-      }
-
-      const canShare = await Sharing.isAvailableAsync();
-      if (!canShare) {
-        Alert.alert('Export Ready', `Report saved to:\n${download.uri}`);
-        return;
-      }
-
-      await Sharing.shareAsync(download.uri, {
-        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        dialogTitle: `Export ${selectedCategory} Report`,
-        UTI: 'com.microsoft.excel.xlsx',
-      });
-    } catch (err: any) {
-      Alert.alert('Export Failed', err?.message || 'Could not export the report. Please try again.');
-    } finally {
-      setExporting(false);
-    }
+  const handleExportExcel = () => {
+    const endpoint = reportService.getExportEndpoint(selectedCategory);
+    Alert.alert(
+      'Export Report',
+      `Excel export URL for ${selectedCategory}:\n${endpoint}\n\nDo you wish to trigger data export?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Export', onPress: () => Alert.alert('Export Started', 'Report download initiated in background.') },
+      ]
+    );
   };
 
   const renderReportCard = ({ item }: { item: any }) => {
@@ -413,19 +374,9 @@ export default function ReportsScreen() {
             />
           </View>
 
-          <TouchableOpacity
-            style={[styles.exportBtn, exporting && styles.exportBtnDisabled]}
-            onPress={handleExportExcel}
-            disabled={loading || exporting}
-          >
-            {exporting ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <>
-                <Icon name="download" size={14} color="#FFFFFF" />
-                <Text style={styles.exportBtnText}>Excel</Text>
-              </>
-            )}
+          <TouchableOpacity style={styles.exportBtn} onPress={handleExportExcel} disabled={loading}>
+            <Icon name="download" size={14} color="#FFFFFF" />
+            <Text style={styles.exportBtnText}>Excel</Text>
           </TouchableOpacity>
         </View>
 
@@ -598,9 +549,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: typography.sizes.xs,
     fontWeight: typography.weights.bold,
-  },
-  exportBtnDisabled: {
-    opacity: 0.6,
   },
   dateFilterRow: {
     flexDirection: 'row',

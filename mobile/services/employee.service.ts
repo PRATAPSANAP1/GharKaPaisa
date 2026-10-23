@@ -192,17 +192,12 @@ export const fetchEmployeeVerificationStatus = async (): Promise<VerificationSta
  * Fetch employee onboarding status checklist
  */
 export interface OnboardingChecklist {
-  employee_id: string;
-  joining_form_completed: boolean;
-  terms_completed: boolean;
-  kyc_submitted: boolean;
-  kyc_verified: boolean;
-  documents_completed: boolean;
-  hr_verified: boolean;
-  links_assigned: boolean;
-  activated: boolean;
-  overall_progress: number;
-  current_stage: string | null;
+  kyc_status: string;
+  video_status: string;
+  terms_status: string;
+  bank_status: string;
+  overall_status: string;
+  [key: string]: any;
 }
 
 export const fetchEmployeeOnboardingStatus = async (): Promise<OnboardingChecklist | null> => {
@@ -220,7 +215,7 @@ export const fetchEmployeeOnboardingStatus = async (): Promise<OnboardingCheckli
 
 export const fetchDailySalesReports = async () => {
   try {
-    const res = await apiClient.get('/employee/sales-reports');
+    const res = await apiClient.get('/employees/sales-reports');
     return res.data;
   } catch (err: any) {
     throw err.response?.data || { success: false, message: 'Failed to fetch sales reports' };
@@ -232,10 +227,10 @@ export const submitDailySalesReport = async (reportData: {
   total_cards: number;
   remark?: string;
   photo_url?: string;
-  banks?: Array<{ bank_id: string; bank_name?: string; cards_sold: number }>;
+  banks?: Array<{ bank_id: string; cards_sold: number }>;
 }) => {
   try {
-    const res = await apiClient.post('/employee/sales-reports', reportData);
+    const res = await apiClient.post('/employees/sales-reports', reportData);
     return res.data;
   } catch (err: any) {
     throw err.response?.data || { success: false, message: 'Failed to submit sales report' };
@@ -244,7 +239,7 @@ export const submitDailySalesReport = async (reportData: {
 
 export const submitJoiningDetails = async (formData: any) => {
   try {
-    const res = await apiClient.post('/employee/joining-form', formData);
+    const res = await apiClient.post('/employee/joining-details', formData);
     return res.data;
   } catch (err: any) {
     throw err.response?.data || { success: false, message: 'Failed to submit joining details' };
@@ -261,72 +256,17 @@ export const submitEmployeeKYC = async (formData: any) => {
 };
 
 /**
- * Map the onboarding screen's camelCase form state to the
- * snake_case payload expected by POST /employee/joining-form.
- */
-const mapJoiningFormPayload = (data: any) => ({
-  full_name: data.fullName,
-  date_of_birth: data.dateOfBirth || null,
-  gender: data.gender || null,
-  current_address: data.address || null,
-  emergency_contact_name: data.emergencyRelation || null,
-  emergency_contact_number: data.emergencyContact || null,
-  highest_qualification: data.education || null,
-  previous_company: data.workExperience || null,
-  pan_number: data.panNumber || null,
-  aadhaar_number: data.aadhaarNumber || null,
-  declaration_accepted: true,
-});
-
-/**
- * Submit data for a single onboarding step.
- * Each step maps to its own dedicated backend endpoint.
+ * Submit onboarding step data
  */
 export const submitOnboardingStep = async (stepData: {
   step: string;
   data: any;
 }) => {
   try {
-    switch (stepData.step) {
-      case 'JOINING_FORM': {
-        const res = await apiClient.post('/employee/joining-form', mapJoiningFormPayload(stepData.data));
-        return res.data;
-      }
-      case 'TERMS': {
-        const res = await apiClient.post('/employee/terms-acceptance', {
-          terms_version: '1.0',
-          accepted: true,
-        });
-        return res.data;
-      }
-      case 'KYC': {
-        const formData = new FormData();
-        if (stepData.data.panNumber) formData.append('pan_number', stepData.data.panNumber);
-        if (stepData.data.aadhaarNumber) formData.append('aadhaar_number', stepData.data.aadhaarNumber);
-        if (stepData.data.panDocumentUri) {
-          formData.append('pan_document', {
-            uri: stepData.data.panDocumentUri,
-            name: stepData.data.panDocumentName || 'pan_card.jpg',
-            type: stepData.data.panDocumentType || 'image/jpeg',
-          } as any);
-        }
-        if (stepData.data.aadhaarDocumentUri) {
-          formData.append('aadhaar_document', {
-            uri: stepData.data.aadhaarDocumentUri,
-            name: stepData.data.aadhaarDocumentName || 'aadhaar_card.jpg',
-            type: stepData.data.aadhaarDocumentType || 'image/jpeg',
-          } as any);
-        }
-        const res = await apiClient.post('/employee/kyc', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        return res.data;
-      }
-      default:
-        throw new Error(`No onboarding submission endpoint for step "${stepData.step}"`);
-    }
+    const res = await apiClient.post('/employee/onboarding/step', stepData);
+    return res.data;
   } catch (err: any) {
-    throw err.response?.data || { success: false, message: err.message || 'Failed to submit onboarding step' };
+    throw err.response?.data || { success: false, message: 'Failed to submit onboarding step' };
   }
 };
 
@@ -335,9 +275,24 @@ export const submitOnboardingStep = async (stepData: {
  */
 export const acceptTermsAndConditions = async () => {
   try {
-    const res = await apiClient.post('/employee/terms-acceptance');
+    const res = await apiClient.post('/employee/terms/accept');
     return res.data;
   } catch (err: any) {
     throw err.response?.data || { success: false, message: 'Failed to accept terms' };
+  }
+};
+
+/**
+ * Submit employee verification data
+ */
+export const submitEmployeeVerification = async (verificationData: {
+  face_image?: string;
+  video_url?: string;
+}) => {
+  try {
+    const res = await apiClient.post('/employee/verification', verificationData);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to submit verification' };
   }
 };

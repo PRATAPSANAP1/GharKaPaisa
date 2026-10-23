@@ -14,11 +14,6 @@ const migrateApplicationQueryIndexes = async () => {
       `CREATE INDEX IF NOT EXISTS idx_apps_sales_claimed_by ON applications(sales_claimed_by)`,
       `CREATE INDEX IF NOT EXISTS idx_apps_process_type ON applications(process_type)`,
       `CREATE INDEX IF NOT EXISTS idx_apps_created_at_desc ON applications(created_at DESC)`,
-      `CREATE INDEX IF NOT EXISTS idx_apps_customer_id ON applications(customer_id)`,
-      `CREATE INDEX IF NOT EXISTS idx_apps_lead_id ON applications(lead_id)`,
-      `CREATE INDEX IF NOT EXISTS idx_apps_submitted_by ON applications(submitted_by)`,
-      `CREATE INDEX IF NOT EXISTS idx_apps_employee_id ON applications(employee_id)`,
-      `CREATE INDEX IF NOT EXISTS idx_pad_application_id ON physical_application_details(application_id)`,
       `CREATE INDEX IF NOT EXISTS idx_admin_bank_assignments_admin_category ON admin_bank_assignments(admin_id, category)`,
       `CREATE INDEX IF NOT EXISTS idx_timeline_app_id ON application_timeline(application_id)`
     ];

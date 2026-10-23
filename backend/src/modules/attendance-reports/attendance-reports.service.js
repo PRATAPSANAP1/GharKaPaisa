@@ -99,9 +99,8 @@ const getAttendanceReports = async ({
 
   let baseWhere = `
     WHERE att.attendance_date >= $1 AND att.attendance_date <= $2
-      AND e.employee_status != 'TERMINATED'
-      AND (u.role IS NULL OR u.role = 'EMPLOYEE')
-      AND (e.designation NOT ILIKE '%HR%' AND e.designation NOT ILIKE '%Human Resource%')
+      AND (e.employee_status IS NULL OR e.employee_status != 'TERMINATED')
+      AND (u.role IS NULL OR u.role != 'SUPER_ADMIN')
   `;
 
   if (search && search.trim()) {
@@ -310,9 +309,8 @@ const exportAttendanceReports = async ({
 
   let baseWhere = `
     WHERE att.attendance_date >= $1 AND att.attendance_date <= $2
-      AND e.employee_status != 'TERMINATED'
-      AND (u.role IS NULL OR u.role = 'EMPLOYEE')
-      AND (e.designation NOT ILIKE '%HR%' AND e.designation NOT ILIKE '%Human Resource%')
+      AND (e.employee_status IS NULL OR e.employee_status != 'TERMINATED')
+      AND (u.role IS NULL OR u.role != 'SUPER_ADMIN')
   `;
 
   if (search && search.trim()) {

@@ -1183,7 +1183,7 @@ export function FooterSection({ C, navigate }) {
       </div>
 
       <div style={{ borderTop: `1px solid ${borderColor}`, paddingTop: "16px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "12px", color: subTextColor }}>
-        <span>© 2026 OIT_Stack All Rights Reserved.</span>
+        <span>© 2026 GharKaPaisa. All Rights Reserved.</span>
       </div>
     </div>
   );

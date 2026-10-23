@@ -1,28 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import apiClient from '../../services/api';
+import { apiClient } from '../../services/api';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
 interface Withdrawal {
   id: string;
-  partner_id?: string;
-  partner_code?: string;
-  first_name?: string;
-  last_name?: string;
-  mobile?: string;
+  partner_id: string;
+  partner_name: string;
+  partner_email: string;
   amount: number;
-  net_amount?: number;
-  bank_name?: string;
-  account_number?: string;
-  ifsc_code?: string;
-  upi_id?: string;
+  bank_name: string;
+  account_number: string;
+  ifsc_code: string;
   status: string;
-  requested_at?: string;
+  requested_at: string;
   processed_at?: string;
-  rejection_reason?: string;
-  admin_note?: string;
+  remarks?: string;
 }
 
 export default function AdminWithdrawalsScreen() {
@@ -38,9 +33,9 @@ export default function AdminWithdrawalsScreen() {
   const fetchWithdrawals = async () => {
     try {
       setLoading(true);
-      const params = { status: statusFilter, limit: '100' };
-      const response = await apiClient.get('/wallet/withdrawals', { params });
-      setWithdrawals(response.data?.data || []);
+      const params = statusFilter !== 'all' ? { status: statusFilter } : {};
+      const response = await apiClient.get('/admin/withdrawals', { params });
+      setWithdrawals(response.data || []);
     } catch (error) {
       console.error('Failed to fetch withdrawals:', error);
       Alert.alert('Error', 'Failed to load withdrawals');
@@ -60,8 +55,9 @@ export default function AdminWithdrawalsScreen() {
           style: 'default',
           onPress: async () => {
             try {
-              await apiClient.post(`/wallet/admin/withdrawals/${withdrawalId}/approve`, {
-                admin_note: 'Approved by admin',
+              await apiClient.patch(`/admin/withdrawals/${withdrawalId}`, {
+                status: 'approved',
+                processed_at: new Date().toISOString()
               });
               fetchWithdrawals();
               Alert.alert('Success', 'Withdrawal approved successfully');
@@ -86,8 +82,10 @@ export default function AdminWithdrawalsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await apiClient.post(`/wallet/admin/withdrawals/${withdrawalId}/reject`, {
-                rejection_reason: 'Rejected by admin',
+              await apiClient.patch(`/admin/withdrawals/${withdrawalId}`, {
+                status: 'rejected',
+                processed_at: new Date().toISOString(),
+                remarks: 'Rejected by admin'
               });
               fetchWithdrawals();
               Alert.alert('Success', 'Withdrawal rejected successfully');
@@ -101,15 +99,18 @@ export default function AdminWithdrawalsScreen() {
     );
   };
 
-  const handleViewPartner = (partnerId?: string) => {
-    if (!partnerId) return;
+  const handleViewPartner = (partnerId: string) => {
     router.push({
       pathname: '/customer-details',
       params: { id: partnerId, type: 'partner' }
     });
   };
 
-  const statusOptions = ['pending', 'processed', 'all'];
+  const filteredWithdrawals = withdrawals.filter(w =>
+    statusFilter === 'all' || w.status === statusFilter
+  );
+
+  const statusOptions = ['all', 'pending', 'approved', 'rejected', 'processing'];
 
   if (loading) {
     return (
@@ -151,21 +152,17 @@ export default function AdminWithdrawalsScreen() {
       </View>
 
       <View style={styles.withdrawalsContainer}>
-        {withdrawals.length === 0 ? (
+        {filteredWithdrawals.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No withdrawals found</Text>
           </View>
         ) : (
-          withdrawals.map((withdrawal) => (
+          filteredWithdrawals.map((withdrawal) => (
             <View key={withdrawal.id} style={styles.withdrawalCard}>
               <View style={styles.withdrawalHeader}>
                 <View style={styles.partnerInfo}>
-                  <Text style={styles.partnerName}>
-                    {`${withdrawal.first_name || 'Partner'} ${withdrawal.last_name || ''}`.trim()}
-                  </Text>
-                  <Text style={styles.partnerEmail}>
-                    {withdrawal.mobile || withdrawal.partner_code || ''}
-                  </Text>
+                  <Text style={styles.partnerName}>{withdrawal.partner_name}</Text>
+                  <Text style={styles.partnerEmail}>{withdrawal.partner_email}</Text>
                 </View>
                 <View
                   style={[
@@ -181,32 +178,23 @@ export default function AdminWithdrawalsScreen() {
 
               <View style={styles.amountContainer}>
                 <Text style={styles.amountLabel}>Withdrawal Amount</Text>
-                <Text style={styles.amountValue}>
-                  ₹{Number(withdrawal.amount || 0).toLocaleString('en-IN')}
-                </Text>
+                <Text style={styles.amountValue}>₹{withdrawal.amount.toLocaleString()}</Text>
               </View>
 
               <View style={styles.bankDetails}>
                 <Text style={styles.bankLabel}>Bank Account Details</Text>
-                <Text style={styles.bankName}>{withdrawal.bank_name || '—'}</Text>
-                <Text style={styles.accountNumber}>A/C: {withdrawal.account_number || '—'}</Text>
-                <Text style={styles.ifscCode}>IFSC: {withdrawal.ifsc_code || '—'}</Text>
+                <Text style={styles.bankName}>{withdrawal.bank_name}</Text>
+                <Text style={styles.accountNumber}>A/C: {withdrawal.account_number}</Text>
+                <Text style={styles.ifscCode}>IFSC: {withdrawal.ifsc_code}</Text>
               </View>
 
               <View style={styles.timestamps}>
-                {!!withdrawal.requested_at && (
-                  <Text style={styles.timestampLabel}>
-                    Requested: {new Date(withdrawal.requested_at).toLocaleDateString()}
-                  </Text>
-                )}
-                {!!withdrawal.processed_at && (
+                <Text style={styles.timestampLabel}>
+                  Requested: {new Date(withdrawal.requested_at).toLocaleDateString()}
+                </Text>
+                {withdrawal.processed_at && (
                   <Text style={styles.timestampLabel}>
                     Processed: {new Date(withdrawal.processed_at).toLocaleDateString()}
-                  </Text>
-                )}
-                {!!withdrawal.rejection_reason && (
-                  <Text style={styles.timestampLabel}>
-                    Reason: {withdrawal.rejection_reason}
                   </Text>
                 )}
               </View>
@@ -255,13 +243,13 @@ const getStatusColor = (status: string) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.bg,
+    backgroundColor: colors.background,
   },
   loadingText: {
     marginTop: 12,
@@ -288,7 +276,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: colors.bg,
+    backgroundColor: colors.background,
     marginRight: 8,
     borderWidth: 1,
     borderColor: colors.border,
@@ -357,7 +345,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.bold,
   },
   amountContainer: {
-    backgroundColor: colors.bg,
+    backgroundColor: colors.background,
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
@@ -389,7 +377,7 @@ const styles = StyleSheet.create({
   bankName: {
     fontSize: typography.sizes.sm,
     color: colors.text,
-    fontWeight: typography.weights.semibold,
+    fontWeight: typography.weights.semiBold,
     marginBottom: 2,
   },
   accountNumber: {
@@ -432,7 +420,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.bold,
   },
   viewPartnerButton: {
-    backgroundColor: colors.bg,
+    backgroundColor: colors.background,
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
@@ -442,6 +430,6 @@ const styles = StyleSheet.create({
   viewPartnerButtonText: {
     color: colors.primary,
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
+    fontWeight: typography.weights.semiBold,
   },
 });

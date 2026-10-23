@@ -272,7 +272,7 @@ export const unassignEmployeeHierarchy = async (employeeId: string) => {
  */
 export const fetchPartnersList = async (params: { search?: string; status?: string; page?: number; limit?: number } = {}) => {
   try {
-    const res = await apiClient.get('/admin/partners', { params });
+    const res = await apiClient.get('/Partners', { params });
     return res.data;
   } catch (err: any) {
     throw err.response?.data || { success: false, message: 'Failed to fetch partners' };
@@ -567,27 +567,6 @@ export const updateTicketStatus = async (ticketId: string, status: string, respo
     return res.data;
   } catch (err: any) {
     throw err.response?.data || { success: false, message: 'Failed to update ticket status' };
-  }
-};
-
-/**
- * Global System Settings (admin_privacy_mode, maintenance_mode, etc.)
- */
-export const fetchSystemSettings = async (): Promise<Record<string, string>> => {
-  try {
-    const res = await apiClient.get('/settings');
-    return res.data?.data || {};
-  } catch (err: any) {
-    throw err.response?.data || { success: false, message: 'Failed to fetch system settings' };
-  }
-};
-
-export const updateSystemSetting = async (key: string, value: string) => {
-  try {
-    const res = await apiClient.put('/settings', { key, value });
-    return res.data;
-  } catch (err: any) {
-    throw err.response?.data || { success: false, message: 'Failed to update system setting' };
   }
 };
 

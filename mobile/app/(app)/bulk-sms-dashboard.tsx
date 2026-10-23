@@ -1,36 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
-import apiClient from '../../services/api';
+import { apiClient } from '../../services/api';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
 interface Campaign {
   id: string;
-  campaign_name: string;
-  template_id?: string;
-  sender_id?: string;
+  name: string;
+  template_id: string;
+  recipient_count: number;
+  sent_count: number;
+  delivered_count: number;
+  failed_count: number;
   status: string;
-  total_recipients?: number;
-  valid_recipients?: number;
-  sent_count?: number;
-  delivered_count?: number;
-  failed_count?: number;
-  pending_count?: number;
   scheduled_at?: string;
-  created_at?: string;
+  sent_at?: string;
 }
 
 interface Template {
   id: string;
   name: string;
-  provider?: string;
-  provider_template_id?: string;
-  sender_id?: string;
-  content?: string;
-  template_type?: string;
-  approval_status?: string;
-  variables?: unknown;
-  preview_url?: string;
+  content: string;
+  is_active: boolean;
 }
 
 export default function BulkSmsDashboardScreen() {
@@ -47,13 +38,11 @@ export default function BulkSmsDashboardScreen() {
     try {
       setLoading(true);
       if (activeTab === 'campaigns') {
-        const response = await apiClient.get('/superadmin/bulk-sms/campaigns', {
-          params: { limit: '50' },
-        });
-        setCampaigns(response.data?.data || []);
+        const response = await apiClient.get('/superadmin/bulk-sms/campaigns');
+        setCampaigns(response.data || []);
       } else {
         const response = await apiClient.get('/superadmin/bulk-sms/templates');
-        setTemplates(response.data?.data || []);
+        setTemplates(response.data || []);
       }
     } catch (error) {
       console.error('Failed to fetch data:', error);
@@ -63,23 +52,34 @@ export default function BulkSmsDashboardScreen() {
     }
   };
 
-  const handleSendCampaign = async (campaignId: string) => {
+  const handleToggleTemplate = async (templateId: string, currentStatus: boolean) => {
+    try {
+      await apiClient.patch(`/superadmin/bulk-sms/templates/${templateId}`, {
+        is_active: !currentStatus
+      });
+      fetchData();
+    } catch (error) {
+      console.error('Failed to update template:', error);
+      Alert.alert('Error', 'Failed to update template');
+    }
+  };
+
+  const handleDeleteCampaign = async (campaignId: string) => {
     Alert.alert(
-      'Send Campaign',
-      'Are you sure you want to send this campaign now?',
+      'Confirm Delete',
+      'Are you sure you want to delete this campaign?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Send',
-          style: 'default',
+          text: 'Delete',
+          style: 'destructive',
           onPress: async () => {
             try {
-              await apiClient.post(`/superadmin/bulk-sms/campaigns/${campaignId}/send`);
+              await apiClient.delete(`/superadmin/bulk-sms/campaigns/${campaignId}`);
               fetchData();
-              Alert.alert('Success', 'Campaign triggered successfully');
             } catch (error) {
-              console.error('Failed to send campaign:', error);
-              Alert.alert('Error', 'Failed to send campaign');
+              console.error('Failed to delete campaign:', error);
+              Alert.alert('Error', 'Failed to delete campaign');
             }
           },
         },
@@ -132,9 +132,9 @@ export default function BulkSmsDashboardScreen() {
               <View key={campaign.id} style={styles.card}>
                 <View style={styles.cardHeader}>
                   <View style={styles.cardInfo}>
-                    <Text style={styles.cardTitle}>{campaign.campaign_name}</Text>
+                    <Text style={styles.cardTitle}>{campaign.name}</Text>
                     <Text style={styles.cardSubtitle}>
-                      {campaign.total_recipients ?? 0} recipients
+                      {campaign.recipient_count} recipients
                     </Text>
                   </View>
                   <View
@@ -144,37 +144,37 @@ export default function BulkSmsDashboardScreen() {
                     ]}
                   >
                     <Text style={styles.statusText}>
-                      {(campaign.status || 'DRAFT').charAt(0).toUpperCase() + (campaign.status || 'DRAFT').slice(1).toLowerCase()}
+                      {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
                     </Text>
                   </View>
                 </View>
 
                 <View style={styles.statsGrid}>
                   <View style={styles.statItem}>
-                    <Text style={styles.statValue}>{campaign.sent_count ?? 0}</Text>
+                    <Text style={styles.statValue}>{campaign.sent_count}</Text>
                     <Text style={styles.statLabel}>Sent</Text>
                   </View>
                   <View style={styles.statItem}>
-                    <Text style={styles.statValue}>{campaign.delivered_count ?? 0}</Text>
+                    <Text style={styles.statValue}>{campaign.delivered_count}</Text>
                     <Text style={styles.statLabel}>Delivered</Text>
                   </View>
                   <View style={styles.statItem}>
-                    <Text style={styles.statValue}>{campaign.failed_count ?? 0}</Text>
+                    <Text style={styles.statValue}>{campaign.failed_count}</Text>
                     <Text style={styles.statLabel}>Failed</Text>
                   </View>
                 </View>
 
-                {!!campaign.scheduled_at && (
+                {campaign.scheduled_at && (
                   <Text style={styles.scheduledText}>
                     Scheduled: {new Date(campaign.scheduled_at).toLocaleString()}
                   </Text>
                 )}
 
                 <TouchableOpacity
-                  style={styles.sendButton}
-                  onPress={() => handleSendCampaign(campaign.id)}
+                  style={styles.deleteButton}
+                  onPress={() => handleDeleteCampaign(campaign.id)}
                 >
-                  <Text style={styles.sendButtonText}>Send Now</Text>
+                  <Text style={styles.deleteButtonText}>Delete Campaign</Text>
                 </TouchableOpacity>
               </View>
             ))
@@ -192,31 +192,25 @@ export default function BulkSmsDashboardScreen() {
                 <View style={styles.cardHeader}>
                   <View style={styles.cardInfo}>
                     <Text style={styles.cardTitle}>{template.name}</Text>
-                    <Text style={styles.cardSubtitle}>
-                      {template.provider_template_id || '—'}
-                    </Text>
                   </View>
-                  <View
+                  <TouchableOpacity
                     style={[
                       styles.statusBadge,
-                      { backgroundColor: getApprovalColor(template.approval_status) }
+                      { backgroundColor: template.is_active ? '#10B981' : '#6B7280' }
                     ]}
+                    onPress={() => handleToggleTemplate(template.id, template.is_active)}
                   >
                     <Text style={styles.statusText}>
-                      {(template.approval_status || 'pending').toUpperCase()}
+                      {template.is_active ? 'Active' : 'Inactive'}
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                 </View>
 
                 <View style={styles.templateContent}>
                   <Text style={styles.templateText} numberOfLines={3}>
-                    {template.content || ''}
+                    {template.content}
                   </Text>
                 </View>
-
-                <Text style={styles.scheduledText}>
-                  {template.provider || 'MSG91'} • {template.sender_id || 'GHARKP'}
-                </Text>
               </View>
             ))
           )}
@@ -226,23 +220,12 @@ export default function BulkSmsDashboardScreen() {
   );
 }
 
-const getStatusColor = (status?: string) => {
-  switch ((status || '').toUpperCase()) {
-    case 'COMPLETED': return '#10B981';
-    case 'SCHEDULED': return '#3B82F6';
-    case 'SENDING':
-    case 'PROCESSING': return '#F59E0B';
-    case 'FAILED':
-    case 'REJECTED': return '#EF4444';
-    default: return '#6B7280';
-  }
-};
-
-const getApprovalColor = (status?: string) => {
-  switch ((status || '').toLowerCase()) {
-    case 'approved': return '#10B981';
-    case 'pending': return '#F59E0B';
-    case 'rejected': return '#EF4444';
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'completed': return '#10B981';
+    case 'scheduled': return '#3B82F6';
+    case 'sending': return '#F59E0B';
+    case 'failed': return '#EF4444';
     default: return '#6B7280';
   }
 };
@@ -250,13 +233,13 @@ const getApprovalColor = (status?: string) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.bg,
+    backgroundColor: colors.background,
   },
   loadingText: {
     marginTop: 12,
@@ -293,7 +276,7 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: typography.sizes.md,
     color: colors.textLight,
-    fontWeight: typography.weights.semibold,
+    fontWeight: typography.weights.semiBold,
   },
   tabTextActive: {
     color: colors.primary,
@@ -379,7 +362,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   templateContent: {
-    backgroundColor: colors.bg,
+    backgroundColor: colors.background,
     padding: 12,
     borderRadius: 8,
   },
@@ -396,18 +379,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   deleteButtonText: {
-    color: '#FFFFFF',
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-  },
-  sendButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  sendButtonText: {
     color: '#FFFFFF',
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.bold,

@@ -171,19 +171,17 @@ export default function ApplicationDetailsScreen() {
         copyToCacheDirectory: true,
       });
 
-      if (result.canceled || !result.assets || result.assets.length === 0) {
+      if (result.canceled) {
         return;
       }
-
-      const asset = result.assets[0];
 
       setUploading(true);
 
       const formData = new FormData();
       formData.append('document', {
-        uri: asset.uri,
-        name: asset.name,
-        type: asset.mimeType || 'application/octet-stream',
+        uri: result.uri,
+        name: result.name,
+        type: result.mimeType || 'application/octet-stream',
       } as any);
 
       await uploadCustomerDocument(id, formData);

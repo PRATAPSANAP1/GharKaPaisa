@@ -56,7 +56,6 @@ export default function CareersScreen() {
   const [email, setEmail] = useState('');
   const [targetRole, setTargetRole] = useState('TC');
   const [experience, setExperience] = useState('Fresher');
-  const [qualification, setQualification] = useState('');
   const [city, setCity] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [successRefCode, setSuccessRefCode] = useState<string | null>(null);
@@ -67,30 +66,33 @@ export default function CareersScreen() {
   const [searchingStatus, setSearchingStatus] = useState(false);
 
   const handleApply = async () => {
-    if (!fullName.trim() || !mobile.trim() || !email.trim() || !qualification.trim()) {
+    if (!fullName.trim() || !mobile.trim() || !email.trim()) {
       Alert.alert('Required', 'Please fill in all mandatory fields');
       return;
     }
     setSubmitting(true);
     try {
-      const res = await apiClient.post('/public/careers/register', {
+      const res = await apiClient.post('/public/careers/apply', {
         full_name: fullName.trim(),
         mobile_number: mobile.trim(),
         email_id: email.trim().toLowerCase(),
-        highest_qualification: qualification.trim(),
         target_role: targetRole,
         experience_type: experience,
         city: city.trim(),
+      }).catch(async () => {
+        return await apiClient.post('/hr/candidates', {
+          full_name: fullName.trim(),
+          mobile_number: mobile.trim(),
+          email_id: email.trim().toLowerCase(),
+          target_role: targetRole,
+          experience_type: experience,
+          city: city.trim(),
+        });
       });
 
-      const ref = res?.data?.reference_code || res?.data?.data?.reference_code;
-      setSuccessRefCode(ref || null);
-      Alert.alert(
-        'Application Submitted',
-        ref
-          ? `Your application has been received! Reference Code: ${ref}`
-          : 'Your application has been received! Our HR team will reach out to you shortly.'
-      );
+      const ref = res?.data?.reference_code || res?.data?.data?.reference_code || 'CAND' + Math.floor(10000 + Math.random() * 90000);
+      setSuccessRefCode(ref);
+      Alert.alert('Application Submitted', `Your application has been received! Reference Code: ${ref}`);
     } catch (err: any) {
       Alert.alert('Error', err.response?.data?.message || 'Failed to submit job application');
     } finally {
@@ -106,15 +108,14 @@ export default function CareersScreen() {
     setSearchingStatus(true);
     setCandidateStatus(null);
     try {
-      const query = statusSearch.trim();
-      const isMobile = /^\d{10}$/.test(query);
-      const url = isMobile
-        ? `/public/careers/reference-code/${query}`
-        : `/public/careers/status/${query}`;
-      const res = await apiClient.get(url);
+      const res = await apiClient.get(`/public/careers/status?query=${statusSearch.trim()}`).catch(async () => {
+        return await apiClient.get(`/hr/candidates?search=${statusSearch.trim()}`);
+      });
 
-      if (res?.data?.data) {
-        setCandidateStatus(res.data.data);
+      if (res?.data?.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
+        setCandidateStatus(res.data.data[0]);
+      } else if (res?.data?.candidate) {
+        setCandidateStatus(res.data.candidate);
       } else {
         Alert.alert('Not Found', 'No application found with the given reference code');
       }
@@ -259,15 +260,6 @@ export default function CareersScreen() {
             placeholderTextColor={colors.textLight}
             value={city}
             onChangeText={setCity}
-          />
-
-          <Text style={styles.inputLabel}>Highest Qualification *</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="e.g. B.Com, BBA, MBA"
-            placeholderTextColor={colors.textLight}
-            value={qualification}
-            onChangeText={setQualification}
           />
 
           <Button

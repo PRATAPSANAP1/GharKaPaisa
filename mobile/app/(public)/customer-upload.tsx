@@ -52,12 +52,12 @@ export default function CustomerUploadScreen() {
       let resolvedSize = fileSize;
       if (!resolvedSize) {
         const fileInfo = await FileSystem.getInfoAsync(uri);
-        resolvedSize = fileInfo.exists ? fileInfo.size : 0;
+        resolvedSize = fileInfo.size || 0;
       }
 
-      const MAX_SIZE = 5 * 1024 * 1024; // 5MB (server-side portal controller limit)
+      const MAX_SIZE = 10 * 1024 * 1024; // 10MB
       if (resolvedSize > MAX_SIZE) {
-        Alert.alert('File Too Large', 'Maximum file size is 5MB. Please select a smaller file.');
+        Alert.alert('File Too Large', 'Maximum file size is 10MB. Please select a smaller file.');
         return;
       }
 
@@ -164,15 +164,19 @@ export default function CustomerUploadScreen() {
 
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('document_type', docType);
-      formData.append('document', {
-        uri: selectedFile.uri,
-        name: selectedFile.name,
-        type: selectedFile.type,
-      } as any);
+      // Read file as base64 for upload
+      const base64 = await FileSystem.readAsStringAsync(selectedFile.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
 
-      await uploadCustomerDocument(tokenInput.trim(), formData);
+      await uploadCustomerDocument(tokenInput.trim(), {
+        document_type: docType,
+        file_name: selectedFile.name,
+        file_data: base64,
+        file_size: selectedFile.size,
+        file_type: selectedFile.type,
+        uploaded_at: new Date().toISOString(),
+      });
 
       setUploadedDocs((prev) => [...prev, docType]);
       const uploadedName = selectedFile.name;

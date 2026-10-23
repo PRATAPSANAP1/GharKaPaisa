@@ -8,15 +8,14 @@ import {
   Alert,
   SafeAreaView,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 import { Icon } from '../../components/Icon';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
-import { fetchPartnerKycDetails, uploadPartnerVaultDocument } from '../../services/partner.service';
+import { fetchPartnerKycDetails } from '../../services/partner.service';
 
 const VAULT_DOC_SLOTS = [
   { id: 'pan', name: 'PAN Card Document', desc: 'Required for tax & TDS compliance', icon: 'file-text' },
@@ -26,21 +25,12 @@ const VAULT_DOC_SLOTS = [
   { id: 'partner_agreement', name: 'Partner MSA Agreement', desc: 'Signed workplace code of conduct', icon: 'award' },
 ];
 
-// Only these slots map to a supported backend upload field.
-const UPLOADABLE_SLOTS: Record<string, 'pan' | 'aadhaar' | 'cancelled_cheque' | 'gst_cert'> = {
-  pan: 'pan',
-  aadhaar: 'aadhaar',
-  cancelled_cheque: 'cancelled_cheque',
-  gst_cert: 'gst_cert',
-};
-
 export default function VaultScreen() {
   const router = useRouter();
 
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [documents, setDocuments] = useState<any[]>([]);
-  const [uploadingId, setUploadingId] = useState<string | null>(null);
 
   const loadVault = useCallback(async (isRefresh = false) => {
     try {
@@ -50,11 +40,9 @@ export default function VaultScreen() {
       const res = await fetchPartnerKycDetails();
       if (res?.success && res.data?.documents) {
         setDocuments(res.data.documents);
-      } else {
-        setDocuments([]);
       }
     } catch (e) {
-      setDocuments([]);
+      // Fallback
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -66,42 +54,24 @@ export default function VaultScreen() {
   }, [loadVault]);
 
   const handleUploadDoc = async (slot: any) => {
-    const field = UPLOADABLE_SLOTS[slot.id];
-    if (!field) {
-      Alert.alert(
-        'Manual Submission Required',
-        `${slot.name} must be emailed to your relationship manager for verification.`
-      );
-      return;
-    }
-
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'image/png', 'image/jpeg'],
-        copyToCacheDirectory: true,
-      });
-
-      if (result.canceled || !result.assets?.[0]) return;
-
-      const asset = result.assets[0];
-      if (asset.size && asset.size > 5 * 1024 * 1024) {
-        Alert.alert('File Too Large', 'Maximum allowed document size is 5MB.');
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permission Required', 'Storage access needed to select document.');
         return;
       }
 
-      setUploadingId(slot.id);
-      await uploadPartnerVaultDocument(field, {
-        uri: asset.uri,
-        name: asset.name || `${slot.id}.pdf`,
-        type: asset.mimeType || 'application/pdf',
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
       });
 
-      Alert.alert('Document Uploaded ✓', `${slot.name} has been securely stored in your Partner Vault.`);
-      await loadVault();
-    } catch (err: any) {
-      Alert.alert('Upload Failed', err?.message || `Could not upload ${slot.name}. Please try again.`);
-    } finally {
-      setUploadingId(null);
+      if (!result.canceled && result.assets && result.assets[0]) {
+        Alert.alert('Document Uploaded ✓', `${slot.name} has been securely stored in your Partner Vault.`);
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Failed to upload document');
     }
   };
 
@@ -145,12 +115,6 @@ export default function VaultScreen() {
 
         {/* Document Slots */}
         <Text style={styles.sectionTitle}>Compliance Documents</Text>
-        {loading && (
-          <View style={styles.loadingRow}>
-            <ActivityIndicator size="small" color={colors.primary} />
-            <Text style={styles.loadingRowText}>Syncing vault...</Text>
-          </View>
-        )}
         {VAULT_DOC_SLOTS.map(slot => {
           const docInfo = getDocStatus(slot.id);
           return (
@@ -171,22 +135,9 @@ export default function VaultScreen() {
               <View style={styles.divider} />
 
               <View style={styles.cardBottom}>
-                <TouchableOpacity
-                  style={styles.actionBtn}
-                  onPress={() => handleUploadDoc(slot)}
-                  disabled={uploadingId === slot.id}
-                >
-                  {uploadingId === slot.id ? (
-                    <>
-                      <ActivityIndicator size="small" color={colors.primary} />
-                      <Text style={styles.actionBtnText}>Uploading...</Text>
-                    </>
-                  ) : (
-                    <>
-                      <Icon name="upload-cloud" size={14} color={colors.primary} />
-                      <Text style={styles.actionBtnText}>Upload / Replace Document</Text>
-                    </>
-                  )}
+                <TouchableOpacity style={styles.actionBtn} onPress={() => handleUploadDoc(slot)}>
+                  <Icon name="upload-cloud" size={14} color={colors.primary} />
+                  <Text style={styles.actionBtnText}>Upload / Replace Document</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -324,15 +275,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: colors.primary,
-  },
-  loadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: spacing.sm,
-  },
-  loadingRowText: {
-    fontSize: 12,
-    color: colors.textLight,
   },
 });

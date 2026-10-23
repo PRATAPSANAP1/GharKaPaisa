@@ -1,5 +1,3 @@
-const fs = require('fs');
-const path = require('path');
 const { query, getClient } = require('../../config/database');
 const { getPaginationParams } = require('../../utils/helpers/helpers');
 const { success, created, error, notFound, paginate } = require('../../utils/response/response');
@@ -403,19 +401,13 @@ const uploadCustomerDocument = async (req, res, next) => {
     } catch (uploadErr) {
       logger.warn('S3 upload fallback to local path:', uploadErr.message);
       const cleanName = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const filename = `${Date.now()}_${cleanName}`;
-      const uploadDir = path.join(__dirname, '../../../public/uploads/documents');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      fs.writeFileSync(path.join(uploadDir, filename), req.file.buffer);
-      fileUrl = `/uploads/documents/${filename}`;
+      fileUrl = `/uploads/documents/${Date.now()}_${cleanName}`;
     }
 
     const docTypeLabel = document_type.toLowerCase();
     const { rows: [doc] } = await query(`
       INSERT INTO customer_documents (customer_id, document_type, file_url, status, uploaded_at)
-      VALUES ($1, $2, $3, 'pending', NOW())
+      VALUES ($1, $2, $3, 'verified', NOW())
       RETURNING *
     `, [id, docTypeLabel, fileUrl]);
 

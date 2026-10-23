@@ -37,7 +37,7 @@ export default function ContactScreen() {
         priority: 'Medium',
       }).catch(async () => {
         // Fallback endpoint
-        return await apiClient.post('/support/tickets/public-contact', {
+        return await apiClient.post('/public/contact', {
           name,
           emailOrPhone,
           subject,

@@ -27,8 +27,6 @@ export interface CreateLeadPayload {
   pan?: string;
   pan_number?: string;
   priority?: string;
-  remarks?: string;
-  business_type?: string;
 }
 
 export const fetchLeads = async (params: LeadQueryParams = {}) => {
@@ -55,50 +53,5 @@ export const createLead = async (payload: CreateLeadPayload) => {
     return res.data;
   } catch (err: any) {
     throw err.response?.data || { success: false, message: 'Failed to create lead' };
-  }
-};
-
-export const sendLeadOtp = async (leadId: string, channel: 'sms' | 'whatsapp' = 'sms') => {
-  try {
-    const res = await apiClient.post(`/leads/${leadId}/send-otp`, { channel });
-    return res.data;
-  } catch (err: any) {
-    throw err.response?.data || { success: false, message: 'Failed to send OTP' };
-  }
-};
-
-export const verifyLeadOtp = async (leadId: string, otp: string) => {
-  try {
-    const res = await apiClient.post(`/leads/${leadId}/verify-otp`, { otp });
-    return res.data;
-  } catch (err: any) {
-    throw err.response?.data || { success: false, message: 'Invalid OTP' };
-  }
-};
-
-export const addLeadNote = async (leadId: string, note: string) => {
-  try {
-    const res = await apiClient.post(`/leads/${leadId}/note`, { note, visibility: 'partner' });
-    return res.data;
-  } catch (err: any) {
-    throw err.response?.data || { success: false, message: 'Failed to add note' };
-  }
-};
-
-export const updateLeadStatus = async (leadId: string, status: string) => {
-  try {
-    const res = await apiClient.patch(`/leads/${leadId}`, { status });
-    return res.data;
-  } catch (err: any) {
-    throw err.response?.data || { success: false, message: 'Failed to update status' };
-  }
-};
-
-export const convertLeadToApplication = async (leadId: string) => {
-  try {
-    const res = await apiClient.post(`/leads/${leadId}/convert`);
-    return res.data;
-  } catch (err: any) {
-    throw err.response?.data || { success: false, message: 'Failed to convert lead' };
   }
 };

@@ -267,7 +267,7 @@ export default function HomeScreen() {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>© 2026 OIT_Stack All Rights Reserved.</Text>
+        <Text style={styles.footerText}>© 2026 GharKaPaisa. All rights reserved.</Text>
         <View style={styles.footerLinks}>
           <TouchableOpacity onPress={() => router.push('/(public)/policy' as any)}>
             <Text style={styles.footerLink}>Privacy Policy</Text>

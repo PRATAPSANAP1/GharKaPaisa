@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { getSecureItem, setSecureItem, removeSecureItem } from './storage.service';
-import { attachRetryInterceptor } from './httpRetry';
 
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.gharkapaisa.in/api/v1';
 
@@ -70,24 +69,12 @@ apiClient.interceptors.response.use(
   }
 );
 
-// Centralized 429 Exponential Backoff with Jitter Interceptor
-attachRetryInterceptor(apiClient, { clientType: 'mobile' });
-
-export interface WorkingHoursPayload {
-  isRestricted: boolean;
-  message: string;
-  details?: any;
-}
-
-type WorkingHoursListener = (payload: WorkingHoursPayload) => void;
-
-let onWorkingHoursCallback: WorkingHoursListener | null = null;
-
-export const registerWorkingHoursListener = (callback: WorkingHoursListener) => {
+let onWorkingHoursCallback = null;
+export const registerWorkingHoursListener = (callback) => {
   onWorkingHoursCallback = callback;
 };
 
-export const setAuthToken = (token: string | null) => {
+export const setAuthToken = (token) => {
   if (token) {
     apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
   } else {

@@ -8,7 +8,6 @@
  */
 import axios from 'axios';
 import { getApiV1Url } from '../config/api';
-import { attachRetryInterceptor, retryMetrics } from './httpRetry';
 
 const BASE_URL = getApiV1Url();
 
@@ -200,10 +199,6 @@ api.interceptors.response.use(
   }
 );
 
-// ── 429 Exponential Backoff with Jitter Interceptor ───────────────────────────
-attachRetryInterceptor(api, { clientType: 'frontend' });
-attachRetryInterceptor(axios, { clientType: 'frontend-direct' });
-
 // ── Session helpers ────────────────────────────────────────────────────────────
 export function clearSession() {
   clearAccessToken();
@@ -216,6 +211,4 @@ export function clearSession() {
   }
 }
 
-export { retryMetrics };
 export default api;
-

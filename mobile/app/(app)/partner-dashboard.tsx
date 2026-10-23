@@ -7,9 +7,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-  Image,
-  Linking,
-  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
@@ -18,14 +15,10 @@ import {
   fetchPartnerDashboard,
   fetchPartnerWallet,
   fetchPartnerProfile,
-  fetchPartnerBanners,
 } from '../../services/partner.service';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const BANNER_WIDTH = SCREEN_WIDTH - spacing.md * 2;
 
 export default function PartnerDashboardScreen() {
   const router = useRouter();
@@ -38,7 +31,6 @@ export default function PartnerDashboardScreen() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [walletData, setWalletData] = useState<any>(null);
   const [profileData, setProfileData] = useState<any>(null);
-  const [banners, setBanners] = useState<any[]>([]);
 
   const loadDashboard = useCallback(async (isRefresh = false) => {
     try {
@@ -46,11 +38,10 @@ export default function PartnerDashboardScreen() {
       else setLoading(true);
       setError(null);
 
-      const [dashRes, walletRes, profRes, bannerRes] = await Promise.allSettled([
+      const [dashRes, walletRes, profRes] = await Promise.allSettled([
         fetchPartnerDashboard(),
         fetchPartnerWallet(),
         fetchPartnerProfile(),
-        fetchPartnerBanners(),
       ]);
 
       if (dashRes.status === 'fulfilled' && dashRes.value.success) {
@@ -62,10 +53,6 @@ export default function PartnerDashboardScreen() {
       if (profRes.status === 'fulfilled' && profRes.value.success) {
         setProfileData(profRes.value.data || profRes.value);
       }
-      if (bannerRes.status === 'fulfilled') {
-        const list = bannerRes.value?.data;
-        setBanners(Array.isArray(list) ? list : []);
-      }
     } catch (err: any) {
       setError(err.message || 'Failed to load dashboard data');
     } finally {
@@ -73,13 +60,6 @@ export default function PartnerDashboardScreen() {
       setRefreshing(false);
     }
   }, []);
-
-  const handleBannerPress = (banner: any) => {
-    const url = banner?.click_url;
-    if (!url || typeof url !== 'string') return;
-    const target = url.startsWith('http') ? url : `https://gharkapaisa.in${url.startsWith('/') ? '' : '/'}${url}`;
-    Linking.openURL(target).catch(() => {});
-  };
 
   useEffect(() => {
     loadDashboard();
@@ -161,42 +141,6 @@ export default function PartnerDashboardScreen() {
           </View>
         </View>
       </View>
-
-      {/* Offer / Campaign Banners */}
-      {banners.length > 0 ? (
-        <>
-          <Text style={styles.sectionTitle}>Offers & Updates</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            pagingEnabled
-            snapToInterval={BANNER_WIDTH + spacing.sm}
-            decelerationRate="fast"
-            style={styles.bannerRow}
-          >
-            {banners.map((banner) => (
-              <TouchableOpacity
-                key={String(banner.id)}
-                activeOpacity={0.9}
-                style={styles.bannerCard}
-                onPress={() => handleBannerPress(banner)}
-              >
-                {banner.image_url ? (
-                  <Image source={{ uri: banner.image_url }} style={styles.bannerImage} resizeMode="cover" />
-                ) : (
-                  <View style={[styles.bannerImage, styles.bannerFallback]} />
-                )}
-                {(banner.title || banner.subtitle) ? (
-                  <View style={styles.bannerOverlay}>
-                    {banner.title ? <Text style={styles.bannerTitle} numberOfLines={1}>{banner.title}</Text> : null}
-                    {banner.subtitle ? <Text style={styles.bannerSubtitle} numberOfLines={2}>{banner.subtitle}</Text> : null}
-                  </View>
-                ) : null}
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </>
-      ) : null}
 
       {/* Quick Action Bar */}
       <Text style={styles.sectionTitle}>Partner Quick Tools</Text>
@@ -424,42 +368,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1E293B',
     marginBottom: spacing.sm,
-  },
-  bannerRow: {
-    marginBottom: spacing.lg,
-  },
-  bannerCard: {
-    width: BANNER_WIDTH,
-    height: 150,
-    borderRadius: 16,
-    marginRight: spacing.sm,
-    overflow: 'hidden',
-    backgroundColor: '#E2E8F0',
-  },
-  bannerImage: {
-    width: '100%',
-    height: '100%',
-  },
-  bannerFallback: {
-    backgroundColor: '#CBD5E1',
-  },
-  bannerOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: spacing.sm,
-    backgroundColor: 'rgba(15, 23, 42, 0.55)',
-  },
-  bannerTitle: {
-    color: '#FFFFFF',
-    fontSize: typography.sizes.sm,
-    fontWeight: '700',
-  },
-  bannerSubtitle: {
-    color: '#E2E8F0',
-    fontSize: typography.sizes.xs,
-    marginTop: 2,
   },
   quickActionGrid: {
     flexDirection: 'row',

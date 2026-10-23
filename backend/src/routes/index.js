@@ -40,7 +40,6 @@ router.post('/webhooks/razorpay', walletCtrl.handleRazorpayWebhook);
 router.post('/partner/referral-click', partnerCtrl.invitePartnerClick);
 
 const contestRoute = require('../modules/contest/routes.js');
-const travelUtilitiesRoute = require('../modules/travel-utilities/routes.js');
 
 // ── Public Homepage & Catalog Content (No auth required) ────────
 router.use('/public/products',  productRoute);
@@ -141,8 +140,5 @@ router.use('/attendance-verification', attendanceVerificationRoute);
 router.use('/attendance/admin/reports', attendanceReportsRoute);
 router.use('/attendance/admin', attendanceAdminRoute);
 router.use('/attendance', attendanceRoute);
-
-// ── Travel & Utilities (Partner margin services) ────────────────
-router.use('/travel-utilities', travelUtilitiesRoute);
 
 module.exports = router;

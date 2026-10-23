@@ -1,5 +1,3 @@
-const fs = require('fs');
-const path = require('path');
 const { query } = require('../../config/database');
 const logger = require('../../config/logger');
 const { uploadToS3 } = require('../../services/aws/s3.service');
@@ -202,21 +200,14 @@ const uploadCustomerDocument = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid file format. Allowed: JPEG, PNG, WEBP, PDF' });
     }
 
-    // Upload to S3 (or fallback to local disk if S3 not set)
+    // Upload to S3 (or mock local path if S3 not set)
     let fileUrl = '';
     try {
       const s3Res = await uploadToS3(req.file.buffer, req.file.originalname, 'customer-documents');
       fileUrl = s3Res.url;
     } catch (uploadErr) {
       logger.warn('S3 Upload failed, writing to fallback public upload folder:', uploadErr.message);
-      const cleanName = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const filename = `${Date.now()}_${cleanName}`;
-      const uploadDir = path.join(__dirname, '../../../public/uploads/documents');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      fs.writeFileSync(path.join(uploadDir, filename), req.file.buffer);
-      fileUrl = `/uploads/documents/${filename}`;
+      fileUrl = `/uploads/documents/${Date.now()}_${req.file.originalname}`;
     }
 
     // Check existing documents of this type to update versioning
@@ -480,13 +471,7 @@ const uploadCustomerPortalDocument = async (req, res) => {
     } catch (uploadErr) {
       logger.warn('S3 upload fallback to local path:', uploadErr.message);
       const cleanName = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const filename = `${Date.now()}_${cleanName}`;
-      const uploadDir = path.join(__dirname, '../../../public/uploads/documents');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      fs.writeFileSync(path.join(uploadDir, filename), req.file.buffer);
-      fileUrl = `/uploads/documents/${filename}`;
+      fileUrl = `/uploads/documents/${Date.now()}_${cleanName}`;
     }
 
     const docTypeLabel = document_type.toLowerCase();

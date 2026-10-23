@@ -11,14 +11,12 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { router } from 'expo-router';
-import * as DocumentPicker from 'expo-document-picker';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { Card } from '../../components/Card';
 import { Icon } from '../../components/Icon';
 import { Button } from '../../components/Button';
 import { fetchEmployeeOnboardingStatus, submitOnboardingStep } from '../../services/employee.service';
-import { getEnrollmentStatus } from '../../services/attendance.service';
 
 type OnboardingStep = 'JOINING_FORM' | 'TERMS' | 'KYC' | 'VERIFICATION' | 'COMPLETED';
 
@@ -52,12 +50,11 @@ export default function EmployeeOnboardingScreen() {
     // KYC
     panNumber: '',
     aadhaarNumber: '',
-    panDocumentUri: '',
-    panDocumentName: '',
-    panDocumentType: '',
-    aadhaarDocumentUri: '',
-    aadhaarDocumentName: '',
-    aadhaarDocumentType: '',
+    panCardUploaded: false,
+    aadhaarCardUploaded: false,
+    
+    // Verification
+    faceEnrolled: false,
   });
 
   useEffect(() => {
@@ -70,15 +67,15 @@ export default function EmployeeOnboardingScreen() {
       const status = await fetchEmployeeOnboardingStatus();
       setOnboardingStatus(status);
       
-      // Resume at the first incomplete step based on the onboarding checklist
-      if (status?.kyc_verified) {
-        setCurrentStep('COMPLETED');
-      } else if (status?.kyc_submitted) {
-        setCurrentStep('VERIFICATION');
-      } else if (status?.terms_completed) {
+      // Set current step based on status
+      if (status?.termsAccepted) {
         setCurrentStep('KYC');
-      } else if (status?.joining_form_completed) {
-        setCurrentStep('TERMS');
+      }
+      if (status?.kycSubmitted) {
+        setCurrentStep('VERIFICATION');
+      }
+      if (status?.verified) {
+        setCurrentStep('COMPLETED');
       }
     } catch (err: any) {
       console.error('Failed to load onboarding status:', err);
@@ -108,63 +105,6 @@ export default function EmployeeOnboardingScreen() {
       Alert.alert('Success', 'Step completed successfully!');
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to submit step');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Pick a KYC document (PAN / Aadhaar) and stash it for the multipart
-  // upload performed by submitOnboardingStep's KYC branch.
-  const handlePickKycDocument = async (docType: 'pan' | 'aadhaar') => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'],
-        copyToCacheDirectory: true,
-      });
-
-      if (result.canceled || !result.assets || result.assets.length === 0) {
-        return;
-      }
-
-      const asset = result.assets[0];
-
-      if (docType === 'pan') {
-        setFormData((prev) => ({
-          ...prev,
-          panDocumentUri: asset.uri,
-          panDocumentName: asset.name || 'pan_card.jpg',
-          panDocumentType: asset.mimeType || 'image/jpeg',
-        }));
-      } else {
-        setFormData((prev) => ({
-          ...prev,
-          aadhaarDocumentUri: asset.uri,
-          aadhaarDocumentName: asset.name || 'aadhaar_card.jpg',
-          aadhaarDocumentType: asset.mimeType || 'image/jpeg',
-        }));
-      }
-    } catch (err: any) {
-      Alert.alert('Error', 'Could not select the document.');
-    }
-  };
-
-  // Face enrollment is verified through the attendance module, not an
-  // onboarding endpoint — the pipeline only opens once the face is enrolled.
-  const handleCompleteVerification = async () => {
-    try {
-      setLoading(true);
-      const enrollment = await getEnrollmentStatus();
-      if (enrollment?.is_enrolled) {
-        setCurrentStep('COMPLETED');
-        Alert.alert('Success', 'Face enrollment verified. Onboarding complete!');
-      } else {
-        Alert.alert(
-          'Face Enrollment Pending',
-          'Your face is not enrolled yet. Please complete face enrollment from the Attendance section, then return here.'
-        );
-      }
-    } catch (err: any) {
-      Alert.alert('Error', 'Could not verify face enrollment status.');
     } finally {
       setLoading(false);
     }
@@ -380,10 +320,10 @@ export default function EmployeeOnboardingScreen() {
         />
       </View>
 
-      <TouchableOpacity style={styles.uploadBox} onPress={() => handlePickKycDocument('pan')}>
+      <TouchableOpacity style={styles.uploadBox}>
         <Icon name="upload-cloud" size={32} color={colors.primaryLight} />
         <Text style={styles.uploadText}>
-          {formData.panDocumentName ? `${formData.panDocumentName} ✓` : 'Upload PAN Card'}
+          {formData.panCardUploaded ? 'PAN Card Uploaded ✓' : 'Upload PAN Card'}
         </Text>
       </TouchableOpacity>
 
@@ -399,10 +339,10 @@ export default function EmployeeOnboardingScreen() {
         />
       </View>
 
-      <TouchableOpacity style={styles.uploadBox} onPress={() => handlePickKycDocument('aadhaar')}>
+      <TouchableOpacity style={styles.uploadBox}>
         <Icon name="upload-cloud" size={32} color={colors.primaryLight} />
         <Text style={styles.uploadText}>
-          {formData.aadhaarDocumentName ? `${formData.aadhaarDocumentName} ✓` : 'Upload Aadhaar Card'}
+          {formData.aadhaarCardUploaded ? 'Aadhaar Card Uploaded ✓' : 'Upload Aadhaar Card'}
         </Text>
       </TouchableOpacity>
 
@@ -424,22 +364,28 @@ export default function EmployeeOnboardingScreen() {
       <View style={styles.verificationBox}>
         <Icon name="user" size={64} color={colors.textLight} />
         <Text style={styles.verificationText}>
-          Complete your face enrollment in the Attendance section to finish onboarding.
+          {formData.faceEnrolled 
+            ? 'Face Enrollment Completed ✓' 
+            : 'Tap to Start Face Enrollment'}
         </Text>
       </View>
 
-      <Button
-        title="Go to Face Enrollment"
-        onPress={() => router.push('/(app)/attendance')}
-        style={{ marginTop: spacing.md }}
-      />
+      {!formData.faceEnrolled && (
+        <Button
+          title="Start Face Enrollment"
+          onPress={() => setFormData({ ...formData, faceEnrolled: true })}
+          style={{ marginTop: spacing.md }}
+        />
+      )}
 
-      <Button
-        title="I've Enrolled — Check Status"
-        onPress={handleCompleteVerification}
-        loading={loading}
-        style={{ marginTop: spacing.sm }}
-      />
+      {formData.faceEnrolled && (
+        <Button
+          title="Complete Onboarding"
+          onPress={handleStepSubmit}
+          loading={loading}
+          style={{ marginTop: spacing.md }}
+        />
+      )}
     </Card>
   );
 

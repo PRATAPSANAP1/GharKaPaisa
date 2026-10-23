@@ -1,45 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Alert, Linking } from 'react-native';
-import apiClient from '../../services/api';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { apiClient } from '../../services/api';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
 interface Candidate {
   id: string;
-  reference_code?: string;
-  full_name: string;
-  email_id: string;
-  mobile_number: string;
-  current_designation?: string;
-  current_company?: string;
-  experience_type?: string;
-  total_experience_years?: number;
+  name: string;
+  email: string;
+  phone: string;
+  position: string;
+  status: string;
+  experience_years: number;
   resume_url?: string;
-  interview_status: string;
+  applied_at: string;
   interview_date?: string;
   interview_feedback?: string;
-  interview_rating?: number;
-  rejection_reason?: string;
-  assigned_hr_name?: string;
-  created_at: string;
 }
-
-const STATUS_OPTIONS = [
-  'all',
-  'REGISTERED',
-  'INTERVIEW_PENDING',
-  'INTERVIEWED',
-  'SELECTED',
-  'REJECTED',
-  'EMPLOYEE_CREATED',
-];
 
 export default function HrCandidatesScreen() {
   const [loading, setLoading] = useState(true);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCandidates();
@@ -48,10 +31,9 @@ export default function HrCandidatesScreen() {
   const fetchCandidates = async () => {
     try {
       setLoading(true);
-      const params: Record<string, any> = { limit: 100 };
-      if (statusFilter !== 'all') params.status = statusFilter;
+      const params = statusFilter !== 'all' ? { status: statusFilter } : {};
       const response = await apiClient.get('/hr/candidates', { params });
-      setCandidates(response.data?.data || []);
+      setCandidates(response.data || []);
     } catch (error) {
       console.error('Failed to fetch candidates:', error);
       Alert.alert('Error', 'Failed to load candidates');
@@ -60,84 +42,33 @@ export default function HrCandidatesScreen() {
     }
   };
 
-  const runCandidateAction = async (
-    candidateId: string,
-    path: string,
-    body: Record<string, any>,
-    successMessage: string
-  ) => {
+  const handleUpdateStatus = async (candidateId: string, newStatus: string) => {
     try {
-      setActionLoadingId(candidateId);
-      await apiClient.post(`/hr/candidates/${candidateId}/${path}`, body);
-      await fetchCandidates();
-      Alert.alert('Success', successMessage);
+      await apiClient.patch(`/hr/candidates/${candidateId}`, { status: newStatus });
+      fetchCandidates();
+      Alert.alert('Success', 'Candidate status updated');
     } catch (error) {
-      console.error(`Failed to ${path} candidate:`, error);
-      Alert.alert('Error', 'Action failed. Please try again.');
-    } finally {
-      setActionLoadingId(null);
+      console.error('Failed to update status:', error);
+      Alert.alert('Error', 'Failed to update candidate status');
     }
   };
 
-  const handleMarkInterviewed = (candidateId: string) => {
-    runCandidateAction(
-      candidateId,
-      'interview',
-      { interview_status: 'INTERVIEWED', interview_date: new Date().toISOString() },
-      'Candidate marked as interviewed'
-    );
-  };
-
-  const handleSelect = (candidateId: string) => {
+  const handleScheduleInterview = async (candidateId: string) => {
     Alert.alert(
-      'Select Candidate',
-      'This will create an employee record and generate an Employee ID. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Continue',
-          onPress: () =>
-            runCandidateAction(candidateId, 'select', {}, 'Candidate selected as employee'),
-        },
-      ]
+      'Schedule Interview',
+      'This feature will open the interview scheduling form',
+      [{ text: 'OK' }]
     );
   };
 
-  const handleReject = (candidateId: string) => {
-    Alert.alert(
-      'Reject Candidate',
-      'Are you sure you want to reject this candidate?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reject',
-          style: 'destructive',
-          onPress: () =>
-            runCandidateAction(
-              candidateId,
-              'reject',
-              { rejection_reason: 'Not meeting selection criteria' },
-              'Candidate rejected'
-            ),
-        },
-      ]
-    );
-  };
+  const filteredCandidates = candidates.filter(c =>
+    c.name.toLowerCase().includes(searchText.toLowerCase()) ||
+    c.email.toLowerCase().includes(searchText.toLowerCase()) ||
+    c.phone.includes(searchText) ||
+    c.position.toLowerCase().includes(searchText.toLowerCase())
+  );
 
-  const formatStatus = (status?: string) =>
-    (status || '')
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (l) => l.toUpperCase());
-
-  const filteredCandidates = candidates.filter((c) => {
-    const q = searchText.toLowerCase();
-    return (
-      (c.full_name || '').toLowerCase().includes(q) ||
-      (c.email_id || '').toLowerCase().includes(q) ||
-      (c.mobile_number || '').includes(searchText) ||
-      (c.reference_code || '').toLowerCase().includes(q)
-    );
-  });
+  const statusOptions = ['all', 'applied', 'screening', 'interview_scheduled', 'interviewed', 'offered', 'rejected', 'hired'];
 
   if (loading) {
     return (
@@ -166,22 +97,22 @@ export default function HrCandidatesScreen() {
 
       <View style={styles.filterContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {STATUS_OPTIONS.map((status) => (
+          {statusOptions.map((status) => (
             <TouchableOpacity
               key={status}
               style={[
                 styles.filterChip,
-                statusFilter === status && styles.filterChipActive,
+                statusFilter === status && styles.filterChipActive
               ]}
               onPress={() => setStatusFilter(status)}
             >
               <Text
                 style={[
                   styles.filterChipText,
-                  statusFilter === status && styles.filterChipTextActive,
+                  statusFilter === status && styles.filterChipTextActive
                 ]}
               >
-                {status === 'all' ? 'All' : formatStatus(status)}
+                {status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
               </Text>
             </TouchableOpacity>
           ))}
@@ -194,151 +125,115 @@ export default function HrCandidatesScreen() {
             <Text style={styles.emptyText}>No candidates found</Text>
           </View>
         ) : (
-          filteredCandidates.map((candidate) => {
-            const busy = actionLoadingId === candidate.id;
-            const status = candidate.interview_status;
-            return (
-              <View key={candidate.id} style={styles.candidateCard}>
-                <View style={styles.candidateHeader}>
-                  <View style={styles.candidateInfo}>
-                    <Text style={styles.candidateName}>{candidate.full_name}</Text>
-                    <Text style={styles.candidatePosition}>
-                      {candidate.current_designation || candidate.reference_code || 'Candidate'}
-                    </Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      { backgroundColor: getStatusColor(status) },
-                    ]}
-                  >
-                    <Text style={styles.statusText}>{formatStatus(status)}</Text>
-                  </View>
+          filteredCandidates.map((candidate) => (
+            <View key={candidate.id} style={styles.candidateCard}>
+              <View style={styles.candidateHeader}>
+                <View style={styles.candidateInfo}>
+                  <Text style={styles.candidateName}>{candidate.name}</Text>
+                  <Text style={styles.candidatePosition}>{candidate.position}</Text>
                 </View>
-
-                <View style={styles.candidateDetails}>
-                  <View style={styles.detailItem}>
-                    <Text style={styles.detailLabel}>Email</Text>
-                    <Text style={styles.detailValue}>{candidate.email_id}</Text>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Text style={styles.detailLabel}>Phone</Text>
-                    <Text style={styles.detailValue}>{candidate.mobile_number}</Text>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Text style={styles.detailLabel}>Experience</Text>
-                    <Text style={styles.detailValue}>
-                      {Number(candidate.total_experience_years || 0)} yrs
-                      {candidate.experience_type ? ` (${candidate.experience_type})` : ''}
-                    </Text>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Text style={styles.detailLabel}>Applied</Text>
-                    <Text style={styles.detailValue}>
-                      {candidate.created_at
-                        ? new Date(candidate.created_at).toLocaleDateString()
-                        : '—'}
-                    </Text>
-                  </View>
-                  {candidate.assigned_hr_name && (
-                    <View style={styles.detailItem}>
-                      <Text style={styles.detailLabel}>Assigned HR</Text>
-                      <Text style={styles.detailValue}>{candidate.assigned_hr_name}</Text>
-                    </View>
-                  )}
-                  {candidate.current_company && (
-                    <View style={styles.detailItem}>
-                      <Text style={styles.detailLabel}>Current Company</Text>
-                      <Text style={styles.detailValue}>{candidate.current_company}</Text>
-                    </View>
-                  )}
-                </View>
-
-                {candidate.interview_date && (
-                  <View style={styles.interviewContainer}>
-                    <Text style={styles.interviewLabel}>Interview Date:</Text>
-                    <Text style={styles.interviewDate}>
-                      {new Date(candidate.interview_date).toLocaleDateString()}
-                    </Text>
-                  </View>
-                )}
-
-                {candidate.interview_feedback && (
-                  <View style={styles.feedbackContainer}>
-                    <Text style={styles.feedbackLabel}>Feedback:</Text>
-                    <Text style={styles.feedbackText} numberOfLines={2}>
-                      {candidate.interview_feedback}
-                    </Text>
-                  </View>
-                )}
-
-                {candidate.rejection_reason && (
-                  <View style={styles.feedbackContainer}>
-                    <Text style={styles.feedbackLabel}>Rejection Reason:</Text>
-                    <Text style={styles.feedbackText} numberOfLines={2}>
-                      {candidate.rejection_reason}
-                    </Text>
-                  </View>
-                )}
-
-                {candidate.resume_url ? (
-                  <TouchableOpacity
-                    style={styles.resumeButton}
-                    onPress={() => Linking.openURL(candidate.resume_url as string)}
-                  >
-                    <Text style={styles.resumeButtonText}>View Resume</Text>
-                  </TouchableOpacity>
-                ) : null}
-
-                <View style={styles.actionsContainer}>
-                  {busy ? (
-                    <ActivityIndicator size="small" color={colors.primary} />
-                  ) : (
-                    <>
-                      {(status === 'REGISTERED' || status === 'INTERVIEW_PENDING') && (
-                        <TouchableOpacity
-                          style={styles.actionButton}
-                          onPress={() => handleMarkInterviewed(candidate.id)}
-                        >
-                          <Text style={styles.actionButtonText}>Mark Interviewed</Text>
-                        </TouchableOpacity>
-                      )}
-                      {status === 'INTERVIEWED' && (
-                        <>
-                          <TouchableOpacity
-                            style={[styles.actionButton, styles.offerButton]}
-                            onPress={() => handleSelect(candidate.id)}
-                          >
-                            <Text style={styles.actionButtonText}>Select</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[styles.actionButton, styles.rejectButton]}
-                            onPress={() => handleReject(candidate.id)}
-                          >
-                            <Text style={styles.actionButtonText}>Reject</Text>
-                          </TouchableOpacity>
-                        </>
-                      )}
-                    </>
-                  )}
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: getStatusColor(candidate.status) }
+                  ]}
+                >
+                  <Text style={styles.statusText}>
+                    {candidate.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </Text>
                 </View>
               </View>
-            );
-          })
+
+              <View style={styles.candidateDetails}>
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Email</Text>
+                  <Text style={styles.detailValue}>{candidate.email}</Text>
+                </View>
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Phone</Text>
+                  <Text style={styles.detailValue}>{candidate.phone}</Text>
+                </View>
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Experience</Text>
+                  <Text style={styles.detailValue}>{candidate.experience_years} years</Text>
+                </View>
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Applied</Text>
+                  <Text style={styles.detailValue}>
+                    {new Date(candidate.applied_at).toLocaleDateString()}
+                  </Text>
+                </View>
+              </View>
+
+              {candidate.interview_date && (
+                <View style={styles.interviewContainer}>
+                  <Text style={styles.interviewLabel}>Interview Scheduled:</Text>
+                  <Text style={styles.interviewDate}>
+                    {new Date(candidate.interview_date).toLocaleString()}
+                  </Text>
+                </View>
+              )}
+
+              {candidate.interview_feedback && (
+                <View style={styles.feedbackContainer}>
+                  <Text style={styles.feedbackLabel}>Feedback:</Text>
+                  <Text style={styles.feedbackText} numberOfLines={2}>
+                    {candidate.interview_feedback}
+                  </Text>
+                </View>
+              )}
+
+              <View style={styles.actionsContainer}>
+                {candidate.status === 'applied' && (
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => handleUpdateStatus(candidate.id, 'screening')}
+                  >
+                    <Text style={styles.actionButtonText}>Move to Screening</Text>
+                  </TouchableOpacity>
+                )}
+                {candidate.status === 'screening' && (
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => handleScheduleInterview(candidate.id)}
+                  >
+                    <Text style={styles.actionButtonText}>Schedule Interview</Text>
+                  </TouchableOpacity>
+                )}
+                {candidate.status === 'interviewed' && (
+                  <>
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.offerButton]}
+                      onPress={() => handleUpdateStatus(candidate.id, 'offered')}
+                    >
+                      <Text style={styles.actionButtonText}>Offer</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.rejectButton]}
+                      onPress={() => handleUpdateStatus(candidate.id, 'rejected')}
+                    >
+                      <Text style={styles.actionButtonText}>Reject</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            </View>
+          ))
         )}
       </View>
     </ScrollView>
   );
 }
 
-const getStatusColor = (status?: string) => {
-  switch ((status || '').toUpperCase()) {
-    case 'EMPLOYEE_CREATED': return '#10B981';
-    case 'SELECTED': return '#3B82F6';
-    case 'INTERVIEWED': return '#8B5CF6';
-    case 'INTERVIEW_PENDING': return '#F59E0B';
-    case 'REGISTERED': return '#6B7280';
-    case 'REJECTED': return '#EF4444';
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'hired': return '#10B981';
+    case 'offered': return '#3B82F6';
+    case 'interviewed': return '#8B5CF6';
+    case 'interview_scheduled': return '#F59E0B';
+    case 'screening': return '#06B6D4';
+    case 'applied': return '#6B7280';
+    case 'rejected': return '#EF4444';
     default: return '#6B7280';
   }
 };
@@ -346,13 +241,13 @@ const getStatusColor = (status?: string) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.bg,
+    backgroundColor: colors.background,
   },
   loadingText: {
     marginTop: 12,
@@ -375,7 +270,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   searchInput: {
-    backgroundColor: colors.bg,
+    backgroundColor: colors.background,
     borderRadius: 8,
     padding: 12,
     fontSize: typography.sizes.sm,
@@ -392,7 +287,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: colors.bg,
+    backgroundColor: colors.background,
     marginRight: 8,
     borderWidth: 1,
     borderColor: colors.border,
@@ -477,10 +372,10 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: typography.sizes.sm,
     color: colors.text,
-    fontWeight: typography.weights.semibold,
+    fontWeight: typography.weights.semiBold,
   },
   interviewContainer: {
-    backgroundColor: colors.bg,
+    backgroundColor: colors.background,
     padding: 10,
     borderRadius: 8,
     marginBottom: 8,
@@ -493,10 +388,10 @@ const styles = StyleSheet.create({
   interviewDate: {
     fontSize: typography.sizes.sm,
     color: colors.primary,
-    fontWeight: typography.weights.semibold,
+    fontWeight: typography.weights.semiBold,
   },
   feedbackContainer: {
-    backgroundColor: colors.bg,
+    backgroundColor: colors.background,
     padding: 10,
     borderRadius: 8,
     marginBottom: 12,
@@ -510,26 +405,12 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.text,
   },
-  resumeButton: {
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: 8,
-    paddingVertical: 8,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  resumeButtonText: {
-    color: colors.primary,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-  },
   actionsContainer: {
     flexDirection: 'row',
     gap: 8,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     paddingTop: 12,
-    minHeight: 30,
   },
   actionButton: {
     flex: 1,

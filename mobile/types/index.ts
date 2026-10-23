@@ -130,8 +130,6 @@ export interface NotificationPreference {
   commission_enabled?: boolean;
   kyc_enabled?: boolean;
   application_enabled?: boolean;
-  messenger_enabled?: boolean;
-  sound_enabled?: boolean;
   language?: string;
   frequency?: string;
 }

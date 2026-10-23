@@ -1,30 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-import apiClient from '../../services/api';
+import { useRouter } from 'expo-router';
+import { apiClient } from '../../services/api';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
-interface Announcement {
+interface Message {
   id: string;
-  announcement_id?: string;
-  title: string;
-  short_description?: string;
-  content?: string;
-  priority?: string;
-  status?: string;
-  audience_type?: string;
-  target_role?: string;
-  creator_name?: string;
-  reach?: number;
-  views?: number;
+  subject: string;
+  content: string;
+  sender_id: string;
+  sender_name: string;
+  recipient_type: string;
+  is_read: boolean;
   created_at: string;
-  published_at?: string;
   expires_at?: string;
 }
 
 export default function ViewMessagesScreen() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [messages, setMessages] = useState<Announcement[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [filter, setFilter] = useState<string>('all');
 
   useEffect(() => {
@@ -34,11 +30,9 @@ export default function ViewMessagesScreen() {
   const fetchMessages = async () => {
     try {
       setLoading(true);
-      const params: Record<string, string> = { admin: 'true' };
-      if (filter !== 'all') params.status = filter;
-      const response = await apiClient.get('/notifications/broadcast', { params });
-      const payload = response.data?.data;
-      setMessages(Array.isArray(payload) ? payload : []);
+      const params = filter !== 'all' ? { is_read: filter === 'read' } : {};
+      const response = await apiClient.get('/notifications/messages', { params });
+      setMessages(response.data || []);
     } catch (error) {
       console.error('Failed to fetch messages:', error);
       Alert.alert('Error', 'Failed to load messages');
@@ -47,9 +41,9 @@ export default function ViewMessagesScreen() {
     }
   };
 
-  const handleMarkAsRead = async (announcementId: string) => {
+  const handleMarkAsRead = async (messageId: string) => {
     try {
-      await apiClient.post(`/notifications/announcements/${announcementId}/read`);
+      await apiClient.patch(`/notifications/messages/${messageId}`, { is_read: true });
       fetchMessages();
     } catch (error) {
       console.error('Failed to mark as read:', error);
@@ -57,23 +51,32 @@ export default function ViewMessagesScreen() {
     }
   };
 
-  const isUnread = (item: Announcement) => !item.views;
-
-  const getPriorityColor = (priority?: string) => {
-    switch ((priority || '').toUpperCase()) {
-      case 'URGENT':
-      case 'HIGH':
-        return '#EF4444';
-      case 'MEDIUM':
-        return '#F59E0B';
-      case 'LOW':
-        return '#10B981';
-      default:
-        return colors.primary;
-    }
+  const handleDeleteMessage = async (messageId: string) => {
+    Alert.alert(
+      'Confirm Delete',
+      'Are you sure you want to delete this message?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiClient.delete(`/notifications/messages/${messageId}`);
+              fetchMessages();
+            } catch (error) {
+              console.error('Failed to delete message:', error);
+              Alert.alert('Error', 'Failed to delete message');
+            }
+          },
+        },
+      ]
+    );
   };
 
-  const filteredMessages = messages;
+  const filteredMessages = messages.filter(m =>
+    filter === 'all' || (filter === 'read' ? m.is_read : !m.is_read)
+  );
 
   if (loading) {
     return (
@@ -92,7 +95,7 @@ export default function ViewMessagesScreen() {
 
       <View style={styles.filterContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {['all', 'publish', 'draft', 'scheduled', 'expired'].map((f) => (
+          {['all', 'unread', 'read'].map((f) => (
             <TouchableOpacity
               key={f}
               style={[
@@ -125,46 +128,48 @@ export default function ViewMessagesScreen() {
               key={message.id}
               style={[
                 styles.messageCard,
-                isUnread(message) && styles.unreadCard
+                !message.is_read && styles.unreadCard
               ]}
             >
               <View style={styles.messageHeader}>
                 <View style={styles.senderInfo}>
-                  <Text style={styles.senderName}>{message.creator_name || 'Super Admin'}</Text>
+                  <Text style={styles.senderName}>{message.sender_name}</Text>
                   <Text style={styles.messageDate}>
                     {new Date(message.created_at).toLocaleDateString()}
                   </Text>
                 </View>
-                <View
-                  style={[
-                    styles.unreadBadge,
-                    { backgroundColor: getPriorityColor(message.priority) }
-                  ]}
-                >
-                  <Text style={styles.unreadBadgeText}>
-                    {(message.priority || message.status || 'INFO').toUpperCase()}
-                  </Text>
-                </View>
+                {!message.is_read && (
+                  <View style={styles.unreadBadge}>
+                    <Text style={styles.unreadBadgeText}>New</Text>
+                  </View>
+                )}
               </View>
 
-              <Text style={styles.messageSubject}>{message.title}</Text>
+              <Text style={styles.messageSubject}>{message.subject}</Text>
               <Text style={styles.messageContent} numberOfLines={3}>
-                {message.short_description || message.content || ''}
+                {message.content}
               </Text>
 
-              <Text style={styles.expiresText}>
-                Reach: {message.reach ?? 0} • Views: {message.views ?? 0}
-                {message.expires_at
-                  ? ` • Expires: ${new Date(message.expires_at).toLocaleDateString()}`
-                  : ''}
-              </Text>
+              {message.expires_at && (
+                <Text style={styles.expiresText}>
+                  Expires: {new Date(message.expires_at).toLocaleDateString()}
+                </Text>
+              )}
 
               <View style={styles.messageActions}>
+                {!message.is_read && (
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => handleMarkAsRead(message.id)}
+                  >
+                    <Text style={styles.actionButtonText}>Mark as Read</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => handleMarkAsRead(message.announcement_id || message.id)}
+                  style={[styles.actionButton, styles.deleteButton]}
+                  onPress={() => handleDeleteMessage(message.id)}
                 >
-                  <Text style={styles.actionButtonText}>Mark as Read</Text>
+                  <Text style={[styles.actionButtonText, styles.deleteButtonText]}>Delete</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -178,13 +183,13 @@ export default function ViewMessagesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.bg,
+    backgroundColor: colors.background,
   },
   loadingText: {
     marginTop: 12,
@@ -211,7 +216,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: colors.bg,
+    backgroundColor: colors.background,
     marginRight: 8,
     borderWidth: 1,
     borderColor: colors.border,
@@ -286,7 +291,7 @@ const styles = StyleSheet.create({
   },
   messageSubject: {
     fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
+    fontWeight: typography.weights.semiBold,
     color: colors.text,
     marginBottom: 6,
   },

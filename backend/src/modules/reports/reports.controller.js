@@ -5,8 +5,7 @@ const {
   getAdminReportData,
   getPartnerReportData,
   getApplicationReportData,
-  getCompleteSystemSummaryMetrics,
-  getDashboardStats
+  getCompleteSystemSummaryMetrics
 } = require('./reportQueries');
 
 const {
@@ -125,19 +124,8 @@ async function getCompleteSystemReport(req, res) {
   }
 }
 
-// ── SUPER ADMIN DASHBOARD STATS ─────────────────────────────────
-
-async function getDashboardStatsReport(req, res) {
-  try {
-    const data = await getDashboardStats();
-    return res.json({ success: true, data });
-  } catch (err) {
-    console.error('getDashboardStatsReport Error:', err);
-    return res.status(500).json({ success: false, message: err.message || 'Failed to fetch dashboard stats' });
-  }
-}
-
 // ── EXCEL EXPORT ENDPOINTS ──────────────────────────────────────
+
 async function exportEmployeeReport(req, res) {
   try {
     const filters = req.query;
@@ -248,7 +236,6 @@ module.exports = {
   getPartnerReport,
   getApplicationReport,
   getCompleteSystemReport,
-  getDashboardStatsReport,
   exportEmployeeReport,
   exportCustomerReport,
   exportAdminReport,

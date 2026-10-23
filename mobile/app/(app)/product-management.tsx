@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import apiClient from '../../services/api';
+import { apiClient } from '../../services/api';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
@@ -9,14 +9,13 @@ interface Product {
   id: string;
   name: string;
   category: string;
-  sub_category?: string;
-  bank_id?: string;
-  bank_name?: string;
-  annual_fee?: string;
-  time_period?: string;
-  commission_type?: string;
-  commission_value?: number;
-  status?: string;
+  bank_id: string;
+  bank_name: string;
+  processing_fee: number;
+  interest_rate: number;
+  max_amount: number;
+  min_amount: number;
+  tenure_months: number;
   is_active: boolean;
 }
 
@@ -25,6 +24,7 @@ export default function ProductManagementScreen() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [searchText, setSearchText] = useState('');
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     fetchProducts();
@@ -33,8 +33,8 @@ export default function ProductManagementScreen() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/products', { params: { limit: '200' } });
-      setProducts(response.data?.data || []);
+      const response = await apiClient.get('/products');
+      setProducts(response.data || []);
     } catch (error) {
       console.error('Failed to fetch products:', error);
       Alert.alert('Error', 'Failed to load products');
@@ -45,10 +45,7 @@ export default function ProductManagementScreen() {
 
   const handleToggleActive = async (productId: string, currentStatus: boolean) => {
     try {
-      await apiClient.patch(`/products/${productId}/status`, {
-        id: productId,
-        is_active: !currentStatus,
-      });
+      await apiClient.patch(`/products/${productId}`, { is_active: !currentStatus });
       fetchProducts();
     } catch (error) {
       console.error('Failed to update product:', error);
@@ -80,8 +77,8 @@ export default function ProductManagementScreen() {
   };
 
   const filteredProducts = products.filter(p =>
-    (p.name || '').toLowerCase().includes(searchText.toLowerCase()) ||
-    (p.bank_name || '').toLowerCase().includes(searchText.toLowerCase())
+    p.name.toLowerCase().includes(searchText.toLowerCase()) ||
+    p.bank_name.toLowerCase().includes(searchText.toLowerCase())
   );
 
   if (loading) {
@@ -126,7 +123,7 @@ export default function ProductManagementScreen() {
               <View style={styles.productHeader}>
                 <View style={styles.productInfo}>
                   <Text style={styles.productName}>{product.name}</Text>
-                  <Text style={styles.bankName}>{product.bank_name || '—'}</Text>
+                  <Text style={styles.bankName}>{product.bank_name}</Text>
                 </View>
                 <TouchableOpacity
                   style={[
@@ -144,23 +141,21 @@ export default function ProductManagementScreen() {
               <View style={styles.productDetails}>
                 <View style={styles.detailItem}>
                   <Text style={styles.detailLabel}>Category</Text>
-                  <Text style={styles.detailValue}>{product.category || '—'}</Text>
+                  <Text style={styles.detailValue}>{product.category}</Text>
                 </View>
                 <View style={styles.detailItem}>
-                  <Text style={styles.detailLabel}>Sub-category</Text>
-                  <Text style={styles.detailValue}>{product.sub_category || '—'}</Text>
+                  <Text style={styles.detailLabel}>Interest Rate</Text>
+                  <Text style={styles.detailValue}>{product.interest_rate}%</Text>
                 </View>
                 <View style={styles.detailItem}>
-                  <Text style={styles.detailLabel}>Annual Fee</Text>
-                  <Text style={styles.detailValue}>{product.annual_fee || '—'}</Text>
-                </View>
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailLabel}>Commission</Text>
+                  <Text style={styles.detailLabel}>Amount Range</Text>
                   <Text style={styles.detailValue}>
-                    {product.commission_type === 'percentage'
-                      ? `${product.commission_value ?? 0}%`
-                      : `₹${Number(product.commission_value ?? 0).toLocaleString('en-IN')}`}
+                    ₹{product.min_amount.toLocaleString()} - ₹{product.max_amount.toLocaleString()}
                   </Text>
+                </View>
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Tenure</Text>
+                  <Text style={styles.detailValue}>{product.tenure_months} months</Text>
                 </View>
               </View>
 
@@ -192,13 +187,13 @@ export default function ProductManagementScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.bg,
+    backgroundColor: colors.background,
   },
   loadingText: {
     marginTop: 12,
@@ -235,7 +230,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   searchInput: {
-    backgroundColor: colors.bg,
+    backgroundColor: colors.background,
     borderRadius: 8,
     padding: 12,
     fontSize: typography.sizes.sm,
@@ -311,7 +306,7 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: typography.sizes.sm,
     color: colors.text,
-    fontWeight: typography.weights.semibold,
+    fontWeight: typography.weights.semiBold,
   },
   productActions: {
     flexDirection: 'row',

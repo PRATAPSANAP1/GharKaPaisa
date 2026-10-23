@@ -760,7 +760,6 @@ router.get('/:id', async (req, res, next) => {
           aadhaar_number: joiningData.aadhaar_number || employee.aadhaar_number || null,
           aadhaar_document_url: null,
           bank_account_number: joiningData.bank_account_number || employee.bank_account_number || null,
-          bank_account_holder_name: joiningData.bank_account_holder_name || employee.bank_account_holder_name || employee.full_name || null,
           ifsc_code: joiningData.ifsc_code || employee.ifsc_code || null,
           bank_document_url: null,
           kyc_status: 'SUBMITTED'
@@ -770,7 +769,6 @@ router.get('/:id', async (req, res, next) => {
       kycData.pan_number = kycData.pan_number || joiningData.pan_number || employee.pan_number || null;
       kycData.aadhaar_number = kycData.aadhaar_number || joiningData.aadhaar_number || employee.aadhaar_number || null;
       kycData.bank_account_number = kycData.bank_account_number || joiningData.bank_account_number || employee.bank_account_number || null;
-      kycData.bank_account_holder_name = kycData.bank_account_holder_name || joiningData.bank_account_holder_name || employee.bank_account_holder_name || employee.full_name || null;
       kycData.ifsc_code = kycData.ifsc_code || joiningData.ifsc_code || employee.ifsc_code || null;
     }
 
@@ -805,18 +803,12 @@ router.get('/:id', async (req, res, next) => {
 
     // 6. Onboarding checklist
     const checklistRes = await query(`SELECT * FROM employee_onboarding_checklist WHERE employee_id = $1`, [id]);
-    // 7. Hierarchy with all 4 levels joined
+    // 7. Hierarchy
     const hierarchyRes = await query(`
-      SELECT h.*, 
-             tl.full_name as team_leader_name, 
-             mgr.full_name as manager_name,
-             sm.full_name as senior_manager_name,
-             bh.full_name as branch_head_name
+      SELECT h.*, tl.full_name as team_leader_name, mgr.full_name as manager_name
       FROM employee_hierarchy h
       LEFT JOIN employees tl ON tl.id = h.team_leader_id
       LEFT JOIN employees mgr ON mgr.id = h.manager_id
-      LEFT JOIN employees sm ON sm.id = h.senior_manager_id
-      LEFT JOIN employees bh ON bh.id = h.branch_head_id
       WHERE h.employee_id = $1 AND h.is_active = true
     `, [id]);
 
@@ -894,9 +886,8 @@ router.get('/:id', async (req, res, next) => {
 router.post('/:id/send-reminder', async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { message, custom_note, note } = req.body || {};
-    const reminderMsg = message || custom_note || note || null;
-    const result = await sendVerificationReminder(id, req.user?.id, reminderMsg);
+    const { message } = req.body || {};
+    const result = await sendVerificationReminder(id, req.user?.id, message);
     if (!result.success) {
       return res.status(400).json(result);
     }
@@ -922,52 +913,26 @@ router.put('/:id', async (req, res, next) => {
       work_location,
       date_of_birth,
       gender,
-      whatsapp_number,
-      offered_salary,
-      employment_type,
-      emergency_contact_name,
-      emergency_contact_number,
-      current_address,
-      permanent_address,
       aadhaar_number,
       pan_number,
       bank_account,
-      bank_account_number,
-      bank_account_holder_name,
       ifsc_code,
       admin_remarks
     } = req.body;
 
     const emailVal = email_id || email;
     const managerVal = manager_name || reporting_manager;
-    const bankAccVal = bank_account_number || bank_account;
 
     const { rows } = await query(
       `UPDATE employees 
        SET full_name = COALESCE($1, full_name),
            mobile_number = COALESCE($2, mobile_number),
-           email_id = COALESCE($3, email_id),
-           designation = COALESCE($4, designation),
-           department = COALESCE($5, department),
-           work_location = COALESCE($6, work_location),
-           whatsapp_number = COALESCE($7, whatsapp_number),
-           date_of_birth = COALESCE($8, date_of_birth),
-           gender = COALESCE($9, gender),
-           offered_salary = COALESCE($10, offered_salary),
-           employment_type = COALESCE($11, employment_type),
-           emergency_contact_name = COALESCE($12, emergency_contact_name),
-           emergency_contact_number = COALESCE($13, emergency_contact_number),
-           current_address = COALESCE($14, current_address),
-           permanent_address = COALESCE($15, permanent_address),
+           designation = COALESCE($3, designation),
+           department = COALESCE($4, department),
+           work_location = COALESCE($5, work_location),
            updated_at = NOW()
-       WHERE id = $16 RETURNING *`,
-      [
-        full_name, mobile_number, emailVal, designation, department,
-        work_location, whatsapp_number, date_of_birth, gender,
-        offered_salary ? parseFloat(offered_salary) : null, employment_type,
-        emergency_contact_name, emergency_contact_number,
-        current_address, permanent_address, id
-      ]
+       WHERE id = $6 RETURNING *`,
+      [full_name, mobile_number, designation, department, work_location, id]
     );
 
     if (rows.length === 0) {
@@ -999,45 +964,23 @@ router.put('/:id', async (req, res, next) => {
            work_location = COALESCE($7, work_location),
            date_of_birth = COALESCE($8, date_of_birth),
            gender = COALESCE($9, gender),
-           whatsapp_number = COALESCE($10, whatsapp_number),
-           emergency_contact_name = COALESCE($11, emergency_contact_name),
-           emergency_contact_number = COALESCE($12, emergency_contact_number),
-           current_address = COALESCE($13, current_address),
-           permanent_address = COALESCE($14, permanent_address),
-           offered_salary = COALESCE($15, offered_salary),
-           employment_type = COALESCE($16, employment_type),
-           bank_account_holder_name = COALESCE($17, bank_account_holder_name),
-           bank_account_number = COALESCE($18, bank_account_number),
-           ifsc_code = COALESCE($19, ifsc_code),
-           pan_number = COALESCE($20, pan_number),
-           aadhaar_number = COALESCE($21, aadhaar_number),
            updated_at = NOW()
-       WHERE employee_id = $22`,
-      [
-        full_name, mobile_number, emailVal, designation, department,
-        managerVal, work_location, date_of_birth, gender,
-        whatsapp_number, emergency_contact_name, emergency_contact_number,
-        current_address, permanent_address,
-        offered_salary ? parseFloat(offered_salary) : null, employment_type,
-        bank_account_holder_name, bankAccVal, ifsc_code, pan_number, aadhaar_number, id
-      ]
+       WHERE employee_id = $10`,
+      [full_name, mobile_number, emailVal, designation, department, managerVal, work_location, date_of_birth, gender, id]
     ).catch(() => {});
 
-    // Update employee_kyc table if identity fields provided (UPSERT)
-    if (aadhaar_number || pan_number || bankAccVal || bank_account_holder_name || ifsc_code || admin_remarks) {
+    // Update employee_kyc table if identity fields provided
+    if (aadhaar_number || pan_number || bank_account || ifsc_code || admin_remarks) {
       await query(
-        `INSERT INTO employee_kyc (
-           employee_id, aadhaar_number, pan_number, bank_account_number, bank_account_holder_name, ifsc_code, review_notes, kyc_status, updated_at
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'SUBMITTED', NOW())
-         ON CONFLICT (employee_id) DO UPDATE SET
-           aadhaar_number = COALESCE(EXCLUDED.aadhaar_number, employee_kyc.aadhaar_number),
-           pan_number = COALESCE(EXCLUDED.pan_number, employee_kyc.pan_number),
-           bank_account_number = COALESCE(EXCLUDED.bank_account_number, employee_kyc.bank_account_number),
-           bank_account_holder_name = COALESCE(EXCLUDED.bank_account_holder_name, employee_kyc.bank_account_holder_name),
-           ifsc_code = COALESCE(EXCLUDED.ifsc_code, employee_kyc.ifsc_code),
-           review_notes = COALESCE(EXCLUDED.review_notes, employee_kyc.review_notes),
-           updated_at = NOW()`,
-        [id, aadhaar_number || null, pan_number || null, bankAccVal || null, bank_account_holder_name || null, ifsc_code || null, admin_remarks || null]
+        `UPDATE employee_kyc 
+         SET aadhaar_number = COALESCE($1, aadhaar_number),
+             pan_number = COALESCE($2, pan_number),
+             bank_account_number = COALESCE($3, bank_account_number),
+             bank_ifsc = COALESCE($4, bank_ifsc),
+             review_notes = COALESCE($5, review_notes),
+             updated_at = NOW()
+         WHERE employee_id = $6`,
+        [aadhaar_number, pan_number, bank_account, ifsc_code, admin_remarks, id]
       ).catch(() => {});
     }
 
@@ -1094,44 +1037,8 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
       video_action, video_reason,
       photo_action, photo_reason,
       address_proof_action, address_proof_reason,
-      education_certificate_action, education_certificate_reason,
-      offer_letter_action, offer_letter_reason,
-      resume_action, resume_reason,
-      experience_letter_action, experience_letter_reason,
-      aadhaar_number, pan_number, bank_account, bank_account_number, bank_account_holder_name, ifsc_code
+      education_certificate_action, education_certificate_reason
     } = req.body;
-
-    const bankAccVal = bank_account_number || bank_account;
-
-    // Update identity details if passed (from KYC identity fields card)
-    if (aadhaar_number || pan_number || bankAccVal || bank_account_holder_name || ifsc_code || review_notes) {
-      await query(
-        `INSERT INTO employee_kyc (
-           employee_id, aadhaar_number, pan_number, bank_account_number, bank_account_holder_name, ifsc_code, review_notes, kyc_status, updated_at
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'SUBMITTED', NOW())
-         ON CONFLICT (employee_id) DO UPDATE SET
-           aadhaar_number = COALESCE(EXCLUDED.aadhaar_number, employee_kyc.aadhaar_number),
-           pan_number = COALESCE(EXCLUDED.pan_number, employee_kyc.pan_number),
-           bank_account_number = COALESCE(EXCLUDED.bank_account_number, employee_kyc.bank_account_number),
-           bank_account_holder_name = COALESCE(EXCLUDED.bank_account_holder_name, employee_kyc.bank_account_holder_name),
-           ifsc_code = COALESCE(EXCLUDED.ifsc_code, employee_kyc.ifsc_code),
-           review_notes = COALESCE(EXCLUDED.review_notes, employee_kyc.review_notes),
-           updated_at = NOW()`,
-        [id, aadhaar_number || null, pan_number || null, bankAccVal || null, bank_account_holder_name || null, ifsc_code || null, review_notes || null]
-      ).catch(() => {});
-
-      await query(
-        `UPDATE employee_joining_details
-         SET aadhaar_number = COALESCE($1, aadhaar_number),
-             pan_number = COALESCE($2, pan_number),
-             bank_account_number = COALESCE($3, bank_account_number),
-             bank_account_holder_name = COALESCE($4, bank_account_holder_name),
-             ifsc_code = COALESCE($5, ifsc_code),
-             updated_at = NOW()
-         WHERE employee_id = $6`,
-        [aadhaar_number || null, pan_number || null, bankAccVal || null, bank_account_holder_name || null, ifsc_code || null, id]
-      ).catch(() => {});
-    }
 
     // Fetch existing KYC record
     const existingRes = await query(`SELECT * FROM employee_kyc WHERE employee_id = $1`, [id]);
@@ -1237,14 +1144,11 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
       `, [vDocStatus, video_rejection_reason, req.user.id, id]).catch(() => {});
     }
 
-    // Handle generic document actions (photo, address_proof, education_certificate, offer_letter, resume, experience_letter)
+    // Handle generic document actions (photo, address_proof, education_certificate)
     const extraDocActions = [
       { action: photo_action, reason: photo_reason, types: ['photo', 'photograph', 'profile_photo'] },
       { action: address_proof_action, reason: address_proof_reason, types: ['address_proof', 'address'] },
-      { action: education_certificate_action, reason: education_certificate_reason, types: ['education_certificate', 'qualification_certificate', 'education', 'highest_qualification'] },
-      { action: req.body.offer_letter_action, reason: req.body.offer_letter_reason, types: ['offer_letter', 'joining_form', 'signed_offer_letter'] },
-      { action: req.body.resume_action, reason: req.body.resume_reason, types: ['resume', 'cv'] },
-      { action: req.body.experience_letter_action, reason: req.body.experience_letter_reason, types: ['experience_letter', 'experience', 'relieving_letter'] }
+      { action: education_certificate_action, reason: education_certificate_reason, types: ['education_certificate', 'qualification_certificate', 'education'] }
     ];
 
     for (const item of extraDocActions) {
@@ -2946,6 +2850,16 @@ router.get('/:id/verification', async (req, res, next) => {
   }
 });
 
+// POST /api/v1/employees/:id/send-reminder — Trigger dynamic verification reminder
+router.post('/:id/send-reminder', async (req, res, next) => {
+  try {
+    const { custom_note } = req.body;
+    const result = await sendVerificationReminder(req.params.id, req.user.id, custom_note);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
 
 // GET /api/v1/employees/:id/reminder-history — Get audit history of sent reminders
 router.get('/:id/reminder-history', async (req, res, next) => {
@@ -3119,6 +3033,142 @@ router.post('/:id/verify-section', async (req, res, next) => {
   }
 });
 
+// POST /api/v1/employees/:id/kyc-verify — Super Admin bulk or document-level KYC verification
+router.post('/:id/kyc-verify', async (req, res, next) => {
+  try {
+    const empId = req.params.id;
+    const { kyc_status, review_notes, pan_action, pan_reason, aadhaar_action, aadhaar_reason, bank_proof_action, bank_proof_reason, video_action, video_reason, aadhaar_number, pan_number, bank_account, ifsc_code } = req.body;
+
+    // 0. Update identity details if passed
+    if (aadhaar_number || pan_number || bank_account || ifsc_code) {
+      const existingKyc = await query(`SELECT id FROM employee_kyc WHERE employee_id = $1 LIMIT 1`, [empId]);
+      if (existingKyc.rows.length > 0) {
+        await query(`
+          UPDATE employee_kyc
+          SET aadhaar_number = COALESCE($1, aadhaar_number),
+              pan_number = COALESCE($2, pan_number),
+              bank_account_number = COALESCE($3, bank_account_number),
+              ifsc_code = COALESCE($4, ifsc_code),
+              review_notes = COALESCE($5, review_notes),
+              updated_at = NOW()
+          WHERE employee_id = $6
+        `, [aadhaar_number || null, pan_number || null, bank_account || null, ifsc_code || null, review_notes || null, empId]).catch(() => {});
+      } else {
+        await query(`
+          INSERT INTO employee_kyc (employee_id, aadhaar_number, pan_number, bank_account_number, ifsc_code, review_notes, kyc_status)
+          VALUES ($1, $2, $3, $4, $5, $6, 'SUBMITTED')
+        `, [empId, aadhaar_number || null, pan_number || null, bank_account || null, ifsc_code || null, review_notes || null]).catch(() => {});
+      }
+    }
+
+    // 1. Bulk KYC verification (Approve All or Reject All)
+    if (kyc_status) {
+      const isApproved = String(kyc_status).toUpperCase() === 'VERIFIED' || String(kyc_status).toUpperCase() === 'APPROVED';
+      const statusVal = isApproved ? 'APPROVED' : 'REJECTED';
+      const kycVal = isApproved ? 'VERIFIED' : 'REJECTED';
+
+      // Update employee_kyc table
+      await query(`
+        UPDATE employee_kyc
+        SET kyc_status = $1,
+            pan_status = $1, pan_verified = $2, pan_rejection_reason = $3,
+            aadhaar_status = $1, aadhaar_verified = $2, aadhaar_rejection_reason = $3,
+            bank_status = $1, bank_verified = $2, bank_rejection_reason = $3,
+            updated_at = NOW()
+        WHERE employee_id = $4
+      `, [kycVal, isApproved, isApproved ? null : (review_notes || 'KYC rejected'), empId]).catch(() => {});
+
+      // Update employee_documents table
+      const docTypes = ['pan', 'aadhaar', 'bank_proof'];
+      for (const dType of docTypes) {
+        await query(`
+          INSERT INTO employee_documents (employee_id, document_type, verification_status, rejection_reason, verified_by, document_url, document_key, updated_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+          ON CONFLICT DO NOTHING
+        `, [empId, dType, statusVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, 'upload document', `${dType}_key`]).catch(() => {});
+
+        await query(`
+          UPDATE employee_documents
+          SET verification_status = $1, rejection_reason = $2, verified_by = $3, updated_at = NOW()
+          WHERE employee_id = $4 AND LOWER(document_type) = LOWER($5)
+        `, [statusVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, empId, dType]).catch(() => {});
+      }
+
+      // Update video terms acceptance
+      await query(`
+        UPDATE employee_terms_acceptance
+        SET verification_status = $1, verification_notes = $2, verified_by = $3, updated_at = NOW()
+        WHERE employee_id = $4
+      `, [kycVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, empId]).catch(() => {});
+
+      // Update employee account status
+      await query(`
+        UPDATE employees
+        SET activation_status = $1, employee_status = $2
+        WHERE id = $3
+      `, [isApproved ? 'APPROVED' : 'REJECTED', isApproved ? 'ACTIVE' : 'ONBOARDING', empId]);
+    }
+
+    // 2. Individual document actions (pan_action, bank_proof_action, etc.)
+    const docActions = [
+      { type: 'pan', action: pan_action, reason: pan_reason },
+      { type: 'aadhaar', action: aadhaar_action, reason: aadhaar_reason },
+      { type: 'bank_proof', action: bank_proof_action, reason: bank_proof_reason },
+      { type: 'video', action: video_action, reason: video_reason }
+    ];
+
+    for (const item of docActions) {
+      if (item.action) {
+        const finalStatus = (String(item.action).toUpperCase() === 'VERIFIED' || String(item.action).toUpperCase() === 'APPROVED') ? 'APPROVED' : 'REJECTED';
+        const kycStatusVal = finalStatus === 'APPROVED' ? 'VERIFIED' : 'REJECTED';
+
+        // Check/update employee_documents
+        const existingDoc = await query(
+          `SELECT * FROM employee_documents WHERE employee_id = $1 AND LOWER(document_type) = LOWER($2) ORDER BY created_at DESC LIMIT 1`,
+          [empId, item.type]
+        );
+
+        if (existingDoc.rows.length > 0) {
+          await query(`
+            UPDATE employee_documents 
+            SET verification_status = $1, rejection_reason = $2, verified_by = $3, updated_at = NOW()
+            WHERE id = $4
+          `, [finalStatus, finalStatus === 'REJECTED' ? (item.reason || 'Document rejected') : null, req.user.id, existingDoc.rows[0].id]);
+        } else {
+          await query(`
+            INSERT INTO employee_documents (employee_id, document_type, verification_status, rejection_reason, verified_by, document_url, document_key)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+          `, [empId, item.type, finalStatus, finalStatus === 'REJECTED' ? (item.reason || 'Document rejected') : null, req.user.id, 'upload document', `${item.type}_key`]);
+        }
+
+        // Sync to legacy tables
+        if (item.type === 'pan') {
+          await query(`UPDATE employee_kyc SET pan_status = $1, pan_verified = $2, pan_rejection_reason = $3 WHERE employee_id = $4`,
+            [kycStatusVal, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? item.reason : null, empId]).catch(() => {});
+        } else if (item.type === 'aadhaar') {
+          await query(`UPDATE employee_kyc SET aadhaar_status = $1, aadhaar_verified = $2, aadhaar_rejection_reason = $3 WHERE employee_id = $4`,
+            [kycStatusVal, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? item.reason : null, empId]).catch(() => {});
+        } else if (item.type === 'bank_proof') {
+          await query(`UPDATE employee_kyc SET bank_status = $1, bank_verified = $2, bank_rejection_reason = $3 WHERE employee_id = $4`,
+            [kycStatusVal, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? item.reason : null, empId]).catch(() => {});
+        } else if (item.type === 'video') {
+          await query(`UPDATE employee_terms_acceptance SET verification_status = $1, verification_notes = $2, verified_by = $3 WHERE employee_id = $4`,
+            [kycStatusVal, item.reason || null, req.user.id, empId]).catch(() => {});
+        }
+      }
+    }
+
+    const updatedState = await calculateEmployeeVerificationState(empId);
+
+    res.json({
+      success: true,
+      message: 'Employee KYC verification status updated successfully',
+      data: updatedState
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 module.exports = router;
 

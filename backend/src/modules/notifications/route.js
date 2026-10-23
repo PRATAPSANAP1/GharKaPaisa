@@ -22,11 +22,6 @@ router.put('/read-all', notifCtrl.markAllRead);
 router.patch('/read-all', notifCtrl.markAllRead);
 router.delete('/clear-all', notifCtrl.deleteNotification);
 router.delete('/all', notifCtrl.deleteNotification);
-
-// Device Push Tokens
-router.post('/device-token', notifCtrl.registerDeviceToken);
-router.delete('/device-token', notifCtrl.unregisterDeviceToken);
-
 router.delete('/:id', notifCtrl.deleteNotification);
 
 // User Preferences
