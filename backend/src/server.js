@@ -428,6 +428,14 @@ const startServer = async () => {
       logger.warn('CIBIL Personal Loan auto seed note:', plErr.message);
     }
 
+    // Always ensure CRM Application Performance & Schema Alignment columns exist on boot
+    try {
+      const { migrateCrmApplicationPerformance } = require('./database/migrations/migrate_crm_application_performance.js');
+      await migrateCrmApplicationPerformance();
+    } catch (crmErr) {
+      logger.warn('CRM Application Performance auto migration note:', crmErr.message);
+    }
+
     // Always ensure CRM Application query optimization indexes exist on boot
     try {
       const { migrateApplicationQueryIndexes } = require('./database/migrations/migrate_application_query_indexes.js');

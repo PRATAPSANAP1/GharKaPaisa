@@ -1,66 +1,54 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Clipboard } from 'react-native';
-import { apiClient } from '../../services/api';
+import apiClient from '../../services/api';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
-interface Referral {
-  id: string;
-  referred_by: string;
-  referred_name: string;
+interface ReferralInfo {
+  id?: string;
+  partner_id?: string;
   referral_code: string;
   referral_link: string;
-  status: string;
-  converted_at?: string;
-  commission_earned: number;
-  created_at: string;
-}
-
-interface ReferralStats {
-  total_referrals: number;
-  active_referrals: number;
-  converted_referrals: number;
-  total_commission: number;
-  conversion_rate: number;
+  total_invites: number;
+  total_registered: number;
+  custom_message?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export default function PartnerReferralsScreen() {
   const [loading, setLoading] = useState(true);
-  const [referrals, setReferrals] = useState<Referral[]>([]);
-  const [stats, setStats] = useState<ReferralStats | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [info, setInfo] = useState<ReferralInfo | null>(null);
 
   useEffect(() => {
-    fetchReferrals();
-  }, [statusFilter]);
+    fetchReferralInfo();
+  }, []);
 
-  const fetchReferrals = async () => {
+  const fetchReferralInfo = async () => {
     try {
       setLoading(true);
-      const params = statusFilter !== 'all' ? { status: statusFilter } : {};
-      const response = await apiClient.get('/referrals', { params });
-      setReferrals(response.data.referrals || []);
-      setStats(response.data.stats || null);
+      const response = await apiClient.get('/partner/referral');
+      setInfo(response.data?.data || null);
     } catch (error) {
-      console.error('Failed to fetch referrals:', error);
-      Alert.alert('Error', 'Failed to load referrals');
+      console.error('Failed to fetch referral info:', error);
+      Alert.alert('Error', 'Failed to load referral details');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCopyLink = async (link: string) => {
+  const handleCopy = (value: string) => {
     try {
-      await Clipboard.setStringAsync(link);
-      Alert.alert('Success', 'Referral link copied to clipboard');
+      Clipboard.setString(value);
+      Alert.alert('Success', 'Copied to clipboard');
     } catch (error) {
-      Alert.alert('Error', 'Failed to copy link');
+      Alert.alert('Error', 'Failed to copy');
     }
   };
 
-  const filteredReferrals = referrals.filter(r =>
-    statusFilter === 'all' || r.status === statusFilter
-  );
+  const totalInvites = Number(info?.total_invites || 0);
+  const totalRegistered = Number(info?.total_registered || 0);
+  const conversionRate = totalInvites > 0 ? (totalRegistered / totalInvites) * 100 : 0;
 
   if (loading) {
     return (
@@ -77,135 +65,77 @@ export default function PartnerReferralsScreen() {
         <Text style={styles.title}>My Referrals</Text>
       </View>
 
-      {stats && (
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Total Referrals</Text>
-            <Text style={styles.statValue}>{stats.total_referrals}</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Converted</Text>
-            <Text style={styles.statValue}>{stats.converted_referrals}</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Commission</Text>
-            <Text style={styles.statValue}>₹{stats.total_commission.toLocaleString()}</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Conversion Rate</Text>
-            <Text style={styles.statValue}>{stats.conversion_rate.toFixed(1)}%</Text>
-          </View>
+      <View style={styles.statsContainer}>
+        <View style={styles.statCard}>
+          <Text style={styles.statLabel}>Total Invites</Text>
+          <Text style={styles.statValue}>{totalInvites}</Text>
         </View>
-      )}
-
-      <View style={styles.filterContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {['all', 'active', 'converted', 'expired'].map((status) => (
-            <TouchableOpacity
-              key={status}
-              style={[
-                styles.filterChip,
-                statusFilter === status && styles.filterChipActive
-              ]}
-              onPress={() => setStatusFilter(status)}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  statusFilter === status && styles.filterChipTextActive
-                ]}
-              >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <View style={styles.statCard}>
+          <Text style={styles.statLabel}>Registered</Text>
+          <Text style={styles.statValue}>{totalRegistered}</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statLabel}>Conversion Rate</Text>
+          <Text style={styles.statValue}>{conversionRate.toFixed(1)}%</Text>
+        </View>
       </View>
 
       <View style={styles.referralsContainer}>
-        {filteredReferrals.length === 0 ? (
+        {!info?.referral_link ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No referrals found</Text>
+            <Text style={styles.emptyText}>
+              Referral link will be available once your KYC is approved.
+            </Text>
           </View>
         ) : (
-          filteredReferrals.map((referral) => (
-            <View key={referral.id} style={styles.referralCard}>
-              <View style={styles.referralHeader}>
-                <View style={styles.referralInfo}>
-                  <Text style={styles.referredName}>{referral.referred_name}</Text>
-                  <Text style={styles.referralCode}>Code: {referral.referral_code}</Text>
-                </View>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    { backgroundColor: getStatusColor(referral.status) }
-                  ]}
-                >
-                  <Text style={styles.statusText}>
-                    {referral.status.charAt(0).toUpperCase() + referral.status.slice(1)}
-                  </Text>
-                </View>
+          <View style={styles.referralCard}>
+            <View style={styles.referralHeader}>
+              <View style={styles.referralInfo}>
+                <Text style={styles.referredName}>Your Referral Code</Text>
+                <Text style={styles.referralCode}>{info.referral_code}</Text>
               </View>
-
-              <View style={styles.linkContainer}>
-                <Text style={styles.linkLabel}>Referral Link:</Text>
-                <Text style={styles.linkText} numberOfLines={2}>
-                  {referral.referral_link}
-                </Text>
-              </View>
-
-              <View style={styles.referralStats}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>₹{referral.commission_earned.toLocaleString()}</Text>
-                  <Text style={styles.statLabel}>Commission</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>
-                    {new Date(referral.created_at).toLocaleDateString()}
-                  </Text>
-                  <Text style={styles.statLabel}>Created</Text>
-                </View>
-              </View>
-
-              {referral.converted_at && (
-                <Text style={styles.convertedText}>
-                  Converted: {new Date(referral.converted_at).toLocaleDateString()}
-                </Text>
-              )}
-
               <TouchableOpacity
-                style={styles.copyButton}
-                onPress={() => handleCopyLink(referral.referral_link)}
+                style={styles.statusBadge}
+                onPress={() => handleCopy(info.referral_code)}
               >
-                <Text style={styles.copyButtonText}>Copy Referral Link</Text>
+                <Text style={styles.statusText}>COPY</Text>
               </TouchableOpacity>
             </View>
-          ))
+
+            <View style={styles.linkContainer}>
+              <Text style={styles.linkLabel}>Referral Link</Text>
+              <Text style={styles.linkText} numberOfLines={2}>
+                {info.referral_link}
+              </Text>
+            </View>
+
+            {!!info.custom_message && (
+              <Text style={styles.convertedText}>{info.custom_message}</Text>
+            )}
+
+            <TouchableOpacity
+              style={styles.copyButton}
+              onPress={() => handleCopy(info.referral_link)}
+            >
+              <Text style={styles.copyButtonText}>Copy Referral Link</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     </ScrollView>
   );
 }
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'converted': return '#10B981';
-    case 'active': return '#3B82F6';
-    case 'expired': return '#EF4444';
-    default: return '#6B7280';
-  }
-};
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
   },
   loadingText: {
     marginTop: 12,
@@ -250,32 +180,6 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.bold,
     color: colors.text,
   },
-  filterContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: colors.card,
-  },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: colors.background,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  filterChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  filterChipText: {
-    fontSize: typography.sizes.sm,
-    color: colors.text,
-  },
-  filterChipTextActive: {
-    color: '#FFFFFF',
-    fontWeight: typography.weights.bold,
-  },
   referralsContainer: {
     padding: 16,
     gap: 12,
@@ -318,6 +222,7 @@ const styles = StyleSheet.create({
     color: colors.textLight,
   },
   statusBadge: {
+    backgroundColor: colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
@@ -328,7 +233,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.bold,
   },
   linkContainer: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
@@ -342,29 +247,6 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.primary,
     fontFamily: 'monospace',
-  },
-  referralStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 12,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-  },
-  statLabel: {
-    fontSize: typography.sizes.xs,
-    color: colors.textLight,
-    marginTop: 2,
   },
   convertedText: {
     fontSize: typography.sizes.xs,

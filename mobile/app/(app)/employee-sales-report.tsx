@@ -19,15 +19,7 @@ import {
   fetchDailySalesReports,
   submitDailySalesReport,
 } from '../../services/employee.service';
-
-const POPULAR_BANKS = [
-  { id: '1', name: 'HDFC Bank' },
-  { id: '2', name: 'SBI Cards' },
-  { id: '3', name: 'ICICI Bank' },
-  { id: '4', name: 'Axis Bank' },
-  { id: '5', name: 'Kotak Bank' },
-  { id: '6', name: 'IndusInd Bank' },
-];
+import { fetchBanks } from '../../services/application.service';
 
 export default function EmployeeSalesReportScreen() {
   const [activeTab, setActiveTab] = useState<'submit' | 'history'>('submit');
@@ -38,16 +30,40 @@ export default function EmployeeSalesReportScreen() {
   const [remark, setRemark] = useState('');
   const [bankCounts, setBankCounts] = useState<{ [key: string]: number }>({});
   const [submitting, setSubmitting] = useState(false);
+  const [banks, setBanks] = useState<Array<{ id: string; name: string }>>([]);
+  const [loadingBanks, setLoadingBanks] = useState(false);
 
   // History State
   const [reportsHistory, setReportsHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
   useEffect(() => {
+    loadBanks();
+  }, []);
+
+  useEffect(() => {
     if (activeTab === 'history') {
       loadHistory();
     }
   }, [activeTab]);
+
+  const loadBanks = async () => {
+    setLoadingBanks(true);
+    try {
+      const res = await fetchBanks();
+      const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+      setBanks(
+        list
+          .filter((b: any) => b && (b.id || b.bank_id))
+          .map((b: any) => ({ id: String(b.id || b.bank_id), name: b.name || b.bank_name || 'Bank' }))
+      );
+    } catch (err: any) {
+      console.warn('Could not fetch banks:', err);
+      setBanks([]);
+    } finally {
+      setLoadingBanks(false);
+    }
+  };
 
   const loadHistory = async () => {
     setLoadingHistory(true);
@@ -87,7 +103,11 @@ export default function EmployeeSalesReportScreen() {
         remark: remark.trim(),
         banks: Object.entries(bankCounts)
           .filter(([_, count]) => count > 0)
-          .map(([bId, count]) => ({ bank_id: bId, cards_sold: count })),
+          .map(([bId, count]) => ({
+            bank_id: bId,
+            bank_name: banks.find((b) => b.id === bId)?.name || 'Bank',
+            cards_sold: count,
+          })),
       });
 
       Alert.alert('Report Submitted', 'Your daily sales report has been submitted for team leader verification.');
@@ -145,19 +165,27 @@ export default function EmployeeSalesReportScreen() {
           {/* Bank-wise Breakdown */}
           <Text style={styles.inputLabel}>Bank-wise Card Counts</Text>
           <View style={styles.bankGrid}>
-            {POPULAR_BANKS.map((b) => (
-              <View key={b.id} style={styles.bankInputRow}>
-                <Text style={styles.bankNameLabel}>{b.name}</Text>
-                <TextInput
-                  style={styles.countInput}
-                  placeholder="0"
-                  placeholderTextColor={colors.textLight}
-                  keyboardType="numeric"
-                  value={bankCounts[b.id] ? String(bankCounts[b.id]) : ''}
-                  onChangeText={(t) => handleBankCountChange(b.id, t)}
-                />
-              </View>
-            ))}
+            {loadingBanks ? (
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: spacing.md }} />
+            ) : banks.length === 0 ? (
+              <Text style={styles.emptyBankText}>
+                No banks available for your account. Please contact your administrator.
+              </Text>
+            ) : (
+              banks.map((b) => (
+                <View key={b.id} style={styles.bankInputRow}>
+                  <Text style={styles.bankNameLabel}>{b.name}</Text>
+                  <TextInput
+                    style={styles.countInput}
+                    placeholder="0"
+                    placeholderTextColor={colors.textLight}
+                    keyboardType="numeric"
+                    value={bankCounts[b.id] ? String(bankCounts[b.id]) : ''}
+                    onChangeText={(t) => handleBankCountChange(b.id, t)}
+                  />
+                </View>
+              ))
+            )}
           </View>
 
           {/* Total Cards */}
@@ -314,6 +342,12 @@ const styles = StyleSheet.create({
   },
   bankGrid: {
     gap: spacing.xs,
+  },
+  emptyBankText: {
+    fontSize: 12,
+    color: colors.textLight,
+    fontStyle: 'italic',
+    paddingVertical: spacing.sm,
   },
   bankInputRow: {
     flexDirection: 'row',

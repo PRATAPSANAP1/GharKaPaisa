@@ -1,17 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { apiClient } from '../../services/api';
+import apiClient from '../../services/api';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
 interface CategoryStats {
   category: string;
-  totalLeads: number;
-  convertedLeads: number;
+  applications: number;
+  approved: number;
   conversionRate: number;
-  totalApplications: number;
+  commission: number;
 }
+
+const categories = [
+  { id: 'credit-card', name: 'Credit Cards', icon: '💳', color: '#3B82F6' },
+  { id: 'personal-loan', name: 'Personal Loans', icon: '💰', color: '#10B981' },
+  { id: 'business-loan', name: 'Business Loans', icon: '🏢', color: '#F59E0B' },
+  { id: 'insurance', name: 'Insurance', icon: '🛡️', color: '#8B5CF6' },
+];
+
+// UI category -> backend `products.category` values
+const CATEGORY_GROUPS: Record<string, string[]> = {
+  'credit-card': ['credit_card', 'co_branded_card', 'fd_card'],
+  'personal-loan': ['personal_loan'],
+  'business-loan': ['business_loan'],
+  'insurance': ['insurance'],
+};
 
 export default function CategoryOverviewScreen() {
   const router = useRouter();
@@ -25,21 +40,36 @@ export default function CategoryOverviewScreen() {
   const fetchCategoryStats = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/partner/dashboard/category-stats');
-      setStats(response.data || []);
+      // Per-product application totals (includes category / total / approved / commission)
+      const response = await apiClient.get('/reports/applications-by-product');
+      const rows = response.data?.data || [];
+
+      const categoryMap = new Map<string, CategoryStats>();
+      categories.forEach((cat) => {
+        const keys = CATEGORY_GROUPS[cat.id] || [];
+        const matched = rows.filter((r: any) =>
+          keys.includes(String(r.category || '').toLowerCase())
+        );
+        const applications = matched.reduce((sum: number, r: any) => sum + Number(r.total || 0), 0);
+        const approved = matched.reduce((sum: number, r: any) => sum + Number(r.approved || 0), 0);
+        const commission = matched.reduce((sum: number, r: any) => sum + Number(r.commission || 0), 0);
+
+        categoryMap.set(cat.id, {
+          category: cat.id,
+          applications,
+          approved,
+          conversionRate: applications > 0 ? (approved / applications) * 100 : 0,
+          commission,
+        });
+      });
+
+      setStats(Array.from(categoryMap.values()));
     } catch (error) {
       console.error('Failed to fetch category stats:', error);
     } finally {
       setLoading(false);
     }
   };
-
-  const categories = [
-    { id: 'credit-card', name: 'Credit Cards', icon: '💳', color: '#3B82F6' },
-    { id: 'personal-loan', name: 'Personal Loans', icon: '💰', color: '#10B981' },
-    { id: 'business-loan', name: 'Business Loans', icon: '🏢', color: '#F59E0B' },
-    { id: 'insurance', name: 'Insurance', icon: '🛡️', color: '#8B5CF6' },
-  ];
 
   if (loading) {
     return (
@@ -76,15 +106,15 @@ export default function CategoryOverviewScreen() {
 
               <View style={styles.statsGrid}>
                 <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Total Leads</Text>
+                  <Text style={styles.statLabel}>Applications</Text>
                   <Text style={styles.statValue}>
-                    {categoryStat?.totalLeads || 0}
+                    {categoryStat?.applications || 0}
                   </Text>
                 </View>
                 <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Converted</Text>
+                  <Text style={styles.statLabel}>Approved</Text>
                   <Text style={styles.statValue}>
-                    {categoryStat?.convertedLeads || 0}
+                    {categoryStat?.approved || 0}
                   </Text>
                 </View>
                 <View style={styles.statItem}>
@@ -94,9 +124,9 @@ export default function CategoryOverviewScreen() {
                   </Text>
                 </View>
                 <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Applications</Text>
+                  <Text style={styles.statLabel}>Commission</Text>
                   <Text style={styles.statValue}>
-                    {categoryStat?.totalApplications || 0}
+                    ₹{Math.round(categoryStat?.commission || 0).toLocaleString('en-IN')}
                   </Text>
                 </View>
               </View>
@@ -115,13 +145,13 @@ export default function CategoryOverviewScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
   },
   loadingText: {
     marginTop: 12,
@@ -200,6 +230,6 @@ const styles = StyleSheet.create({
   viewDetails: {
     fontSize: typography.sizes.sm,
     color: colors.primary,
-    fontWeight: typography.weights.semiBold,
+    fontWeight: typography.weights.semibold,
   },
 });

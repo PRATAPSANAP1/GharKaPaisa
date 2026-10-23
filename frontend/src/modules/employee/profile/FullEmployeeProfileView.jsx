@@ -432,7 +432,7 @@ Generated On  : ${new Date().toLocaleString()}
           </div>
           <div>
             <span style={{ opacity: 0.7, textTransform: 'uppercase', fontSize: '10.5px', fontWeight: 700, display: 'block' }}>DOB / Gender</span>
-            <strong style={{ color: '#FFF', fontSize: '13px' }}>{jDetails.date_of_birth || '01-01-1998'} ({jDetails.gender || 'Male'})</strong>
+            <strong style={{ color: '#FFF', fontSize: '13px' }}>{jDetails.date_of_birth || emp.date_of_birth || 'N/A'} ({jDetails.gender || emp.gender || 'N/A'})</strong>
           </div>
         </div>
 
@@ -519,10 +519,10 @@ Generated On  : ${new Date().toLocaleString()}
             <div style={{ fontSize: '12px', fontWeight: 800, color: C.text, marginBottom: '8px' }}>QUALIFICATIONS & EXPERIENCE:</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
               <span style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '4px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 700 }}>
-                {jDetails.highest_qualification || 'Graduate'}
+                {jDetails.highest_qualification || emp.highest_qualification || 'N/A'}
               </span>
               <span style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '4px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 700 }}>
-                {jDetails.experience_type || 'Experienced'} ({jDetails.total_experience_years || 2} Yrs)
+                {jDetails.experience_type || emp.experience_type || 'N/A'} {jDetails.total_experience_years !== undefined && jDetails.total_experience_years !== null ? `(${jDetails.total_experience_years} Yrs)` : ''}
               </span>
               <span style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '4px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 700 }}>
                 Fintech Sales
@@ -597,11 +597,11 @@ Generated On  : ${new Date().toLocaleString()}
             </div>
             <div>
               <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Date of Birth</span>
-              <strong style={{ display: 'block', marginTop: '2px' }}>{jDetails.date_of_birth || '01-01-1998'}</strong>
+              <strong style={{ display: 'block', marginTop: '2px' }}>{jDetails.date_of_birth || emp.date_of_birth || 'N/A'}</strong>
             </div>
             <div>
               <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Gender</span>
-              <strong style={{ display: 'block', marginTop: '2px' }}>{jDetails.gender || 'Male'}</strong>
+              <strong style={{ display: 'block', marginTop: '2px' }}>{jDetails.gender || emp.gender || 'N/A'}</strong>
             </div>
             <div>
               <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Mobile Phone</span>
@@ -636,7 +636,9 @@ Generated On  : ${new Date().toLocaleString()}
             </div>
             <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
               <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800 }}>Offered Monthly Salary</span>
-              <strong style={{ display: 'block', color: '#059669', fontSize: '15px' }}>₹{Number(jDetails.offered_salary || 25000).toLocaleString('en-IN')}</strong>
+              <strong style={{ display: 'block', color: '#059669', fontSize: '15px' }}>
+                {jDetails.offered_salary || emp.offered_salary ? `₹${Number(jDetails.offered_salary || emp.offered_salary).toLocaleString('en-IN')}` : 'Not Specified'}
+              </strong>
             </div>
           </div>
 
@@ -743,7 +745,15 @@ Generated On  : ${new Date().toLocaleString()}
       {activeTab === 'hierarchy' && (
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '28px' }}>
           <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.teal, margin: '0 0 20px 0' }}>Employee Hierarchy Architecture</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+            <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Branch Head</span>
+              <h4 style={{ margin: '4px 0 0 0', fontSize: '15px' }}>{hierarchy.branch_head_name || 'Direct / None'}</h4>
+            </div>
+            <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Senior Manager</span>
+              <h4 style={{ margin: '4px 0 0 0', fontSize: '15px' }}>{hierarchy.senior_manager_name || 'Direct / None'}</h4>
+            </div>
             <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
               <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Assigned Manager</span>
               <h4 style={{ margin: '4px 0 0 0', fontSize: '15px' }}>{hierarchy.manager_name || jDetails.reporting_manager || 'Super Admin'}</h4>

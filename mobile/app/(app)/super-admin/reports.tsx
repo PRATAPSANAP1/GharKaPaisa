@@ -16,7 +16,10 @@ import { spacing } from '../../../theme/spacing';
 import { Card } from '../../../components/Card';
 import { Button } from '../../../components/Button';
 import { Icon } from '../../../components/Icon';
-import apiClient from '../../../services/api';
+import apiClient, { API_BASE_URL } from '../../../services/api';
+import { getSecureItem } from '../../../services/storage.service';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 
 interface ReportSummary {
   total_records: number;
@@ -33,6 +36,7 @@ export default function SuperAdminReportsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<'csv' | 'excel' | null>(null);
 
   const loadReports = async () => {
     try {
@@ -56,6 +60,44 @@ export default function SuperAdminReportsScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     loadReports();
+  };
+
+  const handleExport = async (kind: 'csv' | 'excel') => {
+    try {
+      setExporting(kind);
+      const token = await getSecureItem('auth_token');
+
+      const path = kind === 'csv' ? '/applications/export/csv' : '/super-admin/reports/complete/export';
+      const ext = kind === 'csv' ? 'csv' : 'xlsx';
+      const fileUri = `${FileSystem.cacheDirectory}gharkapaisa_report_${Date.now()}.${ext}`;
+
+      const download = await FileSystem.downloadAsync(`${API_BASE_URL}${path}`, fileUri, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (download.status !== 200) {
+        throw new Error(`Server responded with ${download.status}`);
+      }
+
+      const canShare = await Sharing.isAvailableAsync();
+      if (!canShare) {
+        Alert.alert('Export Ready', `Report saved to:\n${download.uri}`);
+        return;
+      }
+
+      await Sharing.shareAsync(download.uri, {
+        mimeType:
+          kind === 'csv'
+            ? 'text/csv'
+            : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        dialogTitle: kind === 'csv' ? 'Export CSV' : 'Export Excel',
+        UTI: kind === 'csv' ? 'public.comma-separated-values-text' : 'org.openxmlformats.spreadsheetml.sheet',
+      });
+    } catch (err: any) {
+      Alert.alert('Export Failed', err.message || 'Could not export the report. Please try again.');
+    } finally {
+      setExporting(null);
+    }
   };
 
   const reportTypes = [
@@ -170,7 +212,7 @@ export default function SuperAdminReportsScreen() {
             <Card style={styles.reportCard}>
               <View style={styles.reportHeader}>
                 <View style={[styles.reportIcon, { backgroundColor: `${report.color}15` }]}>
-                  <Text style={styles.reportIconText}>{report.icon}</Text>
+                  <Icon name={report.icon as any} size={24} color={report.color} />
                 </View>
                 <Icon name="chevron-right" size={20} color={colors.textMid} />
               </View>
@@ -187,14 +229,18 @@ export default function SuperAdminReportsScreen() {
         <View style={styles.exportGrid}>
           <Button
             title="Export CSV"
-            onPress={() => Alert.alert('Export', 'CSV export feature coming soon')}
+            onPress={() => handleExport('csv')}
             variant="outline"
+            loading={exporting === 'csv'}
+            disabled={exporting !== null}
             style={styles.exportBtn}
           />
           <Button
             title="Export Excel"
-            onPress={() => Alert.alert('Export', 'Excel export feature coming soon')}
+            onPress={() => handleExport('excel')}
             variant="outline"
+            loading={exporting === 'excel'}
+            disabled={exporting !== null}
             style={styles.exportBtn}
           />
         </View>

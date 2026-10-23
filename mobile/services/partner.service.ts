@@ -58,6 +58,16 @@ export const fetchPartnerTeamDashboard = async () => {
   }
 };
 
+export const fetchMarketingMaterials = async () => {
+  try {
+    const res = await apiClient.get('/marketing/materials');
+    const data = res.data?.data || res.data;
+    return Array.isArray(data) ? data : [];
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch marketing materials' };
+  }
+};
+
 export const fetchPartnerTeamMembers = async () => {
   try {
     const res = await apiClient.get('/partner/team-members');
@@ -76,12 +86,33 @@ export const fetchPartnerReferralInfo = async () => {
   }
 };
 
-export const generatePartnerShareLink = async (productId: string) => {
+export const generatePartnerShareLink = async (
+  productId: string,
+  meta: { customer_name?: string; customer_mobile?: string } = {}
+) => {
   try {
-    const res = await apiClient.post('/partner/share-link', { productId });
+    const res = await apiClient.post('/partner/share-link', { productId, ...meta });
     return res.data;
   } catch (err: any) {
     throw err.response?.data || { success: false, message: 'Failed to generate share link' };
+  }
+};
+
+export const fetchProductApplication = async (productId: string) => {
+  try {
+    const res = await apiClient.get(`/products/${productId}/apply`);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to resolve application link' };
+  }
+};
+
+export const fetchPincodeInfo = async (pincode: string) => {
+  try {
+    const res = await apiClient.get(`/location/pincode/${pincode}`);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Pincode not found' };
   }
 };
 
@@ -144,6 +175,26 @@ export const fetchPartnerKycDetails = async () => {
     return res.data;
   } catch (err: any) {
     throw err.response?.data || { success: false, message: 'Failed to fetch KYC details' };
+  }
+};
+
+/**
+ * Upload a single compliance document to the Partner Document Vault.
+ * Backend accepts multipart fields: pan | aadhaar | cancelled_cheque | gst_cert
+ */
+export const uploadPartnerVaultDocument = async (
+  docType: 'pan' | 'aadhaar' | 'cancelled_cheque' | 'gst_cert',
+  file: { uri: string; name: string; type: string }
+) => {
+  try {
+    const formData = new FormData();
+    formData.append(docType, file as any);
+    const res = await apiClient.post('/partner/upload-docs', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to upload document' };
   }
 };
 
@@ -225,9 +276,9 @@ export const completeTrainingModule = async (moduleId: string) => {
   }
 };
 
-export const fetchPartnerShareTracking = async () => {
+export const fetchPartnerShareTracking = async (params?: { page?: number; limit?: number; status?: string }) => {
   try {
-    const res = await apiClient.get('/partner/share-tracking');
+    const res = await apiClient.get('/partner/share-tracking', { params });
     return res.data;
   } catch (err: any) {
     throw err.response?.data || { success: false, message: 'Failed to fetch share tracking stats' };
@@ -270,12 +321,47 @@ export const markNotificationRead = async (id: string) => {
   }
 };
 
-export const fetchTravelUtilitiesTransactions = async () => {
+export const fetchPartnerBanners = async () => {
   try {
-    const res = await apiClient.get('/partner/wallet/transactions', { params: { type: 'UTILITY_MARGIN' } });
+    const res = await apiClient.get('/banners', { params: { page: 'partner' } });
     return res.data;
   } catch (err: any) {
-    return { success: true, data: [] };
+    return { success: false, data: [] };
+  }
+};
+
+export const fetchTravelUtilitiesTransactions = async (page = 1, limit = 20) => {
+  try {
+    const res = await apiClient.get('/travel-utilities/transactions', { params: { page, limit } });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to load transactions' };
+  }
+};
+
+export const fetchTravelUtilityServices = async (category?: string) => {
+  try {
+    const res = await apiClient.get('/travel-utilities/services', {
+      params: category ? { category } : {},
+    });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to load services' };
+  }
+};
+
+export const createTravelUtilityTransaction = async (payload: {
+  service_id: string;
+  identifier: string;
+  amount: number;
+  provider?: string;
+  customer_name?: string;
+}) => {
+  try {
+    const res = await apiClient.post('/travel-utilities/transactions', payload);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Transaction failed' };
   }
 };
 

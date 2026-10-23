@@ -41,11 +41,16 @@ const isHdfcCreditCardApp = (app, pRow) => {
   return isCreditCard;
 };
 
-// Helper to safely ensure application_admin_assignments table exists
+// Helper to safely ensure application_admin_assignments table exists (cached in memory)
+let _assignmentsTableEnsured = false;
 const ensureAssignmentsTableExists = async () => {
+  if (_assignmentsTableEnsured) return true;
   try {
     const { rows } = await query(`SELECT to_regclass('public.application_admin_assignments') as tbl_exists`);
-    if (rows[0] && rows[0].tbl_exists) return true;
+    if (rows[0] && rows[0].tbl_exists) {
+      _assignmentsTableEnsured = true;
+      return true;
+    }
     await query(`
       CREATE TABLE IF NOT EXISTS application_admin_assignments (
         id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -60,6 +65,7 @@ const ensureAssignmentsTableExists = async () => {
         UNIQUE(application_id, admin_user_id)
       )
     `);
+    _assignmentsTableEnsured = true;
     return true;
   } catch (err) {
     logger.warn('application_admin_assignments table check/create warning:', err.message);
@@ -644,10 +650,64 @@ const getApplicationsDashboard = async (req, res, next) => {
   }
 };
 
+/**
+ * Verifies application/lead ownership for tenant/partner role.
+ * Admins, super admins, operators, and staff bypass this check.
+ * Partners are strictly restricted to accessing records they own.
+ */
+const verifyPartnerApplicationOwnership = async (idOrNumber, user) => {
+  if (!user || user.role !== 'PARTNER') return { authorized: true };
+
+  const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [user.id]);
+  if (!partner) return { authorized: false, reason: 'Partner profile not found' };
+
+  let { rows: [app] } = await query(`
+    SELECT id, partner_id FROM applications 
+    WHERE id::text = $1 OR app_number = $1 OR lead_id::text = $1 OR tracking_token = $1 OR bank_application_number = $1 OR bank_ref_number = $1
+    LIMIT 1
+  `, [idOrNumber]);
+
+  if (!app) {
+    const { rows: [pdRec] } = await query(
+      `SELECT application_id FROM physical_application_details WHERE id::text = $1 OR bank_application_number = $1 OR bank_ref_number = $1 LIMIT 1`,
+      [idOrNumber]
+    ).catch(() => ({ rows: [] }));
+    if (pdRec?.application_id) {
+      const { rows: [appFromPd] } = await query(`SELECT id, partner_id FROM applications WHERE id::text = $1`, [pdRec.application_id]);
+      if (appFromPd) app = appFromPd;
+    }
+  }
+
+  if (!app) {
+    const { rows: [leadRec] } = await query(
+      `SELECT id, partner_id FROM leads WHERE id::text = $1 OR lead_number = $1 OR application_id::text = $1 LIMIT 1`,
+      [idOrNumber]
+    ).catch(() => ({ rows: [] }));
+    if (leadRec) {
+      if (leadRec.partner_id !== partner.id) {
+        return { authorized: false, reason: 'Access denied. You do not own this application record.' };
+      }
+      return { authorized: true, partnerId: partner.id, record: leadRec };
+    }
+    return { authorized: false, notFound: true, reason: 'Application or Lead record not found' };
+  }
+
+  if (app.partner_id !== partner.id) {
+    return { authorized: false, reason: 'Access denied. You do not own this application.' };
+  }
+  return { authorized: true, partnerId: partner.id, record: app };
+};
+
 // GET /applications/:id/timeline
 const getTimeline = async (req, res, next) => {
   try {
     const { id } = req.params;
+
+    const authCheck = await verifyPartnerApplicationOwnership(id, req.user);
+    if (!authCheck.authorized) {
+      if (authCheck.notFound) return notFound(res, authCheck.reason);
+      return forbidden(res, authCheck.reason);
+    }
 
     // Resolve application & linked lead ID safely without throwing cast errors
     let appId = id;
@@ -701,6 +761,13 @@ const getTimeline = async (req, res, next) => {
 const getDocuments = async (req, res, next) => {
   try {
     const { id } = req.params;
+
+    const authCheck = await verifyPartnerApplicationOwnership(id, req.user);
+    if (!authCheck.authorized) {
+      if (authCheck.notFound) return notFound(res, authCheck.reason);
+      return forbidden(res, authCheck.reason);
+    }
+
     let { rows } = await query(`
       SELECT * FROM application_documents WHERE application_id = $1 ORDER BY uploaded_at DESC
     `, [id]);
@@ -723,6 +790,13 @@ const getDocuments = async (req, res, next) => {
 const addNote = async (req, res, next) => {
   try {
     const { id } = req.params;
+
+    const authCheck = await verifyPartnerApplicationOwnership(id, req.user);
+    if (!authCheck.authorized) {
+      if (authCheck.notFound) return notFound(res, authCheck.reason);
+      return forbidden(res, authCheck.reason);
+    }
+
     const { note, visibility = 'public' } = req.body;
     if (!note) return error(res, 'Note content is required', 400);
 
@@ -935,6 +1009,14 @@ const updateStatus = async (req, res, next) => {
 
 
     const userRole = (req.user?.role || '').toUpperCase();
+    if (['PARTNER', 'TEAM_MEMBER'].includes(userRole)) {
+      const { rows: [partner] } = await client.query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (!partner || app.partner_id !== partner.id) {
+        await client.query('ROLLBACK');
+        return forbidden(res, 'Access denied. You do not own this application.');
+      }
+    }
+
     const restrictedForPartner = ['operational_verified', 'super_admin_approved', 'commission_processing', 'commission_released'];
     if (['PARTNER', 'TEAM_MEMBER'].includes(userRole) && restrictedForPartner.includes(targetStatus)) {
       await client.query('ROLLBACK');
@@ -1582,6 +1664,7 @@ const manualCommission = async (req, res, next) => {
 
 const isUuid = (str) => typeof str === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
 
+let stageColumnsEnsured = false;
 const ensureApplicationStageColumns = async () => {
   if (stageColumnsEnsured) return;
   try {
@@ -2030,15 +2113,10 @@ const listApplications = async (req, res, next) => {
       }
     }
 
-    const partnerTeamScopeSQL = `
-      WHERE (
-        ($11::boolean = false AND ($1::uuid IS NULL OR combined.partner_id IN (
-          SELECT $1::uuid UNION SELECT $8::uuid 
-          UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $8::uuid OR referred_by_id = $8::uuid
-          UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $8::uuid OR sponsor_id = $8::uuid
-          UNION SELECT id FROM partner_profiles WHERE user_id = $8::uuid
-        )))
-        OR ($11::boolean = true AND (
+    let effectivePartnerTeamScopeSQL = '';
+    if (isPartnerOrTeam) {
+      effectivePartnerTeamScopeSQL = `
+        WHERE (
           combined.partner_id IN (
             SELECT $1::uuid UNION SELECT $8::uuid 
             UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $8::uuid OR referred_by_id = $8::uuid
@@ -2055,11 +2133,21 @@ const listApplications = async (req, res, next) => {
             SELECT user_id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
             UNION SELECT u.id FROM users u WHERE u.created_by = $8::uuid
           )
-        ))
-      )
-    `;
-
-    const effectivePartnerTeamScopeSQL = partnerTeamScopeSQL;
+        )
+      `;
+    } else if (validPartnerId) {
+      effectivePartnerTeamScopeSQL = `
+        WHERE (
+          combined.partner_id IN (
+            SELECT $1::uuid
+            UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
+            UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid
+          )
+        )
+      `;
+    } else {
+      effectivePartnerTeamScopeSQL = `WHERE 1=1`;
+    }
 
     const statusFilterBlockSQL = `(
       $2::text IS NULL
@@ -2097,7 +2185,7 @@ const listApplications = async (req, res, next) => {
       OR ($2 = 'cancelled' AND (combined.status IN ('cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'))
     )`;
 
-    const { rows } = await query(`
+    const dataQueryPromise = query(`
       SELECT * FROM (
         SELECT 
           a.id,
@@ -2112,65 +2200,65 @@ const listApplications = async (req, res, next) => {
           1::int as update_count,
           COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number,
           COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, ''), NULLIF(a.bank_application_number, ''), NULLIF(pad.bank_application_number, '')) as bank_ref_number,
-          COALESCE(NULLIF(to_jsonb(a)->>'ipa_stage', ''), NULLIF(to_jsonb(pad)->>'ipa_stage', ''), NULLIF(a.iqa_stage, ''), NULLIF(pad.iqa_stage, '')) as ipa_stage,
-          COALESCE(NULLIF(to_jsonb(a)->>'kyc_stage', ''), NULLIF(to_jsonb(pad)->>'kyc_stage', ''), NULLIF(a.vkyc_stage, ''), NULLIF(a.vkyc_status, ''), NULLIF(pad.vkyc_stage, '')) as kyc_stage,
-          (to_jsonb(a)->>'card_approval_stage') as card_approval_stage,
-          (to_jsonb(a)->>'digital_card_issued') as digital_card_issued,
+          COALESCE(NULLIF(a.ipa_stage, ''), NULLIF(pad.ipa_stage, ''), NULLIF(a.iqa_stage, ''), NULLIF(pad.iqa_stage, '')) as ipa_stage,
+          COALESCE(NULLIF(a.kyc_stage, ''), NULLIF(pad.kyc_stage, ''), NULLIF(a.vkyc_stage, ''), NULLIF(a.vkyc_status, ''), NULLIF(pad.vkyc_stage, '')) as kyc_stage,
+          a.card_approval_stage,
+          a.digital_card_issued,
           COALESCE(NULLIF(a.appcode_status, ''), NULLIF(pad.appcode_status, '')) as appcode_status,
-          COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(to_jsonb(pad)->>'dispatch_status', '')) as dispatch_status,
-          COALESCE(NULLIF(to_jsonb(a)->>'soft_approval_stage', ''), NULLIF(to_jsonb(pad)->>'soft_approval_stage', ''), NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, '')) as soft_approval_stage,
+          COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status,
+          COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, '')) as soft_approval_stage,
           COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, '')) as soft_approval_status,
           COALESCE(NULLIF(a.iqa_stage, ''), NULLIF(pad.iqa_stage, '')) as iqa_stage,
           COALESCE(NULLIF(a.vkyc_stage, ''), NULLIF(a.vkyc_status, ''), NULLIF(pad.vkyc_stage, '')) as vkyc_stage,
           COALESCE(NULLIF(a.vkyc_status, ''), NULLIF(a.vkyc_stage, ''), NULLIF(pad.vkyc_stage, '')) as vkyc_status,
           COALESCE(NULLIF(a.vkyc_url, ''), NULLIF(pad.vkyc_url, '')) as vkyc_url,
           COALESCE(
-            NULLIF(to_jsonb(a)->>'user_remark', ''),
-            NULLIF(to_jsonb(pad)->>'user_remark', ''),
             NULLIF(a.user_remark, ''),
+            NULLIF(pad.user_remark, ''),
             NULLIF(a.notes, ''),
             NULLIF(a.bank_remark, ''),
             NULLIF(pad.bank_remark, ''),
             'NA'
           ) as bank_remark,
-          COALESCE(NULLIF(to_jsonb(a)->>'user_remark', ''), NULLIF(to_jsonb(pad)->>'user_remark', ''), a.user_remark, a.notes, a.operational_remarks) as user_remark,
+          COALESCE(NULLIF(a.user_remark, ''), NULLIF(pad.user_remark, ''), a.user_remark, a.notes, a.operational_remarks) as user_remark,
           COALESCE(a.user_remark, a.notes) as notes,
           COALESCE(NULLIF(a.final_status, ''), NULLIF(pad.final_status, '')) as final_status,
           COALESCE(NULLIF(a.app_file_generated, ''), NULLIF(pad.app_file_generated, '')) as app_file_generated,
           COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, '')) as decline_reason,
           COALESCE(NULLIF(a.eligible_reqd, ''), NULLIF(pad.eligible_reqd, '')) as eligible_reqd,
-          COALESCE(NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as decline_code,
-          COALESCE(NULLIF(to_jsonb(a)->>'decline_description', ''), NULLIF(to_jsonb(pad)->>'decline_description', '')) as decline_description,
-          COALESCE(NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as curing_designation,
-          COALESCE(NULLIF(to_jsonb(a)->>'primary_decline_code', ''), NULLIF(to_jsonb(pad)->>'primary_decline_code', ''), NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as primary_decline_code,
-          COALESCE(NULLIF(to_jsonb(a)->>'primary_decline_description', ''), NULLIF(to_jsonb(pad)->>'primary_decline_description', ''), NULLIF(to_jsonb(a)->>'decline_description', ''), NULLIF(to_jsonb(pad)->>'decline_description', '')) as primary_decline_description,
-          COALESCE(NULLIF(to_jsonb(a)->>'primary_curing_designation', ''), NULLIF(to_jsonb(pad)->>'primary_curing_designation', ''), NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as primary_curing_designation,
-          COALESCE(NULLIF(to_jsonb(a)->>'secondary_decline_code', ''), NULLIF(to_jsonb(pad)->>'secondary_decline_code', '')) as secondary_decline_code,
-          COALESCE(NULLIF(to_jsonb(a)->>'secondary_decline_description', ''), NULLIF(to_jsonb(pad)->>'secondary_decline_description', '')) as secondary_decline_description,
-          COALESCE(NULLIF(to_jsonb(a)->>'secondary_curing_designation', ''), NULLIF(to_jsonb(pad)->>'secondary_curing_designation', '')) as secondary_curing_designation,
-          (to_jsonb(a)->>'last_operator_name') as last_operator_name,
-          (to_jsonb(a)->>'last_operator_role') as last_operator_role,
-          (to_jsonb(a)->>'last_operator_designation') as last_operator_designation,
-          (to_jsonb(a)->>'last_operator_code') as last_operator_code,
-          (to_jsonb(a)->>'final_status_operator_code') as final_status_operator_code,
-          NULLIF(to_jsonb(a)->>'last_operated_at', '')::timestamptz as last_operated_at,
-          COALESCE(NULLIF(to_jsonb(a)->>'last_operator_name', ''), NULLIF(to_jsonb(a)->>'last_operator_code', ''), 'Not Assigned') as currently_working_by,
-          COALESCE(to_jsonb(a)->>'sales_claimed_by', to_jsonb(pad)->>'sales_claimed_by', '') as sales_claimed_by,
-          COALESCE(to_jsonb(a)->>'sales_claimed_by_name', to_jsonb(pad)->>'sales_claimed_by_name', '') as sales_claimed_by_name,
-          COALESCE(to_jsonb(a)->>'sales_claimed_by_code', to_jsonb(pad)->>'sales_claimed_by_code', '') as sales_claimed_by_code,
-          NULLIF(COALESCE(to_jsonb(a)->>'sales_claimed_at', to_jsonb(pad)->>'sales_claimed_at', ''), '')::timestamptz as sales_claimed_at,
+          COALESCE(NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as decline_code,
+          COALESCE(NULLIF(a.decline_description, ''), NULLIF(pad.decline_description, '')) as decline_description,
+          COALESCE(NULLIF(a.curing_designation, ''), NULLIF(pad.curing_designation, '')) as curing_designation,
+          COALESCE(NULLIF(a.primary_decline_code, ''), NULLIF(pad.primary_decline_code, ''), NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as primary_decline_code,
+          COALESCE(NULLIF(a.primary_decline_description, ''), NULLIF(pad.primary_decline_description, ''), NULLIF(a.decline_description, ''), NULLIF(pad.decline_description, '')) as primary_decline_description,
+          COALESCE(NULLIF(a.primary_curing_designation, ''), NULLIF(pad.primary_curing_designation, ''), NULLIF(a.curing_designation, ''), NULLIF(pad.curing_designation, '')) as primary_curing_designation,
+          COALESCE(NULLIF(a.secondary_decline_code, ''), NULLIF(pad.secondary_decline_code, '')) as secondary_decline_code,
+          COALESCE(NULLIF(a.secondary_decline_description, ''), NULLIF(pad.secondary_decline_description, ''), NULLIF(a.decline_description, ''), NULLIF(pad.decline_description, '')) as secondary_decline_description,
+          COALESCE(NULLIF(a.secondary_curing_designation, ''), NULLIF(pad.secondary_curing_designation, ''), NULLIF(a.curing_designation, ''), NULLIF(pad.curing_designation, '')) as secondary_curing_designation,
+          a.last_operator_name,
+          a.last_operator_role,
+          a.last_operator_designation,
+          a.last_operator_code,
+          a.final_status_operator_code,
+          a.last_operated_at,
+          COALESCE(NULLIF(a.last_operator_name, ''), NULLIF(a.last_operator_code, ''), 'Not Assigned') as currently_working_by,
+          COALESCE(a.sales_claimed_by, pad.sales_claimed_by, '') as sales_claimed_by,
+          COALESCE(a.sales_claimed_by_name, pad.sales_claimed_by_name, '') as sales_claimed_by_name,
+          COALESCE(a.sales_claimed_by_code, pad.sales_claimed_by_code, '') as sales_claimed_by_code,
+          COALESCE(a.sales_claimed_at, pad.sales_claimed_at) as sales_claimed_at,
           a.submitted_at,
           a.approved_at,
           a.approved_by,
           COALESCE(
             NULLIF(appu.employee_id, ''),
             NULLIF(appemp.employee_id, ''),
+            NULLIF(appemp_id.employee_id, ''),
             NULLIF(appu.full_name, ''),
             NULLIF(appu.email, ''),
             appu.id::text
           ) as approved_by_admin_id,
           appu.full_name as approved_by_name,
-          COALESCE(NULLIF(appu.employee_id, ''), NULLIF(appemp.employee_id, '')) as approved_by_code,
+          COALESCE(NULLIF(appu.employee_id, ''), NULLIF(appemp.employee_id, ''), NULLIF(appemp_id.employee_id, '')) as approved_by_code,
           a.commission_received_at,
           a.commission_paid_at,
           a.submitted_by,
@@ -2188,8 +2276,8 @@ const listApplications = async (req, res, next) => {
           c.employment_type,
           c.monthly_income,
           p.name as product_name,
-          COALESCE(NULLIF(to_jsonb(a)->>'category', ''), p.category::text) as category,
-          COALESCE(NULLIF(to_jsonb(a)->>'sub_category', ''), p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category,
+          COALESCE(NULLIF(a.metadata->>'category', ''), p.category::text) as category,
+          COALESCE(NULLIF(a.sub_category, ''), p.sub_category, (a.metadata->>'product_type')) as sub_category,
           b.name as bank_name,
           b.short_code as bank_code,
           ap.partner_code,
@@ -2197,47 +2285,48 @@ const listApplications = async (req, res, next) => {
           ap.last_name as partner_last_name,
           COALESCE(
             NULLIF(su.employee_id, ''),
-            NULLIF(emp.employee_id, '')
+            NULLIF(emp.employee_id, ''),
+            NULLIF(emp_sub.employee_id, '')
           ) as emp_code,
-          emp.full_name as employee_name,
-          emp.designation as employee_designation,
+          COALESCE(emp.full_name, emp_sub.full_name) as employee_name,
+          COALESCE(emp.designation, emp_sub.designation) as employee_designation,
           su.role as submitter_role,
           a.partner_id,
           a.product_id,
           COALESCE(a.bank_id, p.bank_id) as bank_id,
           COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id,
           oh.full_name as operation_head_name,
-          COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(to_jsonb(pad)->>'pan_check', ''), 'no') as pan_check,
-          COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(to_jsonb(pad)->>'bank_current_lead_status', ''), 'None') as bank_current_lead_status,
-          COALESCE(NULLIF(to_jsonb(a)->>'requery_date', ''), NULLIF(to_jsonb(pad)->>'requery_date', '')) as requery_date,
-          COALESCE(NULLIF(to_jsonb(a)->>'remark_status', ''), 'PENDING') as remark_status,
-          COALESCE(to_jsonb(a)->>'assigned_to', to_jsonb(pad)->>'assigned_to') as assigned_to,
-          COALESCE(NULLIF(to_jsonb(a)->>'sales_operator_code', ''), NULLIF(to_jsonb(pad)->>'sales_operator_code', ''), NULLIF(to_jsonb(a)->>'salas_operator_code', ''), NULLIF(to_jsonb(pad)->>'salas_operator_code', '')) as sales_operator_code,
-          COALESCE(NULLIF(to_jsonb(a)->>'sales_operator_code', ''), NULLIF(to_jsonb(pad)->>'sales_operator_code', ''), NULLIF(to_jsonb(a)->>'salas_operator_code', ''), NULLIF(to_jsonb(pad)->>'salas_operator_code', '')) as salas_operator_code,
-          COALESCE(NULLIF(to_jsonb(a)->>'pan_checker_code', ''), NULLIF(to_jsonb(pad)->>'pan_checker_code', '')) as pan_checker_code,
-          COALESCE(NULLIF(to_jsonb(a)->>'remark_operator_code', ''), NULLIF(to_jsonb(pad)->>'remark_operator_code', ''), NULLIF(to_jsonb(a)->>'remark_opretor_code', ''), NULLIF(to_jsonb(pad)->>'remark_opretor_code', '')) as remark_operator_code,
-          COALESCE(NULLIF(to_jsonb(a)->>'remark_operator_code', ''), NULLIF(to_jsonb(pad)->>'remark_operator_code', ''), NULLIF(to_jsonb(a)->>'remark_opretor_code', ''), NULLIF(to_jsonb(pad)->>'remark_opretor_code', '')) as remark_opretor_code,
-          COALESCE(NULLIF(to_jsonb(a)->>'backend_remark', ''), NULLIF(to_jsonb(pad)->>'backend_remark', '')) as backend_remark,
-          COALESCE(NULLIF(to_jsonb(a)->>'cureble_stage', ''), NULLIF(to_jsonb(pad)->>'cureble_stage', ''), NULLIF(to_jsonb(a)->>'queryable_remark', ''), NULLIF(to_jsonb(pad)->>'queryable_remark', ''), NULLIF(to_jsonb(a)->>'curable_stage', ''), NULLIF(to_jsonb(pad)->>'curable_stage', '')) as cureble_stage,
-          COALESCE(NULLIF(to_jsonb(a)->>'primary_code', ''), NULLIF(to_jsonb(pad)->>'primary_code', ''), NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as primary_code,
-          COALESCE(NULLIF(to_jsonb(a)->>'secondary_code', ''), NULLIF(to_jsonb(pad)->>'secondary_code', '')) as secondary_code,
-          COALESCE(NULLIF(to_jsonb(a)->>'cureble_type', ''), NULLIF(to_jsonb(pad)->>'cureble_type', ''), NULLIF(to_jsonb(a)->>'digital_remark', ''), NULLIF(to_jsonb(pad)->>'digital_remark', ''), NULLIF(to_jsonb(a)->>'curable_type', ''), NULLIF(to_jsonb(pad)->>'curable_type', '')) as cureble_type,
-          COALESCE(NULLIF(to_jsonb(a)->>'cureble_operator_code', ''), NULLIF(to_jsonb(pad)->>'cureble_operator_code', ''), NULLIF(to_jsonb(a)->>'curable_executive', ''), NULLIF(to_jsonb(pad)->>'curable_executive', '')) as cureble_operator_code,
-          COALESCE(NULLIF(to_jsonb(a)->>'final_card_approval', ''), NULLIF(to_jsonb(pad)->>'final_card_approval', ''), NULLIF(to_jsonb(a)->>'card_approval_stage', ''), NULLIF(to_jsonb(pad)->>'card_approval_stage', ''), NULLIF(to_jsonb(a)->>'digital_card_issued', ''), NULLIF(to_jsonb(pad)->>'digital_card_issued', '')) as final_card_approval,
+          COALESCE(NULLIF(a.pan_check, ''), NULLIF(pad.pan_check, ''), 'no') as pan_check,
+          COALESCE(NULLIF(a.bank_current_lead_status, ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status,
+          COALESCE(NULLIF(a.requery_date::text, ''), NULLIF(pad.requery_date::text, '')) as requery_date,
+          COALESCE(NULLIF(a.remark_status, ''), 'PENDING') as remark_status,
+          COALESCE(NULLIF(a.assigned_to_name, ''), NULLIF(pad.assigned_to_name, ''), a.metadata->>'assigned_to') as assigned_to,
+          COALESCE(NULLIF(a.sales_operator_code, ''), NULLIF(pad.sales_operator_code, '')) as sales_operator_code,
+          COALESCE(NULLIF(a.sales_operator_code, ''), NULLIF(pad.sales_operator_code, '')) as salas_operator_code,
+          COALESCE(NULLIF(a.pan_checker_code, ''), NULLIF(pad.pan_checker_code, '')) as pan_checker_code,
+          COALESCE(NULLIF(a.remark_operator_code, ''), NULLIF(pad.remark_operator_code, '')) as remark_operator_code,
+          COALESCE(NULLIF(a.remark_operator_code, ''), NULLIF(pad.remark_operator_code, '')) as remark_opretor_code,
+          COALESCE(NULLIF(a.backend_remark, ''), NULLIF(pad.backend_remark, '')) as backend_remark,
+          COALESCE(NULLIF(a.cureble_stage, ''), NULLIF(pad.cureble_stage, ''), NULLIF(a.user_remark, ''), NULLIF(pad.user_remark, '')) as cureble_stage,
+          COALESCE(NULLIF(a.primary_decline_code, ''), NULLIF(pad.primary_decline_code, ''), NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as primary_code,
+          COALESCE(NULLIF(a.secondary_decline_code, ''), NULLIF(pad.secondary_decline_code, '')) as secondary_code,
+          COALESCE(NULLIF(a.cureble_type, ''), NULLIF(pad.cureble_type, ''), NULLIF(a.curing_designation, ''), NULLIF(pad.curing_designation, '')) as cureble_type,
+          COALESCE(NULLIF(a.cureble_operator_code, ''), NULLIF(pad.cureble_operator_code, '')) as cureble_operator_code,
+          COALESCE(NULLIF(a.card_approval_stage, ''), NULLIF(pad.card_approval_stage, ''), NULLIF(a.digital_card_issued, ''), NULLIF(pad.digital_card_issued, '')) as final_card_approval,
           COALESCE(a.commission_amount, 0) as incentive_amount,
-          COALESCE(NULLIF(to_jsonb(a)->>'remark_updated', '')::boolean, FALSE) as remark_updated,
-          NULLIF(to_jsonb(a)->>'remark_updated_by', '')::uuid as remark_updated_by,
-          NULLIF(to_jsonb(a)->>'remark_updated_at', '')::timestamptz as remark_updated_at,
-          NULLIF(to_jsonb(a)->>'assigned_to_employee_id', '')::uuid as assigned_to_employee_id,
-          NULLIF(to_jsonb(a)->>'assigned_to_user_id', '')::uuid as assigned_to_user_id,
-          COALESCE(NULLIF(to_jsonb(a)->>'assigned_to_name', ''), NULLIF(to_jsonb(pad)->>'assigned_to_name', '')) as assigned_to_name,
-          COALESCE(NULLIF(to_jsonb(a)->>'assigned_to_code', ''), NULLIF(to_jsonb(pad)->>'assigned_to_code', '')) as assigned_to_code,
-          NULLIF(to_jsonb(a)->>'assigned_by_user_id', '')::uuid as assigned_by_user_id,
-          NULLIF(to_jsonb(a)->>'assigned_by_employee_id', '')::uuid as assigned_by_employee_id,
-          COALESCE(NULLIF(to_jsonb(a)->>'assigned_by_name', ''), NULLIF(to_jsonb(pad)->>'assigned_by_name', '')) as assigned_by_name,
-          COALESCE(NULLIF(to_jsonb(a)->>'assigned_by_code', ''), NULLIF(to_jsonb(pad)->>'assigned_by_code', '')) as assigned_by_code,
-          NULLIF(COALESCE(to_jsonb(a)->>'assigned_at', to_jsonb(pad)->>'assigned_at', ''), '')::timestamptz as assigned_at,
-          COALESCE(NULLIF(to_jsonb(a)->>'assignment_notes', ''), NULLIF(to_jsonb(pad)->>'assignment_notes', '')) as assignment_notes
+          COALESCE(a.remark_updated, FALSE) as remark_updated,
+          a.remark_updated_by,
+          a.remark_updated_at,
+          a.assigned_to_employee_id,
+          a.assigned_to_user_id,
+          COALESCE(NULLIF(a.assigned_to_name, ''), NULLIF(pad.assigned_to_name, '')) as assigned_to_name,
+          COALESCE(NULLIF(a.assigned_to_code, ''), NULLIF(pad.assigned_to_code, '')) as assigned_to_code,
+          a.assigned_by_user_id,
+          a.assigned_by_employee_id,
+          COALESCE(NULLIF(a.assigned_by_name, ''), NULLIF(pad.assigned_by_name, '')) as assigned_by_name,
+          COALESCE(NULLIF(a.assigned_by_code, ''), NULLIF(pad.assigned_by_code, '')) as assigned_by_code,
+          COALESCE(a.assigned_at, pad.assigned_at) as assigned_at,
+          COALESCE(NULLIF(a.assignment_notes, ''), NULLIF(pad.assignment_notes, '')) as assignment_notes
         FROM applications a
         LEFT JOIN physical_application_details pad ON pad.application_id = a.id
         LEFT JOIN leads l ON l.id = a.lead_id
@@ -2245,11 +2334,13 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN products p ON p.id = a.product_id
         LEFT JOIN banks b ON b.id = COALESCE(a.bank_id, p.bank_id)
         LEFT JOIN partner_profiles ap ON ap.id = a.partner_id
-        LEFT JOIN employees emp ON (emp.id = a.employee_id OR emp.user_id = a.submitted_by)
+        LEFT JOIN employees emp ON emp.id = a.employee_id
+        LEFT JOIN employees emp_sub ON (emp_sub.user_id = a.submitted_by AND a.employee_id IS NULL)
         LEFT JOIN users su ON su.id = a.submitted_by
         LEFT JOIN users oh ON oh.id = COALESCE(p.operation_head_id, b.operation_head_id)
         LEFT JOIN users appu ON appu.id = a.approved_by
-        LEFT JOIN employees appemp ON (appemp.user_id = appu.id OR appemp.id = appu.id)
+        LEFT JOIN employees appemp ON appemp.user_id = appu.id
+        LEFT JOIN employees appemp_id ON (appemp_id.id = appu.id AND appemp.id IS NULL)
       ) combined
       ${effectivePartnerTeamScopeSQL}
         AND ${statusFilterBlockSQL}
@@ -2302,16 +2393,11 @@ const listApplications = async (req, res, next) => {
       LIMIT $6 OFFSET $7
     `, queryParams);
 
-    // Count query with synchronized status filter
-    const countScopeSQL = `
-      WHERE (
-        ($9::boolean = false AND ($1::uuid IS NULL OR combined.partner_id IN (
-          SELECT $1::uuid UNION SELECT $8::uuid 
-          UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $8::uuid OR referred_by_id = $8::uuid
-          UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $8::uuid OR sponsor_id = $8::uuid
-          UNION SELECT id FROM partner_profiles WHERE user_id = $8::uuid
-        )))
-        OR ($9::boolean = true AND (
+    // Count query: synchronized canonical status aggregation running in parallel
+    let effectiveCountScopeSQL = '';
+    if (isPartnerOrTeam) {
+      effectiveCountScopeSQL = `
+        WHERE (
           combined.partner_id IN (
             SELECT $1::uuid UNION SELECT $8::uuid 
             UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $8::uuid OR referred_by_id = $8::uuid
@@ -2328,41 +2414,57 @@ const listApplications = async (req, res, next) => {
             SELECT user_id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
             UNION SELECT u.id FROM users u WHERE u.created_by = $8::uuid
           )
-        ))
-      )
-    `;
+        )
+      `;
+    } else if (validPartnerId) {
+      effectiveCountScopeSQL = `
+        WHERE (
+          combined.partner_id IN (
+            SELECT $1::uuid
+            UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
+            UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid
+          )
+        )
+      `;
+    } else {
+      effectiveCountScopeSQL = `WHERE 1=1`;
+    }
 
-    const effectiveCountScopeSQL = countScopeSQL;
+    const countSearchJoinSQL = validSearch ? `
+        LEFT JOIN leads l ON l.id = a.lead_id
+        LEFT JOIN customers c ON c.id = a.customer_id
+    ` : '';
 
-    const { rows: [{ count }] } = await query(`
-      SELECT COUNT(*) FROM (
+    // Single unified count query grouping by status and resolution fields across all active non-status filters
+    const countQueryPromise = query(`
+      SELECT combined.status, COALESCE(combined.final_status, '') as final_status, COALESCE(combined.bank_current_lead_status, '') as bank_current_lead_status, COALESCE(combined.decline_code, '') as decline_code, COUNT(*)::int as count FROM (
         SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, COALESCE(
-          NULLIF(to_jsonb(a)->>'assigned_to', ''),
-          NULLIF(to_jsonb(pad)->>'assigned_to', ''),
-          NULLIF(to_jsonb(a)->>'assigned_to_name', ''),
-          NULLIF(to_jsonb(pad)->>'assigned_to_name', '')
-        ) AS assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, COALESCE(NULLIF(to_jsonb(a)->>'category', ''), p.category::text) as category, COALESCE(NULLIF(to_jsonb(a)->>'sub_category', ''), p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(to_jsonb(pad)->>'pan_check', ''), 'no') as pan_check, COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(to_jsonb(pad)->>'bank_current_lead_status', ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(to_jsonb(a)->>'requery_date', ''), NULLIF(to_jsonb(pad)->>'requery_date', '')) as requery_date,
+          NULLIF(a.assigned_to_name, ''),
+          NULLIF(pad.assigned_to_name, ''),
+          NULLIF(a.assigned_to_code, ''),
+          NULLIF(pad.assigned_to_code, '')
+        ) AS assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status,
+        ${validSearch ? "COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile," : "COALESCE(NULLIF(a.pan_number, ''), '') as pan_number, 'Customer' as customer_name, '' as customer_mobile,"}
+        COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, COALESCE(NULLIF(a.metadata->>'category', ''), p.category::text) as category, COALESCE(NULLIF(a.sub_category, ''), p.sub_category, (a.metadata->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(a.pan_check, ''), NULLIF(pad.pan_check, ''), 'no') as pan_check, COALESCE(NULLIF(a.bank_current_lead_status, ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(a.requery_date::text, ''), NULLIF(pad.requery_date::text, '')) as requery_date,
         COALESCE(NULLIF(a.final_status, ''), NULLIF(pad.final_status, '')) as final_status,
         COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, '')) as decline_reason,
-        COALESCE(NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as decline_code,
-        COALESCE(NULLIF(to_jsonb(a)->>'decline_description', ''), NULLIF(to_jsonb(pad)->>'decline_description', '')) as decline_description,
-        COALESCE(NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as curing_designation,
-        COALESCE(NULLIF(to_jsonb(a)->>'primary_decline_code', ''), NULLIF(to_jsonb(pad)->>'primary_decline_code', ''), NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as primary_decline_code,
-        COALESCE(NULLIF(to_jsonb(a)->>'secondary_decline_code', ''), NULLIF(to_jsonb(pad)->>'secondary_decline_code', '')) as secondary_decline_code,
-        COALESCE(to_jsonb(a)->>'sales_claimed_by', to_jsonb(pad)->>'sales_claimed_by', '') as sales_claimed_by,
-        NULLIF(to_jsonb(a)->>'assigned_to_user_id', '')::uuid as assigned_to_user_id,
-        NULLIF(to_jsonb(a)->>'assigned_to_employee_id', '')::uuid as assigned_to_employee_id,
-        NULLIF(to_jsonb(a)->>'assigned_by_user_id', '')::uuid as assigned_by_user_id,
-        NULLIF(to_jsonb(a)->>'assigned_by_employee_id', '')::uuid as assigned_by_employee_id
+        COALESCE(NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as decline_code,
+        COALESCE(NULLIF(a.decline_description, ''), NULLIF(pad.decline_description, '')) as decline_description,
+        COALESCE(NULLIF(a.curing_designation, ''), NULLIF(pad.curing_designation, '')) as curing_designation,
+        COALESCE(NULLIF(a.primary_decline_code, ''), NULLIF(pad.primary_decline_code, ''), NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as primary_decline_code,
+        COALESCE(NULLIF(a.secondary_decline_code, ''), NULLIF(pad.secondary_decline_code, '')) as secondary_decline_code,
+        COALESCE(a.sales_claimed_by, pad.sales_claimed_by, '') as sales_claimed_by,
+        a.assigned_to_user_id,
+        a.assigned_to_employee_id,
+        a.assigned_by_user_id,
+        a.assigned_by_employee_id
         FROM applications a
-        LEFT JOIN leads l ON l.id = a.lead_id
-        LEFT JOIN customers c ON c.id = a.customer_id
+        ${countSearchJoinSQL}
         LEFT JOIN products p ON p.id = a.product_id
         LEFT JOIN banks b ON b.id = COALESCE(a.bank_id, p.bank_id)
         LEFT JOIN physical_application_details pad ON pad.application_id = a.id
       ) combined
       ${effectiveCountScopeSQL}
-         AND ${statusFilterBlockSQL}
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
         AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5 OR combined.bank_application_number ILIKE $5 OR combined.bank_ref_number ILIKE $5 OR combined.pan_number ILIKE $5))
@@ -2408,85 +2510,12 @@ const listApplications = async (req, res, next) => {
         ${finalStatusOperatorFilterSQL}
         ${querableOperatorFilterSQL}
         ${curableOperatorFilterSQL}
+      GROUP BY combined.status, COALESCE(combined.final_status, ''), COALESCE(combined.bank_current_lead_status, ''), COALESCE(combined.decline_code, '')
     `, countQueryParams);
 
-    // Compute real-time canonical status counts scoped to user role & bank filters
-    const { rows: statusCountsRows } = await query(`
-      SELECT combined.status, COALESCE(combined.final_status, '') as final_status, COUNT(*)::int as count FROM (
-        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, COALESCE(
-          NULLIF(to_jsonb(a)->>'assigned_to', ''),
-          NULLIF(to_jsonb(pad)->>'assigned_to', ''),
-          NULLIF(to_jsonb(a)->>'assigned_to_name', ''),
-          NULLIF(to_jsonb(pad)->>'assigned_to_name', '')
-        ) AS assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_application_number', ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(to_jsonb(pad)->>'dispatch_status', '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, COALESCE(NULLIF(to_jsonb(a)->>'category', ''), p.category::text) as category, COALESCE(NULLIF(to_jsonb(a)->>'sub_category', ''), p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(to_jsonb(pad)->>'pan_check', ''), 'no') as pan_check, COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(to_jsonb(pad)->>'bank_current_lead_status', ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(to_jsonb(a)->>'requery_date', ''), NULLIF(to_jsonb(pad)->>'requery_date', '')) as requery_date,
-        COALESCE(NULLIF(a.final_status, ''), NULLIF(pad.final_status, ''), NULLIF(to_jsonb(pad)->>'final_status', '')) as final_status,
-        COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, ''), NULLIF(to_jsonb(pad)->>'decline_reason', '')) as decline_reason,
-        COALESCE(NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as decline_code,
-        COALESCE(NULLIF(to_jsonb(a)->>'decline_description', ''), NULLIF(to_jsonb(pad)->>'decline_description', '')) as decline_description,
-        COALESCE(NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as curing_designation,
-        COALESCE(NULLIF(to_jsonb(a)->>'primary_decline_code', ''), NULLIF(to_jsonb(pad)->>'primary_decline_code', ''), NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as primary_decline_code,
-        COALESCE(NULLIF(to_jsonb(a)->>'secondary_decline_code', ''), NULLIF(to_jsonb(pad)->>'secondary_decline_code', '')) as secondary_decline_code,
-        COALESCE(to_jsonb(a)->>'sales_claimed_by', to_jsonb(pad)->>'sales_claimed_by', '') as sales_claimed_by,
-        NULLIF(to_jsonb(a)->>'assigned_to_user_id', '')::uuid as assigned_to_user_id,
-        NULLIF(to_jsonb(a)->>'assigned_to_employee_id', '')::uuid as assigned_to_employee_id,
-        NULLIF(to_jsonb(a)->>'assigned_by_user_id', '')::uuid as assigned_by_user_id,
-        NULLIF(to_jsonb(a)->>'assigned_by_employee_id', '')::uuid as assigned_by_employee_id
-        FROM applications a
-        LEFT JOIN leads l ON l.id = a.lead_id
-        LEFT JOIN customers c ON c.id = a.customer_id
-        LEFT JOIN products p ON p.id = a.product_id
-        LEFT JOIN banks b ON b.id = COALESCE(a.bank_id, p.bank_id)
-        LEFT JOIN physical_application_details pad ON pad.application_id = a.id
-      ) combined
-      ${effectiveCountScopeSQL}
-        AND ${statusFilterBlockSQL}
-        AND ($3::uuid IS NULL OR combined.product_id = $3)
-        AND ($4::uuid IS NULL OR combined.bank_id = $4)
-        AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5 OR combined.bank_application_number ILIKE $5 OR combined.bank_ref_number ILIKE $5 OR combined.pan_number ILIKE $5))
-        AND ($6::text IS NULL OR combined.process_by = $6 OR combined.submitted_by::text = $6)
-        AND ($7::uuid IS NULL OR combined.operation_head_id = $7::uuid)
-        AND (
-          $10::text IS NULL OR $10::text = ''
-          OR ($10::text = 'my' AND (combined.submitted_by = $8::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $8::uuid))))
-          OR ($10::text = 'team' AND NOT (combined.submitted_by = $8::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $8::uuid))))
-        )
-        AND ($11::uuid IS NULL OR combined.submitted_by = $11::uuid OR combined.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $11::uuid OR id = $11::uuid))
-        AND (
-          $12::text IS NULL OR $12::text = '' OR $12::text = 'all'
-          OR ($12::text IN ('loc_eoc', 'LOC/EOC', 'loc-eoc', 'LOC_EOC') AND ${locEocAppSQL})
-          OR ($12::text IN ('loan_on_credit_card', 'loc', 'LOC') AND (
-            LOWER(COALESCE(combined.sub_category, '')) = 'loc'
-            OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) = 'loc')
-          ))
-          OR ($12::text IN ('smart_emi', 'eoc', 'EOC') AND (
-            LOWER(COALESCE(combined.sub_category, '')) = 'eoc'
-            OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) = 'eoc')
-          ))
-          OR ($12::text = 'credit_card' AND ${creditCardAppSQL})
-          OR ($12::text IN ('loan', 'loans', 'personal_loan') AND (LOWER(combined.category::text) LIKE '%loan%' OR LOWER(combined.category::text) LIKE '%personal%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
-          OR ($12::text = 'business_loan' AND (LOWER(combined.category::text) LIKE '%business%'))
-          OR ($12::text = 'insurance' AND (LOWER(combined.category::text) LIKE '%insurance%'))
-          OR ($12::text = 'utility' AND (LOWER(combined.category::text) LIKE '%utilit%' OR LOWER(combined.category::text) LIKE '%recharge%'))
-          OR (LOWER(combined.category::text) = LOWER($12::text))
-        )
-        AND (
-          $13::text IS NULL OR $13::text = '' OR $13::text = 'all'
-          OR combined.commission_status = $13::text
-          OR ($13::text = 'released' AND combined.commission_status IN ('released', 'credited', 'paid', 'approved', 'commission_released'))
-          OR ($13::text = 'pending' AND combined.commission_status IN ('pending', 'unpaid', 'due', 'initiated'))
-        )
-        AND ($14::timestamp IS NULL OR combined.created_at >= $14::timestamp)
-        AND ($15::timestamp IS NULL OR combined.created_at <= $15::timestamp)
-        ${countOpHeadBankFilterSQL}
-        ${salesExecFilterSQL}
-        ${panCheckerFilterSQL}
-        ${qdOperatorFilterSQL}
-        ${remarkOperatorFilterSQL}
-        ${finalStatusOperatorFilterSQL}
-        ${querableOperatorFilterSQL}
-        ${curableOperatorFilterSQL}
-      GROUP BY combined.status, COALESCE(combined.final_status, ''), COALESCE(combined.bank_current_lead_status, '')
-    `, countQueryParams);
+    // Parallel fetch: data page + status counts execute concurrently
+    const [{ rows }, { rows: statusCountsRows }] = await Promise.all([dataQueryPromise, countQueryPromise]);
+
     const statusCountsObj = {
       pending: 0,
       details_submitted: 0,
@@ -2502,15 +2531,20 @@ const listApplications = async (req, res, next) => {
       const s = String(r.status || '').toLowerCase();
       const fs = String(r.final_status || '').toLowerCase();
       const bs = String(r.bank_current_lead_status || '').toLowerCase();
-      const cnt = parseInt(r.count) || 0;
+      const dc = String(r.decline_code || '').trim().toUpperCase();
+      const cnt = parseInt(r.count, 10) || 0;
 
-      if (['declined', 'decline'].includes(s) || s.includes('decline') || fs.includes('decline') || bs.includes('decline')) {
+      const isCancelled = ['cancelled', 'cancel', 'canceled'].includes(s) || fs.includes('cancel') || bs.includes('cancel');
+      const isDeclined = ['declined', 'decline'].includes(s) || s.includes('decline') || fs.includes('decline') || bs.includes('decline');
+      const isRejected = isDeclined || ['rejected', 'technical_error'].includes(s) || s.includes('reject') || fs.includes('reject') || bs.includes('reject') || (dc && dc !== 'NONE');
+
+      if (isCancelled) {
+        statusCountsObj.cancelled += cnt;
+      } else if (isDeclined) {
         statusCountsObj.declined = (statusCountsObj.declined || 0) + cnt;
         statusCountsObj.rejected += cnt;
-      } else if (['rejected', 'technical_error'].includes(s) || s.includes('reject') || fs.includes('reject') || bs.includes('reject')) {
+      } else if (isRejected) {
         statusCountsObj.rejected += cnt;
-      } else if (['cancelled', 'cancel', 'canceled'].includes(s) || fs.includes('cancel')) {
-        statusCountsObj.cancelled += cnt;
       } else if (['pending', 'lead_created', 'new', 'draft', 'initiated', 'link_sent', 'confirmed', 'link_pending'].includes(s)) {
         statusCountsObj.pending += cnt;
       } else if (['details_submitted', 'submitted', 'bank_form_submitted'].includes(s)) {
@@ -2534,15 +2568,23 @@ const listApplications = async (req, res, next) => {
       (statusCountsObj.rejected || 0) +
       (statusCountsObj.cancelled || 0);
 
+    let count;
+    if (!validStatus || validStatus === 'all') {
+      count = statusCountsObj.all;
+    } else {
+      const vsLower = validStatus.toLowerCase();
+      count = statusCountsObj[vsLower] !== undefined ? statusCountsObj[vsLower] : 0;
+    }
+
     return res.status(200).json({
       success: true,
       message: 'Success',
       data: rows,
       pagination: {
-        total: parseInt(count),
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages: Math.ceil(parseInt(count) / limit),
+        total: parseInt(count, 10),
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+        totalPages: Math.max(1, Math.ceil(parseInt(count, 10) / limit)),
       },
       status_counts: statusCountsObj,
       timestamp: new Date().toISOString(),
@@ -4636,6 +4678,14 @@ const updateApplicationDetails = async (req, res, next) => {
     }
 
     const userRole = (req.user?.role || '').toUpperCase();
+    if (['PARTNER', 'TEAM_MEMBER'].includes(userRole)) {
+      const { rows: [partner] } = await client.query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (!partner || app.partner_id !== partner.id) {
+        await client.query('ROLLBACK');
+        return forbidden(res, 'Access denied. You do not own this application.');
+      }
+    }
+
     const userDesignation = (req.user?.designation || '').toUpperCase();
     const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
     const isOpsOrAdmin = ['SUPER_ADMIN', 'ADMIN', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'EMPLOYEE', 'TELECALLER', 'SALES_EXECUTIVE', 'MANAGER', 'TEAM_LEADER', 'FIELD_OPERATOR', 'PARTNER'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation) || !!req.user;
@@ -6373,6 +6423,12 @@ const get360ApplicationTrace = async (req, res, next) => {
   try {
     const { id } = req.params;
 
+    const authCheck = await verifyPartnerApplicationOwnership(id, req.user);
+    if (!authCheck.authorized) {
+      if (authCheck.notFound) return notFound(res, authCheck.reason);
+      return forbidden(res, authCheck.reason);
+    }
+
     const { rows: [appTrace] } = await query(`
       SELECT
         a.id AS application_id,
@@ -6767,8 +6823,15 @@ const ensureOperatorHistoryTable = async () => {
 // GET /applications/:id/operator-history — Fetch full operator audit trail
 const getApplicationOperatorHistory = async (req, res, next) => {
   try {
-    await ensureOperatorHistoryTable();
     const { id } = req.params;
+
+    const authCheck = await verifyPartnerApplicationOwnership(id, req.user);
+    if (!authCheck.authorized) {
+      if (authCheck.notFound) return notFound(res, authCheck.reason);
+      return forbidden(res, authCheck.reason);
+    }
+
+    await ensureOperatorHistoryTable();
     const { rows } = await query(`
       SELECT 
         h.id,

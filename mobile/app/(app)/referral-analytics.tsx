@@ -1,51 +1,86 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { apiClient } from '../../services/api';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
+import apiClient from '../../services/api';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
-interface ReferralStats {
-  total_referrals: number;
-  active_referrals: number;
-  converted_referrals: number;
-  conversion_rate: number;
-  total_revenue: number;
-  avg_conversion_days: number;
+interface ReferralSummary {
+  total_partners: number;
+  active_partners: number;
+  inactive_partners: number;
+  pending_kyc: number;
+  approved_kyc: number;
+  total_team_members: number;
+  largest_team_size: number;
+  highest_team_commission: number;
+  daily_registrations: number;
+  weekly_registrations: number;
+  monthly_registrations: number;
+  referral_conversion_rate: number;
+  average_team_size: number;
 }
 
 interface TopReferrer {
-  partner_id: string;
-  partner_name: string;
-  total_referrals: number;
-  converted_referrals: number;
-  conversion_rate: number;
-  total_revenue: number;
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  partner_code?: string;
+  referral_count?: number;
+  children_count?: number;
+  team_commission?: number;
+  email?: string;
+  mobile?: string;
+  status?: string;
 }
 
 export default function ReferralAnalyticsScreen() {
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<ReferralStats | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [summary, setSummary] = useState<ReferralSummary | null>(null);
   const [topReferrers, setTopReferrers] = useState<TopReferrer[]>([]);
-  const [timeRange, setTimeRange] = useState<string>('30d');
 
   useEffect(() => {
     fetchReferralAnalytics();
-  }, [timeRange]);
+  }, []);
 
-  const fetchReferralAnalytics = async () => {
+  const fetchReferralAnalytics = async (isRefresh = false) => {
     try {
-      setLoading(true);
-      const response = await apiClient.get('/superadmin/referrals/analytics', {
-        params: { time_range: timeRange }
-      });
-      setStats(response.data.stats || null);
-      setTopReferrers(response.data.top_referrers || []);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      const response = await apiClient.get('/superadmin/referral-analytics');
+      const payload = response.data?.data || {};
+      setSummary(payload);
+      setTopReferrers(payload.top_referrers || []);
     } catch (error) {
       console.error('Failed to fetch referral analytics:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
+
+  const onRefresh = useCallback(() => {
+    fetchReferralAnalytics(true);
+  }, []);
+
+  const formatCurrency = (value?: number) =>
+    `₹${Number(value || 0).toLocaleString('en-IN')}`;
+
+  const getReferrerName = (referrer: TopReferrer) =>
+    `${referrer.first_name || ''} ${referrer.last_name || ''}`.trim() ||
+    referrer.partner_code ||
+    'Partner';
 
   if (loading) {
     return (
@@ -57,60 +92,71 @@ export default function ReferralAnalyticsScreen() {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={[colors.primary]}
+          tintColor={colors.primary}
+        />
+      }
+    >
       <View style={styles.header}>
         <Text style={styles.title}>Referral Analytics</Text>
+        <TouchableOpacity style={styles.refreshButton} onPress={() => fetchReferralAnalytics(true)}>
+          <Text style={styles.refreshButtonText}>Refresh</Text>
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.filterContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {['7d', '30d', '90d', '1y'].map((range) => (
-            <TouchableOpacity
-              key={range}
-              style={[
-                styles.filterChip,
-                timeRange === range && styles.filterChipActive
-              ]}
-              onPress={() => setTimeRange(range)}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  timeRange === range && styles.filterChipTextActive
-                ]}
-              >
-                {range === '1y' ? '1 Year' : range === '90d' ? '90 Days' : range === '30d' ? '30 Days' : '7 Days'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      {stats && (
+      {summary && (
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Total Referrals</Text>
-            <Text style={styles.statValue}>{stats.total_referrals}</Text>
+            <Text style={styles.statLabel}>Total Partners</Text>
+            <Text style={styles.statValue}>{summary.total_partners}</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Active Referrals</Text>
-            <Text style={styles.statValue}>{stats.active_referrals}</Text>
+            <Text style={styles.statLabel}>Active Partners</Text>
+            <Text style={styles.statValue}>{summary.active_partners}</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Converted</Text>
-            <Text style={styles.statValue}>{stats.converted_referrals}</Text>
+            <Text style={styles.statLabel}>Team Members</Text>
+            <Text style={styles.statValue}>{summary.total_team_members}</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Conversion Rate</Text>
-            <Text style={styles.statValue}>{stats.conversion_rate.toFixed(1)}%</Text>
+            <Text style={styles.statLabel}>Referral Conversion</Text>
+            <Text style={styles.statValue}>
+              {Number(summary.referral_conversion_rate || 0).toFixed(2)}%
+            </Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Total Revenue</Text>
-            <Text style={styles.statValue}>₹{stats.total_revenue.toLocaleString()}</Text>
+            <Text style={styles.statLabel}>Pending KYC</Text>
+            <Text style={styles.statValue}>{summary.pending_kyc}</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Avg Conversion Days</Text>
-            <Text style={styles.statValue}>{stats.avg_conversion_days.toFixed(1)}</Text>
+            <Text style={styles.statLabel}>Approved KYC</Text>
+            <Text style={styles.statValue}>{summary.approved_kyc}</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>Avg Team Size</Text>
+            <Text style={styles.statValue}>
+              {Number(summary.average_team_size || 0).toFixed(2)}
+            </Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>Largest Team</Text>
+            <Text style={styles.statValue}>{summary.largest_team_size}</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>Highest Team Comm.</Text>
+            <Text style={styles.statValue}>
+              {formatCurrency(summary.highest_team_commission)}
+            </Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>New (30 Days)</Text>
+            <Text style={styles.statValue}>{summary.monthly_registrations}</Text>
           </View>
         </View>
       )}
@@ -126,23 +172,22 @@ export default function ReferralAnalyticsScreen() {
           </View>
         ) : (
           topReferrers.map((referrer, index) => (
-            <View key={referrer.partner_id} style={styles.referrerCard}>
+            <View key={referrer.id} style={styles.referrerCard}>
               <View style={styles.rankBadge}>
                 <Text style={styles.rankText}>#{index + 1}</Text>
               </View>
               <View style={styles.referrerInfo}>
-                <Text style={styles.referrerName}>{referrer.partner_name}</Text>
+                <Text style={styles.referrerName}>{getReferrerName(referrer)}</Text>
                 <Text style={styles.referrerStats}>
-                  {referrer.total_referrals} referrals • {referrer.converted_referrals} converted
+                  {referrer.partner_code ? `${referrer.partner_code} • ` : ''}
+                  {referrer.referral_count || 0} referrals • {referrer.children_count || 0} team
                 </Text>
               </View>
               <View style={styles.referrerMetrics}>
-                <Text style={styles.conversionRate}>
-                  {referrer.conversion_rate.toFixed(1)}%
+                <Text style={styles.teamCommission}>
+                  {formatCurrency(referrer.team_commission)}
                 </Text>
-                <Text style={styles.revenue}>
-                  ₹{referrer.total_revenue.toLocaleString()}
-                </Text>
+                <Text style={styles.revenueLabel}>Team Comm.</Text>
               </View>
             </View>
           ))
@@ -155,13 +200,13 @@ export default function ReferralAnalyticsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
   },
   loadingText: {
     marginTop: 12,
@@ -169,6 +214,9 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 20,
     backgroundColor: colors.card,
     borderBottomWidth: 1,
@@ -179,30 +227,15 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.bold,
     color: colors.text,
   },
-  filterContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: colors.card,
-  },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: colors.background,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  filterChipActive: {
+  refreshButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
     backgroundColor: colors.primary,
-    borderColor: colors.primary,
   },
-  filterChipText: {
-    fontSize: typography.sizes.sm,
-    color: colors.text,
-  },
-  filterChipTextActive: {
+  refreshButtonText: {
     color: '#FFFFFF',
+    fontSize: typography.sizes.sm,
     fontWeight: typography.weights.bold,
   },
   statsContainer: {
@@ -296,14 +329,14 @@ const styles = StyleSheet.create({
   referrerMetrics: {
     alignItems: 'flex-end',
   },
-  conversionRate: {
+  teamCommission: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
     color: '#10B981',
     marginBottom: 2,
   },
-  revenue: {
-    fontSize: typography.sizes.sm,
+  revenueLabel: {
+    fontSize: typography.sizes.xs,
     color: colors.textLight,
   },
 });

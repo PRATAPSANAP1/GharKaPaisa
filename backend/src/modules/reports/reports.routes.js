@@ -9,6 +9,7 @@ const {
   getPartnerReport,
   getApplicationReport,
   getCompleteSystemReport,
+  getDashboardStatsReport,
   exportEmployeeReport,
   exportCustomerReport,
   exportAdminReport,
@@ -21,6 +22,7 @@ const {
 router.use(authenticate, syncUser, authorize('SUPER_ADMIN', 'ADMIN', 'SUPERADMIN', 'OPERATIONAL_HEAD'));
 
 // ── Preview Data Endpoints ─────────────────────────────────────
+router.get('/dashboard-stats', getDashboardStatsReport);
 router.get('/employees', getEmployeeReport);
 router.get('/customers', getCustomerReport);
 router.get('/admins', getAdminReport);

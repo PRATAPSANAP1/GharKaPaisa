@@ -100,33 +100,28 @@ export const submitCustomerApplication = async (payload: {
 
 export const uploadCustomerDocument = async (tokenOrAppId: string, formData: any) => {
   try {
-    // If file_data is present (base64), send as JSON with base64 data
-    // If file is present (File object), send as multipart/form-data
-    if (formData.file_data) {
-      // Base64 upload - send as JSON
-      const res = await apiClient.post(`/customer/upload/${tokenOrAppId}`, formData).catch(async () => {
-        return await apiClient.post(`/applications/${tokenOrAppId}/documents`, formData);
-      });
-      return res.data;
-    } else {
-      // File upload - send as multipart/form-data
-      const res = await apiClient.post(`/customer/upload/${tokenOrAppId}`, formData, {
+    // Multipart upload. Public token flow hits the customer portal;
+    // authenticated flow falls back to the application documents route.
+    const res = await apiClient
+      .post(`/customer-portal/${tokenOrAppId}/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-      }).catch(async () => {
+      })
+      .catch(async () => {
         return await apiClient.post(`/applications/${tokenOrAppId}/documents`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
       });
-      return res.data;
-    }
+    return res.data;
   } catch (err: any) {
     throw err.response?.data || { success: false, message: 'Failed to upload document' };
   }
 };
 
-export const fetchBankCards = async (bankSlug: string) => {
+export const fetchBankCards = async (bankId: string) => {
   try {
-    const res = await apiClient.get(`/products`, { params: { bank: bankSlug, category: 'credit-card' } });
+    const res = await apiClient.get(`/products`, {
+      params: { bank_id: bankId, category: 'credit_card', is_active: 'true' },
+    });
     return res.data;
   } catch (err: any) {
     throw err.response?.data || { success: false, message: 'Failed to fetch bank cards' };

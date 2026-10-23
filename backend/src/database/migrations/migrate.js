@@ -5070,6 +5070,22 @@ const migrate = async () => {
     logger.error('Sales Operator Claim migration error note:', claimErr.message);
   }
 
+  // Device Push Token Registration Migration
+  try {
+    const { migrateDeviceTokens } = require('./migrate_device_tokens');
+    await migrateDeviceTokens();
+  } catch (deviceTokenErr) {
+    logger.error('Device Tokens migration error note:', deviceTokenErr.message);
+  }
+
+  // Notification Preferences Mobile Toggles Migration
+  try {
+    const { migrateNotificationPreferencesExtend } = require('./migrate_notification_preferences_extend');
+    await migrateNotificationPreferencesExtend();
+  } catch (notifPrefErr) {
+    logger.error('Notification Preferences extend migration error note:', notifPrefErr.message);
+  }
+
   if (require.main === module) {
     process.exit(0);
   }
