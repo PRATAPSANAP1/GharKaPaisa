@@ -80,6 +80,7 @@ router.all('/:id/send-link', requireApprovedPartnerOrAdmin, appCtrl.sendUploadLi
 router.post('/:id/assign', requireApprovedPartnerOrAdmin, appCtrl.reassignApplication);
 router.post('/:id/reassign', requireApprovedPartnerOrAdmin, appCtrl.reassignApplication);
 router.post('/:id/assign-employee', requireApprovedPartnerOrAdmin, appCtrl.assignApplicationToEmployee);
+router.post('/:id/assign-sales-executive', requireApprovedPartnerOrAdmin, appCtrl.assignApplicationToSalesExecutive);
 router.put('/:id/documents/:docId/verify', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.verifyDocument);
 router.put('/:id/verification-complete', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.markVerificationComplete);
 router.put('/:id/verification', requireApprovedPartnerOrAdmin, appCtrl.updateApplicationDetails);

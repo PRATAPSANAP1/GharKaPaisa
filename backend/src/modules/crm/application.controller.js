@@ -7157,26 +7157,40 @@ const claimApplicationRequest = async (req, res, next) => {
 };
 
 /**
+const isUuid = (val) => typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
+/**
  * GET /api/v1/applications/assignable-employees
  * Search active employees by Name, Mobile Number, or Employee Code.
+ * Supports designation filter (e.g., ?designation=sales_executive)
  */
 const getAssignableEmployees = async (req, res, next) => {
   try {
     const rawSearch = (req.query.search || req.query.q || '').trim();
+    const designationFilter = (req.query.designation || req.query.role || '').trim().toLowerCase();
     const currentUserId = req.user?.id;
 
     let baseSQL = `
       SELECT
         e.id,
         COALESCE(NULLIF(e.employee_id, ''), NULLIF(u.employee_id, ''), 'EMP') as employee_id,
-        e.user_id,
+        COALESCE(e.user_id, u.id) as user_id,
         COALESCE(NULLIF(e.full_name, ''), NULLIF(u.full_name, ''), 'Staff') as full_name,
         COALESCE(NULLIF(e.mobile_number, ''), NULLIF(u.mobile, ''), '') as mobile_number,
         COALESCE(NULLIF(e.designation, ''), NULLIF(u.designation, ''), 'Employee') as designation,
         COALESCE(NULLIF(e.department, ''), 'Operations') as department,
         COALESCE(NULLIF(e.employee_status, ''), 'ACTIVE') as employee_status,
         COALESCE(NULLIF(e.email_id, ''), u.email) as email
-      FROM employees e
+      FROM (
+        SELECT id, user_id, employee_id, full_name, mobile_number, designation, department, employee_status, email_id
+        FROM employees
+        WHERE (employee_status IS NULL OR UPPER(employee_status) NOT IN ('TERMINATED', 'INACTIVE'))
+        UNION
+        SELECT id, id as user_id, employee_id, full_name, mobile as mobile_number, designation, 'Sales' as department, status as employee_status, email as email_id
+        FROM users
+        WHERE (status IS NULL OR UPPER(status) NOT IN ('TERMINATED', 'INACTIVE', 'BLOCKED'))
+          AND id NOT IN (SELECT user_id FROM employees WHERE user_id IS NOT NULL)
+      ) e
       LEFT JOIN users u ON u.id = e.user_id
       WHERE (e.employee_status IS NULL OR UPPER(e.employee_status) NOT IN ('TERMINATED', 'INACTIVE'))
     `;
@@ -7185,6 +7199,30 @@ const getAssignableEmployees = async (req, res, next) => {
     if (currentUserId && isUuid(currentUserId)) {
       params.push(currentUserId);
       baseSQL += ` AND (e.user_id IS NULL OR e.user_id != $${params.length})`;
+    }
+
+    if (designationFilter.includes('sales')) {
+      baseSQL += ` AND (
+        UPPER(COALESCE(e.designation, u.designation, '')) IN (
+          'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE',
+          'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR',
+          'SALES EXECUTIVE', 'SALES_EXECUTIVE'
+        )
+        OR UPPER(COALESCE(u.role, '')) IN (
+          'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE',
+          'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'
+        )
+        OR UPPER(COALESCE(e.designation, u.designation, '')) LIKE '%SALES EXECUTIVE%'
+        OR UPPER(COALESCE(e.designation, u.designation, '')) LIKE '%SALES OPERATOR%'
+      )`;
+    } else if (designationFilter) {
+      params.push(`%${designationFilter}%`);
+      const pIdx = params.length;
+      baseSQL += ` AND (
+        COALESCE(e.designation, '') ILIKE $${pIdx}
+        OR COALESCE(u.designation, '') ILIKE $${pIdx}
+        OR COALESCE(u.role, '') ILIKE $${pIdx}
+      )`;
     }
 
     if (rawSearch) {
@@ -7206,6 +7244,397 @@ const getAssignableEmployees = async (req, res, next) => {
     return success(res, rows, 'Assignable employees retrieved successfully');
   } catch (err) {
     next(err);
+  }
+};
+
+/**
+ * POST /api/v1/applications/:id/assign-sales-executive
+ * Assign an application from one Administrative Sales Executive to another.
+ * Updates sales_claimed_by and assigned_to fields, logs timeline & operator history.
+ */
+const assignApplicationToSalesExecutive = async (req, res, next) => {
+  const { id } = req.params;
+  const targetId = req.body.target_employee_id || req.body.target_user_id || req.body.target_id || req.body.employee_id;
+  const notes = (req.body.notes || req.body.remarks || '').trim();
+
+  if (!id || id === 'undefined' || id === 'null' || !String(id).trim()) {
+    return error(res, 'A valid Application ID is required', 400);
+  }
+  if (!targetId) {
+    return error(res, 'Target Administrative Sales Executive is required', 400);
+  }
+
+  const userId = req.user?.id;
+  if (!userId) {
+    return error(res, 'Authentication required', 401);
+  }
+
+  const userRole = (req.user.role || '').toUpperCase();
+  const userDesignation = (req.user.designation || '').toUpperCase();
+  const isSalesUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(userRole);
+
+  if (!isSalesUser && !isAdmin) {
+    return error(res, 'Only Administrative Sales Executives or Administrators can assign applications.', 403);
+  }
+
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Resolve application with concurrency lock
+    const cleanId = String(id).trim();
+    let { rows: [app] } = await client.query(`
+      SELECT a.*,
+        p.bank_id as product_bank_id,
+        b.id as resolved_bank_id,
+        b.short_code as bank_code,
+        b.name as bank_name,
+        COALESCE(to_jsonb(a)->>'sales_claimed_by', to_jsonb(pad)->>'sales_claimed_by', '') as existing_claimed_by,
+        COALESCE(to_jsonb(a)->>'sales_claimed_by_name', to_jsonb(pad)->>'sales_claimed_by_name', '') as existing_claimed_by_name,
+        COALESCE(to_jsonb(a)->>'sales_claimed_by_code', to_jsonb(pad)->>'sales_claimed_by_code', '') as existing_claimed_by_code,
+        COALESCE(to_jsonb(a)->>'sales_claimed_at', to_jsonb(pad)->>'sales_claimed_at', NULL) as existing_claimed_at
+      FROM applications a 
+      LEFT JOIN products p ON p.id = a.product_id
+      LEFT JOIN banks b ON b.id = COALESCE(a.bank_id, p.bank_id)
+      LEFT JOIN physical_application_details pad ON pad.application_id = a.id
+      WHERE LOWER(a.id::text) = LOWER($1) 
+         OR a.app_number ILIKE $1 
+         OR a.app_number ILIKE REPLACE($1, 'APP', '')
+         OR ('APP' || a.id::text) = $1
+         OR (a.bank_application_number IS NOT NULL AND a.bank_application_number ILIKE $1)
+         OR (a.bank_ref_number IS NOT NULL AND a.bank_ref_number ILIKE $1)
+         OR (a.lead_id IS NOT NULL AND a.lead_id::text = $1)
+         OR (a.tracking_token IS NOT NULL AND a.tracking_token = $1)
+      FOR UPDATE OF a
+    `, [cleanId]);
+
+    if (!app) {
+      const { rows: [pdRec] } = await client.query(`
+        SELECT application_id FROM physical_application_details 
+        WHERE id::text = $1 OR bank_application_number ILIKE $1 OR bank_ref_number ILIKE $1 
+        LIMIT 1
+      `, [cleanId]).catch(() => ({ rows: [] }));
+
+      if (pdRec?.application_id) {
+        const { rows: [appFromPd] } = await client.query(`
+          SELECT a.*,
+            p.bank_id as product_bank_id,
+            b.id as resolved_bank_id,
+            b.short_code as bank_code,
+            b.name as bank_name,
+            COALESCE(to_jsonb(a)->>'sales_claimed_by', to_jsonb(pad)->>'sales_claimed_by', '') as existing_claimed_by,
+            COALESCE(to_jsonb(a)->>'sales_claimed_by_name', to_jsonb(pad)->>'sales_claimed_by_name', '') as existing_claimed_by_name,
+            COALESCE(to_jsonb(a)->>'sales_claimed_by_code', to_jsonb(pad)->>'sales_claimed_by_code', '') as existing_claimed_by_code,
+            COALESCE(to_jsonb(a)->>'sales_claimed_at', to_jsonb(pad)->>'sales_claimed_at', NULL) as existing_claimed_at
+          FROM applications a 
+          LEFT JOIN products p ON p.id = a.product_id
+          LEFT JOIN banks b ON b.id = COALESCE(a.bank_id, p.bank_id)
+          LEFT JOIN physical_application_details pad ON pad.application_id = a.id
+          WHERE a.id = $1
+          FOR UPDATE OF a
+        `, [pdRec.application_id]);
+        app = appFromPd;
+      }
+    }
+
+    if (!app) {
+      await client.query('ROLLBACK');
+      return notFound(res, 'Application not found');
+    }
+
+    const appStatusLower = (app.status || '').toLowerCase();
+    if (['cancelled', 'cancel'].includes(appStatusLower)) {
+      await client.query('ROLLBACK');
+      return error(res, 'Cancelled applications cannot be assigned.', 400);
+    }
+    if (['disbursed'].includes(appStatusLower)) {
+      await client.query('ROLLBACK');
+      return error(res, 'Disbursed applications cannot be assigned.', 400);
+    }
+
+    const currentClaimedBy = app.sales_claimed_by || app.existing_claimed_by || '';
+
+    // If claimed by another operator, only that claimant or admin can assign
+    if (currentClaimedBy && currentClaimedBy !== userId && !isAdmin) {
+      await client.query('ROLLBACK');
+      const claimantName = app.sales_claimed_by_name || app.existing_claimed_by_name || 'another Administrative Sales Operator';
+      return res.status(409).json({
+        success: false,
+        message: `This application is currently claimed by ${claimantName}. Only the claiming operator or an Administrator can assign it.`,
+        claimed_by: currentClaimedBy,
+        claimed_by_name: claimantName
+      });
+    }
+
+    // 2. Resolve target employee
+    let targetEmp = null;
+    const cleanTargetId = String(targetId).trim();
+
+    const { rows: empRows } = await client.query(`
+      SELECT 
+        e.id, 
+        COALESCE(NULLIF(e.employee_id, ''), NULLIF(u.employee_id, ''), 'EMP') as employee_id,
+        COALESCE(e.user_id, u.id) as user_id,
+        COALESCE(NULLIF(e.full_name, ''), NULLIF(u.full_name, ''), 'Staff') as full_name,
+        COALESCE(NULLIF(e.mobile_number, ''), NULLIF(u.mobile, ''), '') as mobile_number,
+        COALESCE(NULLIF(e.designation, ''), NULLIF(u.designation, ''), 'Administrative Sales Executive') as designation,
+        COALESCE(NULLIF(e.department, ''), 'Sales') as department
+      FROM employees e
+      LEFT JOIN users u ON u.id = e.user_id
+      WHERE e.id::text = $1 OR e.employee_id = $1 OR (e.user_id IS NOT NULL AND e.user_id::text = $1)
+      LIMIT 1
+    `, [cleanTargetId]);
+
+    if (empRows.length > 0) {
+      targetEmp = empRows[0];
+    } else {
+      const { rows: uRows } = await client.query(`
+        SELECT 
+          u.id as user_id, 
+          COALESCE(NULLIF(u.employee_id, ''), 'EMP') as employee_id, 
+          COALESCE(NULLIF(u.full_name, ''), 'Staff') as full_name, 
+          COALESCE(NULLIF(u.mobile, ''), '') as mobile_number, 
+          COALESCE(NULLIF(u.designation, ''), 'Administrative Sales Executive') as designation
+        FROM users u
+        WHERE u.id::text = $1 OR u.employee_id = $1 LIMIT 1
+      `, [cleanTargetId]);
+      if (uRows.length > 0) {
+        targetEmp = {
+          id: null,
+          employee_id: uRows[0].employee_id,
+          user_id: uRows[0].user_id,
+          full_name: uRows[0].full_name,
+          mobile_number: uRows[0].mobile_number,
+          designation: uRows[0].designation,
+          department: 'Sales'
+        };
+      }
+    }
+
+    if (!targetEmp) {
+      await client.query('ROLLBACK');
+      return notFound(res, 'Target Administrative Sales Executive not found.');
+    }
+
+    if (targetEmp.user_id && targetEmp.user_id === userId) {
+      await client.query('ROLLBACK');
+      return error(res, 'Cannot assign the application to yourself.', 400);
+    }
+
+    // 3. Resolve assigner details
+    let assignerEmp = null;
+    if (userId) {
+      const { rows: aRows } = await client.query(
+        `SELECT id, employee_id, full_name FROM employees WHERE user_id = $1 LIMIT 1`,
+        [userId]
+      ).catch(() => ({ rows: [] }));
+      if (aRows.length > 0) assignerEmp = aRows[0];
+    }
+
+    const assignedByUserId = userId;
+    const assignedByEmpId = assignerEmp?.id || null;
+    const assignedByName = assignerEmp?.full_name || req.user.full_name || req.user.name || 'Sales Operator';
+    const assignedByCode = assignerEmp?.employee_id || req.user.user_code || req.user.employee_id || '';
+    const assignedAt = new Date().toISOString();
+
+    const targetUserId = targetEmp.user_id || null;
+    const targetUserName = targetEmp.full_name;
+    const targetUserCode = targetEmp.employee_id || '';
+    const targetEmpId = targetEmp.id || null;
+
+    // 4. Update applications table
+    await client.query(`
+      UPDATE applications SET
+        sales_claimed_by = $1,
+        sales_claimed_by_name = $2,
+        sales_claimed_by_code = $3,
+        sales_claimed_at = $4,
+        assigned_to_user_id = $1,
+        assigned_to_employee_id = $5,
+        assigned_to_name = $2,
+        assigned_to_code = $3,
+        assigned_by_user_id = $6,
+        assigned_by_employee_id = $7,
+        assigned_by_name = $8,
+        assigned_by_code = $9,
+        assigned_at = $4,
+        assignment_notes = $10,
+        updated_at = NOW()
+      WHERE id = $11
+    `, [
+      targetUserId,
+      targetUserName,
+      targetUserCode,
+      assignedAt,
+      targetEmpId,
+      assignedByUserId,
+      assignedByEmpId,
+      assignedByName,
+      assignedByCode,
+      notes || null,
+      app.id
+    ]);
+
+    // 5. Update physical_application_details if present
+    await client.query(`
+      UPDATE physical_application_details SET
+        sales_claimed_by = $1,
+        sales_claimed_by_name = $2,
+        sales_claimed_by_code = $3,
+        sales_claimed_at = $4,
+        assigned_to_user_id = $1,
+        assigned_to_employee_id = $5,
+        assigned_to_name = $2,
+        assigned_to_code = $3,
+        assigned_by_user_id = $6,
+        assigned_by_employee_id = $7,
+        assigned_by_name = $8,
+        assigned_by_code = $9,
+        assigned_at = $4,
+        assignment_notes = $10,
+        updated_at = NOW()
+      WHERE application_id = $11
+    `, [
+      targetUserId,
+      targetUserName,
+      targetUserCode,
+      assignedAt,
+      targetEmpId,
+      assignedByUserId,
+      assignedByEmpId,
+      assignedByName,
+      assignedByCode,
+      notes || null,
+      app.id
+    ]).catch(() => {});
+
+    // 6. Record assignment in application_employee_assignments table
+    await client.query(`
+      INSERT INTO application_employee_assignments (
+        application_id,
+        assigned_to_employee_id,
+        assigned_to_user_id,
+        assigned_to_name,
+        assigned_to_code,
+        assigned_by_user_id,
+        assigned_by_employee_id,
+        assigned_by_name,
+        assigned_by_code,
+        assignment_notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `, [
+      app.id,
+      targetEmpId,
+      targetUserId,
+      targetUserName,
+      targetUserCode,
+      assignedByUserId,
+      assignedByEmpId,
+      assignedByName,
+      assignedByCode,
+      notes || null
+    ]).catch(() => {});
+
+    // 7. Add entry in application_timeline
+    const timelineDesc = `Application assigned to ${targetUserName} (${targetUserCode}) by ${assignedByName}${notes ? ` - Remarks: ${notes}` : ''}`;
+    await client.query(`
+      INSERT INTO application_timeline (
+        application_id,
+        status,
+        event_type,
+        title,
+        description,
+        performed_by,
+        performed_by_name,
+        performed_by_role,
+        created_at
+      ) VALUES ($1, $2, 'SALES_OPERATOR_ASSIGNED', 'Assigned to Sales Executive', $3, $4, $5, $6, NOW())
+    `, [
+      app.id,
+      app.status || 'in_progress',
+      timelineDesc,
+      assignedByUserId,
+      assignedByName,
+      userRole || 'ADMINISTRATIVE SALES EXECUTIVE'
+    ]).catch(err => logger.warn('Timeline insert non-fatal warn:', err.message));
+
+    // 8. Add entry in application_operator_history
+    try {
+      await ensureOperatorHistoryTable();
+      await client.query(`
+        INSERT INTO application_operator_history (
+          application_id,
+          operator_id,
+          operator_name,
+          operator_role,
+          operator_designation,
+          operator_code,
+          action_type,
+          field_changes,
+          notes,
+          created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+      `, [
+        app.id,
+        assignedByUserId,
+        assignedByName,
+        userRole,
+        userDesignation,
+        assignedByCode,
+        'ASSIGN_SALES_EXECUTIVE',
+        JSON.stringify({
+          sales_claimed_by: targetUserId,
+          sales_claimed_by_name: targetUserName,
+          sales_claimed_by_code: targetUserCode,
+          assigned_by: assignedByName
+        }),
+        timelineDesc
+      ]).catch(() => {});
+    } catch (e) {}
+
+    // 9. Audit log
+    await logAction(req, 'ASSIGN_APPLICATION_SALES_EXECUTIVE', app.id, {
+      app_number: app.app_number,
+      target_user_id: targetUserId,
+      target_user_name: targetUserName,
+      target_user_code: targetUserCode,
+      assigned_by_name: assignedByName,
+      assigned_by_code: assignedByCode,
+      notes: notes || null
+    }).catch(() => {});
+
+    await client.query('COMMIT');
+
+    // 10. Notify target user if targetUserId exists
+    if (targetUserId) {
+      notify(
+        targetUserId,
+        'APPLICATION_ASSIGNED',
+        `Application #${app.app_number || app.id} has been assigned to you by ${assignedByName}.`
+      ).catch(() => {});
+    }
+
+    return success(res, {
+      application_id: app.id,
+      app_number: app.app_number,
+      sales_claimed_by: targetUserId,
+      sales_claimed_by_name: targetUserName,
+      sales_claimed_by_code: targetUserCode,
+      sales_claimed_at: assignedAt,
+      assigned_to_name: targetUserName,
+      assigned_to_code: targetUserCode,
+      assigned_to_user_id: targetUserId,
+      assigned_by_name: assignedByName,
+      assigned_by_code: assignedByCode,
+      assigned_at: assignedAt,
+      assignment_notes: notes || null
+    }, `Application successfully assigned to ${targetUserName} (${targetUserCode})`);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
   }
 };
 
@@ -7486,7 +7915,8 @@ module.exports = {
   normalizeAssignmentCategory,
   claimApplicationRequest,
   getAssignableEmployees,
-  assignApplicationToEmployee
+  assignApplicationToEmployee,
+  assignApplicationToSalesExecutive
 };
 
 

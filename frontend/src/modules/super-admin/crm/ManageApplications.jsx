@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import AdminDocumentVerificationModal from '../../admin/reports/AdminDocumentVerificationModal';
+import AssignSalesExecutiveModal from '../../admin/reports/AssignSalesExecutiveModal';
 import ExportApplicationsModal from '../../../components/Admin/ExportApplicationsModal';
-import { ShieldCheck, Zap, Loader2, UserCheck, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Zap, Loader2, UserCheck, CheckCircle2, UserPlus } from 'lucide-react';
 import { 
   MdSearch, MdFilterList, MdCheckCircle, MdBlock, 
   MdCompareArrows, MdHistory, MdFileDownload, MdClose,
@@ -58,6 +59,7 @@ export default function ManageApplications() {
   // Verification modal state
   const [verifyModalApp, setVerifyModalApp] = useState(null);
   const [verifyModalTab, setVerifyModalTab] = useState('qd');
+  const [assignModalApp, setAssignModalApp] = useState(null);
   const [whatsAppData, setWhatsAppData] = useState(null);
 
   // Active Main Tab: 'applications' | 'partner_share'
@@ -1142,6 +1144,13 @@ export default function ManageApplications() {
                                 Review
                               </button>
                               <button
+                                onClick={() => setAssignModalApp(app)}
+                                style={{ padding: '6px 12px', borderRadius: '8px', background: '#8b5cf615', border: '1px solid #8b5cf640', color: '#8b5cf6', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                title="Assign this application to another Administrative Sales Executive"
+                              >
+                                <UserPlus size={13} /> Assign
+                              </button>
+                              <button
                                 onClick={() => setActionMenuAppId(isMenuOpen ? null : app.id)}
                                 style={{ width: '32px', height: '32px', borderRadius: '8px', background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                               >
@@ -1541,6 +1550,18 @@ export default function ManageApplications() {
           initialTab={verifyModalTab}
           onClose={() => setVerifyModalApp(null)}
           onRefresh={fetchApplications}
+        />
+      )}
+
+      {/* ASSIGN SALES EXECUTIVE MODAL */}
+      {assignModalApp && (
+        <AssignSalesExecutiveModal
+          application={assignModalApp}
+          onClose={() => setAssignModalApp(null)}
+          onSuccess={() => {
+            setAssignModalApp(null);
+            fetchApplications();
+          }}
         />
       )}
 

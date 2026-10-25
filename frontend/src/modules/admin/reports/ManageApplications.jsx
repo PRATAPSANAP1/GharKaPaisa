@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { Icons } from "../../../components/Icon/PartnerIcons";
-import { FileText, FileEdit, Building2, Clock, Search, CheckCircle2, Sparkles, XCircle, Layers, Eye, Download, ShieldCheck, Zap, Loader2, UserCheck } from 'lucide-react';
+import { FileText, FileEdit, Building2, Clock, Search, CheckCircle2, Sparkles, XCircle, Layers, Eye, Download, ShieldCheck, Zap, Loader2, UserCheck, UserPlus } from 'lucide-react';
 import {
   MdSearch, MdFilterList, MdDownload, MdAdd, MdHourglassEmpty, MdTrackChanges,
   MdCheckCircle, MdCancel, MdChevronLeft, MdChevronRight, MdClose, MdMoreVert,
@@ -11,6 +11,7 @@ import {
 } from 'react-icons/md';
 import { FaFileAlt, FaSlidersH } from 'react-icons/fa';
 import AdminDocumentVerificationModal from './AdminDocumentVerificationModal';
+import AssignSalesExecutiveModal from './AssignSalesExecutiveModal';
 import ExportApplicationsModal from '../../../components/Admin/ExportApplicationsModal';
 import LoadingLogo from '../../../components/Loader/LoadingLogo';
 import { useAuthStore } from '../../../app/store/authStore';
@@ -55,6 +56,7 @@ export default function ManageApplications() {
   // Verification Modal State
   const [verifyModalApp, setVerifyModalApp] = useState(null);
   const [verifyModalTab, setVerifyModalTab] = useState('qd');
+  const [assignModalApp, setAssignModalApp] = useState(null);
 
   // Listing State
   const [apps, setApps] = useState([]);
@@ -1438,6 +1440,13 @@ export default function ManageApplications() {
                               >
                                 <FileEdit size={12} /> Remark Form
                               </button>
+                              <button
+                                onClick={() => setAssignModalApp(app)}
+                                style={{ background: "#8b5cf615", border: "1px solid #8b5cf640", color: "#8b5cf6", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                title="Assign this application to another Administrative Sales Executive"
+                              >
+                                <UserPlus size={12} /> Assign
+                              </button>
                             </>
                           ) : (
                             <>
@@ -2003,6 +2012,18 @@ export default function ManageApplications() {
           initialTab={verifyModalTab}
           onClose={() => setVerifyModalApp(null)}
           onRefresh={fetchApplications}
+        />
+      )}
+
+      {/* Assign Sales Executive Modal */}
+      {assignModalApp && (
+        <AssignSalesExecutiveModal
+          application={assignModalApp}
+          onClose={() => setAssignModalApp(null)}
+          onSuccess={() => {
+            setAssignModalApp(null);
+            fetchApplications();
+          }}
         />
       )}
 
