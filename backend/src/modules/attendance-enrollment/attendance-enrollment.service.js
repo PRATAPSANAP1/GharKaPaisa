@@ -436,7 +436,10 @@ const getEmployeeBiometricStatus = async (employeeId, reqUser) => {
       activeImageUrl = await resolveS3Url(rawKey).catch(() => null);
     } else {
       const { rows: [empRow] } = await query(
-        `SELECT profile_photo_url, face_reference_url, to_jsonb(e)->>'photo_url' as photo_url, to_jsonb(e)->>'selfie_url' as selfie_url
+        `SELECT to_jsonb(e)->>'profile_photo_url' as profile_photo_url,
+                to_jsonb(e)->>'face_reference_url' as face_reference_url,
+                to_jsonb(e)->>'photo_url' as photo_url,
+                to_jsonb(e)->>'selfie_url' as selfie_url
          FROM employees e WHERE id = $1 LIMIT 1`,
         [targetEmpId]
       ).catch(() => ({ rows: [] }));
@@ -773,7 +776,10 @@ const getSignedPreviewUrl = async (employeeId, reqUser) => {
 
     if (!s3Key) {
       const { rows: [empRow] } = await query(
-        `SELECT profile_photo_url, face_reference_url, to_jsonb(e)->>'photo_url' as photo_url, to_jsonb(e)->>'selfie_url' as selfie_url
+        `SELECT to_jsonb(e)->>'profile_photo_url' as profile_photo_url,
+                to_jsonb(e)->>'face_reference_url' as face_reference_url,
+                to_jsonb(e)->>'photo_url' as photo_url,
+                to_jsonb(e)->>'selfie_url' as selfie_url
          FROM employees e WHERE id = $1 LIMIT 1`,
         [employeeId]
       ).catch(() => ({ rows: [] }));
