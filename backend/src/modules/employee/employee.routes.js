@@ -1827,5 +1827,39 @@ router.post('/upload-document', upload.single('file'), async (req, res, next) =>
   }
 });
 
+// POST /api/v1/employee/submit-verification — Submit all completed verification steps for review
+router.post('/submit-verification', async (req, res, next) => {
+  try {
+    const empId = req.employee.id;
+    const vState = await calculateEmployeeVerificationState(empId);
+
+    // Transition any uploaded documents in NOT_STARTED to UNDER_REVIEW
+    await query(`
+      UPDATE employee_documents
+      SET verification_status = 'UNDER_REVIEW', updated_at = NOW()
+      WHERE employee_id = $1 AND verification_status = 'NOT_STARTED' AND document_url IS NOT NULL
+    `, [empId]).catch(() => {});
+
+    // Update employee activation status to PENDING if not already VERIFIED
+    if (vState.overall_status !== 'VERIFIED') {
+      await query(`
+        UPDATE employees 
+        SET activation_status = 'PENDING', updated_at = NOW()
+        WHERE id = $1
+      `, [empId]).catch(() => {});
+    }
+
+    const updatedState = await calculateEmployeeVerificationState(empId);
+
+    res.json({
+      success: true,
+      message: 'Verification submitted successfully! Your submission is now under review by Super Admin / HR.',
+      data: updatedState
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
 module.exports.getMonthlyIncentiveReportData = getMonthlyIncentiveReportData;
