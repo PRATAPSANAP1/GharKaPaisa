@@ -195,7 +195,7 @@ export const fetchCommissionReports = async (params: { startDate?: string; endDa
 /**
  * Fetch Employees and Candidates Directory
  */
-export const fetchEmployeesList = async (params: { search?: string; designation?: string; status?: string; activation_status?: string; page?: number; limit?: number } = {}) => {
+export const fetchEmployeesList = async (params: { search?: string; designation?: string; status?: string; activation_status?: string; action_required?: string; department?: string; page?: number; limit?: number } = {}) => {
   try {
     const res = await apiClient.get('/employees', { params });
     return res.data;
@@ -567,6 +567,193 @@ export const updateTicketStatus = async (ticketId: string, status: string, respo
     return res.data;
   } catch (err: any) {
     throw err.response?.data || { success: false, message: 'Failed to update ticket status' };
+  }
+};
+
+/**
+ * Employee 360 Details
+ */
+export const fetchEmployeeDetails = async (employeeId: string) => {
+  try {
+    const res = await apiClient.get(`/employees/${employeeId}`);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch employee details' };
+  }
+};
+
+export const updateEmployeeInfo = async (employeeId: string, data: { full_name?: string; mobile_number?: string; email_id?: string; designation?: string; department?: string }) => {
+  try {
+    const res = await apiClient.put(`/employees/${employeeId}`, data);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to update employee information' };
+  }
+};
+
+/**
+ * Document Verification
+ */
+export const approveDocument = async (employeeId: string, documentType: string) => {
+  try {
+    const res = await apiClient.post(`/employees/${employeeId}/documents/${documentType}/approve`);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to approve document' };
+  }
+};
+
+export const rejectDocument = async (employeeId: string, documentType: string, reason: string) => {
+  try {
+    const res = await apiClient.post(`/employees/${employeeId}/documents/${documentType}/reject`, { reason });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to reject document' };
+  }
+};
+
+/**
+ * Employee Attendance
+ */
+export const fetchEmployeeAttendance = async (employeeId: string, month: number, year: number) => {
+  try {
+    const res = await apiClient.get(`/attendance/admin/employee/${employeeId}`, { params: { month, year } });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch employee attendance' };
+  }
+};
+
+/**
+ * KYC Verification
+ */
+export const verifyEmployeeKYC = async (employeeId: string, status: string) => {
+  try {
+    const res = await apiClient.post(`/employees/${employeeId}/kyc-verify`, { status });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to verify KYC' };
+  }
+};
+
+export const updateEmployeeIdentityDetails = async (employeeId: string, data: {
+  aadhaar_number?: string;
+  pan_number?: string;
+  bank_account?: string;
+  ifsc_code?: string;
+  review_notes?: string;
+}) => {
+  try {
+    const res = await apiClient.post(`/employees/${employeeId}/kyc-verify`, data);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to update identity details' };
+  }
+};
+
+/**
+ * Employee Actions
+ */
+export const sendReminder = async (employeeId: string) => {
+  try {
+    const res = await apiClient.post(`/employees/${employeeId}/reminder`);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to send reminder' };
+  }
+};
+
+export const sendKYCReverificationLink = async (employeeId: string) => {
+  try {
+    const res = await apiClient.post(`/employees/${employeeId}/kyc-link`);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to send KYC link' };
+  }
+};
+
+export const resetLoginCredentials = async (employeeId: string) => {
+  try {
+    const res = await apiClient.post(`/employees/${employeeId}/reset-credentials`);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to reset credentials' };
+  }
+};
+
+export const toggleEmployeeStatus = async (employeeId: string) => {
+  try {
+    const res = await apiClient.post(`/employees/${employeeId}/toggle-status`);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to toggle status' };
+  }
+};
+
+export const downloadProfileSummary = async (employeeId: string) => {
+  try {
+    const res = await apiClient.get(`/employees/${employeeId}/profile-summary`, { responseType: 'blob' });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to download profile summary' };
+  }
+};
+
+/**
+ * Department & Bank Access
+ */
+export const fetchEmployeeDepartments = async (employeeId: string) => {
+  try {
+    const res = await apiClient.get(`/employees/${employeeId}/departments`);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch employee departments' };
+  }
+};
+
+export const saveEmployeeDepartments = async (employeeId: string, bankIds: string[]) => {
+  try {
+    const res = await apiClient.post(`/employees/${employeeId}/departments`, { bank_ids: bankIds });
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to save employee departments' };
+  }
+};
+
+/**
+ * Bonus Rules
+ */
+export const fetchBonusRules = async () => {
+  try {
+    const res = await apiClient.get('/employees/bonus-rules/all');
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to fetch bonus rules' };
+  }
+};
+
+export const createBonusRule = async (data: {
+  employee_id: string;
+  bank_id: string;
+  start_date: string;
+  end_date: string;
+  target_count: string | number;
+  bonus_per_card: string | number;
+}) => {
+  try {
+    const res = await apiClient.post('/employees/bonus-rules', data);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to create bonus rule' };
+  }
+};
+
+export const deleteBonusRule = async (ruleId: string) => {
+  try {
+    const res = await apiClient.delete(`/employees/bonus-rules/${ruleId}`);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to delete bonus rule' };
   }
 };
 

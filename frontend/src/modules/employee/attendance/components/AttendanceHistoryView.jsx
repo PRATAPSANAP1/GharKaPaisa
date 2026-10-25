@@ -15,10 +15,15 @@ export default function AttendanceHistoryView({
   onExportCSV,
   onBackToDashboard
 }) {
+  // Ensure history is a valid array regardless of response envelope
+  const safeHistory = Array.isArray(history) 
+    ? history 
+    : (Array.isArray(history?.records) ? history.records : []);
+
   // Calculate Completed & Attendance % safely from real data
-  const completedCount = (Array.isArray(history) ? history : []).filter(item => item.check_in_time && item.check_out_time).length;
-  const presentCount = summary.present || (Array.isArray(history) ? history : []).filter(item => item.check_in_time).length;
-  const totalDays = summary.total || history.length || 0;
+  const completedCount = summary?.completed ?? safeHistory.filter(item => item.check_in_time && item.check_out_time).length;
+  const presentCount = summary?.present ?? safeHistory.filter(item => item.check_in_time).length;
+  const totalDays = summary?.total || safeHistory.length || 0;
   const attendancePct = totalDays > 0 ? Math.round((presentCount / totalDays) * 100) : (presentCount > 0 ? 100 : 0);
 
   const formatTime = (timeStr) => {
@@ -37,6 +42,14 @@ export default function AttendanceHistoryView({
   const formatDate = (dateStr) => {
     if (!dateStr) return '--';
     try {
+      if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+        const [y, m, d] = dateStr.substring(0, 10).split('-').map(Number);
+        return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric'
+        });
+      }
       return new Date(dateStr).toLocaleDateString('en-US', {
         weekday: 'short',
         month: 'short',
@@ -55,6 +68,29 @@ export default function AttendanceHistoryView({
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     return `${hours}h ${mins}m`;
+  };
+
+  const getStatusBadge = (row) => {
+    const rawStatus = (row.status || '').toUpperCase();
+    if (rawStatus === 'LATE') {
+      return { label: 'Late', bg: '#FEF3C7', color: '#D97706' };
+    }
+    if (rawStatus === 'HALF_DAY') {
+      return { label: 'Half Day', bg: '#FEF9C3', color: '#854D0E' };
+    }
+    if (rawStatus === 'LEAVE') {
+      return { label: 'Leave', bg: '#E0E7FF', color: '#4338CA' };
+    }
+    if (rawStatus === 'ABSENT') {
+      return { label: 'Absent', bg: '#FEE2E2', color: '#DC2626' };
+    }
+    if (row.check_in_time && row.check_out_time) {
+      return { label: 'Present', bg: '#DCFCE7', color: '#16A34A' };
+    }
+    if (row.check_in_time) {
+      return { label: 'Working', bg: '#DBEAFE', color: '#2563EB' };
+    }
+    return { label: 'Not Started', bg: '#F3F4F6', color: '#6B7280' };
   };
 
   return (
@@ -239,50 +275,53 @@ export default function AttendanceHistoryView({
               </tr>
             </thead>
             <tbody>
-              {history && history.length > 0 ? (
-                history.map((row, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #F3F4F6' }}>
-                    <td style={{ padding: '14px 16px', fontWeight: 600, color: '#111827' }}>
-                      {formatDate(row.date || row.attendance_date)}
-                    </td>
-                    <td style={{ padding: '14px 16px', color: '#111827' }}>
-                      {formatTime(row.check_in_time)}
-                    </td>
-                    <td style={{ padding: '14px 16px', color: '#111827' }}>
-                      {formatTime(row.check_out_time)}
-                    </td>
-                    <td style={{ padding: '14px 16px', color: '#6B7280', fontWeight: 500 }}>
-                      {formatDuration(row)}
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span style={{
-                        background: row.check_in_time && row.check_out_time ? '#DCFCE7' : row.check_in_time ? '#FEF3C7' : '#F3F4F6',
-                        color: row.check_in_time && row.check_out_time ? '#16A34A' : row.check_in_time ? '#D97706' : '#6B7280',
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: 600
-                      }}>
-                        {row.check_in_time && row.check_out_time ? 'Present' : row.check_in_time ? 'Working' : 'Not Started'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span style={{
-                        background: '#EFF6FF',
-                        color: '#0B74F6',
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}>
-                        <ShieldCheck size={13} /> Verified
-                      </span>
-                    </td>
-                  </tr>
-                ))
+              {safeHistory && safeHistory.length > 0 ? (
+                safeHistory.map((row, idx) => {
+                  const badge = getStatusBadge(row);
+                  return (
+                    <tr key={row.id || idx} style={{ borderBottom: '1px solid #F3F4F6' }}>
+                      <td style={{ padding: '14px 16px', fontWeight: 600, color: '#111827' }}>
+                        {formatDate(row.date || row.attendance_date)}
+                      </td>
+                      <td style={{ padding: '14px 16px', color: '#111827' }}>
+                        {formatTime(row.check_in_time)}
+                      </td>
+                      <td style={{ padding: '14px 16px', color: '#111827' }}>
+                        {formatTime(row.check_out_time)}
+                      </td>
+                      <td style={{ padding: '14px 16px', color: '#6B7280', fontWeight: 500 }}>
+                        {formatDuration(row)}
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <span style={{
+                          background: badge.bg,
+                          color: badge.color,
+                          padding: '4px 10px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 600
+                        }}>
+                          {badge.label}
+                        </span>
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <span style={{
+                          background: '#EFF6FF',
+                          color: '#0B74F6',
+                          padding: '4px 10px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          <ShieldCheck size={13} /> {row.verification_status || 'Verified'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan="6" style={{ textAlign: 'center', padding: '36px', color: '#6B7280', fontSize: '14px' }}>

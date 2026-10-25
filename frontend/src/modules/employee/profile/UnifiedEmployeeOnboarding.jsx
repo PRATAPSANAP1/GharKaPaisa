@@ -51,13 +51,35 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Active Tab Step: 1, 2, or 3
+  // Active Tab Step: 1, 2, 3, or 4
   const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    const stepParam = params.get('step');
+    if (stepParam) {
+      const parsed = parseInt(stepParam, 10);
+      if ([1, 2, 3, 4].includes(parsed)) return parsed;
+    }
+    if (location.pathname.includes('face-verification') || location.pathname.includes('enrollment')) return 4;
     if (location.pathname.includes('terms')) return 2;
     if (location.pathname.includes('kyc')) return 3;
     if (location.pathname.includes('joining')) return 1;
     return initialStep;
   });
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const stepParam = params.get('step');
+    if (stepParam) {
+      const parsed = parseInt(stepParam, 10);
+      if ([1, 2, 3, 4].includes(parsed)) {
+        setActiveTab(parsed);
+        return;
+      }
+    }
+    if (location.pathname.includes('face-verification') || location.pathname.includes('enrollment')) {
+      setActiveTab(4);
+    }
+  }, [location.search, location.pathname]);
 
   const [loading, setLoading] = useState(false);
   const [fetchingProfile, setFetchingProfile] = useState(true);
@@ -222,18 +244,27 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
         }
 
         // 4. Check Biometric Face Enrollment Status
-        if (emp.id) {
-          try {
-            const bioRes = await axios.get(`${getApiV1Url()}/attendance/enrollment/employee/${emp.id}`);
-            if (bioRes.data?.success) {
-              setFaceEnrollStatus(bioRes.data.data);
-              if (bioRes.data.data.is_enrolled) {
-                setFaceEnrollCompleted(true);
-              }
+        try {
+          let bioRes = null;
+          if (emp.id) {
+            try {
+              bioRes = await axios.get(`${getApiV1Url()}/attendance/enrollment/employee/${emp.id}`);
+            } catch (e1) {
+              // Non-admin or employee route fallback
             }
-          } catch (bioErr) {
-            console.warn('Biometric status fetch note:', bioErr.message);
           }
+          if (!bioRes || !bioRes.data?.success) {
+            bioRes = await axios.get(`${getApiV1Url()}/attendance/enrollment/status`);
+          }
+          if (bioRes && (bioRes.data?.success || bioRes.data?.status === 'success')) {
+            const bioData = bioRes.data?.data || bioRes.data;
+            setFaceEnrollStatus(bioData);
+            if (bioData?.is_enrolled) {
+              setFaceEnrollCompleted(true);
+            }
+          }
+        } catch (bioErr) {
+          console.warn('Biometric status fetch note:', bioErr.message);
         }
       }
     } catch (err) {

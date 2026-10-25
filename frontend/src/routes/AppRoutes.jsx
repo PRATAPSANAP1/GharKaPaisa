@@ -315,6 +315,7 @@ const AppRoutes = () => {
             <Route path="/employee/joining-form" element={<JoiningForm />} />
             <Route path="/employee/terms" element={<TermsAcceptance />} />
             <Route path="/employee/kyc" element={<KYCSubmission />} />
+            <Route path="/employee/face-verification" element={<KYCSubmission initialStep={4} />} />
             <Route path="/employee/verification" element={<EmployeeVerification />} />
             <Route path="/employee/verification-status" element={<EmployeeVerification />} />
             <Route path="/employee/credit-cards" element={<EmployeeCreditCards defaultCategory="credit_card" />} />

@@ -388,6 +388,7 @@ const getMyAttendance = async ({ reqUser, month, year, limit = 31, page = 1 }) =
       month: targetMonth,
       year: targetYear,
       totalRecords: 0,
+      total: 0,
       records: []
     };
   }
@@ -395,7 +396,23 @@ const getMyAttendance = async ({ reqUser, month, year, limit = 31, page = 1 }) =
   const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
 
   const { rows } = await query(
-    `SELECT id, attendance_date, check_in_time, check_out_time, status, verification_status, verification_reference, source, matched_environment_code, created_at 
+    `SELECT 
+       id, 
+       attendance_date::TEXT AS attendance_date, 
+       attendance_date::TEXT AS date,
+       check_in_time, 
+       check_out_time, 
+       status, 
+       verification_status, 
+       verification_reference, 
+       source, 
+       matched_environment_code, 
+       created_at,
+       CASE 
+         WHEN check_in_time IS NOT NULL AND check_out_time IS NOT NULL 
+         THEN ROUND((EXTRACT(EPOCH FROM (check_out_time - check_in_time)) / 3600.0)::numeric, 1)
+         ELSE NULL 
+       END AS total_hours
      FROM employee_attendance 
      WHERE employee_id = $1 
        AND EXTRACT(MONTH FROM attendance_date) = $2 
@@ -418,6 +435,7 @@ const getMyAttendance = async ({ reqUser, month, year, limit = 31, page = 1 }) =
     month: targetMonth,
     year: targetYear,
     totalRecords: countRow ? countRow.total : 0,
+    total: countRow ? countRow.total : 0,
     records: rows,
   };
 };
@@ -436,18 +454,44 @@ const getMySummary = async ({ reqUser, month, year }) => {
       month: targetMonth,
       year: targetYear,
       totalPresent: 0,
+      total_present: 0,
+      present_days: 0,
+      present: 0,
+      totalCompleted: 0,
+      total_completed: 0,
+      completed_days: 0,
+      completed: 0,
       totalLate: 0,
+      total_late: 0,
+      late_days: 0,
+      late: 0,
       totalHalfDay: 0,
+      total_half_day: 0,
+      half_days: 0,
       totalLeave: 0,
+      total_leave: 0,
+      leave_days: 0,
       totalAbsent: 0,
+      total_absent: 0,
+      absent_days: 0,
+      absent: 0,
       totalMarkedDays: 0,
+      total_marked_days: 0,
+      total_days: 0,
+      total: 0,
       totalWorkingHoursFormatted: '0h 0m',
+      total_working_hours_formatted: '0h 0m',
+      totalWorkingSeconds: 0,
+      total_working_seconds: 0,
+      totalHours: 0,
+      total_hours: 0,
     };
   }
 
   const { rows } = await query(
     `SELECT 
-       COUNT(*) FILTER (WHERE status = 'PRESENT')::INT AS total_present,
+       COUNT(*) FILTER (WHERE check_in_time IS NOT NULL OR status IN ('PRESENT', 'LATE', 'HALF_DAY'))::INT AS total_present,
+       COUNT(*) FILTER (WHERE check_in_time IS NOT NULL AND check_out_time IS NOT NULL)::INT AS total_completed,
        COUNT(*) FILTER (WHERE status = 'LATE')::INT AS total_late,
        COUNT(*) FILTER (WHERE status = 'HALF_DAY')::INT AS total_half_day,
        COUNT(*) FILTER (WHERE status = 'LEAVE')::INT AS total_leave,
@@ -465,17 +509,59 @@ const getMySummary = async ({ reqUser, month, year }) => {
   const totalSeconds = Number(summary.total_working_seconds || 0);
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const totalHoursDecimal = Number((totalSeconds / 3600).toFixed(1));
+
+  const presentVal = Number(summary.total_present || 0);
+  const completedVal = Number(summary.total_completed || 0);
+  const lateVal = Number(summary.total_late || 0);
+  const halfDayVal = Number(summary.total_half_day || 0);
+  const leaveVal = Number(summary.total_leave || 0);
+  const absentVal = Number(summary.total_absent || 0);
+  const markedDaysVal = Number(summary.total_marked_days || 0);
+  const hoursFormatted = `${hours}h ${minutes}m`;
 
   return {
     month: targetMonth,
     year: targetYear,
-    totalPresent: summary.total_present || 0,
-    totalLate: summary.total_late || 0,
-    totalHalfDay: summary.total_half_day || 0,
-    totalLeave: summary.total_leave || 0,
-    totalAbsent: summary.total_absent || 0,
-    totalMarkedDays: summary.total_marked_days || 0,
-    totalWorkingHoursFormatted: `${hours}h ${minutes}m`,
+    totalPresent: presentVal,
+    total_present: presentVal,
+    present_days: presentVal,
+    present: presentVal,
+
+    totalCompleted: completedVal,
+    total_completed: completedVal,
+    completed_days: completedVal,
+    completed: completedVal,
+
+    totalLate: lateVal,
+    total_late: lateVal,
+    late_days: lateVal,
+    late: lateVal,
+
+    totalHalfDay: halfDayVal,
+    total_half_day: halfDayVal,
+    half_days: halfDayVal,
+
+    totalLeave: leaveVal,
+    total_leave: leaveVal,
+    leave_days: leaveVal,
+
+    totalAbsent: absentVal,
+    total_absent: absentVal,
+    absent_days: absentVal,
+    absent: absentVal,
+
+    totalMarkedDays: markedDaysVal,
+    total_marked_days: markedDaysVal,
+    total_days: markedDaysVal,
+    total: markedDaysVal,
+
+    totalWorkingHoursFormatted: hoursFormatted,
+    total_working_hours_formatted: hoursFormatted,
+    totalWorkingSeconds: totalSeconds,
+    total_working_seconds: totalSeconds,
+    totalHours: totalHoursDecimal,
+    total_hours: totalHoursDecimal,
   };
 };
 

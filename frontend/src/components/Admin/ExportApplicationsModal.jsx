@@ -40,6 +40,45 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
     '1eacfa67-1187-48c7-adde-8a6edcfe9969'
   ];
 
+  const ALL_PLATFORM_BANKS = [
+    { id: 'hdfc', code: 'HDFC', name: 'HDFC Bank', isHdfc: true },
+    { id: 'sbi', code: 'SBI', name: 'State Bank of India (SBI)', matchKeys: ['sbi', 'state bank'] },
+    { id: 'icici', code: 'ICICI', name: 'ICICI Bank', matchKeys: ['icici'] },
+    { id: 'axis', code: 'AXIS', name: 'Axis Bank', matchKeys: ['axis'] },
+    { id: 'kotak', code: 'KOTAK', name: 'Kotak Mahindra Bank', matchKeys: ['kotak'] },
+    { id: 'idfc', code: 'IDFC', name: 'IDFC FIRST Bank', matchKeys: ['idfc'] },
+    { id: 'indusind', code: 'INDUSIND', name: 'IndusInd Bank', matchKeys: ['indusind'] },
+    { id: 'yes', code: 'YES', name: 'YES Bank', matchKeys: ['yes'] },
+    { id: 'federal', code: 'FEDERAL', name: 'Federal Bank', matchKeys: ['federal'] },
+    { id: 'bob', code: 'BOB', name: 'Bank of Baroda (BOB)', matchKeys: ['bob', 'baroda'] },
+    { id: 'rbl', code: 'RBL', name: 'RBL Bank', matchKeys: ['rbl'] },
+    { id: 'au', code: 'AU', name: 'AU Small Finance Bank', matchKeys: ['au small', 'au bank', 'au_bank'] },
+    { id: 'equitas', code: 'EQUITAS', name: 'Equitas Small Finance Bank', matchKeys: ['equitas'] },
+    { id: 'dcb', code: 'DCB', name: 'DCB Bank', matchKeys: ['dcb'] },
+    { id: 'sbm', code: 'SBM', name: 'SBM Bank', matchKeys: ['sbm'] },
+    { id: 'scb', code: 'SCB', name: 'Standard Chartered Bank', matchKeys: ['standard chartered', 'scb'] },
+    { id: 'hsbc', code: 'HSBC', name: 'HSBC Bank', matchKeys: ['hsbc'] },
+    { id: 'pnb', code: 'PNB', name: 'Punjab National Bank (PNB)', matchKeys: ['pnb', 'punjab'] },
+    { id: 'canara', code: 'CANARA', name: 'Canara Bank', matchKeys: ['canara'] },
+    { id: 'union', code: 'UNION', name: 'Union Bank of India', matchKeys: ['union'] },
+    { id: 'boi', code: 'BOI', name: 'Bank of India (BOI)', matchKeys: ['bank of india', 'boi'] },
+    { id: 'tata', code: 'TATA', name: 'Tata Capital / Tata Neu', matchKeys: ['tata'] },
+    { id: 'bajaj', code: 'BAJAJ', name: 'Bajaj Finance', matchKeys: ['bajaj'] },
+    { id: 'kreditbee', code: 'KREDITBEE', name: 'KreditBee', matchKeys: ['kreditbee', 'kredit bee'] },
+    { id: 'moneyview', code: 'MONEYVIEW', name: 'MoneyView', matchKeys: ['moneyview', 'money view'] },
+    { id: 'navi', code: 'NAVI', name: 'Navi', matchKeys: ['navi'] },
+    { id: 'paysense', code: 'PAYSENSE', name: 'PaySense', matchKeys: ['paysense'] },
+    { id: 'poonawalla', code: 'POONAWALLA', name: 'Poonawalla Fincorp', matchKeys: ['poonawalla', 'punawalla'] },
+    { id: 'finable', code: 'FINABLE', name: 'Finable / Prefr', matchKeys: ['finable', 'prefr'] },
+    { id: 'unity', code: 'UNITY', name: 'Unity Small Finance Bank', matchKeys: ['unity'] },
+    { id: 'ramfincorp', code: 'RAMFINCORP', name: 'Ram Fincorp', matchKeys: ['ram fincorp', 'ram_fincorp', 'ramfin'] },
+    { id: 'scapia', code: 'SCAPIA', name: 'Scapia', matchKeys: ['scapia'] },
+    { id: 'starhealth', code: 'STARHEALTH', name: 'Star Health Insurance', matchKeys: ['star health', 'starhealth'] },
+    { id: 'hdfcergo', code: 'HDFCERGO', name: 'HDFC ERGO', matchKeys: ['hdfcergo', 'hdfc ergo'] },
+    { id: 'icicilombard', code: 'ICICILOMBARD', name: 'ICICI Lombard', matchKeys: ['icicilombard', 'icici lombard'] },
+    { id: 'loc_eoc', code: 'LOC_EOC', name: 'LOC/EOC (Loan on Card & Smart EMI)', matchKeys: ['loc_eoc', 'loc', 'eoc', 'loan on card', 'smart emi', 'jumbo'] }
+  ];
+
   const isHdfcApp = (app) => {
     if (!app) return false;
     const bId = String(app.bank_id || '').toLowerCase();
@@ -82,26 +121,171 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
     return false;
   };
 
+  const [dbBanks, setDbBanks] = useState([]);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    const fetchBanksFromApi = async () => {
+      try {
+        const res = await api.get('/banks', { params: { status: 'all', limit: 100 } });
+        let list = res.data?.data || res.data || [];
+        if (!Array.isArray(list) && typeof list === 'object') {
+          list = list.banks || list.rows || [];
+        }
+        if (isMounted && Array.isArray(list) && list.length > 0) {
+          setDbBanks(list);
+          return;
+        }
+      } catch (e) {
+        // Fallback to /banks/active
+      }
+      try {
+        const resActive = await api.get('/banks/active');
+        if (isMounted && resActive.data?.data && Array.isArray(resActive.data.data)) {
+          setDbBanks(resActive.data.data);
+        }
+      } catch (e) {}
+    };
+    if (isOpen) {
+      fetchBanksFromApi();
+    }
+    return () => { isMounted = false; };
+  }, [isOpen]);
+
+  const availableBanks = React.useMemo(() => {
+    const list = [];
+    const seenKeys = new Set();
+
+    const addBank = (b) => {
+      if (!b) return;
+      const rawCode = b.code || b.short_code || '';
+      const rawName = b.name || b.bank_name || b.label || '';
+      const rawId = b.id || b.bank_id || b._id || rawCode.toLowerCase() || rawName.toLowerCase();
+
+      const normKey = (rawCode ? rawCode.toUpperCase() : rawName.toLowerCase().replace(/[^a-z0-9]/g, ''));
+      if (!normKey || seenKeys.has(normKey)) return;
+      seenKeys.add(normKey);
+
+      const isHdfc = resolveIsHdfc(rawId) || resolveIsHdfc(rawCode) || resolveIsHdfc(rawName);
+
+      list.push({
+        id: isHdfc ? 'hdfc' : String(rawId),
+        code: rawCode ? rawCode.toUpperCase() : (isHdfc ? 'HDFC' : ''),
+        name: rawName || rawCode || 'Bank',
+        isHdfc,
+        matchKeys: b.matchKeys || [normKey.toLowerCase(), rawName.toLowerCase()]
+      });
+    };
+
+    // 1. Add standard platform banks
+    ALL_PLATFORM_BANKS.forEach(addBank);
+
+    // 2. Add banks passed via props
+    if (Array.isArray(banksList)) {
+      banksList.forEach(b => {
+        if (typeof b === 'string') {
+          addBank({ id: b.toLowerCase(), name: b, code: b.toUpperCase() });
+        } else if (b && typeof b === 'object') {
+          addBank(b);
+        }
+      });
+    }
+
+    // 3. Add banks fetched from DB
+    if (Array.isArray(dbBanks)) {
+      dbBanks.forEach(addBank);
+    }
+
+    // 4. Add dynamic banks from applications if any
+    (Array.isArray(defaultApplications) ? defaultApplications : []).forEach(a => {
+      const bName = a.bank_name || a.bank || '';
+      const bCode = a.bank_code || '';
+      const bId = a.bank_id || '';
+      if (bName || bCode) {
+        addBank({ id: bId || bCode.toLowerCase() || bName.toLowerCase(), name: bName || bCode, code: bCode });
+      }
+    });
+
+    // Sort: HDFC first, then others alphabetically
+    return list.sort((a, b) => {
+      if (a.isHdfc) return -1;
+      if (b.isHdfc) return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [banksList, dbBanks, defaultApplications]);
+
   const [bankFilter, setBankFilter] = useState(() => {
-    const isInitHdfc = resolveIsHdfc(initialBank) || checkIsAllHdfcApplications(defaultApplications) || isHdfcCurableOperator;
-    return isInitHdfc ? 'hdfc' : (initialBank || 'all');
+    if (initialBank && initialBank !== 'all') {
+      return resolveIsHdfc(initialBank) ? 'hdfc' : initialBank;
+    }
+    const isInitHdfc = checkIsAllHdfcApplications(defaultApplications) || isHdfcCurableOperator;
+    return isInitHdfc ? 'hdfc' : 'all';
   });
   const [exporting, setExporting] = useState(false);
 
   React.useEffect(() => {
     if (isOpen) {
-      const isInitHdfc = resolveIsHdfc(initialBank) || checkIsAllHdfcApplications(defaultApplications) || isHdfcCurableOperator;
-      setBankFilter(isInitHdfc ? 'hdfc' : (initialBank || 'all'));
+      if (initialBank && initialBank !== 'all') {
+        setBankFilter(resolveIsHdfc(initialBank) ? 'hdfc' : initialBank);
+      } else if (isHdfcCurableOperator || checkIsAllHdfcApplications(defaultApplications)) {
+        setBankFilter('hdfc');
+      } else {
+        setBankFilter('all');
+      }
     }
-  }, [isOpen, initialBank, banksList, defaultApplications]);
+  }, [isOpen, initialBank, defaultApplications]);
 
-  const isHdfcSelected = resolveIsHdfc(bankFilter) || (bankFilter === 'all' && (checkIsAllHdfcApplications(defaultApplications) || isHdfcCurableOperator));
+  const isHdfcSelected = bankFilter === 'hdfc' || resolveIsHdfc(bankFilter);
 
-  const dynamicBankNames = Array.from(new Set(
-    (Array.isArray(defaultApplications) ? defaultApplications : [])
-      .map(a => a.bank_name || a.bank || '')
-      .filter(Boolean)
-  )).sort();
+  const selectedBankObj = React.useMemo(() => {
+    if (!bankFilter || bankFilter === 'all') return null;
+    if (isHdfcSelected || bankFilter === 'hdfc') {
+      return availableBanks.find(b => b.isHdfc) || { id: 'hdfc', code: 'HDFC', name: 'HDFC Bank', isHdfc: true };
+    }
+    const filterLower = String(bankFilter).toLowerCase().trim();
+    return availableBanks.find(b => 
+      String(b.id).toLowerCase() === filterLower ||
+      String(b.code).toLowerCase() === filterLower ||
+      String(b.name).toLowerCase() === filterLower ||
+      (Array.isArray(b.matchKeys) && b.matchKeys.some(k => k.toLowerCase() === filterLower))
+    ) || { id: bankFilter, code: bankFilter.toUpperCase(), name: bankFilter };
+  }, [bankFilter, isHdfcSelected, availableBanks]);
+
+  const matchesBank = (app, bVal, bObj) => {
+    if (!app || !bVal || bVal === 'all') return true;
+    if (bVal === 'hdfc' || bObj?.isHdfc) return isHdfcApp(app);
+
+    const bValLower = String(bVal).toLowerCase().trim();
+    const appBankId = String(app.bank_id || '').toLowerCase().trim();
+    const objId = String(bObj?.id || '').toLowerCase().trim();
+    const objCode = String(bObj?.code || bObj?.short_code || '').toLowerCase().trim();
+    const objName = String(bObj?.name || '').toLowerCase().trim();
+
+    // 1. Direct ID match
+    if (appBankId && (appBankId === bValLower || (objId && appBankId === objId))) {
+      return true;
+    }
+
+    // 2. Direct code match
+    const appBankCode = String(app.bank_code || '').toLowerCase().trim();
+    if (appBankCode && (appBankCode === bValLower || (objCode && appBankCode === objCode))) {
+      return true;
+    }
+
+    // 3. Name or product text match
+    const textToSearch = `${app.bank_name || ''} ${app.bank || ''} ${app.bank_code || ''} ${app.product_name || ''} ${app.product || ''}`.toLowerCase();
+
+    if (objCode && textToSearch.includes(objCode)) return true;
+    if (objName && textToSearch.includes(objName)) return true;
+    if (textToSearch.includes(bValLower)) return true;
+
+    // 4. Custom matchKeys (e.g. for SBI, match 'sbi' or 'state bank')
+    if (Array.isArray(bObj?.matchKeys)) {
+      return bObj.matchKeys.some(k => textToSearch.includes(k.toLowerCase()));
+    }
+
+    return false;
+  };
 
   if (!isOpen) return null;
 
@@ -157,10 +341,10 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
           queryParams.status = statusFilter;
         }
 
-        if (isHdfcSelected || resolveIsHdfc(bankFilter) || resolveIsHdfc(initialBank)) {
+        if (isHdfcSelected) {
           queryParams.bank = 'hdfc';
         } else if (bankFilter !== 'all') {
-          queryParams.bank = bankFilter;
+          queryParams.bank = selectedBankObj?.code || selectedBankObj?.id || bankFilter;
         }
 
         const res = await api.get('/applications', { params: queryParams });
@@ -201,20 +385,16 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
       }
 
       if (bankFilter !== 'all' && filtered.length > 0) {
-        if (isHdfcSelected || resolveIsHdfc(bankFilter)) {
+        if (isHdfcSelected) {
           filtered = (Array.isArray(filtered) ? filtered : []).filter(isHdfcApp);
         } else {
-          const bFilterLower = bankFilter.toLowerCase();
-          filtered = (Array.isArray(filtered) ? filtered : []).filter(app => {
-            const bName = `${app.bank_name || ''} ${app.bank_code || ''} ${app.bank || ''} ${app.product_name || ''}`.toLowerCase();
-            return bName.includes(bFilterLower) || (app.bank_id && String(app.bank_id).toLowerCase() === bFilterLower);
-          });
+          filtered = (Array.isArray(filtered) ? filtered : []).filter(app => matchesBank(app, bankFilter, selectedBankObj));
         }
       }
 
       if (filtered.length === 0) {
-        const bankNotice = bankFilter !== 'all' ? ` for ${bankFilter.toUpperCase()}` : '';
-        alert(`No applications found${bankNotice} for the selected period (${period === 'custom' ? `${fromDate} to ${toDate}` : period}).`);
+        const bankNameNotice = selectedBankObj?.name || (bankFilter !== 'all' ? bankFilter.toUpperCase() : '');
+        alert(`No applications found${bankNameNotice ? ` for ${bankNameNotice}` : ''} for the selected period (${period === 'custom' ? `${fromDate} to ${toDate}` : period}).`);
         setExporting(false);
         return;
       }
@@ -492,14 +672,14 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
 
       const isFinalHdfcDump = isHdfcSelected ||
         resolveIsHdfc(bankFilter) ||
-        resolveIsHdfc(initialBank) ||
-        (filtered.length > 0 && checkIsAllHdfcApplications(filtered)) ||
-        (defaultApplications.length > 0 && checkIsAllHdfcApplications(defaultApplications));
+        (filtered.length > 0 && checkIsAllHdfcApplications(filtered));
 
       const activeColDefs = isFinalHdfcDump ? HDFC_COL_DEFS : colDefs;
-      const downloadFileName = isFinalHdfcDump
-        ? `hdfc_gharkapaisa_dump_${period}${period === 'all' ? '' : `_${fromDate}_to_${toDate}`}.csv`
-        : `applications_report_${period}_${fromDate}_to_${toDate}.csv`;
+      const datePart = period === 'all' ? 'all_time' : (period === 'custom' ? `${fromDate}_to_${toDate}` : period);
+      const bankSlug = isFinalHdfcDump
+        ? 'hdfc_gharkapaisa_dump'
+        : (bankFilter !== 'all' ? `${String(selectedBankObj?.code || selectedBankObj?.id || bankFilter).toLowerCase().replace(/[^a-z0-9]/g, '_')}_applications_report` : 'applications_report');
+      const downloadFileName = `${bankSlug}_${datePart}.csv`;
 
       const formatCsvVal = (val) => {
         if (val === null || val === undefined) return '""';
@@ -638,35 +818,36 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
           <div>
             <label style={{ fontSize: '12px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
               <span>Bank Filter / Dump Format</span>
-              {isHdfcSelected && (
+              {isHdfcSelected ? (
                 <span style={{ color: '#2563eb', fontSize: '11px', fontWeight: 900, textTransform: 'none', background: '#dbeafe', padding: '2px 8px', borderRadius: '6px' }}>
                   HDFC 33-Column Dump
+                </span>
+              ) : bankFilter !== 'all' ? (
+                <span style={{ color: C.primary, fontSize: '11px', fontWeight: 900, textTransform: 'none', background: `${C.primary}15`, padding: '2px 8px', borderRadius: '6px' }}>
+                  {selectedBankObj?.name || bankFilter.toUpperCase()} Format
+                </span>
+              ) : (
+                <span style={{ color: C.textLight, fontSize: '11px', fontWeight: 700, textTransform: 'none' }}>
+                  Standard Dump (All Banks)
                 </span>
               )}
             </label>
             <select
-              value={isHdfcSelected ? 'hdfc' : bankFilter}
+              value={bankFilter}
               onChange={(e) => setBankFilter(e.target.value)}
               style={{
                 width: '100%', padding: '10px 14px', borderRadius: '10px',
-                border: `1px solid ${isHdfcSelected ? '#3b82f6' : C.border}`,
+                border: `1px solid ${isHdfcSelected ? '#3b82f6' : (bankFilter !== 'all' ? C.primary : C.border)}`,
                 background: isHdfcSelected ? (isDark ? '#1e293b' : '#f0f9ff') : C.bg,
                 color: C.text, fontSize: '13px', fontWeight: 700
               }}
             >
               <option value="all">All Banks (Standard Dump)</option>
-              <option value="hdfc">HDFC Bank (Hdfc gharkapaisa dump format)</option>
-              <option value="sbi">State Bank of India (SBI)</option>
-              <option value="axis">Axis Bank</option>
-              <option value="icici">ICICI Bank</option>
-              <option value="idfc">IDFC First Bank</option>
-              <option value="kotak">Kotak Mahindra Bank</option>
-              {dynamicBankNames
-                .filter(b => !['all', 'hdfc', 'sbi', 'axis', 'icici', 'idfc', 'kotak'].some(k => b.toLowerCase().includes(k)))
-                .map(b => (
-                  <option key={b} value={b}>{b}</option>
-                ))
-              }
+              {availableBanks.map(b => (
+                <option key={b.id || b.code} value={b.id}>
+                  {b.name} {b.isHdfc ? '(HDFC 33-Column Dump Format)' : (b.code ? `(${b.code})` : '')}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -705,7 +886,15 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
                 boxShadow: isHdfcSelected ? '0 4px 14px rgba(37, 99, 235, 0.4)' : `0 4px 14px ${C.primary}40`
               }}
             >
-              <Download size={16} /> {exporting ? 'Generating CSV...' : (isHdfcSelected ? 'Download HDFC Dump CSV (33 Cols)' : 'Download CSV Report')}
+              <Download size={16} /> {
+                exporting
+                  ? 'Generating CSV...'
+                  : isHdfcSelected
+                    ? 'Download HDFC Dump CSV (33 Cols)'
+                    : bankFilter !== 'all'
+                      ? `Download ${selectedBankObj?.name || bankFilter.toUpperCase()} CSV`
+                      : 'Download CSV Report'
+              }
             </button>
           </div>
         </div>

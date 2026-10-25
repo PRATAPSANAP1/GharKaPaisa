@@ -24,7 +24,17 @@ export default function EmployeeAttendance() {
 
   const [todayAttendance, setTodayAttendance] = useState(null);
   const [history, setHistory] = useState([]);
-  const [summary, setSummary] = useState({ present: 0, late: 0, absent: 0, total: 0 });
+  const [summary, setSummary] = useState({
+    present: 0,
+    completed: 0,
+    late: 0,
+    halfDay: 0,
+    leave: 0,
+    absent: 0,
+    total: 0,
+    formattedHours: '0h 0m',
+    totalHours: 0
+  });
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [actionType, setActionType] = useState('CHECK_IN');
@@ -44,27 +54,43 @@ export default function EmployeeAttendance() {
       ]);
 
       if (enrollRes.status === 'fulfilled' && enrollRes.value) {
-        const isEnrolled = !!enrollRes.value?.data?.is_enrolled || enrollRes.value?.is_enrolled || false;
-        setIsFaceEnrolled(isEnrolled);
+        const data = enrollRes.value?.data || enrollRes.value;
+        const isEnrolled = typeof data?.is_enrolled === 'boolean'
+          ? data.is_enrolled
+          : (data?.status === 'ACTIVE');
+        setIsFaceEnrolled(!!isEnrolled);
       } else {
-        setIsFaceEnrolled(true); // default optimistic if endpoint unavailable
+        setIsFaceEnrolled(false);
       }
 
       if (todayRes.status === 'fulfilled' && todayRes.value) {
-        setTodayAttendance(todayRes.value.data || todayRes.value);
+        setTodayAttendance(todayRes.value.data || todayRes.value || null);
       }
 
       if (historyRes.status === 'fulfilled' && historyRes.value) {
-        setHistory(historyRes.value.data || historyRes.value || []);
+        const hData = historyRes.value?.data || historyRes.value;
+        const records = Array.isArray(hData)
+          ? hData
+          : Array.isArray(hData?.records)
+            ? hData.records
+            : [];
+        setHistory(records);
+      } else {
+        setHistory([]);
       }
 
       if (summaryRes.status === 'fulfilled' && summaryRes.value) {
-        const s = summaryRes.value.data || summaryRes.value;
+        const s = summaryRes.value?.data || summaryRes.value || {};
         setSummary({
-          present: s.present_days || s.present || 0,
-          late: s.late_days || s.late || 0,
-          absent: s.absent_days || s.absent || 0,
-          total: s.total_days || s.total || 0
+          present: s.totalPresent ?? s.present_days ?? s.present ?? s.total_present ?? 0,
+          completed: s.totalCompleted ?? s.completed_days ?? s.completed ?? s.total_completed ?? 0,
+          late: s.totalLate ?? s.late_days ?? s.late ?? s.total_late ?? 0,
+          halfDay: s.totalHalfDay ?? s.half_days ?? s.total_half_day ?? 0,
+          leave: s.totalLeave ?? s.leave_days ?? s.total_leave ?? 0,
+          absent: s.totalAbsent ?? s.absent_days ?? s.absent ?? s.total_absent ?? 0,
+          total: s.totalMarkedDays ?? s.total_marked_days ?? s.total_days ?? s.total ?? 0,
+          formattedHours: s.totalWorkingHoursFormatted || s.total_working_hours_formatted || '0h 0m',
+          totalHours: typeof s.totalHours === 'number' ? s.totalHours : (s.total_hours ?? 0)
         });
       }
     } catch (err) {
@@ -83,7 +109,7 @@ export default function EmployeeAttendance() {
 
   const handleStartVerification = useCallback(() => {
     if (isFaceEnrolled === false) {
-      setFaceEnrollModalOpen(true);
+      navigate('/employee/kyc?step=4');
       return;
     }
 
@@ -93,7 +119,7 @@ export default function EmployeeAttendance() {
       setActionType('CHECK_OUT');
     }
     setIsModalOpen(true);
-  }, [isCheckedIn, isFaceEnrolled]);
+  }, [isCheckedIn, isFaceEnrolled, navigate]);
 
   const handleVerificationSuccess = useCallback(() => {
     fetchAttendanceData();
@@ -106,9 +132,10 @@ export default function EmployeeAttendance() {
   }, [fetchAttendanceData]);
 
   const exportCSV = useCallback(() => {
-    if (!history || history.length === 0) return;
+    const safeHistory = Array.isArray(history) ? history : (history?.records || []);
+    if (!safeHistory || safeHistory.length === 0) return;
     const headers = ['Date', 'Status', 'Start Work Time', 'End Work Time', 'Total Duration', 'Biometric Status'];
-    const rows = history.map(item => [
+    const rows = safeHistory.map(item => [
       item.date || item.attendance_date ? new Date(item.date || item.attendance_date).toLocaleDateString('en-US') : '--',
       item.check_in_time && item.check_out_time ? 'Work Completed' : item.check_in_time ? 'Working' : 'Not Started',
       item.check_in_time ? new Date(item.check_in_time).toLocaleTimeString('en-US') : '--',
@@ -212,7 +239,23 @@ export default function EmployeeAttendance() {
           </div>
 
           {/* SCREEN 12: ATTENDANCE PAGE WHEN FACE VERIFICATION IS MISSING */}
-          {isFaceEnrolled === false ? (
+          {loading && isFaceEnrolled === null ? (
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '20px',
+              border: '1px solid #E5E7EB',
+              padding: '48px 28px',
+              maxWidth: '480px',
+              width: '100%',
+              margin: '12px auto',
+              boxShadow: '0 8px 30px rgba(0, 0, 0, 0.04)',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '15px', color: '#6B7280', fontWeight: 600 }}>
+                Loading attendance details...
+              </div>
+            </div>
+          ) : isFaceEnrolled === false ? (
             <motion.div
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -262,7 +305,7 @@ export default function EmployeeAttendance() {
                   Face Verification Required
                 </h3>
                 <p style={{ fontSize: '13px', color: '#78350F', margin: 0, lineHeight: 1.45 }}>
-                  Complete your KYC face verification before marking attendance.
+                  KYC Step 4 face verification is not completed for your account. Please complete face verification before marking attendance.
                 </p>
               </div>
 
@@ -270,7 +313,8 @@ export default function EmployeeAttendance() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <button
                   type="button"
-                  onClick={() => setFaceEnrollModalOpen(true)}
+                  id="direct-verify-face-btn"
+                  onClick={() => navigate('/employee/kyc?step=4')}
                   style={{
                     width: '100%',
                     height: '50px',
@@ -281,10 +325,14 @@ export default function EmployeeAttendance() {
                     fontSize: '15px',
                     fontWeight: 700,
                     cursor: 'pointer',
-                    boxShadow: '0 4px 16px rgba(11, 116, 246, 0.25)'
+                    boxShadow: '0 4px 16px rgba(11, 116, 246, 0.25)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
                   }}
                 >
-                  Complete Face Verification
+                  <ShieldCheck size={18} /> Verify
                 </button>
 
                 <button
@@ -407,7 +455,9 @@ export default function EmployeeAttendance() {
           summary={summary}
           history={history}
           selectedMonth={selectedMonth}
+          setSelectedMonth={setSelectedMonth}
           selectedYear={selectedYear}
+          setSelectedYear={setSelectedYear}
           onBackToDashboard={() => setActiveView('DASHBOARD')}
         />
       )}
