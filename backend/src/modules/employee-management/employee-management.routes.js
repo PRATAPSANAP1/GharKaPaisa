@@ -482,9 +482,16 @@ router.get('/', async (req, res, next) => {
       try {
         const vState = await calculateEmployeeVerificationState(emp.id);
         const resolvedPhoto = vState.profile_photo_url || (emp.profile_photo_url ? await resolveS3Url(emp.profile_photo_url) : null);
+        const resolvedFaceUrl = vState.biometric_template?.image_url || null;
         return {
           ...emp,
           profile_photo_url: resolvedPhoto,
+          face_reference_url: resolvedFaceUrl,
+          face_verification_url: resolvedFaceUrl,
+          biometric_enrolled: Boolean(vState.has_biometric_reference || resolvedFaceUrl),
+          face_enrolled: Boolean(vState.has_biometric_reference || resolvedFaceUrl),
+          has_biometric_reference: Boolean(vState.has_biometric_reference || resolvedFaceUrl),
+          face_biometric_status: vState.face_biometric_status,
           overall_verification_status: vState.overall_status,
           information_status: vState.information_status,
           documents_summary: vState.documents_summary,
@@ -919,16 +926,16 @@ router.get('/:id', async (req, res, next) => {
                 (to_jsonb(b)->>'admin_reviewed_at')::timestamptz as admin_reviewed_at,
                 created_at as enrolled_at 
          FROM employee_biometric_templates b 
-         WHERE employee_id = $1 AND status = 'ACTIVE' 
-         ORDER BY created_at DESC LIMIT 1`,
+         WHERE employee_id = $1 
+         ORDER BY (CASE WHEN status = 'ACTIVE' THEN 0 ELSE 1 END), created_at DESC LIMIT 1`,
         [id]
       );
     } catch (err) {
       bioRes = await query(
         `SELECT id, status, s3_key, s3_bucket, version, created_at as enrolled_at 
          FROM employee_biometric_templates 
-         WHERE employee_id = $1 AND status = 'ACTIVE' 
-         ORDER BY created_at DESC LIMIT 1`,
+         WHERE employee_id = $1 
+         ORDER BY (CASE WHEN status = 'ACTIVE' THEN 0 ELSE 1 END), created_at DESC LIMIT 1`,
         [id]
       ).catch(() => ({ rows: [] }));
     }
@@ -938,20 +945,42 @@ router.get('/:id', async (req, res, next) => {
       bioImageUrl = await resolveS3Url(bioRes.rows[0].s3_key);
     }
 
+    // Fallback: check employee_documents for any face verification image
+    if (!bioImageUrl && Array.isArray(docs)) {
+      const faceDoc = docs.find(d => {
+        const t = String(d.document_type || '').toLowerCase().trim();
+        return ['face', 'face_biometric', 'biometric', 'face_verification', 'face_reference', 'selfie'].includes(t) || t.includes('face');
+      });
+      if (faceDoc) {
+        const rawKey = faceDoc.document_url || faceDoc.document_key || faceDoc.file_url || faceDoc.s3_key;
+        if (rawKey) {
+          bioImageUrl = await resolveS3Url(rawKey);
+        }
+      }
+    }
+
     const biometrics = {
-      is_enrolled: bioRes.rows.length > 0,
-      active_template: bioRes.rows.length > 0 ? {
-        id: bioRes.rows[0].id,
-        version: bioRes.rows[0].version || 1,
-        status: bioRes.rows[0].status,
-        admin_review_status: bioRes.rows[0].admin_review_status || 'PENDING',
-        admin_review_notes: bioRes.rows[0].admin_review_notes || null,
-        admin_reviewed_at: bioRes.rows[0].admin_reviewed_at || null,
-        enrolled_at: bioRes.rows[0].enrolled_at,
-        s3_key: bioRes.rows[0].s3_key,
+      is_enrolled: bioRes.rows.length > 0 || Boolean(bioImageUrl),
+      active_template: (bioRes.rows.length > 0 || bioImageUrl) ? {
+        id: bioRes.rows[0]?.id || 'doc-face',
+        version: bioRes.rows[0]?.version || 1,
+        status: bioRes.rows[0]?.status || 'ACTIVE',
+        admin_review_status: bioRes.rows[0]?.admin_review_status || 'PENDING',
+        admin_review_notes: bioRes.rows[0]?.admin_review_notes || null,
+        admin_reviewed_at: bioRes.rows[0]?.admin_reviewed_at || null,
+        enrolled_at: bioRes.rows[0]?.enrolled_at || new Date().toISOString(),
+        s3_key: bioRes.rows[0]?.s3_key || null,
         image_url: bioImageUrl
       } : null
     };
+
+    // Attach biometric URLs directly to employee object for seamless frontend display
+    employee.face_reference_url = bioImageUrl || vState?.biometric_template?.image_url || null;
+    employee.face_verification_url = employee.face_reference_url;
+    employee.biometric_enrolled = Boolean(biometrics.is_enrolled);
+    employee.face_enrolled = Boolean(biometrics.is_enrolled);
+    employee.has_biometric_reference = Boolean(biometrics.is_enrolled);
+    employee.face_verification_status = biometrics.active_template?.admin_review_status === 'APPROVED' ? 'VERIFIED' : (biometrics.is_enrolled ? 'ENROLLED' : 'PENDING');
 
     // 11. Compile dynamic recent audit & onboarding activities from verified timestamps
     const recentActivities = [];

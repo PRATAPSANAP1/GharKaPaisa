@@ -269,26 +269,46 @@ async function calculateEmployeeVerificationState(employeeId) {
              (to_jsonb(b)->>'admin_reviewed_at')::timestamptz as admin_reviewed_at,
              created_at 
       FROM employee_biometric_templates b
-      WHERE employee_id = $1 AND status = 'ACTIVE' 
-      ORDER BY created_at DESC LIMIT 1
+      WHERE employee_id = $1 
+      ORDER BY (CASE WHEN status = 'ACTIVE' THEN 0 ELSE 1 END), created_at DESC LIMIT 1
     `, [employeeId]);
   } catch (err) {
     bioRes = await query(`
       SELECT id, status, s3_key, s3_bucket, version, created_at 
       FROM employee_biometric_templates 
-      WHERE employee_id = $1 AND status = 'ACTIVE' 
-      ORDER BY created_at DESC LIMIT 1
+      WHERE employee_id = $1 
+      ORDER BY (CASE WHEN status = 'ACTIVE' THEN 0 ELSE 1 END), created_at DESC LIMIT 1
     `, [employeeId]).catch(() => ({ rows: [] }));
   }
 
   const activeBio = bioRes.rows[0] || null;
-  const hasBiometricReference = !!activeBio;
+  let hasBiometricReference = !!activeBio;
   let biometricStatus = 'NOT_COMPLETED';
   let bioReviewNotes = null;
 
+  let faceImageUrl = null;
+  if (activeBio?.s3_key) {
+    faceImageUrl = await resolveS3Url(activeBio.s3_key);
+  }
+
+  // Fallback: check docsRes.rows for any face document if faceImageUrl not found yet
+  if (!faceImageUrl && Array.isArray(docsRes.rows)) {
+    const faceDoc = docsRes.rows.find(d => {
+      const t = String(d.document_type || '').toLowerCase().trim();
+      return ['face', 'face_biometric', 'biometric', 'face_verification', 'face_reference', 'selfie'].includes(t) || t.includes('face');
+    });
+    if (faceDoc) {
+      const rawKey = faceDoc.document_url || faceDoc.document_key || faceDoc.file_url || faceDoc.s3_key;
+      if (rawKey) {
+        faceImageUrl = await resolveS3Url(rawKey);
+        hasBiometricReference = true;
+      }
+    }
+  }
+
   if (hasBiometricReference) {
-    bioReviewNotes = activeBio.admin_review_notes || null;
-    const adminRev = String(activeBio.admin_review_status || '').toUpperCase();
+    bioReviewNotes = activeBio?.admin_review_notes || null;
+    const adminRev = String(activeBio?.admin_review_status || '').toUpperCase();
     if (adminRev === 'REJECTED' || adminRev === 'FLAGGED') {
       biometricStatus = 'REJECTED';
       missingItems.push({
@@ -317,11 +337,6 @@ async function calculateEmployeeVerificationState(employeeId) {
       status: 'NOT_COMPLETED',
       text: 'Face Biometric Verification – Pending'
     });
-  }
-
-  let faceImageUrl = null;
-  if (activeBio?.s3_key) {
-    faceImageUrl = await resolveS3Url(activeBio.s3_key);
   }
 
   // Overall Status

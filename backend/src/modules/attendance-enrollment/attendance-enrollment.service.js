@@ -38,6 +38,16 @@ const ensureRemindersTable = async () => {
   }
 };
 
+const resolveS3Url = async (keyOrUrl) => {
+  if (!keyOrUrl) return null;
+  if (keyOrUrl.startsWith('http://') || keyOrUrl.startsWith('https://')) return keyOrUrl;
+  try {
+    return await getSignedDownloadUrl(keyOrUrl, 3600);
+  } catch (e) {
+    return keyOrUrl;
+  }
+};
+
 /**
  * Helper to resolve employeeId from reqUser or user_id mapping
  * Handles both employee_id (UUID) and employee_code (string) by mapping to UUID
@@ -396,7 +406,7 @@ const getEmployeeBiometricStatus = async (employeeId, reqUser) => {
   }
 
   const { rows: templates } = await query(
-    `SELECT t.id, t.employee_id, t.employee_code, t.version, t.status, t.enrollment_source, t.enrolled_at, t.revoked_at, t.revocation_reason,
+    `SELECT t.id, t.employee_id, t.employee_code, t.version, t.status, t.s3_key, t.enrollment_source, t.enrolled_at, t.revoked_at, t.revocation_reason,
             u.full_name as enrolled_by_name
      FROM employee_biometric_templates t
      LEFT JOIN users u ON u.id = t.enrolled_by
@@ -405,19 +415,40 @@ const getEmployeeBiometricStatus = async (employeeId, reqUser) => {
     [targetEmpId]
   );
 
-  const activeTemplate = templates.find(t => t.status === 'ACTIVE') || null;
+  let activeTemplate = templates.find(t => t.status === 'ACTIVE') || templates[0] || null;
+  let activeImageUrl = null;
+  if (activeTemplate?.s3_key) {
+    activeImageUrl = await resolveS3Url(activeTemplate.s3_key).catch(() => null);
+  } else {
+    const { rows: [faceDoc] } = await query(
+      `SELECT document_url, document_key, file_url, s3_key 
+       FROM employee_documents 
+       WHERE employee_id = $1 
+         AND (
+           LOWER(document_type) IN ('face', 'face_biometric', 'biometric', 'face_verification', 'face_reference', 'selfie')
+           OR LOWER(document_type) LIKE '%face%'
+         )
+       ORDER BY created_at DESC LIMIT 1`,
+      [targetEmpId]
+    ).catch(() => ({ rows: [] }));
+    const rawKey = faceDoc?.document_url || faceDoc?.document_key || faceDoc?.file_url || faceDoc?.s3_key;
+    if (rawKey) {
+      activeImageUrl = await resolveS3Url(rawKey).catch(() => null);
+    }
+  }
 
   return {
     employee_id: employeeId,
-    is_enrolled: !!activeTemplate,
-    status: activeTemplate ? 'ACTIVE' : 'NOT_ENROLLED',
-    active_template: activeTemplate ? {
-      id: activeTemplate.id,
-      version: activeTemplate.version,
-      status: activeTemplate.status,
-      enrollment_source: activeTemplate.enrollment_source,
-      enrolled_at: activeTemplate.enrolled_at,
-      enrolled_by_name: activeTemplate.enrolled_by_name
+    is_enrolled: Boolean(activeTemplate || activeImageUrl),
+    status: activeTemplate ? (activeTemplate.status || 'ACTIVE') : (activeImageUrl ? 'ACTIVE' : 'NOT_ENROLLED'),
+    active_template: (activeTemplate || activeImageUrl) ? {
+      id: activeTemplate?.id || 'doc-face',
+      version: activeTemplate?.version || 1,
+      status: activeTemplate?.status || 'ACTIVE',
+      enrollment_source: activeTemplate?.enrollment_source || 'KYC_FACE_ENROLLMENT',
+      enrolled_at: activeTemplate?.enrolled_at || new Date().toISOString(),
+      enrolled_by_name: activeTemplate?.enrolled_by_name || 'System',
+      image_url: activeImageUrl
     } : null,
     history: (reqUser?.role || '').toUpperCase() === 'SUPER_ADMIN' ? templates : []
   };
@@ -711,17 +742,33 @@ const getSignedPreviewUrl = async (employeeId, reqUser) => {
   }
 
   const { rows: [template] } = await query(
-    `SELECT s3_key FROM employee_biometric_templates WHERE employee_id = $1 AND status = 'ACTIVE' LIMIT 1`,
+    `SELECT s3_key FROM employee_biometric_templates WHERE employee_id = $1 ORDER BY (CASE WHEN status = 'ACTIVE' THEN 0 ELSE 1 END), created_at DESC LIMIT 1`,
     [employeeId]
   );
 
-  if (!template || !template.s3_key) {
+  let s3Key = template?.s3_key;
+  if (!s3Key) {
+    const { rows: [doc] } = await query(
+      `SELECT document_url, document_key, file_url, s3_key 
+       FROM employee_documents 
+       WHERE employee_id = $1 
+         AND (
+           LOWER(document_type) IN ('face', 'face_biometric', 'biometric', 'face_verification', 'face_reference', 'selfie')
+           OR LOWER(document_type) LIKE '%face%'
+         )
+       ORDER BY created_at DESC LIMIT 1`,
+      [employeeId]
+    ).catch(() => ({ rows: [] }));
+    s3Key = doc?.document_url || doc?.document_key || doc?.file_url || doc?.s3_key;
+  }
+
+  if (!s3Key) {
     const error = new Error('No active biometric reference image found for this employee');
     error.statusCode = 404;
     throw error;
   }
 
-  const signedUrl = await getSignedDownloadUrl(template.s3_key, 300); // 5 minutes expiration
+  const signedUrl = await getSignedDownloadUrl(s3Key, 300); // 5 minutes expiration
 
   return {
     signedUrl,

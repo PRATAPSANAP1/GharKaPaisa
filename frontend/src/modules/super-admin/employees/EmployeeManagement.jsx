@@ -87,12 +87,40 @@ export default function EmployeeManagement() {
       if (res.data?.success) {
         const data = res.data.data;
         setDrawer360Data(data);
-        if (data.employee) {
-          setDrawerEmp(prev => (prev ? { ...prev, ...data.employee } : data.employee));
-        }
         const kyc = data.kyc || {};
         const emp = data.employee || {};
         const docs = data.documents || [];
+
+        const findDoc = (types) => docs.find(d => types.includes(String(d.document_type || '').toLowerCase().trim()));
+
+        const aadhaarDoc = findDoc(['aadhaar', 'aadhaar_card', 'aadhaar_front', 'aadhaar_back']);
+        const panDoc = findDoc(['pan', 'pan_card']);
+        const bankDoc = findDoc(['bank', 'bank_proof', 'bank_passbook', 'cheque', 'passbook']);
+        const photoDoc = findDoc(['photo', 'photograph', 'profile_photo', 'passport_photo', 'avatar']);
+        const faceDoc = findDoc(['face', 'face_biometric', 'biometric', 'face_verification', 'face_reference', 'selfie', 'teleprompter_face']);
+        const offerDoc = findDoc(['offer_letter', 'joining_form', 'terms_video', 'resume']);
+
+        const faceUrl = data.biometrics?.active_template?.image_url || data.verification_state?.biometric_template?.image_url || emp.face_reference_url || emp.face_verification_url || faceDoc?.document_url || null;
+        const photoUrl = emp.profile_photo_url || data.verification_state?.profile_photo_url || photoDoc?.document_url || faceUrl || null;
+
+        if (data.employee) {
+          setDrawerEmp(prev => (prev ? { 
+            ...prev, 
+            ...data.employee,
+            face_reference_url: faceUrl || prev.face_reference_url,
+            face_verification_url: faceUrl || prev.face_verification_url,
+            profile_photo_url: photoUrl || prev.profile_photo_url,
+            biometrics: data.biometrics,
+            verification_state: data.verification_state
+          } : {
+            ...data.employee,
+            face_reference_url: faceUrl,
+            face_verification_url: faceUrl,
+            profile_photo_url: photoUrl,
+            biometrics: data.biometrics,
+            verification_state: data.verification_state
+          }));
+        }
 
         setDocIdentityFields({
           aadhaar_number: kyc.aadhaar_number || emp.aadhaar_number || '',
@@ -107,14 +135,6 @@ export default function EmployeeManagement() {
           admin_remarks: kyc.review_notes || ''
         });
 
-        const findDoc = (types) => docs.find(d => types.includes(String(d.document_type || '').toLowerCase().trim()));
-
-        const aadhaarDoc = findDoc(['aadhaar', 'aadhaar_card', 'aadhaar_front', 'aadhaar_back']);
-        const panDoc = findDoc(['pan', 'pan_card']);
-        const bankDoc = findDoc(['bank', 'bank_proof', 'bank_passbook', 'cheque', 'passbook']);
-        const photoDoc = findDoc(['photo', 'photograph', 'profile_photo']);
-        const offerDoc = findDoc(['offer_letter', 'joining_form', 'terms_video', 'resume']);
-
         const parseStatus = (statusStr, isVerifiedFlag, url) => {
           if (isVerifiedFlag || statusStr === 'VERIFIED' || statusStr === 'APPROVED') return 'Verified';
           if (statusStr === 'REJECTED') return 'Rejected';
@@ -125,7 +145,6 @@ export default function EmployeeManagement() {
         const aadhaarUrl = kyc.aadhaar_document_url || aadhaarDoc?.document_url || null;
         const panUrl = kyc.pan_document_url || panDoc?.document_url || null;
         const bankUrl = kyc.bank_document_url || bankDoc?.document_url || null;
-        const photoUrl = emp.profile_photo_url || photoDoc?.document_url || null;
         const offerUrl = offerDoc?.document_url || emp.resume_url || null;
 
         setDocStatuses({
@@ -5679,16 +5698,57 @@ Generated On        : ${new Date().toLocaleString()}
 
                 {/* 3. FACE VERIFICATION TAB */}
                 {drawerTab === 'biometric' && (() => {
-                  const emp = drawer360Data?.employee || drawerEmp;
-                  const isFaceEnrolled = emp.face_verification_status === 'VERIFIED' || 
-                                        emp.biometric_enrolled || 
-                                        emp.face_enrolled || 
-                                        emp.face_status === 'VERIFIED' || 
-                                        emp.face_status === 'ENROLLED' ||
-                                        emp.biometric_status === 'ACTIVE' ||
-                                        Boolean(emp.face_reference_url && emp.face_reference_url.length > 5);
+                  const emp = drawer360Data?.employee || drawerEmp || {};
+                  const docs = drawer360Data?.documents || [];
 
-                  const faceImgUrl = emp.face_reference_url || emp.profile_photo_url || emp.avatar_url;
+                  // Find face document from uploaded documents
+                  const faceDoc = docs.find(d => {
+                    const t = String(d.document_type || '').toLowerCase().trim();
+                    return ['face', 'face_biometric', 'biometric', 'face_verification', 'face_reference', 'selfie', 'teleprompter_face'].includes(t) || t.includes('face');
+                  });
+
+                  // Find profile photo document
+                  const photoDoc = docs.find(d => {
+                    const t = String(d.document_type || '').toLowerCase().trim();
+                    return ['photo', 'photograph', 'profile_photo', 'passport_photo', 'avatar'].includes(t);
+                  });
+
+                  // Candidate URLs for face biometric verification image
+                  const faceVerificationImg = 
+                    drawer360Data?.biometrics?.active_template?.image_url ||
+                    drawer360Data?.verification_state?.biometric_template?.image_url ||
+                    emp.face_reference_url ||
+                    emp.face_verification_url ||
+                    faceDoc?.document_url ||
+                    faceDoc?.file_url ||
+                    drawer360Data?.kyc?.face_verification_url ||
+                    null;
+
+                  // Candidate URLs for captured profile image
+                  const profileImg = 
+                    emp.profile_photo_url ||
+                    drawer360Data?.verification_state?.profile_photo_url ||
+                    emp.avatar_url ||
+                    photoDoc?.document_url ||
+                    photoDoc?.file_url ||
+                    drawer360Data?.kyc?.photo_url ||
+                    null;
+
+                  // Unified fallbacks: if either image is captured, show it!
+                  const finalProfileImg = profileImg || faceVerificationImg;
+                  const finalFaceImg = faceVerificationImg || profileImg;
+
+                  const isFaceEnrolled = Boolean(
+                    finalFaceImg ||
+                    drawer360Data?.biometrics?.is_enrolled ||
+                    drawer360Data?.verification_state?.has_biometric_reference ||
+                    emp.face_verification_status === 'VERIFIED' || 
+                    emp.biometric_enrolled || 
+                    emp.face_enrolled || 
+                    emp.face_status === 'VERIFIED' || 
+                    emp.face_status === 'ENROLLED' ||
+                    emp.biometric_status === 'ACTIVE'
+                  );
 
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -5706,7 +5766,7 @@ Generated On        : ${new Date().toLocaleString()}
                                 Attendance Biometric Reference Enrolled & Locked
                               </div>
                               <div style={{ fontSize: '12.5px', color: '#047857', marginTop: '3px', fontWeight: 700 }}>
-                                Biometric Version: V1 | Enrolled Date: {emp.activated_at ? new Date(emp.activated_at).toLocaleDateString('en-IN') : 'Active'} | Status: <span style={{ color: '#059669' }}>ACTIVE ✓</span>
+                                Biometric Version: V{drawer360Data?.biometrics?.active_template?.version || '1'} | Enrolled Date: {emp.activated_at ? new Date(emp.activated_at).toLocaleDateString('en-IN') : 'Active'} | Status: <span style={{ color: '#059669' }}>ACTIVE ✓</span>
                               </div>
                               <div style={{ fontSize: '12px', color: '#065F46', marginTop: '6px', lineHeight: 1.4 }}>
                                 Your biometric reference is locked. Employees cannot replace it. Re-enrollment requires Super Admin authorization.
@@ -5779,37 +5839,118 @@ Generated On        : ${new Date().toLocaleString()}
 
                       {/* Side by Side Reference Grid */}
                       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
-                        {/* Captured Face Photo */}
+                        {/* Captured Profile Photo */}
                         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px' }}>
-                          <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, marginBottom: '10px' }}>Captured Profile Image</div>
-                          <div style={{ width: '100%', height: '180px', borderRadius: '10px', overflow: 'hidden', background: '#F1F5F9', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {faceImgUrl ? (
-                              <img src={faceImgUrl} alt="Captured Face" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            ) : (
-                              <div style={{ textAlign: 'center', color: C.textMid, padding: '20px' }}>
-                                <div style={{ fontSize: '36px', marginBottom: '4px' }}>👤</div>
-                                <div style={{ fontSize: '12px' }}>Captured Face Image</div>
-                              </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <div style={{ fontSize: '13px', fontWeight: 800, color: C.text }}>Captured Profile Image</div>
+                            {finalProfileImg && (
+                              <span style={{ fontSize: '11px', fontWeight: 800, color: '#3B82F6', background: '#EFF6FF', padding: '2px 8px', borderRadius: '6px' }}>
+                                Profile Photo
+                              </span>
                             )}
+                          </div>
+                          <div 
+                            style={{ 
+                              width: '100%', 
+                              height: '180px', 
+                              borderRadius: '10px', 
+                              overflow: 'hidden', 
+                              background: '#F1F5F9', 
+                              border: `1px solid ${C.border}`, 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              cursor: finalProfileImg ? 'pointer' : 'default',
+                              position: 'relative'
+                            }}
+                            onClick={() => {
+                              if (finalProfileImg) {
+                                setViewingDocModal({ url: finalProfileImg, name: 'Captured Profile Image' });
+                              }
+                            }}
+                            title={finalProfileImg ? 'Click to view full image' : ''}
+                          >
+                            {finalProfileImg ? (
+                              <img 
+                                src={finalProfileImg} 
+                                alt="Captured Profile" 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  if (e.currentTarget.nextElementSibling) e.currentTarget.nextElementSibling.style.display = 'block';
+                                }}
+                              />
+                            ) : null}
+                            <div style={{ 
+                              display: finalProfileImg ? 'none' : 'block', 
+                              textAlign: 'center', 
+                              color: C.textMid, 
+                              padding: '20px' 
+                            }}>
+                              <div style={{ fontSize: '36px', marginBottom: '4px' }}>👤</div>
+                              <div style={{ fontSize: '12px' }}>Captured Face Image</div>
+                            </div>
                           </div>
                         </div>
 
                         {/* Employee Face Reference Box */}
                         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px' }}>
-                          <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, marginBottom: '10px' }}>Biometric Reference Template</div>
-                          <div style={{ width: '100%', height: '180px', borderRadius: '10px', border: isFaceEnrolled ? '1.5px solid #86EFAC' : '1.5px dashed #CBD5E1', background: isFaceEnrolled ? '#F0FDF4' : '#F8FAFC', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px', textAlign: 'center', overflow: 'hidden' }}>
-                            {faceImgUrl && isFaceEnrolled ? (
-                              <img src={faceImgUrl} alt="Biometric Reference" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
-                            ) : (
-                              <>
-                                <div style={{ width: '48px', height: '48px', borderRadius: '50%', border: '2px dashed #94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B', fontSize: '24px', marginBottom: '10px' }}>
-                                  {isFaceEnrolled ? '✓' : '🔲'}
-                                </div>
-                                <div style={{ fontSize: '12px', color: isFaceEnrolled ? '#047857' : '#64748B', fontWeight: 600, maxWidth: '160px', lineHeight: 1.3 }}>
-                                  {isFaceEnrolled ? 'Face Biometric Reference Enrolled & Locked' : 'No face biometric reference available yet.'}
-                                </div>
-                              </>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <div style={{ fontSize: '13px', fontWeight: 800, color: C.text }}>Biometric Reference Template</div>
+                            {finalFaceImg && (
+                              <span style={{ fontSize: '11px', fontWeight: 800, color: '#059669', background: '#D1FAE5', padding: '2px 8px', borderRadius: '6px' }}>
+                                Face Reference
+                              </span>
                             )}
+                          </div>
+                          <div 
+                            style={{ 
+                              width: '100%', 
+                              height: '180px', 
+                              borderRadius: '10px', 
+                              border: finalFaceImg ? '1.5px solid #86EFAC' : (isFaceEnrolled ? '1.5px solid #86EFAC' : '1.5px dashed #CBD5E1'), 
+                              background: finalFaceImg ? '#F0FDF4' : (isFaceEnrolled ? '#F0FDF4' : '#F8FAFC'), 
+                              display: 'flex', 
+                              flexDirection: 'column', 
+                              alignItems: 'center', 
+                              justifyContent: 'center', 
+                              padding: finalFaceImg ? '0' : '16px', 
+                              textAlign: 'center', 
+                              overflow: 'hidden',
+                              position: 'relative',
+                              cursor: finalFaceImg ? 'pointer' : 'default'
+                            }}
+                            onClick={() => {
+                              if (finalFaceImg) {
+                                setViewingDocModal({ url: finalFaceImg, name: 'Face Biometric Reference Template' });
+                              }
+                            }}
+                            title={finalFaceImg ? 'Click to view full image' : ''}
+                          >
+                            {finalFaceImg ? (
+                              <img 
+                                src={finalFaceImg} 
+                                alt="Biometric Reference" 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px', display: 'block' }} 
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  if (e.currentTarget.nextElementSibling) e.currentTarget.nextElementSibling.style.display = 'flex';
+                                }}
+                              />
+                            ) : null}
+                            <div style={{ 
+                              display: finalFaceImg ? 'none' : 'flex', 
+                              flexDirection: 'column', 
+                              alignItems: 'center', 
+                              justifyContent: 'center' 
+                            }}>
+                              <div style={{ width: '48px', height: '48px', borderRadius: '50%', border: '2px dashed #94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748B', fontSize: '24px', marginBottom: '10px' }}>
+                                {isFaceEnrolled ? '✓' : '🔲'}
+                              </div>
+                              <div style={{ fontSize: '12px', color: isFaceEnrolled ? '#047857' : '#64748B', fontWeight: 600, maxWidth: '160px', lineHeight: 1.3 }}>
+                                {isFaceEnrolled ? 'Face Biometric Reference Enrolled & Locked' : 'No face biometric reference available yet.'}
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
