@@ -421,19 +421,29 @@ const getEmployeeBiometricStatus = async (employeeId, reqUser) => {
     activeImageUrl = await resolveS3Url(activeTemplate.s3_key).catch(() => null);
   } else {
     const { rows: [faceDoc] } = await query(
-      `SELECT document_url, document_key, file_url, s3_key 
+      `SELECT * 
        FROM employee_documents 
        WHERE employee_id = $1 
          AND (
-           LOWER(document_type) IN ('face', 'face_biometric', 'biometric', 'face_verification', 'face_reference', 'selfie')
+           LOWER(document_type) IN ('face', 'face_biometric', 'biometric', 'face_verification', 'face_reference', 'selfie', 'photo', 'profile_photo')
            OR LOWER(document_type) LIKE '%face%'
          )
        ORDER BY created_at DESC LIMIT 1`,
       [targetEmpId]
     ).catch(() => ({ rows: [] }));
-    const rawKey = faceDoc?.document_url || faceDoc?.document_key || faceDoc?.file_url || faceDoc?.s3_key;
+    const rawKey = faceDoc?.document_url || faceDoc?.document_key || faceDoc?.s3_key || faceDoc?.file_url || faceDoc?.file_path;
     if (rawKey) {
       activeImageUrl = await resolveS3Url(rawKey).catch(() => null);
+    } else {
+      const { rows: [empRow] } = await query(
+        `SELECT profile_photo_url, face_reference_url, to_jsonb(e)->>'photo_url' as photo_url, to_jsonb(e)->>'selfie_url' as selfie_url
+         FROM employees e WHERE id = $1 LIMIT 1`,
+        [targetEmpId]
+      ).catch(() => ({ rows: [] }));
+      const empFace = empRow?.face_reference_url || empRow?.profile_photo_url || empRow?.photo_url || empRow?.selfie_url;
+      if (empFace) {
+        activeImageUrl = await resolveS3Url(empFace).catch(() => null);
+      }
     }
   }
 
@@ -749,17 +759,26 @@ const getSignedPreviewUrl = async (employeeId, reqUser) => {
   let s3Key = template?.s3_key;
   if (!s3Key) {
     const { rows: [doc] } = await query(
-      `SELECT document_url, document_key, file_url, s3_key 
+      `SELECT * 
        FROM employee_documents 
        WHERE employee_id = $1 
          AND (
-           LOWER(document_type) IN ('face', 'face_biometric', 'biometric', 'face_verification', 'face_reference', 'selfie')
+           LOWER(document_type) IN ('face', 'face_biometric', 'biometric', 'face_verification', 'face_reference', 'selfie', 'photo', 'profile_photo')
            OR LOWER(document_type) LIKE '%face%'
          )
        ORDER BY created_at DESC LIMIT 1`,
       [employeeId]
     ).catch(() => ({ rows: [] }));
-    s3Key = doc?.document_url || doc?.document_key || doc?.file_url || doc?.s3_key;
+    s3Key = doc?.document_url || doc?.document_key || doc?.s3_key || doc?.file_url || doc?.file_path;
+
+    if (!s3Key) {
+      const { rows: [empRow] } = await query(
+        `SELECT profile_photo_url, face_reference_url, to_jsonb(e)->>'photo_url' as photo_url, to_jsonb(e)->>'selfie_url' as selfie_url
+         FROM employees e WHERE id = $1 LIMIT 1`,
+        [employeeId]
+      ).catch(() => ({ rows: [] }));
+      s3Key = empRow?.face_reference_url || empRow?.profile_photo_url || empRow?.photo_url || empRow?.selfie_url;
+    }
   }
 
   if (!s3Key) {

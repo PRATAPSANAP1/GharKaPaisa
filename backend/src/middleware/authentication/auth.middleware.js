@@ -60,6 +60,18 @@ const syncUser = async (req, res, next) => {
       query(`UPDATE users SET last_active_at = NOW() WHERE id = $1`, [user.id]).catch(() => {});
     }
 
+    if (!user.designation) {
+      try {
+        const { rows: [emp] } = await query(
+          `SELECT designation FROM employees WHERE user_id = $1 OR email_id = $2 LIMIT 1`,
+          [user.id, user.email]
+        );
+        if (emp && emp.designation) {
+          user.designation = emp.designation;
+        }
+      } catch (empDesigErr) {}
+    }
+
     req.dbUser = { ...user };
     
     // Strip sensitive fields from req.user
@@ -108,7 +120,10 @@ const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) return unauthorized(res);
     const userRole = (req.user.role || '').toUpperCase();
-    if (!upperRoles.includes(userRole)) {
+    const userDesignation = (req.user?.designation || '').toUpperCase();
+    const roleMatches = upperRoles.includes(userRole);
+    const designationMatches = upperRoles.some(r => userDesignation.includes(r));
+    if (!roleMatches && !designationMatches) {
       return forbidden(res, `Role '${req.user.role}' is not allowed to access this resource`);
     }
     next();
@@ -119,8 +134,16 @@ const requirePartner = async (req, res, next) => {
   try {
     const role = (req.user?.role || '').toUpperCase();
     const designation = (req.user?.designation || '').toUpperCase();
-    const adminRoles = ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_OPERATOR', 'ADMINISTRATIVE SALES OPERATOR', 'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'FINAL_STATUS_OPERATOR', 'FINAL STATUS OPERATOR', 'QUERABLE_OPERATOR', 'QUERABLE OPERATOR', 'QUERYABLE_OPERATOR', 'QUERYABLE OPERATOR', 'PHYSICAL_CURABLE', 'PHYSICAL CURABLE', 'DIGITAL_CURABLE', 'DIGITAL CURABLE', 'EMAIL_CURABLE', 'EMAIL CURABLE', 'PHYSICAL_CURABLE_OPERATOR', 'PHYSICAL CURABLE OPERATOR', 'DIGITAL_CURABLE_OPERATOR', 'DIGITAL CURABLE OPERATOR', 'EMAIL_CURABLE_OPERATOR', 'EMAIL CURABLE OPERATOR'];
-    if (adminRoles.includes(role) || adminRoles.includes(designation)) return next();
+    const adminRoles = [
+      'ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD',
+      'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'BACKEND OPERATOR',
+      'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_OPERATOR', 'ADMINISTRATIVE SALES OPERATOR',
+      'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'FINAL_STATUS_OPERATOR', 'FINAL STATUS OPERATOR',
+      'QUERABLE_OPERATOR', 'QUERABLE OPERATOR', 'QUERYABLE_OPERATOR', 'QUERYABLE OPERATOR',
+      'PHYSICAL_CURABLE', 'PHYSICAL CURABLE', 'DIGITAL_CURABLE', 'DIGITAL CURABLE', 'EMAIL_CURABLE', 'EMAIL CURABLE',
+      'PHYSICAL_CURABLE_OPERATOR', 'PHYSICAL CURABLE OPERATOR', 'DIGITAL_CURABLE_OPERATOR', 'DIGITAL CURABLE OPERATOR', 'EMAIL_CURABLE_OPERATOR', 'EMAIL CURABLE OPERATOR'
+    ];
+    if (adminRoles.includes(role) || adminRoles.some(r => designation.includes(r))) return next();
     if (!req.partner && req.user) {
       const { rows: [p] } = await query(`SELECT id, kyc_status FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       if (p) {
@@ -139,8 +162,16 @@ const requireApprovedPartner = async (req, res, next) => {
   try {
     const role = (req.user?.role || '').toUpperCase();
     const designation = (req.user?.designation || '').toUpperCase();
-    const adminRoles = ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_OPERATOR', 'ADMINISTRATIVE SALES OPERATOR', 'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'FINAL_STATUS_OPERATOR', 'FINAL STATUS OPERATOR', 'QUERABLE_OPERATOR', 'QUERABLE OPERATOR', 'QUERYABLE_OPERATOR', 'QUERYABLE OPERATOR', 'PHYSICAL_CURABLE', 'PHYSICAL CURABLE', 'DIGITAL_CURABLE', 'DIGITAL CURABLE', 'EMAIL_CURABLE', 'EMAIL CURABLE', 'PHYSICAL_CURABLE_OPERATOR', 'PHYSICAL CURABLE OPERATOR', 'DIGITAL_CURABLE_OPERATOR', 'DIGITAL CURABLE OPERATOR', 'EMAIL_CURABLE_OPERATOR', 'EMAIL CURABLE OPERATOR'];
-    if (adminRoles.includes(role) || adminRoles.includes(designation)) return next();
+    const adminRoles = [
+      'ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD',
+      'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'BACKEND OPERATOR',
+      'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_OPERATOR', 'ADMINISTRATIVE SALES OPERATOR',
+      'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'FINAL_STATUS_OPERATOR', 'FINAL STATUS OPERATOR',
+      'QUERABLE_OPERATOR', 'QUERABLE OPERATOR', 'QUERYABLE_OPERATOR', 'QUERYABLE OPERATOR',
+      'PHYSICAL_CURABLE', 'PHYSICAL CURABLE', 'DIGITAL_CURABLE', 'DIGITAL CURABLE', 'EMAIL_CURABLE', 'EMAIL CURABLE',
+      'PHYSICAL_CURABLE_OPERATOR', 'PHYSICAL CURABLE OPERATOR', 'DIGITAL_CURABLE_OPERATOR', 'DIGITAL CURABLE OPERATOR', 'EMAIL_CURABLE_OPERATOR', 'EMAIL CURABLE OPERATOR'
+    ];
+    if (adminRoles.includes(role) || adminRoles.some(r => designation.includes(r))) return next();
     if (!req.partner && req.user) {
       const { rows: [p] } = await query(`SELECT id, kyc_status FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       if (p) {
@@ -161,8 +192,16 @@ const requireApprovedPartner = async (req, res, next) => {
 const requireApprovedPartnerOrAdmin = (req, res, next) => {
   const role = (req.user?.role || '').toUpperCase();
   const designation = (req.user?.designation || '').toUpperCase();
-  const adminRoles = ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_OPERATOR', 'ADMINISTRATIVE SALES OPERATOR', 'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'FINAL_STATUS_OPERATOR', 'FINAL STATUS OPERATOR', 'QUERABLE_OPERATOR', 'QUERABLE OPERATOR', 'QUERYABLE_OPERATOR', 'QUERYABLE OPERATOR', 'PHYSICAL_CURABLE', 'PHYSICAL CURABLE', 'DIGITAL_CURABLE', 'DIGITAL CURABLE', 'EMAIL_CURABLE', 'EMAIL CURABLE', 'PHYSICAL_CURABLE_OPERATOR', 'PHYSICAL CURABLE OPERATOR', 'DIGITAL_CURABLE_OPERATOR', 'DIGITAL CURABLE OPERATOR', 'EMAIL_CURABLE_OPERATOR', 'EMAIL CURABLE OPERATOR'];
-  if (adminRoles.includes(role) || adminRoles.includes(designation)) return next();
+  const adminRoles = [
+    'ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD',
+    'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'BACKEND OPERATOR',
+    'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_OPERATOR', 'ADMINISTRATIVE SALES OPERATOR',
+    'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'FINAL_STATUS_OPERATOR', 'FINAL STATUS OPERATOR',
+    'QUERABLE_OPERATOR', 'QUERABLE OPERATOR', 'QUERYABLE_OPERATOR', 'QUERYABLE OPERATOR',
+    'PHYSICAL_CURABLE', 'PHYSICAL CURABLE', 'DIGITAL_CURABLE', 'DIGITAL CURABLE', 'EMAIL_CURABLE', 'EMAIL CURABLE',
+    'PHYSICAL_CURABLE_OPERATOR', 'PHYSICAL CURABLE OPERATOR', 'DIGITAL_CURABLE_OPERATOR', 'DIGITAL CURABLE OPERATOR', 'EMAIL_CURABLE_OPERATOR', 'EMAIL CURABLE OPERATOR'
+  ];
+  if (adminRoles.includes(role) || adminRoles.some(r => designation.includes(r))) return next();
   return requireApprovedPartner(req, res, next);
 };
 
