@@ -11,6 +11,13 @@ import {
 } from 'react-icons/fa';
 import api from '../../../services/api';
 import BiometricManagementModal from '../biometrics/BiometricManagementModal';
+import { 
+  DOCUMENT_TYPES, 
+  normalizeDocumentType, 
+  isVideoDocument, 
+  isBankDocument, 
+  isFaceBiometricDocument 
+} from '../../../constants/documentTypes';
 
 export default function EmployeeManagement() {
   const { C } = useTheme();
@@ -175,15 +182,27 @@ export default function EmployeeManagement() {
       kyc_status: isApprove ? 'UNDER_REVIEW' : 'REJECTED'
     };
 
-    if (docKey === 'aadhaar') {
+    const canonicalKey = normalizeDocumentType(docKey);
+
+    if (canonicalKey === 'aadhaar') {
       payload.aadhaar_action = action;
       if (!isApprove) payload.aadhaar_reason = reasonText;
-    } else if (docKey === 'pan') {
+    } else if (canonicalKey === 'pan') {
       payload.pan_action = action;
       if (!isApprove) payload.pan_reason = reasonText;
-    } else if (docKey === 'bank') {
+    } else if (canonicalKey === 'bank_proof' || docKey === 'bank') {
       payload.bank_action = action;
-      if (!isApprove) payload.bank_reason = reasonText;
+      payload.bank_proof_action = action;
+      if (!isApprove) {
+        payload.bank_reason = reasonText;
+        payload.bank_proof_reason = reasonText;
+      }
+    } else if (canonicalKey === 'video' || docKey === 'video') {
+      payload.video_action = action;
+      if (!isApprove) payload.video_reason = reasonText;
+    } else if (canonicalKey === 'face_biometric' || docKey === 'face') {
+      payload.biometric_action = action;
+      if (!isApprove) payload.biometric_reason = reasonText;
     } else if (docKey === 'photo') {
       payload.photo_action = action;
       if (!isApprove) payload.photo_reason = reasonText;
@@ -1341,23 +1360,54 @@ Generated On        : ${new Date().toLocaleString()}
 
   const handleDocVerify = async (empId, docType, action) => {
     let reason = '';
-    if (action === 'REJECTED') {
-      reason = prompt(`Enter rejection reason for ${docType.toUpperCase()}:`);
+    if (action === 'REJECTED' || action === 'FLAGGED') {
+      reason = prompt(`Enter rejection reason for ${String(docType).toUpperCase()}:`);
       if (!reason || !reason.trim()) return;
     }
 
+    const canonicalType = normalizeDocumentType(docType);
+
     try {
       const payload = {
-        document_type: docType,
+        document_type: canonicalType,
         status: action,
-        rejection_reason: reason ? reason.trim() : null,
-        [`${docType}_action`]: action,
-        [`${docType}_reason`]: reason ? reason.trim() : null
+        rejection_reason: reason ? reason.trim() : null
       };
 
+      if (isVideoDocument(canonicalType)) {
+        payload.video_action = action;
+        payload.video_reason = reason ? reason.trim() : null;
+      } else if (isBankDocument(canonicalType)) {
+        payload.bank_proof_action = action;
+        payload.bank_action = action;
+        payload.bank_proof_reason = reason ? reason.trim() : null;
+        payload.bank_reason = reason ? reason.trim() : null;
+      } else if (isFaceBiometricDocument(canonicalType)) {
+        payload.biometric_action = action;
+        payload.biometric_reason = reason ? reason.trim() : null;
+      } else {
+        payload[`${canonicalType}_action`] = action;
+        payload[`${canonicalType}_reason`] = reason ? reason.trim() : null;
+      }
+
+      // 1. Post to verify-document
       const res = await api.post(`/employees/${empId}/verify-document`, payload);
+
+      // 2. Synchronize with kyc-verify for full video / bank verification consistency
+      if (isVideoDocument(canonicalType)) {
+        await api.post(`/employees/${empId}/kyc-verify`, {
+          video_action: action,
+          video_reason: reason ? reason.trim() : null
+        }).catch(() => {});
+      } else if (isBankDocument(canonicalType)) {
+        await api.post(`/employees/${empId}/kyc-verify`, {
+          bank_proof_action: action,
+          bank_proof_reason: reason ? reason.trim() : null
+        }).catch(() => {});
+      }
+
       if (res.data.success) {
-        alert(`${docType.toUpperCase().replace('_', ' ')} marked as ${action}`);
+        alert(`${canonicalType.toUpperCase().replace('_', ' ')} marked as ${action}`);
         fetchData();
         if (selectedEmp && selectedEmp.id === empId) {
           handleOpen360View(selectedEmp);
@@ -1365,6 +1415,30 @@ Generated On        : ${new Date().toLocaleString()}
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Document verification update failed');
+    }
+  };
+
+  const handleVerifyBiometric = async (empId, action) => {
+    let notes = '';
+    if (action === 'REJECTED' || action === 'FLAGGED') {
+      notes = prompt('Enter reason for rejecting / flagging Face Biometric enrollment (e.g. blurry image, poor lighting, face partially obscured):');
+      if (!notes || !notes.trim()) return;
+    }
+
+    try {
+      const res = await api.post(`/employees/${empId}/verify-biometric`, {
+        action,
+        notes: notes ? notes.trim() : null
+      });
+      if (res.data?.success) {
+        alert(`Face Biometric enrollment marked as ${action}`);
+        fetchData();
+        if (selectedEmp && selectedEmp.id === empId) {
+          handleOpen360View(selectedEmp);
+        }
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update biometric verification');
     }
   };
 
@@ -3119,27 +3193,55 @@ Generated On        : ${new Date().toLocaleString()}
                   <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
                     <div>
                       <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Mobile Number</div>
-                      <div style={{ fontSize: '14px', fontWeight: 800 }}>{emp360Data.employee.mobile_number}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800 }}>{emp360Data.employee.mobile_number || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>WhatsApp Number</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800 }}>{emp360Data.employee.whatsapp_number || emp360Data.joining_details?.whatsapp_number || 'N/A'}</div>
                     </div>
                     <div>
                       <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Email Address</div>
-                      <div style={{ fontSize: '14px', fontWeight: 800 }}>{emp360Data.employee.email_id}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800 }}>{emp360Data.employee.email_id || emp360Data.employee.email || 'N/A'}</div>
                     </div>
                     <div>
                       <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Designation</div>
-                      <div style={{ fontSize: '14px', fontWeight: 800, color: C.teal }}>{emp360Data.employee.designation}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: C.teal }}>{emp360Data.employee.designation || 'N/A'}</div>
                     </div>
                     <div>
                       <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Department</div>
-                      <div style={{ fontSize: '14px', fontWeight: 800 }}>{emp360Data.employee.department}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800 }}>{emp360Data.employee.department || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Work Location</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800 }}>{emp360Data.employee.work_location || emp360Data.joining_details?.work_location || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Employment Type</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800 }}>{emp360Data.employee.employment_type || emp360Data.joining_details?.employment_type || 'N/A'}</div>
                     </div>
                     <div>
                       <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Offered Salary</div>
-                      <div style={{ fontSize: '14px', fontWeight: 900, color: '#10B981' }}>₹{emp360Data.employee.offered_salary || 0} / month</div>
+                      <div style={{ fontSize: '14px', fontWeight: 900, color: '#10B981' }}>₹{emp360Data.employee.offered_salary || emp360Data.joining_details?.offered_salary || 0} / month</div>
                     </div>
                     <div>
                       <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Joining Date</div>
-                      <div style={{ fontSize: '14px', fontWeight: 800 }}>{emp360Data.employee.joining_date ? new Date(emp360Data.employee.joining_date).toLocaleDateString() : 'N/A'}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800 }}>{emp360Data.employee.joining_date ? new Date(emp360Data.employee.joining_date).toLocaleDateString() : (emp360Data.joining_details?.joining_date ? new Date(emp360Data.joining_details.joining_date).toLocaleDateString() : 'N/A')}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Activation Status</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: emp360Data.employee.activation_status === 'APPROVED' ? '#10B981' : (emp360Data.employee.activation_status === 'REJECTED' ? '#EF4444' : '#F59E0B') }}>
+                        {emp360Data.employee.activation_status || 'PENDING'}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Employee Status</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: emp360Data.employee.employee_status === 'ACTIVE' ? '#10B981' : '#6B7280' }}>
+                        {emp360Data.employee.employee_status || 'N/A'}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Created At</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800 }}>{emp360Data.employee.created_at ? new Date(emp360Data.employee.created_at).toLocaleDateString() : 'N/A'}</div>
                     </div>
                   </div>
 
@@ -3158,33 +3260,83 @@ Generated On        : ${new Date().toLocaleString()}
                         </div>
 
                         <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
-                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>2. Role & Department</span>
+                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>2. Contact Numbers</span>
+                          <strong>Mobile: {emp360Data.joining_details.mobile_number || 'N/A'}</strong>
+                          <div style={{ fontSize: '12px', color: C.textMid }}>WhatsApp: {emp360Data.joining_details.whatsapp_number || 'N/A'}</div>
+                        </div>
+
+                        <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>3. Role & Department</span>
                           <strong>{emp360Data.joining_details.designation}</strong>
                           <div style={{ fontSize: '12px', color: C.textMid }}>{emp360Data.joining_details.department}</div>
                         </div>
 
                         <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
-                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>3. Salary & Joining Date</span>
+                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>4. Salary & Joining Date</span>
                           <strong style={{ color: '#10B981' }}>₹{emp360Data.joining_details.offered_salary} / mo</strong>
                           <div style={{ fontSize: '12px', color: C.textMid }}>Joining: {emp360Data.joining_details.joining_date ? new Date(emp360Data.joining_details.joining_date).toLocaleDateString() : 'N/A'}</div>
                         </div>
 
                         <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
-                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>4. PAN & Aadhaar</span>
+                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>5. Work Location & Type</span>
+                          <strong>{emp360Data.joining_details.work_location || 'N/A'}</strong>
+                          <div style={{ fontSize: '12px', color: C.textMid }}>{emp360Data.joining_details.employment_type || 'N/A'}</div>
+                        </div>
+
+                        <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>6. Reporting Manager</span>
+                          <strong>{emp360Data.joining_details.reporting_manager || 'N/A'}</strong>
+                          <div style={{ fontSize: '12px', color: C.textMid }}>Notice Period: {emp360Data.joining_details.notice_period_days || 'N/A'} days</div>
+                        </div>
+
+                        <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>7. PAN & Aadhaar</span>
                           <strong>PAN: {emp360Data.joining_details.pan_number || 'N/A'}</strong>
                           <div style={{ fontSize: '12px', color: C.textMid }}>Aadhaar: {emp360Data.joining_details.aadhaar_number || 'N/A'}</div>
                         </div>
 
                         <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
-                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>5. Bank Account Details</span>
+                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>8. Bank Account Details</span>
                           <strong>A/C: {emp360Data.joining_details.bank_account_number || 'N/A'}</strong>
                           <div style={{ fontSize: '12px', color: C.textMid }}>IFSC: {emp360Data.joining_details.ifsc_code || 'N/A'} ({emp360Data.joining_details.bank_account_holder_name})</div>
                         </div>
 
                         <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
-                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>6. Qualification & Status</span>
-                          <strong>{emp360Data.joining_details.highest_qualification} ({emp360Data.joining_details.experience_type})</strong>
-                          <div style={{ fontSize: '12px', color: C.teal, fontWeight: 800 }}>Form Status: {emp360Data.joining_details.form_status}</div>
+                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>9. Qualification & Experience</span>
+                          <strong>{emp360Data.joining_details.highest_qualification} ({emp360Data.joining_details.passing_year || 'N/A'})</strong>
+                          <div style={{ fontSize: '12px', color: C.textMid }}>{emp360Data.joining_details.experience_type} - {emp360Data.joining_details.total_experience_years || '0'} yrs</div>
+                        </div>
+
+                        <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>10. Previous Employment</span>
+                          <strong>{emp360Data.joining_details.previous_company || 'N/A'}</strong>
+                          <div style={{ fontSize: '12px', color: C.textMid }}>{emp360Data.joining_details.previous_designation || 'N/A'}</div>
+                        </div>
+
+                        <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>11. Current Address</span>
+                          <strong>{emp360Data.joining_details.current_address || 'N/A'}</strong>
+                          <div style={{ fontSize: '12px', color: C.textMid }}>Permanent: {emp360Data.joining_details.permanent_address || 'Same as current'}</div>
+                        </div>
+
+                        <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>12. Recruitment Info</span>
+                          <strong>Referred By: {emp360Data.joining_details.referred_by || 'N/A'}</strong>
+                          <div style={{ fontSize: '12px', color: C.textMid }}>Source: {emp360Data.joining_details.recruitment_source || 'N/A'}</div>
+                        </div>
+
+                        <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>13. Incentive & Interviewer</span>
+                          <strong>{emp360Data.joining_details.incentive_structure || 'N/A'}</strong>
+                          <div style={{ fontSize: '12px', color: C.textMid }}>Interviewer: {emp360Data.joining_details.interviewer_name || 'N/A'}</div>
+                        </div>
+
+                        <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>14. Form Status</span>
+                          <strong style={{ color: emp360Data.joining_details.form_status === 'APPROVED' ? '#10B981' : (emp360Data.joining_details.form_status === 'REJECTED' ? '#EF4444' : '#F59E0B') }}>
+                            {emp360Data.joining_details.form_status}
+                          </strong>
+                          <div style={{ fontSize: '12px', color: C.textMid }}>Declaration: {emp360Data.joining_details.declaration_accepted ? '✓ Accepted' : 'Pending'}</div>
                         </div>
                       </div>
                     ) : (
@@ -3322,31 +3474,63 @@ Generated On        : ${new Date().toLocaleString()}
                             {/* 5. Face Verification for Attendance Card */}
                             {(() => {
                               const bioEnrolled = emp360Data.biometrics?.is_enrolled || selectedEmp?.face_enrolled || selectedEmp?.biometric_status === 'ACTIVE';
-                              const bioTemplate = emp360Data.biometrics?.active_template;
-                              
-                              const badgeText = bioEnrolled ? 'COMPLETED' : 'MISSING / PENDING';
-                              const badgeBg = bioEnrolled ? '#D1FAE5' : '#FEF3C7';
-                              const badgeColor = bioEnrolled ? '#065F46' : '#92400E';
+                              const bioTemplate = emp360Data.biometrics?.active_template || emp360Data.verification_state?.biometric_template;
+                              const adminReview = String(bioTemplate?.admin_review_status || 'PENDING').toUpperCase();
+                              const isApproved = adminReview === 'APPROVED';
+                              const isRejected = adminReview === 'REJECTED' || adminReview === 'FLAGGED';
+
+                              const badgeText = !bioEnrolled
+                                ? 'MISSING / PENDING'
+                                : isApproved
+                                ? 'VERIFIED & APPROVED'
+                                : isRejected
+                                ? 'FLAGGED / REJECTED'
+                                : 'PENDING ADMIN REVIEW';
+
+                              const badgeBg = !bioEnrolled ? '#FEF3C7' : isApproved ? '#D1FAE5' : isRejected ? '#FEE2E2' : '#E0F2FE';
+                              const badgeColor = !bioEnrolled ? '#92400E' : isApproved ? '#065F46' : isRejected ? '#991B1B' : '#0369A1';
 
                               return (
                                 <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                                   <div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                       <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>5. Face Verification</span>
                                       <span style={{ fontSize: '10.5px', fontWeight: 800, padding: '2px 8px', borderRadius: '6px', background: badgeBg, color: badgeColor }}>
-                                        {bioEnrolled ? '✓ ' : '⚠️ '}{badgeText}
+                                        {isApproved ? '✓ ' : isRejected ? '⚠️ ' : ''}{badgeText}
                                       </span>
                                     </div>
                                     {bioEnrolled ? (
                                       <div>
-                                        <strong style={{ fontSize: '13px', color: '#10B981', display: 'block', marginBottom: '4px' }}>
-                                          ✓ Attendance Biometric Reference Registered
-                                        </strong>
-                                        <div style={{ fontSize: '11px', color: C.textMid, lineHeight: 1.4 }}>
-                                          Biometric Version: <strong>V{bioTemplate?.version || 1}</strong> | Status: <strong style={{ color: '#10B981' }}>ACTIVE</strong>
-                                          <br />
-                                          Enrolled: <strong>{bioTemplate?.enrolled_at ? new Date(bioTemplate.enrolled_at).toLocaleDateString('en-IN') : 'Enrolled'}</strong>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                                          {bioTemplate?.image_url && (
+                                            <a href={bioTemplate.image_url} target="_blank" rel="noopener noreferrer" title="Click to view full photo">
+                                              <img
+                                                src={bioTemplate.image_url}
+                                                alt="Face Biometric"
+                                                style={{ width: '42px', height: '42px', borderRadius: '10px', objectFit: 'cover', border: `2px solid ${isApproved ? '#10B981' : isRejected ? '#EF4444' : C.teal}` }}
+                                              />
+                                            </a>
+                                          )}
+                                          <div>
+                                            <strong style={{ fontSize: '12.5px', color: isApproved ? '#10B981' : isRejected ? '#EF4444' : C.text, display: 'block' }}>
+                                              {isApproved ? '✓ Face Biometric Approved' : isRejected ? '⚠️ Face Enrollment Flagged' : '📷 Face Enrolled (Pending Review)'}
+                                            </strong>
+                                            <span style={{ fontSize: '11px', color: C.textMid }}>
+                                              Template: <strong>V{bioTemplate?.version || 1}</strong> • {bioTemplate?.enrolled_at ? new Date(bioTemplate.enrolled_at).toLocaleDateString('en-IN') : 'Enrolled'}
+                                            </span>
+                                          </div>
                                         </div>
+
+                                        {isRejected && bioTemplate?.admin_review_notes && (
+                                          <div style={{ fontSize: '11px', color: '#EF4444', marginBottom: '6px', background: '#FEF2F2', padding: '6px 8px', borderRadius: '6px', borderLeft: '3px solid #EF4444' }}>
+                                            ⚠️ Rejection Reason: {bioTemplate.admin_review_notes}
+                                          </div>
+                                        )}
+                                        {isApproved && bioTemplate?.admin_review_notes && (
+                                          <div style={{ fontSize: '11px', color: '#065F46', marginBottom: '6px', background: '#D1FAE5', padding: '4px 8px', borderRadius: '6px' }}>
+                                            ✓ {bioTemplate.admin_review_notes}
+                                          </div>
+                                        )}
                                       </div>
                                     ) : (
                                       <div>
@@ -3360,27 +3544,57 @@ Generated On        : ${new Date().toLocaleString()}
                                     )}
                                   </div>
 
-                                  <div style={{ display: 'flex', gap: '6px', marginTop: '10px', paddingTop: '8px', borderTop: `1px dashed ${C.border}` }}>
-                                    {!bioEnrolled && (
-                                      <button
-                                        onClick={() => handleSendReminder(selectedEmp.id, selectedEmp.full_name)}
-                                        disabled={sendingReminder[selectedEmp.id]}
-                                        style={{ flex: 1, background: '#F59E0B', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}
-                                      >
-                                        🔔 {sendingReminder[selectedEmp.id] ? 'Sending...' : 'Send Reminder'}
-                                      </button>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px', paddingTop: '8px', borderTop: `1px dashed ${C.border}` }}>
+                                    {bioEnrolled ? (
+                                      <>
+                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                          <button
+                                            onClick={() => handleVerifyBiometric(selectedEmp.id, 'APPROVED')}
+                                            style={{ flex: 1, background: '#10B981', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}
+                                          >
+                                            ✓ Approve Face
+                                          </button>
+                                          <button
+                                            onClick={() => handleVerifyBiometric(selectedEmp.id, 'REJECTED')}
+                                            style={{ flex: 1, background: '#EF4444', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}
+                                          >
+                                            ✕ Flag / Reject
+                                          </button>
+                                        </div>
+                                        <button
+                                          onClick={() => {
+                                            const empToManage = selectedEmp;
+                                            setSelectedEmp(null);
+                                            setBiometricModalEmp(empToManage);
+                                            setBiometricModalOpen(true);
+                                          }}
+                                          style={{ background: 'transparent', color: C.teal, border: `1px solid ${C.teal}40`, padding: '5px 8px', borderRadius: '6px', fontWeight: 700, cursor: 'pointer', fontSize: '10.5px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                                        >
+                                          <FaCamera /> Re-Enroll Camera Reference
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <div style={{ display: 'flex', gap: '6px' }}>
+                                        <button
+                                          onClick={() => handleSendReminder(selectedEmp.id, selectedEmp.full_name)}
+                                          disabled={sendingReminder[selectedEmp.id]}
+                                          style={{ flex: 1, background: '#F59E0B', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}
+                                        >
+                                          🔔 {sendingReminder[selectedEmp.id] ? 'Sending...' : 'Send Reminder'}
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            const empToManage = selectedEmp;
+                                            setSelectedEmp(null);
+                                            setBiometricModalEmp(empToManage);
+                                            setBiometricModalOpen(true);
+                                          }}
+                                          style={{ flex: 1, background: C.teal, color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}
+                                        >
+                                          <FaCamera /> Complete Verification
+                                        </button>
+                                      </div>
                                     )}
-                                    <button
-                                      onClick={() => {
-                                        const empToManage = selectedEmp;
-                                        setSelectedEmp(null);
-                                        setBiometricModalEmp(empToManage);
-                                        setBiometricModalOpen(true);
-                                      }}
-                                      style={{ flex: 1, background: C.teal, color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}
-                                    >
-                                      <FaCamera /> {bioEnrolled ? 'Re-Enroll Reference' : 'Complete Verification'}
-                                    </button>
                                   </div>
                                 </div>
                               );

@@ -9,6 +9,16 @@ const {
   calculateEmployeeVerificationState, 
   sendVerificationReminder 
 } = require('./verification.service');
+const {
+  DOCUMENT_TYPES,
+  normalizeDocumentType,
+  isVideoDocument,
+  isBankDocument,
+  isAadhaarDocument,
+  isPanDocument,
+  isFaceBiometricDocument
+} = require('../../constants/documentTypes');
+const { createNotification } = require('../notifications/service');
 
 // Helper to convert raw S3 URLs/Keys into presigned S3 download URLs
 const resolveS3Url = async (urlOrKey) => {
@@ -862,6 +872,35 @@ router.get('/:id', async (req, res, next) => {
       termsData.video_url = await resolveS3Url(termsData.video_url);
     }
 
+    // 10. Biometric data
+    const bioRes = await query(
+      `SELECT id, status, s3_key, s3_bucket, version, admin_review_status, admin_review_notes, admin_reviewed_at, created_at as enrolled_at 
+       FROM employee_biometric_templates 
+       WHERE employee_id = $1 AND status = 'ACTIVE' 
+       ORDER BY created_at DESC LIMIT 1`,
+      [id]
+    ).catch(() => ({ rows: [] }));
+
+    let bioImageUrl = null;
+    if (bioRes.rows.length > 0 && bioRes.rows[0].s3_key) {
+      bioImageUrl = await resolveS3Url(bioRes.rows[0].s3_key);
+    }
+
+    const biometrics = {
+      is_enrolled: bioRes.rows.length > 0,
+      active_template: bioRes.rows.length > 0 ? {
+        id: bioRes.rows[0].id,
+        version: bioRes.rows[0].version || 1,
+        status: bioRes.rows[0].status,
+        admin_review_status: bioRes.rows[0].admin_review_status || 'PENDING',
+        admin_review_notes: bioRes.rows[0].admin_review_notes || null,
+        admin_reviewed_at: bioRes.rows[0].admin_reviewed_at || null,
+        enrolled_at: bioRes.rows[0].enrolled_at,
+        s3_key: bioRes.rows[0].s3_key,
+        image_url: bioImageUrl
+      } : null
+    };
+
     res.json({
       success: true,
       data: {
@@ -873,7 +912,9 @@ router.get('/:id', async (req, res, next) => {
         checklist: checklistRes.rows[0] || null,
         hierarchy: hierarchyRes.rows[0] || null,
         product_links: linksRes.rows,
-        incentives_summary: incRes.rows[0]
+        incentives_summary: incRes.rows[0],
+        biometrics,
+        verification_state: vState
       }
     });
 
@@ -2881,22 +2922,93 @@ router.get('/:id/reminder-history', async (req, res, next) => {
 // POST /api/v1/employees/:id/verify-document — Approve or Reject a specific employee document
 router.post('/:id/verify-document', async (req, res, next) => {
   try {
-    const { document_type, status, rejection_reason } = req.body;
+    let {
+      document_type,
+      status,
+      rejection_reason,
+      video_action,
+      video_reason,
+      bank_action,
+      bank_reason,
+      bank_proof_action,
+      bank_proof_reason,
+      biometric_action,
+      biometric_reason,
+      face_action,
+      face_reason
+    } = req.body;
     const empId = req.params.id;
 
+    // Support action-specific properties if document_type / status are not explicitly set
+    if (!document_type) {
+      if (video_action) {
+        document_type = 'video';
+        status = video_action;
+        rejection_reason = video_reason || rejection_reason;
+      } else if (bank_proof_action || bank_action) {
+        document_type = 'bank_proof';
+        status = bank_proof_action || bank_action;
+        rejection_reason = bank_proof_reason || bank_reason || rejection_reason;
+      } else if (biometric_action || face_action) {
+        document_type = 'face_biometric';
+        status = biometric_action || face_action;
+        rejection_reason = biometric_reason || face_reason || rejection_reason;
+      }
+    } else {
+      if (isVideoDocument(document_type) && video_action && !status) {
+        status = video_action;
+        rejection_reason = video_reason || rejection_reason;
+      } else if (isBankDocument(document_type) && (bank_proof_action || bank_action) && !status) {
+        status = bank_proof_action || bank_action;
+        rejection_reason = bank_proof_reason || bank_reason || rejection_reason;
+      } else if (isFaceBiometricDocument(document_type) && (biometric_action || face_action) && !status) {
+        status = biometric_action || face_action;
+        rejection_reason = biometric_reason || face_reason || rejection_reason;
+      }
+    }
+
     if (!document_type || !status) {
-      return res.status(400).json({ success: false, message: 'document_type and status are required' });
+      return res.status(400).json({ success: false, message: 'document_type and status (or action) are required' });
     }
 
     const uppercaseStatus = String(status).toUpperCase();
-    if (!['APPROVED', 'REJECTED', 'VERIFIED', 'PENDING'].includes(uppercaseStatus)) {
+    if (!['APPROVED', 'REJECTED', 'VERIFIED', 'PENDING', 'FLAGGED'].includes(uppercaseStatus)) {
       return res.status(400).json({ success: false, message: 'Invalid status' });
     }
 
-    const finalStatus = uppercaseStatus === 'VERIFIED' ? 'APPROVED' : uppercaseStatus;
+    const finalStatus = (uppercaseStatus === 'VERIFIED' || uppercaseStatus === 'APPROVED') ? 'APPROVED' : (uppercaseStatus === 'FLAGGED' ? 'REJECTED' : uppercaseStatus);
+    const normDocType = normalizeDocumentType(document_type);
 
-    const docTypeLower = document_type.toLowerCase();
-    const isVideoDoc = ['video', 'terms_video', 'video_verification'].includes(docTypeLower);
+    // 1. Handle Face Biometric Verification / Review
+    if (isFaceBiometricDocument(normDocType)) {
+      if (finalStatus === 'APPROVED') {
+        await query(`
+          UPDATE employee_biometric_templates
+          SET admin_review_status = 'APPROVED', admin_reviewed_by = $1, admin_reviewed_at = NOW(), admin_review_notes = $2
+          WHERE employee_id = $3 AND status = 'ACTIVE'
+        `, [req.user.id, rejection_reason || 'Biometric template verified and approved by admin', empId]).catch(() => {});
+      } else {
+        await query(`
+          UPDATE employee_biometric_templates
+          SET status = 'REVOKED', revoked_at = NOW(), revoked_by = $1, revocation_reason = $2,
+              admin_review_status = $3, admin_reviewed_by = $1, admin_reviewed_at = NOW(), admin_review_notes = $2
+          WHERE employee_id = $4 AND status = 'ACTIVE'
+        `, [req.user.id, rejection_reason || 'Face biometric snapshot rejected due to image quality', uppercaseStatus, empId]).catch(() => {});
+      }
+
+      const updatedState = await calculateEmployeeVerificationState(empId);
+      return res.json({
+        success: true,
+        message: `Face biometric verification marked as ${finalStatus}`,
+        data: updatedState
+      });
+    }
+
+    // 2. Handle Document Verification
+    const isVideoDoc = isVideoDocument(normDocType);
+    const isBankDoc = isBankDocument(normDocType);
+    const isPanDoc = isPanDocument(normDocType);
+    const isAadhaarDoc = isAadhaarDocument(normDocType);
 
     // Check if document exists in employee_documents
     const existingDoc = isVideoDoc
@@ -2904,9 +3016,14 @@ router.post('/:id/verify-document', async (req, res, next) => {
           `SELECT * FROM employee_documents WHERE employee_id = $1 AND LOWER(document_type) IN ('video', 'terms_video', 'video_verification') ORDER BY created_at DESC LIMIT 1`,
           [empId]
         )
+      : isBankDoc
+      ? await query(
+          `SELECT * FROM employee_documents WHERE employee_id = $1 AND LOWER(document_type) IN ('bank', 'bank_proof', 'bank_passbook', 'cheque', 'passbook') ORDER BY created_at DESC LIMIT 1`,
+          [empId]
+        )
       : await query(
           `SELECT * FROM employee_documents WHERE employee_id = $1 AND LOWER(document_type) = LOWER($2) ORDER BY created_at DESC LIMIT 1`,
-          [empId, document_type]
+          [empId, normDocType]
         );
 
     if (existingDoc.rows.length > 0) {
@@ -2915,7 +3032,13 @@ router.post('/:id/verify-document', async (req, res, next) => {
           UPDATE employee_documents 
           SET verification_status = $1, rejection_reason = $2, verified_by = $3, updated_at = NOW()
           WHERE employee_id = $4 AND LOWER(document_type) IN ('video', 'terms_video', 'video_verification')
-        `, [finalStatus, finalStatus === 'REJECTED' ? (rejection_reason || 'Document rejected') : null, req.user.id, empId]);
+        `, [finalStatus, finalStatus === 'REJECTED' ? (rejection_reason || 'Video recording rejected') : null, req.user.id, empId]);
+      } else if (isBankDoc) {
+        await query(`
+          UPDATE employee_documents 
+          SET verification_status = $1, rejection_reason = $2, verified_by = $3, updated_at = NOW()
+          WHERE employee_id = $4 AND LOWER(document_type) IN ('bank', 'bank_proof', 'bank_passbook', 'cheque', 'passbook')
+        `, [finalStatus, finalStatus === 'REJECTED' ? (rejection_reason || 'Bank proof rejected') : null, req.user.id, empId]);
       } else {
         await query(`
           UPDATE employee_documents 
@@ -2927,23 +3050,23 @@ router.post('/:id/verify-document', async (req, res, next) => {
       await query(`
         INSERT INTO employee_documents (employee_id, document_type, verification_status, rejection_reason, verified_by, document_url, document_key)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
-      `, [empId, document_type, finalStatus, finalStatus === 'REJECTED' ? (rejection_reason || 'Document rejected') : null, req.user.id, 'upload document', `${document_type}_key`]);
+      `, [empId, normDocType, finalStatus, finalStatus === 'REJECTED' ? (rejection_reason || 'Document rejected') : null, req.user.id, 'upload document', `${normDocType}_key`]);
     }
 
     // Sync legacy columns in employee_kyc and terms acceptance if applicable
-    if (docTypeLower === 'pan') {
+    if (isPanDoc) {
       await query(`
         UPDATE employee_kyc 
         SET pan_status = $1, pan_verified = $2, pan_rejection_reason = $3 
         WHERE employee_id = $4
       `, [finalStatus === 'APPROVED' ? 'VERIFIED' : finalStatus, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? rejection_reason : null, empId]).catch(() => {});
-    } else if (docTypeLower === 'aadhaar') {
+    } else if (isAadhaarDoc) {
       await query(`
         UPDATE employee_kyc 
         SET aadhaar_status = $1, aadhaar_verified = $2, aadhaar_rejection_reason = $3 
         WHERE employee_id = $4
       `, [finalStatus === 'APPROVED' ? 'VERIFIED' : finalStatus, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? rejection_reason : null, empId]).catch(() => {});
-    } else if (docTypeLower === 'bank_proof') {
+    } else if (isBankDoc) {
       await query(`
         UPDATE employee_kyc 
         SET bank_status = $1, bank_verified = $2, bank_rejection_reason = $3 
@@ -2963,6 +3086,12 @@ router.post('/:id/verify-document', async (req, res, next) => {
           verified_at = NOW(),
           updated_at = NOW()
       `, [empId, vStatus, rejection_reason || null, req.user.id]).catch(() => {});
+
+      await query(`
+        UPDATE employee_kyc 
+        SET video_status = $1, video_verified = $2, video_rejection_reason = $3
+        WHERE employee_id = $4
+      `, [vStatus, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? rejection_reason : null, empId]).catch(() => {});
     }
 
     // Recalculate complete state
@@ -2970,10 +3099,61 @@ router.post('/:id/verify-document', async (req, res, next) => {
 
     res.json({
       success: true,
-      message: `Document ${document_type} ${finalStatus.toLowerCase()} successfully`,
+      message: `Document ${normDocType} ${finalStatus.toLowerCase()} successfully`,
       data: updatedState
     });
 
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/v1/employees/:id/verify-biometric — Admin approve, reject or flag face biometric enrollment
+router.post('/:id/verify-biometric', async (req, res, next) => {
+  try {
+    const empId = req.params.id;
+    const { action, notes } = req.body; // action: 'APPROVED' | 'REJECTED' | 'FLAGGED'
+
+    if (!action) {
+      return res.status(400).json({ success: false, message: 'action is required (APPROVED, REJECTED, FLAGGED)' });
+    }
+
+    const upperAction = String(action).toUpperCase();
+    if (!['APPROVED', 'REJECTED', 'FLAGGED'].includes(upperAction)) {
+      return res.status(400).json({ success: false, message: 'Invalid action. Must be APPROVED, REJECTED, or FLAGGED' });
+    }
+
+    if (upperAction === 'APPROVED') {
+      await query(`
+        UPDATE employee_biometric_templates
+        SET admin_review_status = 'APPROVED', admin_reviewed_by = $1, admin_reviewed_at = NOW(), admin_review_notes = $2
+        WHERE employee_id = $3 AND status = 'ACTIVE'
+      `, [req.user.id, notes || 'Face biometric enrollment approved by admin', empId]);
+    } else {
+      // REJECTED or FLAGGED: Revoke template so employee must re-enroll with good lighting / clear face
+      await query(`
+        UPDATE employee_biometric_templates
+        SET status = 'REVOKED', revoked_at = NOW(), revoked_by = $1, revocation_reason = $2,
+            admin_review_status = $3, admin_reviewed_by = $1, admin_reviewed_at = NOW(), admin_review_notes = $2
+        WHERE employee_id = $4 AND status = 'ACTIVE'
+      `, [req.user.id, notes || 'Face biometric enrollment rejected due to poor image quality', upperAction, empId]);
+
+      // Send in-app notification to employee
+      await createNotification({
+        userId: (await query(`SELECT user_id FROM employees WHERE id = $1`, [empId])).rows[0]?.user_id,
+        title: 'Face Biometric Check Requires Re-Capture',
+        message: `Your face biometric verification was flagged by admin: ${notes || 'Image unclear or poor lighting'}. Please re-capture your face snapshot in good lighting.`,
+        type: 'KYC_NOTIFICATION'
+      }).catch(() => {});
+    }
+
+    const updatedState = await calculateEmployeeVerificationState(empId);
+
+    res.json({
+      success: true,
+      message: `Face biometric enrollment marked as ${upperAction}`,
+      data: updatedState
+    });
   } catch (err) {
     next(err);
   }
@@ -3037,7 +3217,28 @@ router.post('/:id/verify-section', async (req, res, next) => {
 router.post('/:id/kyc-verify', async (req, res, next) => {
   try {
     const empId = req.params.id;
-    const { kyc_status, review_notes, pan_action, pan_reason, aadhaar_action, aadhaar_reason, bank_proof_action, bank_proof_reason, video_action, video_reason, aadhaar_number, pan_number, bank_account, ifsc_code } = req.body;
+    const {
+      kyc_status,
+      review_notes,
+      pan_action,
+      pan_reason,
+      aadhaar_action,
+      aadhaar_reason,
+      bank_proof_action,
+      bank_proof_reason,
+      bank_action,
+      bank_reason,
+      video_action,
+      video_reason,
+      biometric_action,
+      biometric_reason,
+      face_action,
+      face_reason,
+      aadhaar_number,
+      pan_number,
+      bank_account,
+      ifsc_code
+    } = req.body;
 
     // 0. Update identity details if passed
     if (aadhaar_number || pan_number || bank_account || ifsc_code) {
@@ -3074,6 +3275,7 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
             pan_status = $1, pan_verified = $2, pan_rejection_reason = $3,
             aadhaar_status = $1, aadhaar_verified = $2, aadhaar_rejection_reason = $3,
             bank_status = $1, bank_verified = $2, bank_rejection_reason = $3,
+            video_status = $1, video_verified = $2, video_rejection_reason = $3,
             updated_at = NOW()
         WHERE employee_id = $4
       `, [kycVal, isApproved, isApproved ? null : (review_notes || 'KYC rejected'), empId]).catch(() => {});
@@ -3087,19 +3289,33 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
           ON CONFLICT DO NOTHING
         `, [empId, dType, statusVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, 'upload document', `${dType}_key`]).catch(() => {});
 
-        await query(`
-          UPDATE employee_documents
-          SET verification_status = $1, rejection_reason = $2, verified_by = $3, updated_at = NOW()
-          WHERE employee_id = $4 AND LOWER(document_type) = LOWER($5)
-        `, [statusVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, empId, dType]).catch(() => {});
+        if (dType === 'bank_proof') {
+          await query(`
+            UPDATE employee_documents
+            SET verification_status = $1, rejection_reason = $2, verified_by = $3, updated_at = NOW()
+            WHERE employee_id = $4 AND LOWER(document_type) IN ('bank', 'bank_proof', 'bank_passbook', 'cheque', 'passbook')
+          `, [statusVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, empId]).catch(() => {});
+        } else {
+          await query(`
+            UPDATE employee_documents
+            SET verification_status = $1, rejection_reason = $2, verified_by = $3, updated_at = NOW()
+            WHERE employee_id = $4 AND LOWER(document_type) = LOWER($5)
+          `, [statusVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, empId, dType]).catch(() => {});
+        }
       }
 
-      // Update video terms acceptance
+      // Update video terms acceptance and documents
       await query(`
         UPDATE employee_terms_acceptance
         SET verification_status = $1, verification_notes = $2, verified_by = $3, updated_at = NOW()
         WHERE employee_id = $4
       `, [kycVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, empId]).catch(() => {});
+
+      await query(`
+        UPDATE employee_documents
+        SET verification_status = $1, rejection_reason = $2, verified_by = $3, updated_at = NOW()
+        WHERE employee_id = $4 AND LOWER(document_type) IN ('video', 'terms_video', 'video_verification')
+      `, [statusVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, empId]).catch(() => {});
 
       // Update employee account status
       await query(`
@@ -3109,31 +3325,75 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
       `, [isApproved ? 'APPROVED' : 'REJECTED', isApproved ? 'ACTIVE' : 'ONBOARDING', empId]);
     }
 
-    // 2. Individual document actions (pan_action, bank_proof_action, etc.)
+    // 2. Individual document actions (pan_action, bank_proof_action, video_action, biometric_action, etc.)
     const docActions = [
       { type: 'pan', action: pan_action, reason: pan_reason },
       { type: 'aadhaar', action: aadhaar_action, reason: aadhaar_reason },
-      { type: 'bank_proof', action: bank_proof_action, reason: bank_proof_reason },
-      { type: 'video', action: video_action, reason: video_reason }
+      { type: 'bank_proof', action: bank_proof_action || bank_action, reason: bank_proof_reason || bank_reason },
+      { type: 'video', action: video_action, reason: video_reason },
+      { type: 'face_biometric', action: biometric_action || face_action, reason: biometric_reason || face_reason }
     ];
 
     for (const item of docActions) {
       if (item.action) {
-        const finalStatus = (String(item.action).toUpperCase() === 'VERIFIED' || String(item.action).toUpperCase() === 'APPROVED') ? 'APPROVED' : 'REJECTED';
+        const uppercaseAction = String(item.action).toUpperCase();
+        const finalStatus = (uppercaseAction === 'VERIFIED' || uppercaseAction === 'APPROVED') ? 'APPROVED' : 'REJECTED';
         const kycStatusVal = finalStatus === 'APPROVED' ? 'VERIFIED' : 'REJECTED';
 
+        if (item.type === 'face_biometric') {
+          if (finalStatus === 'APPROVED') {
+            await query(`
+              UPDATE employee_biometric_templates
+              SET admin_review_status = 'APPROVED', admin_reviewed_by = $1, admin_reviewed_at = NOW(), admin_review_notes = $2
+              WHERE employee_id = $3 AND status = 'ACTIVE'
+            `, [req.user.id, item.reason || 'Biometric template approved by admin', empId]).catch(() => {});
+          } else {
+            await query(`
+              UPDATE employee_biometric_templates
+              SET status = 'REVOKED', revoked_at = NOW(), revoked_by = $1, revocation_reason = $2,
+                  admin_review_status = 'REJECTED', admin_reviewed_by = $1, admin_reviewed_at = NOW(), admin_review_notes = $2
+              WHERE employee_id = $3 AND status = 'ACTIVE'
+            `, [req.user.id, item.reason || 'Biometric template rejected by admin', empId]).catch(() => {});
+          }
+          continue;
+        }
+
         // Check/update employee_documents
-        const existingDoc = await query(
-          `SELECT * FROM employee_documents WHERE employee_id = $1 AND LOWER(document_type) = LOWER($2) ORDER BY created_at DESC LIMIT 1`,
-          [empId, item.type]
-        );
+        const existingDoc = item.type === 'video'
+          ? await query(
+              `SELECT * FROM employee_documents WHERE employee_id = $1 AND LOWER(document_type) IN ('video', 'terms_video', 'video_verification') ORDER BY created_at DESC LIMIT 1`,
+              [empId]
+            )
+          : item.type === 'bank_proof'
+          ? await query(
+              `SELECT * FROM employee_documents WHERE employee_id = $1 AND LOWER(document_type) IN ('bank', 'bank_proof', 'bank_passbook', 'cheque', 'passbook') ORDER BY created_at DESC LIMIT 1`,
+              [empId]
+            )
+          : await query(
+              `SELECT * FROM employee_documents WHERE employee_id = $1 AND LOWER(document_type) = LOWER($2) ORDER BY created_at DESC LIMIT 1`,
+              [empId, item.type]
+            );
 
         if (existingDoc.rows.length > 0) {
-          await query(`
-            UPDATE employee_documents 
-            SET verification_status = $1, rejection_reason = $2, verified_by = $3, updated_at = NOW()
-            WHERE id = $4
-          `, [finalStatus, finalStatus === 'REJECTED' ? (item.reason || 'Document rejected') : null, req.user.id, existingDoc.rows[0].id]);
+          if (item.type === 'video') {
+            await query(`
+              UPDATE employee_documents 
+              SET verification_status = $1, rejection_reason = $2, verified_by = $3, updated_at = NOW()
+              WHERE employee_id = $4 AND LOWER(document_type) IN ('video', 'terms_video', 'video_verification')
+            `, [finalStatus, finalStatus === 'REJECTED' ? (item.reason || 'Document rejected') : null, req.user.id, empId]);
+          } else if (item.type === 'bank_proof') {
+            await query(`
+              UPDATE employee_documents 
+              SET verification_status = $1, rejection_reason = $2, verified_by = $3, updated_at = NOW()
+              WHERE employee_id = $4 AND LOWER(document_type) IN ('bank', 'bank_proof', 'bank_passbook', 'cheque', 'passbook')
+            `, [finalStatus, finalStatus === 'REJECTED' ? (item.reason || 'Document rejected') : null, req.user.id, empId]);
+          } else {
+            await query(`
+              UPDATE employee_documents 
+              SET verification_status = $1, rejection_reason = $2, verified_by = $3, updated_at = NOW()
+              WHERE id = $4
+            `, [finalStatus, finalStatus === 'REJECTED' ? (item.reason || 'Document rejected') : null, req.user.id, existingDoc.rows[0].id]);
+          }
         } else {
           await query(`
             INSERT INTO employee_documents (employee_id, document_type, verification_status, rejection_reason, verified_by, document_url, document_key)
@@ -3154,6 +3414,8 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
         } else if (item.type === 'video') {
           await query(`UPDATE employee_terms_acceptance SET verification_status = $1, verification_notes = $2, verified_by = $3 WHERE employee_id = $4`,
             [kycStatusVal, item.reason || null, req.user.id, empId]).catch(() => {});
+          await query(`UPDATE employee_kyc SET video_status = $1, video_verified = $2, video_rejection_reason = $3 WHERE employee_id = $4`,
+            [kycStatusVal, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? item.reason : null, empId]).catch(() => {});
         }
       }
     }

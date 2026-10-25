@@ -8,6 +8,14 @@ const { uploadToS3 } = require('../../services/aws/s3.service');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } }); // 100MB limit for video & KYC uploads
 const { calculateEmployeeVerificationState } = require('../employee-management/verification.service');
+const {
+  DOCUMENT_TYPES,
+  normalizeDocumentType,
+  isVideoDocument,
+  isBankDocument,
+  isPanDocument,
+  isAadhaarDocument
+} = require('../../constants/documentTypes');
 
 // ── Public Employee Authentication (OTP Flow) ──────────────────────────────
 
@@ -1756,11 +1764,11 @@ router.post('/upload-document', upload.single('file'), async (req, res, next) =>
       return res.status(400).json({ success: false, message: 'document_type and file are required' });
     }
 
-    const docTypeLower = String(document_type).toLowerCase().trim();
+    const canonicalDocType = normalizeDocumentType(document_type);
 
     // 1. BACKEND GUARD: Check if this document is already APPROVED / VERIFIED
     const vState = await calculateEmployeeVerificationState(empId);
-    const targetDoc = vState.documents.find(d => String(d.type).toLowerCase() === docTypeLower);
+    const targetDoc = vState.documents.find(d => normalizeDocumentType(d.type) === canonicalDocType);
 
     if (targetDoc && targetDoc.status === 'APPROVED') {
       return res.status(400).json({
@@ -1773,39 +1781,49 @@ router.post('/upload-document', upload.single('file'), async (req, res, next) =>
     const s3Res = await uploadToS3(req.file.buffer, req.file.originalname, `employee-docs/${empId}`);
 
     // 3. Upsert into employee_documents table
-    const existingDocRes = await query(
-      `SELECT id FROM employee_documents WHERE employee_id = $1 AND LOWER(document_type) = LOWER($2)`,
-      [empId, docTypeLower]
-    );
+    const existingDocRes = isBankDocument(canonicalDocType)
+      ? await query(
+          `SELECT id FROM employee_documents WHERE employee_id = $1 AND LOWER(document_type) IN ('bank', 'bank_proof', 'bank_passbook', 'cheque', 'passbook') ORDER BY created_at DESC LIMIT 1`,
+          [empId]
+        )
+      : isVideoDocument(canonicalDocType)
+      ? await query(
+          `SELECT id FROM employee_documents WHERE employee_id = $1 AND LOWER(document_type) IN ('video', 'terms_video', 'video_verification') ORDER BY created_at DESC LIMIT 1`,
+          [empId]
+        )
+      : await query(
+          `SELECT id FROM employee_documents WHERE employee_id = $1 AND LOWER(document_type) = LOWER($2)`,
+          [empId, canonicalDocType]
+        );
 
     if (existingDocRes.rows.length > 0) {
       await query(`
         UPDATE employee_documents 
         SET document_url = $1, document_key = $2, document_file_name = $3, 
-            verification_status = 'UNDER_REVIEW', rejection_reason = NULL, updated_at = NOW()
-        WHERE id = $4
-      `, [s3Res.url, s3Res.key, req.file.originalname, existingDocRes.rows[0].id]);
+            document_type = $4, verification_status = 'UNDER_REVIEW', rejection_reason = NULL, updated_at = NOW()
+        WHERE id = $5
+      `, [s3Res.url, s3Res.key, req.file.originalname, canonicalDocType, existingDocRes.rows[0].id]);
     } else {
       await query(`
         INSERT INTO employee_documents (employee_id, document_type, document_url, document_key, document_file_name, verification_status)
         VALUES ($1, $2, $3, $4, $5, 'UNDER_REVIEW')
-      `, [empId, docTypeLower, s3Res.url, s3Res.key, req.file.originalname]);
+      `, [empId, canonicalDocType, s3Res.url, s3Res.key, req.file.originalname]);
     }
 
     // Also update legacy employee_kyc if applicable
-    if (docTypeLower === 'pan') {
+    if (isPanDocument(canonicalDocType)) {
       await query(`
         UPDATE employee_kyc 
         SET pan_document_url = $1, pan_document_key = $2, pan_status = 'UNDER_REVIEW', pan_verified = false, pan_rejection_reason = NULL 
         WHERE employee_id = $3
       `, [s3Res.url, s3Res.key, empId]).catch(() => {});
-    } else if (docTypeLower === 'aadhaar') {
+    } else if (isAadhaarDocument(canonicalDocType)) {
       await query(`
         UPDATE employee_kyc 
         SET aadhaar_document_url = $1, aadhaar_document_key = $2, aadhaar_status = 'UNDER_REVIEW', aadhaar_verified = false, aadhaar_rejection_reason = NULL 
         WHERE employee_id = $3
       `, [s3Res.url, s3Res.key, empId]).catch(() => {});
-    } else if (docTypeLower === 'bank_proof') {
+    } else if (isBankDocument(canonicalDocType)) {
       await query(`
         UPDATE employee_kyc 
         SET bank_document_url = $1, bank_document_key = $2, bank_status = 'UNDER_REVIEW', bank_verified = false, bank_rejection_reason = NULL 
@@ -1818,7 +1836,7 @@ router.post('/upload-document', upload.single('file'), async (req, res, next) =>
 
     res.json({
       success: true,
-      message: `Document ${document_type} uploaded successfully and sent for verification.`,
+      message: `Document ${canonicalDocType} uploaded successfully and sent for verification.`,
       data: updatedState
     });
 

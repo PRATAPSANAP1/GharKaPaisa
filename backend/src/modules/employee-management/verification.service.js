@@ -2,6 +2,15 @@ const { query } = require('../../config/database');
 const logger = require('../../config/logger');
 const { createNotification } = require('../notifications/service');
 const { getSignedDownloadUrl } = require('../../services/aws/s3.service');
+const {
+  DOCUMENT_TYPES,
+  normalizeDocumentType,
+  isVideoDocument,
+  isBankDocument,
+  isAadhaarDocument,
+  isPanDocument,
+  isFaceBiometricDocument
+} = require('../../constants/documentTypes');
 
 // Helper to convert raw S3 URLs/Keys into presigned S3 download URLs
 const resolveS3Url = async (urlOrKey) => {
@@ -28,9 +37,9 @@ const resolveS3Url = async (urlOrKey) => {
 };
 
 const REQUIRED_DOC_TYPES = [
-  { type: 'pan', label: 'PAN Card' },
-  { type: 'aadhaar', label: 'Aadhaar Card' },
-  { type: 'bank_proof', label: 'Bank Account Proof' }
+  { type: DOCUMENT_TYPES.PAN, label: 'PAN Card' },
+  { type: DOCUMENT_TYPES.AADHAAR, label: 'Aadhaar Card' },
+  { type: DOCUMENT_TYPES.BANK_PROOF, label: 'Bank Account Proof' }
 ];
 
 /**
@@ -80,9 +89,13 @@ async function calculateEmployeeVerificationState(employeeId) {
 
   const docsMap = {};
   for (const d of docsRes.rows) {
-    const t = String(d.document_type || '').toLowerCase().trim();
-    if (t && !docsMap[t]) {
-      docsMap[t] = d;
+    const rawT = String(d.document_type || '').toLowerCase().trim();
+    const normT = normalizeDocumentType(rawT);
+    if (normT && !docsMap[normT]) {
+      docsMap[normT] = d;
+    }
+    if (rawT && !docsMap[rawT]) {
+      docsMap[rawT] = d;
     }
   }
 
@@ -114,19 +127,19 @@ async function calculateEmployeeVerificationState(employeeId) {
       uploadedAt = docRow.created_at;
     } else {
       // Check fallback legacy fields in employee_kyc
-      if (dType === 'pan' && kyc && (kyc.pan_document_url || kyc.pan_number)) {
+      if (isPanDocument(dType) && kyc && (kyc.pan_document_url || kyc.pan_number)) {
         fileUrl = await resolveS3Url(kyc.pan_document_url);
         rejectionReason = kyc.pan_rejection_reason || null;
         if (kyc.pan_verified || kyc.pan_status === 'VERIFIED') docStatus = 'APPROVED';
         else if (kyc.pan_status === 'REJECTED') docStatus = 'REJECTED';
         else if (kyc.pan_document_url) docStatus = 'UNDER_REVIEW';
-      } else if (dType === 'aadhaar' && kyc && (kyc.aadhaar_document_url || kyc.aadhaar_number)) {
+      } else if (isAadhaarDocument(dType) && kyc && (kyc.aadhaar_document_url || kyc.aadhaar_number)) {
         fileUrl = await resolveS3Url(kyc.aadhaar_document_url);
         rejectionReason = kyc.aadhaar_rejection_reason || null;
         if (kyc.aadhaar_verified || kyc.aadhaar_status === 'VERIFIED') docStatus = 'APPROVED';
         else if (kyc.aadhaar_status === 'REJECTED') docStatus = 'REJECTED';
         else if (kyc.aadhaar_document_url) docStatus = 'UNDER_REVIEW';
-      } else if (dType === 'bank_proof' && kyc && (kyc.bank_document_url || kyc.bank_account_number)) {
+      } else if (isBankDocument(dType) && kyc && (kyc.bank_document_url || kyc.bank_account_number)) {
         fileUrl = await resolveS3Url(kyc.bank_document_url);
         rejectionReason = kyc.bank_rejection_reason || null;
         if (kyc.bank_verified || kyc.bank_status === 'VERIFIED') docStatus = 'APPROVED';
@@ -246,20 +259,55 @@ async function calculateEmployeeVerificationState(employeeId) {
     });
   }
 
-  // 6. Fetch Face Biometric Reference Template
+  // 6. Fetch Face Biometric Reference Template & Admin Review Status
   const bioRes = await query(`
-    SELECT id, status, s3_key FROM employee_biometric_templates WHERE employee_id = $1 AND status = 'ACTIVE' LIMIT 1
+    SELECT id, status, s3_key, s3_bucket, version, admin_review_status, admin_review_notes, admin_reviewed_at, created_at 
+    FROM employee_biometric_templates 
+    WHERE employee_id = $1 AND status = 'ACTIVE' 
+    ORDER BY created_at DESC LIMIT 1
   `, [employeeId]).catch(() => ({ rows: [] }));
-  const hasBiometricReference = bioRes.rows.length > 0;
-  const biometricStatus = hasBiometricReference ? 'VERIFIED' : 'NOT_COMPLETED';
 
-  if (!hasBiometricReference) {
+  const activeBio = bioRes.rows[0] || null;
+  const hasBiometricReference = !!activeBio;
+  let biometricStatus = 'NOT_COMPLETED';
+  let bioReviewNotes = null;
+
+  if (hasBiometricReference) {
+    bioReviewNotes = activeBio.admin_review_notes || null;
+    const adminRev = String(activeBio.admin_review_status || '').toUpperCase();
+    if (adminRev === 'REJECTED' || adminRev === 'FLAGGED') {
+      biometricStatus = 'REJECTED';
+      missingItems.push({
+        type: 'face_biometric',
+        label: 'Face Biometric Verification',
+        status: 'REJECTED',
+        reason: bioReviewNotes || 'Face biometric enrollment rejected or flagged by admin',
+        text: `Face Biometric Verification – Rejected${bioReviewNotes ? ' (' + bioReviewNotes + ')' : ''}`
+      });
+    } else if (adminRev === 'APPROVED') {
+      biometricStatus = 'VERIFIED';
+    } else {
+      // Enrolled by employee, awaiting admin review or ready for attendance
+      biometricStatus = 'UNDER_REVIEW';
+      underReviewItems.push({
+        type: 'face_biometric',
+        label: 'Face Biometric Verification',
+        status: 'UNDER_REVIEW',
+        text: 'Face Biometric Verification – Under Review'
+      });
+    }
+  } else {
     missingItems.push({
       type: 'face_biometric',
       label: 'Face Biometric Verification',
       status: 'NOT_COMPLETED',
       text: 'Face Biometric Verification – Pending'
     });
+  }
+
+  let faceImageUrl = null;
+  if (activeBio?.s3_key) {
+    faceImageUrl = await resolveS3Url(activeBio.s3_key);
   }
 
   // Overall Status
@@ -330,7 +378,16 @@ async function calculateEmployeeVerificationState(employeeId) {
     face_status: biometricStatus,
     face_biometric_status: biometricStatus,
     has_biometric_reference: hasBiometricReference,
-    biometric_enrolled_at: bioRes.rows[0]?.created_at || null,
+    biometric_enrolled_at: activeBio?.created_at || null,
+    biometric_template: activeBio ? {
+      id: activeBio.id,
+      version: activeBio.version || 1,
+      status: activeBio.status,
+      admin_review_status: activeBio.admin_review_status || 'PENDING',
+      admin_review_notes: activeBio.admin_review_notes || null,
+      admin_reviewed_at: activeBio.admin_reviewed_at || null,
+      image_url: faceImageUrl
+    } : null,
     documents,
     missing_items: missingItems,
     under_review_items: underReviewItems,
