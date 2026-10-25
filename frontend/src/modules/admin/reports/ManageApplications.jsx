@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
@@ -107,12 +107,14 @@ export default function ManageApplications() {
   // Agent Lookup lists
   const [partnersList, setPartnersList] = useState([]);
   const [employeesList, setEmployeesList] = useState([]);
+  const abortControllerRef = useRef(null);
 
   useEffect(() => {
     const fetchAgents = async () => {
       try {
+        const isAdminUser = ['ADMIN', 'SUPER_ADMIN'].includes(userRole);
         const [pRes, eRes] = await Promise.all([
-          api.get('/admin/partners', { params: { limit: 1000 } }).catch(() => null),
+          isAdminUser ? api.get('/admin/partners', { params: { limit: 1000 } }).catch(() => null) : Promise.resolve(null),
           api.get('/employees', { params: { limit: 1000 } }).catch(() => null)
         ]);
 
@@ -218,10 +220,18 @@ export default function ManageApplications() {
   };
 
   const fetchApplications = async () => {
+    // Abort previous in-flight request to prevent race conditions or pool saturation
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setLoading(true);
     setErr("");
     try {
       const res = await api.get("/applications", {
+        signal: controller.signal,
         params: {
           page,
           limit,
@@ -304,13 +314,26 @@ export default function ManageApplications() {
         }
       }
     } catch (e) {
+      if (e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED' || e?.isCanceled) {
+        return; // Request was aborted cleanly for subsequent fetch; do not show error
+      }
       console.error('Error fetching applications in ManageApplications:', e);
       const errMsg = e.response?.data?.message || e.message || "Failed to load applications";
       setErr(errMsg);
     } finally {
-      setLoading(false);
+      if (abortControllerRef.current === controller) {
+        setLoading(false);
+      }
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     fetchApplications();
