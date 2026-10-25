@@ -10,6 +10,7 @@ import { getApiV1Url } from '../../config/api';
 import PartnerDashboardComponent from '../partner/dashboard/PartnerDashboardComponent';
 import FaceVerificationModal from './profile/FaceVerificationModal';
 import EmployeeDashboardRedesigned from './EmployeeDashboardRedesigned';
+import LoadingLogo from '../../components/Loader/LoadingLogo';
 
 export default function EmployeeDashboard() {
   const { C } = useTheme();
@@ -83,7 +84,11 @@ export default function EmployeeDashboard() {
   };
 
   if (loading) {
-    return <div style={{ padding: '60px 16px', textAlign: 'center', background: C.bg, minHeight: '100vh', color: C.text }}>Loading Employee Dashboard...</div>;
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh', background: C.bg }}>
+        <LoadingLogo size={110} />
+      </div>
+    );
   }
 
   const missingItems = verState?.missing_items || [];

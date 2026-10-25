@@ -117,18 +117,7 @@ export default function EmployeeSettingsPortal() {
       overflowX: 'hidden'
     }}>
       
-      {/* Page Header */}
-      <div style={{ padding: isMobile ? '4px 2px' : '0' }}>
-        <span style={{ fontSize: '11px', fontWeight: 900, color: C.teal || '#0F766E', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-          Employee Portal Controls
-        </span>
-        <h1 style={{ fontSize: isMobile ? '20px' : '28px', fontWeight: 900, color: C.text, margin: '4px 0 6px 0', lineHeight: 1.2 }}>
-          SETTINGS & PREFERENCES
-        </h1>
-        <p style={{ fontSize: isMobile ? '12px' : '13px', color: C.textMid, margin: 0, lineHeight: 1.5 }}>
-          Manage your account preferences, security credentials, notification channels, and employee profile.
-        </p>
-      </div>
+
 
       {/* Main Settings Layout (Sidebar / Scrollable Tabs + Content Panel) */}
       <div style={{ 

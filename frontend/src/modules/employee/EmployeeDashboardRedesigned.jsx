@@ -11,6 +11,7 @@ import {
 import axios from 'axios';
 import api from '../../services/api';
 import { getApiV1Url } from '../../config/api';
+import LoadingLogo from '../../components/Loader/LoadingLogo';
 
 // Static Banner Image Assets
 import offerBanner from '../home/components/banner/offerbanner.png';
@@ -227,19 +228,13 @@ export default function EmployeeDashboardRedesigned() {
   if (loading) {
     return (
       <div style={{ 
-        padding: '60px 24px', 
-        textAlign: 'center', 
-        background: C.bg, 
-        minHeight: '100vh', 
-        color: C.text,
-        fontFamily: "'Inter', sans-serif"
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '80vh', 
+        background: C.bg 
       }}>
-        <div style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>
-          Loading GharKaPaisa Dashboard...
-        </div>
-        <div style={{ fontSize: '13px', color: C.textMid }}>
-          Fetching your personalized portal updates...
-        </div>
+        <LoadingLogo size={110} />
       </div>
     );
   }
