@@ -177,7 +177,7 @@ export default function EmployeeLayout() {
         top: 0,
         left: 0,
         height: '100vh',
-        background: C.card,
+        background: `linear-gradient(180deg, ${C.sidebar} 0%, ${C.sidebarGradient} 100%)`,
         borderRight: `1px solid ${C.border}`,
         display: 'flex',
         flexDirection: 'column',
@@ -187,23 +187,23 @@ export default function EmployeeLayout() {
       }}>
         
         {/* Brand Header */}
-        <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ padding: '24px', borderBottom: `1px solid rgba(255,255,255,0.1)`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Link to="/employee/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none' }}>
-            <img src={logo} alt="GharKaPaisa" style={{ height: '34px' }} />
+            <img src={logo} alt="GharKaPaisa" style={{ height: '36px' }} />
             <div>
-              <span style={{ fontSize: '15px', fontWeight: 900, color: C.text, display: 'block', lineHeight: 1.1 }}>GharKaPaisa</span>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: C.employeePrimary || '#0F766E', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Employee Portal</span>
+              <span style={{ fontSize: '16px', fontWeight: 900, color: '#FFFFFF', display: 'block', lineHeight: 1.1 }}>GharKaPaisa</span>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Employee Portal</span>
             </div>
           </Link>
           {isMobile && (
-            <button onClick={() => setMobileMenuOpen(false)} style={{ background: 'none', border: 'none', color: C.textMid, cursor: 'pointer', fontSize: '18px' }}>
+            <button onClick={() => setMobileMenuOpen(false)} style={{ background: 'none', border: 'none', color: '#FFFFFF', cursor: 'pointer', fontSize: '18px' }}>
               <FaTimes />
             </button>
           )}
         </div>
 
         {/* Navigation Menu */}
-        <nav style={{ flex: 1, padding: '8px 16px', display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto' }}>
+        <nav style={{ flex: 1, padding: '12px 18px', display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto' }}>
           {navItems.map((item) => {
             const active = location.pathname === item.path;
             const isMessenger = item.path === '/employee/messenger';
@@ -216,17 +216,28 @@ export default function EmployeeLayout() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '12px',
-                  padding: '12px 16px',
+                  padding: '11px 14px',
                   borderRadius: '12px',
-                  fontSize: '13.5px',
-                  fontWeight: active ? 800 : 600,
-                  color: active ? '#ffffff' : C.textMid,
-                  background: active ? (C.employeePrimary || '#0F766E') : 'transparent',
+                  fontSize: '14px',
+                  fontWeight: active ? 600 : 500,
+                  color: active ? '#FFFFFF' : C.sidebarInactive,
+                  background: active ? C.navyMid : 'transparent',
                   textDecoration: 'none',
-                  transition: 'all 0.2s'
+                  transition: 'background-color 0.18s ease',
+                  border: active ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent'
+                }}
+                onMouseEnter={(e) => {
+                  if (!active) {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!active) {
+                    e.currentTarget.style.background = 'transparent';
+                  }
                 }}
               >
-                <span style={{ fontSize: '16px' }}>{item.icon}</span>
+                <span style={{ fontSize: '18px', color: active ? '#FFFFFF' : C.sidebarIconInactive }}>{item.icon}</span>
                 <span style={{ flex: 1 }}>{item.label}</span>
                 {isMessenger && messengerUnread > 0 && (
                   <span style={{
@@ -247,18 +258,29 @@ export default function EmployeeLayout() {
         </nav>
 
         {/* Sidebar Footer */}
-        <div style={{ padding: '14px 16px', borderTop: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ padding: '16px 18px', borderTop: `1px solid rgba(255,255,255,0.1)`, display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '12px', color: C.textMid, fontWeight: 600 }}>Theme Mode</span>
+            <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>Theme</span>
             <button 
               onClick={toggleTheme}
               style={{
-                background: C.bgSecondary, border: `1px solid ${C.border}`,
-                borderRadius: '20px', padding: '5px 12px', display: 'flex', alignItems: 'center', gap: '6px',
-                color: C.text, fontSize: '12px', fontWeight: 700, cursor: 'pointer'
+                background: 'rgba(255,255,255,0.1)', 
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '20px', 
+                padding: '6px 12px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '6px',
+                color: '#FFFFFF', 
+                fontSize: '12px', 
+                fontWeight: 600, 
+                cursor: 'pointer',
+                transition: 'background 0.18s ease'
               }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
             >
-              {theme === 'dark' ? <FaSun style={{ color: '#F59E0B' }} /> : <FaMoon style={{ color: '#6B7280' }} />}
+              {theme === 'dark' ? <FaSun style={{ color: '#F59E0B' }} /> : <FaMoon style={{ color: '#FFFFFF' }} />}
               {theme === 'dark' ? 'Light' : 'Dark'}
             </button>
           </div>
@@ -275,23 +297,23 @@ export default function EmployeeLayout() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              padding: '9px 14px',
+              padding: '10px 14px',
               borderRadius: '10px',
-              background: 'rgba(239, 68, 68, 0.08)',
-              border: '1px solid rgba(239, 68, 68, 0.25)',
-              color: '#DC2626',
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              color: '#FFFFFF',
               fontSize: '13px',
-              fontWeight: 800,
+              fontWeight: 600,
               cursor: 'pointer',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.18s ease'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.16)';
-              e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+              e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)';
-              e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+              e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
             }}
           >
             <FaSignOutAlt style={{ fontSize: '14px' }} />
@@ -306,7 +328,7 @@ export default function EmployeeLayout() {
         {/* Top Navbar */}
         <header style={{ 
           height: '64px', background: C.card, borderBottom: `1px solid ${C.border}`, 
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px',
           position: 'sticky', top: 0, zIndex: 99
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -318,7 +340,7 @@ export default function EmployeeLayout() {
                 <FaBars />
               </button>
             )}
-            <h2 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0 }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 700, color: C.text, margin: 0 }}>
               {navItems.find(n => n.path === location.pathname)?.label || 'Employee Workspace'}
             </h2>
           </div>

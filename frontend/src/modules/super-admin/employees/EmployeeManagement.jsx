@@ -63,11 +63,16 @@ export default function EmployeeManagement() {
   const [rejectingDocKey, setRejectingDocKey] = useState(null);
   const [docRejectReasonInput, setDocRejectReasonInput] = useState('');
   const [docIdentityFields, setDocIdentityFields] = useState({
-    aadhaar_number: '4521 8892 1045',
-    pan_number: 'ABCDE1234F',
-    bank_account: '918230918231',
-    ifsc_code: 'HDFC0001234',
-    admin_remarks: 'All verified during video KYC.'
+    aadhaar_number: '',
+    pan_number: '',
+    bank_account: '',
+    bank_name: '',
+    bank_account_holder_name: '',
+    branch_name: '',
+    ifsc_code: '',
+    date_of_birth: '',
+    gender: '',
+    admin_remarks: ''
   });
   const [viewingDocModal, setViewingDocModal] = useState(null);
 
@@ -90,11 +95,16 @@ export default function EmployeeManagement() {
         const docs = data.documents || [];
 
         setDocIdentityFields({
-          aadhaar_number: kyc.aadhaar_number || emp.aadhaar_number || 'N/A',
-          pan_number: kyc.pan_number || emp.pan_number || 'N/A',
-          bank_account: kyc.bank_account_number || emp.bank_account_number || 'N/A',
-          ifsc_code: kyc.ifsc_code || emp.ifsc_code || 'N/A',
-          admin_remarks: kyc.review_notes || 'KYC profile updated.'
+          aadhaar_number: kyc.aadhaar_number || emp.aadhaar_number || '',
+          pan_number: kyc.pan_number || emp.pan_number || '',
+          bank_account: kyc.bank_account_number || emp.bank_account_number || '',
+          bank_name: kyc.bank_name || emp.bank_name || '',
+          bank_account_holder_name: kyc.bank_account_holder_name || emp.bank_account_holder_name || emp.full_name || '',
+          branch_name: kyc.branch_name || emp.branch_name || '',
+          ifsc_code: kyc.ifsc_code || emp.ifsc_code || '',
+          date_of_birth: emp.date_of_birth ? new Date(emp.date_of_birth).toISOString().split('T')[0] : '',
+          gender: emp.gender || '',
+          admin_remarks: kyc.review_notes || ''
         });
 
         const findDoc = (types) => docs.find(d => types.includes(String(d.document_type || '').toLowerCase().trim()));
@@ -3228,6 +3238,38 @@ Generated On        : ${new Date().toLocaleString()}
                       <div style={{ fontSize: '14px', fontWeight: 800 }}>{emp360Data.employee.joining_date ? new Date(emp360Data.employee.joining_date).toLocaleDateString() : (emp360Data.joining_details?.joining_date ? new Date(emp360Data.joining_details.joining_date).toLocaleDateString() : 'N/A')}</div>
                     </div>
                     <div>
+                      <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Date of Birth & Gender</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800 }}>
+                        {emp360Data.employee.date_of_birth ? new Date(emp360Data.employee.date_of_birth).toLocaleDateString() : 'N/A'}
+                        {emp360Data.employee.gender ? ` (${emp360Data.employee.gender})` : ''}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Emergency Contact</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800 }}>
+                        {emp360Data.employee.emergency_contact_name || emp360Data.joining_details?.emergency_contact_name || 'N/A'}
+                        {(emp360Data.employee.emergency_contact_number || emp360Data.joining_details?.emergency_contact_number) ? ` (${emp360Data.employee.emergency_contact_number || emp360Data.joining_details?.emergency_contact_number})` : ''}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Blood Group & Father</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800 }}>
+                        {emp360Data.employee.blood_group || emp360Data.joining_details?.blood_group || 'N/A'}
+                        {(emp360Data.employee.father_name || emp360Data.joining_details?.father_name) ? ` • S/O ${emp360Data.employee.father_name || emp360Data.joining_details?.father_name}` : ''}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Reporting Manager</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800 }}>{emp360Data.employee.reporting_manager || emp360Data.joining_details?.reporting_manager || emp360Data.employee.manager_name || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Bank Details</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800 }}>
+                        {emp360Data.employee.bank_name || emp360Data.joining_details?.bank_name || 'Bank N/A'}
+                        {(emp360Data.employee.branch_name || emp360Data.joining_details?.branch_name) ? ` - ${emp360Data.employee.branch_name || emp360Data.joining_details?.branch_name}` : ''}
+                      </div>
+                    </div>
+                    <div>
                       <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Activation Status</div>
                       <div style={{ fontSize: '14px', fontWeight: 800, color: emp360Data.employee.activation_status === 'APPROVED' ? '#10B981' : (emp360Data.employee.activation_status === 'REJECTED' ? '#EF4444' : '#F59E0B') }}>
                         {emp360Data.employee.activation_status || 'PENDING'}
@@ -3238,6 +3280,14 @@ Generated On        : ${new Date().toLocaleString()}
                       <div style={{ fontSize: '14px', fontWeight: 800, color: emp360Data.employee.employee_status === 'ACTIVE' ? '#10B981' : '#6B7280' }}>
                         {emp360Data.employee.employee_status || 'N/A'}
                       </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Current Address</div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: C.text }}>{emp360Data.employee.current_address || emp360Data.joining_details?.current_address || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Permanent Address</div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: C.text }}>{emp360Data.employee.permanent_address || emp360Data.joining_details?.permanent_address || 'Same as current'}</div>
                     </div>
                     <div>
                       <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Created At</div>
@@ -3297,8 +3347,9 @@ Generated On        : ${new Date().toLocaleString()}
 
                         <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
                           <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>8. Bank Account Details</span>
-                          <strong>A/C: {emp360Data.joining_details.bank_account_number || 'N/A'}</strong>
-                          <div style={{ fontSize: '12px', color: C.textMid }}>IFSC: {emp360Data.joining_details.ifsc_code || 'N/A'} ({emp360Data.joining_details.bank_account_holder_name})</div>
+                          <strong>{emp360Data.joining_details.bank_name || emp360Data.employee.bank_name || 'Bank'} {emp360Data.joining_details.branch_name || emp360Data.employee.branch_name ? `(${emp360Data.joining_details.branch_name || emp360Data.employee.branch_name})` : ''}</strong>
+                          <div style={{ fontSize: '12px', color: C.text, fontWeight: 700 }}>A/C: {emp360Data.joining_details.bank_account_number || 'N/A'}</div>
+                          <div style={{ fontSize: '12px', color: C.textMid }}>IFSC: {emp360Data.joining_details.ifsc_code || 'N/A'} ({emp360Data.joining_details.bank_account_holder_name || emp360Data.employee.full_name})</div>
                         </div>
 
                         <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
@@ -3337,6 +3388,13 @@ Generated On        : ${new Date().toLocaleString()}
                             {emp360Data.joining_details.form_status}
                           </strong>
                           <div style={{ fontSize: '12px', color: C.textMid }}>Declaration: {emp360Data.joining_details.declaration_accepted ? '✓ Accepted' : 'Pending'}</div>
+                        </div>
+
+                        <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>15. Family & Emergency Contact</span>
+                          <strong>{emp360Data.joining_details.emergency_contact_name || emp360Data.employee.emergency_contact_name || 'N/A'}</strong>
+                          <div style={{ fontSize: '12px', color: C.textMid }}>Phone: {emp360Data.joining_details.emergency_contact_number || emp360Data.employee.emergency_contact_number || 'N/A'}</div>
+                          <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Father: {emp360Data.joining_details.father_name || emp360Data.employee.father_name || 'N/A'} • Blood: {emp360Data.joining_details.blood_group || emp360Data.employee.blood_group || 'N/A'}</div>
                         </div>
                       </div>
                     ) : (
@@ -5044,6 +5102,52 @@ Generated On        : ${new Date().toLocaleString()}
                             <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Bank Access</span>
                             <strong style={{ color: C.text }}>{drawerEmp.active_links_count !== undefined ? `${drawerEmp.active_links_count} Products Assigned` : (drawerEmp.bank_count !== undefined ? `${drawerEmp.bank_count} Banks Assigned` : 'N/A')}</strong>
                           </div>
+
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Date of Birth & Gender</span>
+                            <strong style={{ color: C.text }}>
+                              {drawerEmp.date_of_birth ? new Date(drawerEmp.date_of_birth).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                              {drawerEmp.gender ? ` (${drawerEmp.gender})` : ''}
+                            </strong>
+                          </div>
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Emergency Contact</span>
+                            <strong style={{ color: C.text }}>
+                              {drawerEmp.emergency_contact_name || 'N/A'}
+                              {drawerEmp.emergency_contact_number ? ` (${drawerEmp.emergency_contact_number})` : ''}
+                            </strong>
+                          </div>
+
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Blood Group & Father</span>
+                            <strong style={{ color: C.text }}>
+                              {drawerEmp.blood_group || 'N/A'}
+                              {drawerEmp.father_name ? ` • S/O ${drawerEmp.father_name}` : ''}
+                            </strong>
+                          </div>
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Salary & Type</span>
+                            <strong style={{ color: '#10B981' }}>
+                              ₹{drawerEmp.offered_salary || 0} / mo
+                              <span style={{ color: C.textMid, fontSize: '11.5px', fontWeight: 600 }}> ({drawerEmp.employment_type || 'Full Time'})</span>
+                            </strong>
+                          </div>
+
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Bank Account</span>
+                            <strong style={{ color: C.text }}>
+                              {drawerEmp.bank_name || 'Bank N/A'}
+                              {drawerEmp.branch_name ? ` (${drawerEmp.branch_name})` : ''}
+                              <div style={{ fontSize: '11.5px', color: C.textMid }}>A/C: {drawerEmp.bank_account_number || 'N/A'} • IFSC: {drawerEmp.ifsc_code || 'N/A'}</div>
+                            </strong>
+                          </div>
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Address</span>
+                            <strong style={{ color: C.text, fontSize: '12px' }}>
+                              {drawerEmp.current_address || 'N/A'}
+                              {drawerEmp.permanent_address && drawerEmp.permanent_address !== drawerEmp.current_address ? ` (Perm: ${drawerEmp.permanent_address})` : ''}
+                            </strong>
+                          </div>
                         </div>
                       </div>
                     ) : (
@@ -5149,94 +5253,146 @@ Generated On        : ${new Date().toLocaleString()}
                       </div>
                     )}
 
-                    {/* 4 Status Summary Cards Grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                      {/* KYC Status Card */}
-                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <div style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 800 }}>KYC Status</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                          <div style={{ width: '22px', height: '22px', borderRadius: '0px', background: '#10B981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 900 }}>✓</div>
-                          <span style={{ fontSize: '13.5px', fontWeight: 900, color: '#059669' }}>Completed</span>
-                        </div>
-                        <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>All documents verified</div>
-                      </div>
+                    {/* 4 Status Summary Cards Grid (Dynamic live status) */}
+                    {(() => {
+                      const kycStatus = drawer360Data?.kyc_verification?.overall_status || drawerEmp.kyc_status || (drawerEmp.activation_status === 'APPROVED' ? 'VERIFIED' : 'PENDING');
+                      const isKycVerified = kycStatus === 'VERIFIED' || kycStatus === 'APPROVED';
+                      const isKycRejected = kycStatus === 'REJECTED';
+                      const isKycUnderReview = kycStatus === 'UNDER_REVIEW' || kycStatus === 'SUBMITTED';
 
-                      {/* Face Verification Card */}
-                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <div style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 800 }}>Face Verification</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                          <div style={{ width: '22px', height: '22px', borderRadius: '0px', background: '#F59E0B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 900 }}>▲</div>
-                          <span style={{ fontSize: '13.5px', fontWeight: 900, color: '#D97706' }}>Pending</span>
-                        </div>
-                        <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Biometric reference not captured</div>
-                      </div>
+                      const hasBiometric = !!(drawer360Data?.biometric_template && drawer360Data.biometric_template.status === 'ACTIVE');
+                      const bioAdminStatus = (drawer360Data?.biometric_template?.admin_review_status || 'PENDING').toUpperCase();
+                      const isBioApproved = hasBiometric && (bioAdminStatus === 'APPROVED' || bioAdminStatus === 'VERIFIED');
+                      const isBioFlagged = hasBiometric && (bioAdminStatus === 'FLAGGED' || bioAdminStatus === 'REJECTED');
 
-                      {/* Attendance Card */}
-                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <div style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 800 }}>Attendance</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                          <div style={{ width: '22px', height: '22px', borderRadius: '0px', background: '#10B981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 900 }}>✓</div>
-                          <span style={{ fontSize: '13.5px', fontWeight: 900, color: '#059669' }}>Enabled</span>
-                        </div>
-                        <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Can mark attendance</div>
-                      </div>
+                      const attEnabled = !(drawerEmp.attendance_access === false || drawerEmp.attendance_enabled === false);
 
-                      {/* Team Assignment Card */}
-                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <div style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 800 }}>Team Assignment</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                          <div style={{ width: '22px', height: '22px', borderRadius: '0px', background: '#4F46E5', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>👥</div>
-                          <span style={{ fontSize: '13.5px', fontWeight: 900, color: '#4F46E5' }}>Assigned</span>
+                      const teamName = drawerEmp.team_name || drawerEmp.team || (drawerEmp.team_leader_name ? `${drawerEmp.team_leader_name}'s Team` : null);
+
+                      return (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                          {/* KYC Status Card */}
+                          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 800 }}>KYC Status</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                              <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: isKycVerified ? '#10B981' : isKycRejected ? '#EF4444' : isKycUnderReview ? '#2563EB' : '#F59E0B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 900 }}>
+                                {isKycVerified ? '✓' : isKycRejected ? '✕' : isKycUnderReview ? '⏳' : '●'}
+                              </div>
+                              <span style={{ fontSize: '13.5px', fontWeight: 900, color: isKycVerified ? '#059669' : isKycRejected ? '#DC2626' : isKycUnderReview ? '#2563EB' : '#D97706' }}>
+                                {isKycVerified ? 'Completed' : isKycRejected ? 'Rejected' : isKycUnderReview ? 'Under Review' : 'Pending'}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>
+                              {isKycVerified ? 'All documents verified' : isKycRejected ? 'KYC documents rejected' : isKycUnderReview ? 'Awaiting admin review' : 'Documents pending upload'}
+                            </div>
+                          </div>
+
+                          {/* Face Verification Card */}
+                          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 800 }}>Face Verification</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                              <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: isBioApproved ? '#10B981' : isBioFlagged ? '#EF4444' : hasBiometric ? '#2563EB' : '#F59E0B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 900 }}>
+                                {isBioApproved ? '✓' : isBioFlagged ? '✕' : hasBiometric ? '✓' : '▲'}
+                              </div>
+                              <span style={{ fontSize: '13.5px', fontWeight: 900, color: isBioApproved ? '#059669' : isBioFlagged ? '#DC2626' : hasBiometric ? '#2563EB' : '#D97706' }}>
+                                {isBioApproved ? 'Verified' : isBioFlagged ? 'Flagged' : hasBiometric ? 'Enrolled' : 'Pending'}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>
+                              {isBioApproved ? 'Biometric approved' : isBioFlagged ? 'Biometric flagged for review' : hasBiometric ? 'Biometric captured' : 'Biometric reference not captured'}
+                            </div>
+                          </div>
+
+                          {/* Attendance Card */}
+                          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 800 }}>Attendance</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                              <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: attEnabled ? '#10B981' : '#EF4444', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 900 }}>
+                                {attEnabled ? '✓' : '✕'}
+                              </div>
+                              <span style={{ fontSize: '13.5px', fontWeight: 900, color: attEnabled ? '#059669' : '#DC2626' }}>
+                                {attEnabled ? 'Enabled' : 'Disabled'}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>
+                              {attEnabled ? 'Can mark attendance' : 'Attendance access disabled'}
+                            </div>
+                          </div>
+
+                          {/* Team Assignment Card */}
+                          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 800 }}>Team Assignment</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                              <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: teamName ? '#4F46E5' : '#9CA3AF', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>
+                                👥
+                              </div>
+                              <span style={{ fontSize: '13.5px', fontWeight: 900, color: teamName ? '#4F46E5' : '#6B7280' }}>
+                                {teamName ? 'Assigned' : 'Unassigned'}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {teamName || 'No team assigned'}
+                            </div>
+                          </div>
                         </div>
-                        <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Team Alpha</div>
-                      </div>
-                    </div>
+                      );
+                    })()}
 
                     {/* Recent Activity Timeline Card */}
-                    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '18px' }}>
+                    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '18px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                         <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>Recent Activity</h4>
-                        <button style={{ background: '#EEF2FF', border: 'none', color: '#4F46E5', padding: '4px 10px', borderRadius: '0px', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer' }}>
-                          View All
-                        </button>
+                        {drawer360Data?.recent_activities?.length > 0 && (
+                          <span style={{ background: '#EEF2FF', color: '#4F46E5', padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800 }}>
+                            {drawer360Data.recent_activities.length} Recorded
+                          </span>
+                        )}
                       </div>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '12.5px' }}>
-                          <div style={{ width: '28px', height: '28px', borderRadius: '0px', background: '#D1FAE5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, flexShrink: 0 }}>✓</div>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 800, color: C.text }}>Employee account activated</div>
-                            <div style={{ fontSize: '11px', color: C.textMid }}>by Super Admin</div>
-                          </div>
-                          <div style={{ fontSize: '11px', color: C.textMid, textAlign: 'right' }}>
-                            <div>Oct 2, 2026</div>
-                            <div>10:30 AM</div>
-                          </div>
-                        </div>
+                        {drawer360Data?.recent_activities && drawer360Data.recent_activities.length > 0 ? (
+                          drawer360Data.recent_activities.map((act, actIdx) => {
+                            const actDate = act.timestamp ? new Date(act.timestamp) : null;
+                            const dateStr = actDate && !isNaN(actDate.getTime()) ? actDate.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+                            const timeStr = actDate && !isNaN(actDate.getTime()) ? actDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
+                            const iconBg = act.type === 'activated' ? '#D1FAE5' : act.type === 'biometric' ? '#E0E7FF' : act.type === 'kyc' ? '#EFF6FF' : '#F3E8FF';
+                            const iconColor = act.type === 'activated' ? '#059669' : act.type === 'biometric' ? '#4F46E5' : act.type === 'kyc' ? '#2563EB' : '#7C3AED';
+                            const iconSymbol = act.type === 'activated' ? '✓' : act.type === 'biometric' ? '👤' : act.type === 'kyc' ? '📄' : '📝';
 
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '12.5px' }}>
-                          <div style={{ width: '28px', height: '28px', borderRadius: '0px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, flexShrink: 0 }}>📄</div>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 800, color: C.text }}>KYC documents submitted</div>
-                            <div style={{ fontSize: '11px', color: C.textMid }}>by Employee</div>
+                            return (
+                              <div key={actIdx} style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '12.5px' }}>
+                                <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: iconBg, color: iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, flexShrink: 0 }}>
+                                  {iconSymbol}
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontWeight: 800, color: C.text }}>{act.title}</div>
+                                  <div style={{ fontSize: '11px', color: C.textMid }}>by {act.by || 'System'}</div>
+                                </div>
+                                <div style={{ fontSize: '11px', color: C.textMid, textAlign: 'right' }}>
+                                  <div>{dateStr}</div>
+                                  {timeStr && <div>{timeStr}</div>}
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div style={{ padding: '14px', textAlign: 'center', color: C.textMid, fontSize: '12px', background: C.bgSecondary, borderRadius: '8px' }}>
+                            {drawerEmp.created_at ? (
+                              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '12.5px', textAlign: 'left' }}>
+                                <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: '#F3E8FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, flexShrink: 0 }}>👤</div>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontWeight: 800, color: C.text }}>Employee profile created</div>
+                                  <div style={{ fontSize: '11px', color: C.textMid }}>System record created</div>
+                                </div>
+                                <div style={{ fontSize: '11px', color: C.textMid, textAlign: 'right' }}>
+                                  <div>{new Date(drawerEmp.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                                </div>
+                              </div>
+                            ) : (
+                              'No recent activity recorded yet'
+                            )}
                           </div>
-                          <div style={{ fontSize: '11px', color: C.textMid, textAlign: 'right' }}>
-                            <div>Oct 1, 2026</div>
-                            <div>04:15 PM</div>
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '12.5px' }}>
-                          <div style={{ width: '28px', height: '28px', borderRadius: '0px', background: '#F3E8FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, flexShrink: 0 }}>👤</div>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 800, color: C.text }}>Employee created</div>
-                            <div style={{ fontSize: '11px', color: C.textMid }}>by Super Admin</div>
-                          </div>
-                          <div style={{ fontSize: '11px', color: C.textMid, textAlign: 'right' }}>
-                            <div>Sep 28, 2026</div>
-                            <div>11:20 AM</div>
-                          </div>
-                        </div>
+                        )}
                       </div>
                     </div>
 
@@ -5288,6 +5444,28 @@ Generated On        : ${new Date().toLocaleString()}
                         </div>
 
                         <div>
+                          <label style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, display: 'block', marginBottom: '3px' }}>Bank Name</label>
+                          <input 
+                            type="text" 
+                            value={docIdentityFields.bank_name || ''} 
+                            onChange={(e) => setDocIdentityFields({ ...docIdentityFields, bank_name: e.target.value })}
+                            placeholder="e.g. HDFC Bank, SBI..."
+                            style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12px', fontWeight: 700 }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, display: 'block', marginBottom: '3px' }}>Branch Name</label>
+                          <input 
+                            type="text" 
+                            value={docIdentityFields.branch_name || ''} 
+                            onChange={(e) => setDocIdentityFields({ ...docIdentityFields, branch_name: e.target.value })}
+                            placeholder="e.g. Mumbai Main Branch"
+                            style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12px', fontWeight: 700 }}
+                          />
+                        </div>
+
+                        <div>
                           <label style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, display: 'block', marginBottom: '3px' }}>Bank Account No.</label>
                           <input 
                             type="text" 
@@ -5303,6 +5481,26 @@ Generated On        : ${new Date().toLocaleString()}
                             type="text" 
                             value={docIdentityFields.ifsc_code} 
                             onChange={(e) => setDocIdentityFields({ ...docIdentityFields, ifsc_code: e.target.value })}
+                            style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12px', fontWeight: 700 }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, display: 'block', marginBottom: '3px' }}>Account Holder Name</label>
+                          <input 
+                            type="text" 
+                            value={docIdentityFields.bank_account_holder_name || ''} 
+                            onChange={(e) => setDocIdentityFields({ ...docIdentityFields, bank_account_holder_name: e.target.value })}
+                            style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12px', fontWeight: 700 }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, display: 'block', marginBottom: '3px' }}>Date of Birth</label>
+                          <input 
+                            type="date" 
+                            value={docIdentityFields.date_of_birth || ''} 
+                            onChange={(e) => setDocIdentityFields({ ...docIdentityFields, date_of_birth: e.target.value })}
                             style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12px', fontWeight: 700 }}
                           />
                         </div>
@@ -5327,6 +5525,10 @@ Generated On        : ${new Date().toLocaleString()}
                                 aadhaar_number: docIdentityFields.aadhaar_number,
                                 pan_number: docIdentityFields.pan_number,
                                 bank_account: docIdentityFields.bank_account,
+                                bank_name: docIdentityFields.bank_name,
+                                branch_name: docIdentityFields.branch_name,
+                                bank_account_holder_name: docIdentityFields.bank_account_holder_name,
+                                date_of_birth: docIdentityFields.date_of_birth,
                                 ifsc_code: docIdentityFields.ifsc_code,
                                 review_notes: docIdentityFields.admin_remarks
                               });

@@ -529,7 +529,22 @@ const getApplicationsDashboard = async (req, res, next) => {
     let partnerId = null;
     let userId = req.user?.id || null;
     const userRole = (req.user?.role || '').toUpperCase();
-    const isPartnerOrTeam = ['PARTNER', 'TEAM_MEMBER', 'EMPLOYEE'].includes(userRole);
+    const userDesignation = (req.user?.designation || '').toUpperCase();
+    const isStaffOrOperatorUser = [
+      'ADMIN', 'SUPER_ADMIN', 'SUPERADMIN', 'HR',
+      'OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONS_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION',
+      'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'OPERATOR',
+      'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR',
+      'PAN CHECKER', 'PAN_CHECKER',
+      'QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER',
+      'REMARK OPERATOR', 'REMARK_OPERATOR',
+      'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR',
+      'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR',
+      'PHYSICAL CURABLE', 'PHYSICAL_CURABLE', 'PHYSICAL CURABLE OPERATOR', 'PHYSICAL_CURABLE_OPERATOR',
+      'DIGITAL CURABLE', 'DIGITAL_CURABLE', 'DIGITAL CURABLE OPERATOR', 'DIGITAL_CURABLE_OPERATOR',
+      'EMAIL CURABLE', 'EMAIL_CURABLE', 'EMAIL CURABLE OPERATOR', 'EMAIL_CURABLE_OPERATOR'
+    ].some(title => userDesignation.includes(title) || userRole === title);
+    const isPartnerOrTeam = ['PARTNER', 'TEAM_MEMBER'].includes(userRole) || (userRole === 'EMPLOYEE' && !isStaffOrOperatorUser);
 
     if (isPartnerOrTeam) {
       const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
@@ -1656,7 +1671,22 @@ const listApplications = async (req, res, next) => {
     let partnerId = null;
     let userId = null;
     const userRole = (req.user?.role || '').toUpperCase();
-    const isPartnerOrTeam = ['PARTNER', 'TEAM_MEMBER', 'EMPLOYEE'].includes(userRole);
+    const userDesignation = (req.user?.designation || '').toUpperCase();
+    const isStaffOrOperatorUser = [
+      'ADMIN', 'SUPER_ADMIN', 'SUPERADMIN', 'HR',
+      'OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONS_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION',
+      'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'OPERATOR',
+      'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR',
+      'PAN CHECKER', 'PAN_CHECKER',
+      'QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER',
+      'REMARK OPERATOR', 'REMARK_OPERATOR',
+      'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR',
+      'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR',
+      'PHYSICAL CURABLE', 'PHYSICAL_CURABLE', 'PHYSICAL CURABLE OPERATOR', 'PHYSICAL_CURABLE_OPERATOR',
+      'DIGITAL CURABLE', 'DIGITAL_CURABLE', 'DIGITAL CURABLE OPERATOR', 'DIGITAL_CURABLE_OPERATOR',
+      'EMAIL CURABLE', 'EMAIL_CURABLE', 'EMAIL CURABLE OPERATOR', 'EMAIL_CURABLE_OPERATOR'
+    ].some(title => userDesignation.includes(title) || userRole === title);
+    const isPartnerOrTeam = ['PARTNER', 'TEAM_MEMBER'].includes(userRole) || (userRole === 'EMPLOYEE' && !isStaffOrOperatorUser);
 
     if (isPartnerOrTeam) {
       const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
@@ -1717,7 +1747,6 @@ const listApplications = async (req, res, next) => {
       } catch (bErr) {}
     }
     const validBankId = isUuid(targetBankId) ? targetBankId : null;
-    const userDesignation = (req.user?.designation || '').toUpperCase();
     let rawStatus = status && status.trim() ? status.trim() : null;
     const validStatus = rawStatus;
     const validSearch = search && search.trim() ? `%${search.trim()}%` : null;
@@ -1738,6 +1767,7 @@ const listApplications = async (req, res, next) => {
     const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR', 'PHYSICAL CURABLE', 'PHYSICAL_CURABLE', 'DIGITAL CURABLE', 'DIGITAL_CURABLE', 'EMAIL CURABLE', 'EMAIL_CURABLE', 'PHYSICAL CURABLE OPERATOR', 'PHYSICAL_CURABLE_OPERATOR', 'DIGITAL CURABLE OPERATOR', 'DIGITAL_CURABLE_OPERATOR', 'EMAIL CURABLE OPERATOR', 'EMAIL_CURABLE_OPERATOR'].includes(userDesignation) || ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR', 'PHYSICAL CURABLE', 'PHYSICAL_CURABLE', 'DIGITAL CURABLE', 'DIGITAL_CURABLE', 'EMAIL CURABLE', 'EMAIL_CURABLE', 'PHYSICAL CURABLE OPERATOR', 'PHYSICAL_CURABLE_OPERATOR', 'DIGITAL CURABLE OPERATOR', 'DIGITAL_CURABLE_OPERATOR', 'EMAIL CURABLE OPERATOR', 'EMAIL_CURABLE_OPERATOR'].includes(userRole);
     const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
     const isSalesExecOnlyUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
+    const isAdministrativeOperatorUser = ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'OPERATOR'].includes(userRole);
     let isLocEocAdmin = false;
     let regularBankAssignments = [];
     let abRows = [];
@@ -1791,6 +1821,8 @@ const listApplications = async (req, res, next) => {
           FROM admin_bank_assignments aba
           LEFT JOIN banks b ON b.id = aba.bank_id
           WHERE aba.admin_id = $1
+             OR aba.admin_id IN (SELECT id FROM employees WHERE user_id = $1)
+             OR aba.admin_id IN (SELECT user_id FROM employees WHERE id = $1)
         `, [req.user.id]);
       } catch (abaErr) {
         resAssignments = await query(`
@@ -1798,6 +1830,8 @@ const listApplications = async (req, res, next) => {
           FROM admin_bank_assignments aba
           LEFT JOIN banks b ON b.id = aba.bank_id
           WHERE aba.admin_id = $1
+             OR aba.admin_id IN (SELECT id FROM employees WHERE user_id = $1)
+             OR aba.admin_id IN (SELECT user_id FROM employees WHERE id = $1)
         `, [req.user.id]);
       }
       abRows = resAssignments.rows;
@@ -1826,7 +1860,12 @@ const listApplications = async (req, res, next) => {
       };
 
       if (!abRows || abRows.length === 0) {
-        baseBankAccessFilterSQL = ` AND 1=0`;
+        if (isAdministrativeOperatorUser) {
+          // Administrative Operator without restricted bank assignments gets full application visibility
+          baseBankAccessFilterSQL = '';
+        } else {
+          baseBankAccessFilterSQL = ` AND 1=0`;
+        }
       } else {
         const byCat = {};
         for (const b of abRows) {
@@ -2022,6 +2061,9 @@ const listApplications = async (req, res, next) => {
 
     if (!isPartnerOrTeam && !isSuperAdmin && req.user?.id) {
       if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser || isQdOperatorUser || isFinalStatusOperatorUser || isQuerableOperatorUser || isCurableOperatorUser) {
+        opHeadBankFilterSQL = ``;
+        countOpHeadBankFilterSQL = ``;
+      } else if (isAdministrativeOperatorUser && (!abRows || abRows.length === 0)) {
         opHeadBankFilterSQL = ``;
         countOpHeadBankFilterSQL = ``;
       } else {
@@ -4027,10 +4069,16 @@ const exportApplicationsCSV = async (req, res, next) => {
         FROM admin_bank_assignments aba
         LEFT JOIN banks b ON b.id = aba.bank_id
         WHERE aba.admin_id = $1
+           OR aba.admin_id IN (SELECT id FROM employees WHERE user_id = $1)
+           OR aba.admin_id IN (SELECT user_id FROM employees WHERE id = $1)
       `, [userId]).catch(() => ({ rows: [] }));
 
       if (abRows.length === 0) {
-        whereClause = `WHERE 1=0`;
+        if (isAdminOperator) {
+          whereClause = ``;
+        } else {
+          whereClause = `WHERE 1=0`;
+        }
       } else {
         const pairClauses = abRows.map(b => {
           const isVirtualLocBank = (b.short_code || '').toUpperCase() === 'LOC_EOC' || /loc[\s/_]*eoc|loan\s+on\s+card/i.test(b.name || '');

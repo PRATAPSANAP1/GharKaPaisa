@@ -682,6 +682,10 @@ export default function ManageApplications() {
                       </span>
                     );
                   })
+                ) : isAdministrativeOperatorUser ? (
+                  <span style={{ fontSize: '11.5px', color: '#10B981', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    🌐 All Banks Operational Access
+                  </span>
                 ) : (
                   <span style={{ fontSize: '11.5px', color: '#EF4444', fontWeight: 700 }}>
                     No banks/categories assigned

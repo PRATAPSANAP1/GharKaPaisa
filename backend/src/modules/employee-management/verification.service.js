@@ -260,12 +260,26 @@ async function calculateEmployeeVerificationState(employeeId) {
   }
 
   // 6. Fetch Face Biometric Reference Template & Admin Review Status
-  const bioRes = await query(`
-    SELECT id, status, s3_key, s3_bucket, version, admin_review_status, admin_review_notes, admin_reviewed_at, created_at 
-    FROM employee_biometric_templates 
-    WHERE employee_id = $1 AND status = 'ACTIVE' 
-    ORDER BY created_at DESC LIMIT 1
-  `, [employeeId]).catch(() => ({ rows: [] }));
+  let bioRes;
+  try {
+    bioRes = await query(`
+      SELECT id, status, s3_key, s3_bucket, version,
+             COALESCE(to_jsonb(b)->>'admin_review_status', 'PENDING') as admin_review_status,
+             to_jsonb(b)->>'admin_review_notes' as admin_review_notes,
+             (to_jsonb(b)->>'admin_reviewed_at')::timestamptz as admin_reviewed_at,
+             created_at 
+      FROM employee_biometric_templates b
+      WHERE employee_id = $1 AND status = 'ACTIVE' 
+      ORDER BY created_at DESC LIMIT 1
+    `, [employeeId]);
+  } catch (err) {
+    bioRes = await query(`
+      SELECT id, status, s3_key, s3_bucket, version, created_at 
+      FROM employee_biometric_templates 
+      WHERE employee_id = $1 AND status = 'ACTIVE' 
+      ORDER BY created_at DESC LIMIT 1
+    `, [employeeId]).catch(() => ({ rows: [] }));
+  }
 
   const activeBio = bioRes.rows[0] || null;
   const hasBiometricReference = !!activeBio;

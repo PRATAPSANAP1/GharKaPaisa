@@ -56,6 +56,12 @@ async function syncAndSeedEmployees() {
     await query(`ALTER TABLE employee_hierarchy ADD COLUMN IF NOT EXISTS senior_manager_id UUID REFERENCES employees(id)`).catch(() => {});
     await query(`ALTER TABLE employee_hierarchy ADD COLUMN IF NOT EXISTS branch_head_id UUID REFERENCES employees(id)`).catch(() => {});
 
+    // Ensure biometric templates admin review columns exist
+    await query(`ALTER TABLE employee_biometric_templates ADD COLUMN IF NOT EXISTS admin_review_status VARCHAR(20) DEFAULT 'PENDING'`).catch(() => {});
+    await query(`ALTER TABLE employee_biometric_templates ADD COLUMN IF NOT EXISTS admin_review_notes TEXT`).catch(() => {});
+    await query(`ALTER TABLE employee_biometric_templates ADD COLUMN IF NOT EXISTS admin_reviewed_at TIMESTAMPTZ`).catch(() => {});
+    await query(`ALTER TABLE employee_biometric_templates ADD COLUMN IF NOT EXISTS admin_reviewed_by UUID REFERENCES users(id)`).catch(() => {});
+
     // Ensure Employee Bank Assignment & Bonus Rules tables exist
     await query(`
       CREATE TABLE IF NOT EXISTS employee_bank_assignments (
@@ -736,7 +742,14 @@ router.get('/:id', async (req, res, next) => {
     
     // 1. Employee profile
     const empRes = await query(`
-      SELECT e.*, c.resume_url
+      SELECT 
+        e.*, 
+        c.resume_url,
+        c.date_of_birth as candidate_dob,
+        c.current_address as candidate_address,
+        c.highest_qualification as candidate_qualification,
+        c.total_experience_years as candidate_exp_years,
+        c.experience_type as candidate_exp_type
       FROM employees e
       LEFT JOIN employee_candidates c ON (e.candidate_id IS NOT NULL AND c.id = e.candidate_id) OR (e.candidate_id IS NULL AND c.reference_code = e.employee_id)
       WHERE e.id = $1
@@ -753,6 +766,25 @@ router.get('/:id', async (req, res, next) => {
       [id]
     );
 
+    const joiningData = joiningRes.rows[0] || {};
+
+    // Enrich employee with joining details and candidate details fallback
+    employee.date_of_birth = employee.date_of_birth || joiningData.date_of_birth || employee.candidate_dob || null;
+    employee.gender = employee.gender || joiningData.gender || null;
+    employee.current_address = employee.current_address || joiningData.current_address || employee.candidate_address || null;
+    employee.permanent_address = employee.permanent_address || joiningData.permanent_address || null;
+    employee.emergency_contact_name = employee.emergency_contact_name || joiningData.emergency_contact_name || null;
+    employee.emergency_contact_number = employee.emergency_contact_number || joiningData.emergency_contact_number || null;
+    employee.blood_group = employee.blood_group || joiningData.blood_group || null;
+    employee.father_name = employee.father_name || joiningData.father_name || null;
+    employee.bank_account_holder_name = employee.bank_account_holder_name || joiningData.bank_account_holder_name || employee.full_name || null;
+    employee.bank_name = employee.bank_name || joiningData.bank_name || null;
+    employee.branch_name = employee.branch_name || joiningData.branch_name || null;
+    employee.highest_qualification = employee.highest_qualification || joiningData.highest_qualification || employee.candidate_qualification || null;
+    employee.reporting_manager = employee.reporting_manager || joiningData.reporting_manager || null;
+    employee.total_experience_years = employee.total_experience_years || joiningData.total_experience_years || employee.candidate_exp_years || null;
+    employee.notice_period_days = employee.notice_period_days || joiningData.notice_period_days || null;
+
     // 3. KYC details (check by employee_id or mobile_number)
     const kycRes = await query(
       `SELECT * FROM employee_kyc WHERE employee_id = $1 ORDER BY created_at DESC LIMIT 1`,
@@ -760,7 +792,6 @@ router.get('/:id', async (req, res, next) => {
     );
 
     let kycData = kycRes.rows[0] || null;
-    const joiningData = joiningRes.rows[0] || {};
 
     if (!kycData) {
       if (joiningData.pan_number || joiningData.aadhaar_number || joiningData.bank_account_number || employee.pan_number || employee.aadhaar_number) {
@@ -770,6 +801,9 @@ router.get('/:id', async (req, res, next) => {
           aadhaar_number: joiningData.aadhaar_number || employee.aadhaar_number || null,
           aadhaar_document_url: null,
           bank_account_number: joiningData.bank_account_number || employee.bank_account_number || null,
+          bank_account_holder_name: joiningData.bank_account_holder_name || employee.bank_account_holder_name || employee.full_name || null,
+          bank_name: joiningData.bank_name || employee.bank_name || null,
+          branch_name: joiningData.branch_name || null,
           ifsc_code: joiningData.ifsc_code || employee.ifsc_code || null,
           bank_document_url: null,
           kyc_status: 'SUBMITTED'
@@ -779,6 +813,9 @@ router.get('/:id', async (req, res, next) => {
       kycData.pan_number = kycData.pan_number || joiningData.pan_number || employee.pan_number || null;
       kycData.aadhaar_number = kycData.aadhaar_number || joiningData.aadhaar_number || employee.aadhaar_number || null;
       kycData.bank_account_number = kycData.bank_account_number || joiningData.bank_account_number || employee.bank_account_number || null;
+      kycData.bank_account_holder_name = kycData.bank_account_holder_name || joiningData.bank_account_holder_name || employee.bank_account_holder_name || employee.full_name || null;
+      kycData.bank_name = kycData.bank_name || joiningData.bank_name || employee.bank_name || null;
+      kycData.branch_name = kycData.branch_name || joiningData.branch_name || null;
       kycData.ifsc_code = kycData.ifsc_code || joiningData.ifsc_code || employee.ifsc_code || null;
     }
 
@@ -873,13 +910,28 @@ router.get('/:id', async (req, res, next) => {
     }
 
     // 10. Biometric data
-    const bioRes = await query(
-      `SELECT id, status, s3_key, s3_bucket, version, admin_review_status, admin_review_notes, admin_reviewed_at, created_at as enrolled_at 
-       FROM employee_biometric_templates 
-       WHERE employee_id = $1 AND status = 'ACTIVE' 
-       ORDER BY created_at DESC LIMIT 1`,
-      [id]
-    ).catch(() => ({ rows: [] }));
+    let bioRes;
+    try {
+      bioRes = await query(
+        `SELECT id, status, s3_key, s3_bucket, version,
+                COALESCE(to_jsonb(b)->>'admin_review_status', 'PENDING') as admin_review_status,
+                to_jsonb(b)->>'admin_review_notes' as admin_review_notes,
+                (to_jsonb(b)->>'admin_reviewed_at')::timestamptz as admin_reviewed_at,
+                created_at as enrolled_at 
+         FROM employee_biometric_templates b 
+         WHERE employee_id = $1 AND status = 'ACTIVE' 
+         ORDER BY created_at DESC LIMIT 1`,
+        [id]
+      );
+    } catch (err) {
+      bioRes = await query(
+        `SELECT id, status, s3_key, s3_bucket, version, created_at as enrolled_at 
+         FROM employee_biometric_templates 
+         WHERE employee_id = $1 AND status = 'ACTIVE' 
+         ORDER BY created_at DESC LIMIT 1`,
+        [id]
+      ).catch(() => ({ rows: [] }));
+    }
 
     let bioImageUrl = null;
     if (bioRes.rows.length > 0 && bioRes.rows[0].s3_key) {
@@ -901,6 +953,106 @@ router.get('/:id', async (req, res, next) => {
       } : null
     };
 
+    // 11. Compile dynamic recent audit & onboarding activities from verified timestamps
+    const recentActivities = [];
+
+    if (employee.activated_at) {
+      recentActivities.push({
+        id: 'act-activation',
+        type: 'ACTIVATION',
+        title: 'Employee account activated',
+        subtitle: 'Activated by Super Admin',
+        timestamp: employee.activated_at,
+        icon: '✓',
+        color: '#059669',
+        bg: '#D1FAE5'
+      });
+    }
+
+    if (bioRes.rows.length > 0) {
+      const bioItem = bioRes.rows[0];
+      const isBioApproved = bioItem.admin_review_status === 'APPROVED';
+      const isBioRejected = bioItem.admin_review_status === 'REJECTED' || bioItem.admin_review_status === 'FLAGGED';
+      recentActivities.push({
+        id: 'act-biometric',
+        type: 'BIOMETRIC',
+        title: isBioApproved ? 'Face biometric approved' : (isBioRejected ? 'Face biometric flagged/rejected' : 'Face biometric enrolled'),
+        subtitle: isBioApproved ? (bioItem.admin_review_notes ? `Approved: ${bioItem.admin_review_notes}` : 'Biometric locked for attendance') : 'Authoritative biometric captured',
+        timestamp: bioItem.admin_reviewed_at || bioItem.enrolled_at,
+        icon: '👤',
+        color: isBioApproved ? '#059669' : isBioRejected ? '#DC2626' : '#7C3AED',
+        bg: isBioApproved ? '#D1FAE5' : isBioRejected ? '#FEE2E2' : '#F3E8FF'
+      });
+    }
+
+    if (kycData) {
+      if (kycData.kyc_status === 'VERIFIED') {
+        recentActivities.push({
+          id: 'act-kyc-verified',
+          type: 'KYC_VERIFIED',
+          title: 'KYC documents verified & approved',
+          subtitle: 'All identity proofs verified by Admin',
+          timestamp: kycData.reviewed_at || kycData.updated_at || employee.updated_at,
+          icon: '✓',
+          color: '#059669',
+          bg: '#D1FAE5'
+        });
+      } else if (kycData.submitted_at || kycData.created_at) {
+        recentActivities.push({
+          id: 'act-kyc-submitted',
+          type: 'KYC_SUBMITTED',
+          title: 'KYC documents submitted',
+          subtitle: 'Identity documents submitted for review',
+          timestamp: kycData.submitted_at || kycData.created_at,
+          icon: '📄',
+          color: '#2563EB',
+          bg: '#EFF6FF'
+        });
+      }
+    }
+
+    if (termsData && termsData.accepted_at) {
+      recentActivities.push({
+        id: 'act-terms',
+        type: 'TERMS',
+        title: termsData.video_url ? 'Terms accepted & video uploaded' : 'Terms & policies accepted',
+        subtitle: 'Digital consent and verification recorded',
+        timestamp: termsData.accepted_at,
+        icon: '📝',
+        color: '#0284C7',
+        bg: '#E0F2FE'
+      });
+    }
+
+    if (joiningData && (joiningData.submitted_at || joiningData.created_at)) {
+      recentActivities.push({
+        id: 'act-joining',
+        type: 'JOINING_FORM',
+        title: 'Joining form submitted',
+        subtitle: `Status: ${joiningData.form_status || 'SUBMITTED'}`,
+        timestamp: joiningData.submitted_at || joiningData.created_at,
+        icon: '📋',
+        color: '#D97706',
+        bg: '#FEF3C7'
+      });
+    }
+
+    if (employee.created_at) {
+      recentActivities.push({
+        id: 'act-created',
+        type: 'CREATED',
+        title: 'Employee profile created',
+        subtitle: 'System onboarded record',
+        timestamp: employee.created_at,
+        icon: '⚡',
+        color: '#4F46E5',
+        bg: '#EEF2FF'
+      });
+    }
+
+    // Sort descending by timestamp
+    recentActivities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
     res.json({
       success: true,
       data: {
@@ -914,7 +1066,8 @@ router.get('/:id', async (req, res, next) => {
         product_links: linksRes.rows,
         incentives_summary: incRes.rows[0],
         biometrics,
-        verification_state: vState
+        verification_state: vState,
+        recent_activities: recentActivities
       }
     });
 
@@ -3237,11 +3390,14 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
       aadhaar_number,
       pan_number,
       bank_account,
+      bank_account_holder_name,
+      bank_name,
+      branch_name,
       ifsc_code
     } = req.body;
 
     // 0. Update identity details if passed
-    if (aadhaar_number || pan_number || bank_account || ifsc_code) {
+    if (aadhaar_number || pan_number || bank_account || ifsc_code || bank_account_holder_name || bank_name) {
       const existingKyc = await query(`SELECT id FROM employee_kyc WHERE employee_id = $1 LIMIT 1`, [empId]);
       if (existingKyc.rows.length > 0) {
         await query(`
@@ -3250,15 +3406,16 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
               pan_number = COALESCE($2, pan_number),
               bank_account_number = COALESCE($3, bank_account_number),
               ifsc_code = COALESCE($4, ifsc_code),
-              review_notes = COALESCE($5, review_notes),
+              bank_account_holder_name = COALESCE($5, bank_account_holder_name),
+              review_notes = COALESCE($6, review_notes),
               updated_at = NOW()
-          WHERE employee_id = $6
-        `, [aadhaar_number || null, pan_number || null, bank_account || null, ifsc_code || null, review_notes || null, empId]).catch(() => {});
+          WHERE employee_id = $7
+        `, [aadhaar_number || null, pan_number || null, bank_account || null, ifsc_code || null, bank_account_holder_name || null, review_notes || null, empId]).catch(() => {});
       } else {
         await query(`
-          INSERT INTO employee_kyc (employee_id, aadhaar_number, pan_number, bank_account_number, ifsc_code, review_notes, kyc_status)
-          VALUES ($1, $2, $3, $4, $5, $6, 'SUBMITTED')
-        `, [empId, aadhaar_number || null, pan_number || null, bank_account || null, ifsc_code || null, review_notes || null]).catch(() => {});
+          INSERT INTO employee_kyc (employee_id, aadhaar_number, pan_number, bank_account_number, bank_account_holder_name, ifsc_code, review_notes, kyc_status)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, 'SUBMITTED')
+        `, [empId, aadhaar_number || null, pan_number || null, bank_account || null, bank_account_holder_name || null, ifsc_code || null, review_notes || null]).catch(() => {});
       }
     }
 

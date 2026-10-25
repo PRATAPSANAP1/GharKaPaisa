@@ -9,6 +9,7 @@ import axios from 'axios';
 import { getApiV1Url } from '../../config/api';
 import PartnerDashboardComponent from '../partner/dashboard/PartnerDashboardComponent';
 import FaceVerificationModal from './profile/FaceVerificationModal';
+import EmployeeDashboardRedesigned from './EmployeeDashboardRedesigned';
 
 export default function EmployeeDashboard() {
   const { C } = useTheme();
@@ -92,14 +93,8 @@ export default function EmployeeDashboard() {
   const isApproved = employee?.activation_status === 'APPROVED' || employee?.employee_status === 'ACTIVE';
 
   if (isApproved && verState?.overall_status === 'VERIFIED' && !isVideoRejected) {
-    // When approved & verified (and video is NOT rejected), render Partner Dashboard
-    const partnerAdapter = {
-      ...employee,
-      partner_id: employee?.user_id || employee?.id,
-      partner_code: employee?.employee_id,
-      kyc_status: 'approved'
-    };
-    return <PartnerDashboardComponent partner={partnerAdapter} />;
+    // When approved & verified (and video is NOT rejected), render redesigned dashboard
+    return <EmployeeDashboardRedesigned />;
   }
 
   const isOverallVerified = verState?.overall_status === 'VERIFIED' && !isVideoRejected;

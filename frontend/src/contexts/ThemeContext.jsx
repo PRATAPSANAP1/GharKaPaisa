@@ -13,64 +13,82 @@ const BRAND = {
 
 // ── Light Theme ────────────────────────────────────────────────────────────────
 export const LIGHT = {
-  bg:          "#F8FAFC",   // Page Background
-  bgSecondary: "#EEF2FF",   // Purple Light
+  bg:          "#F5F8F7",   // Main background
+  bgSecondary: "#E8F7EF",   // Soft green surface
   card:        "#FFFFFF",   // Card Background
-  sidebar:     "#0F172A",   // Sidebar Background
+  sidebar:     "#063F38",   // Main sidebar dark green
+  sidebarGradient: "#07594C", // Sidebar gradient end
   sidebarText: "#FFFFFF",
-  text:        "#111827",   // Text Primary
-  textMid:     "#64748B",   // Text Secondary
-  textLight:   "#94A3B8",   // Light Text / Inactive Menu Icon
-  primary:     "#4F46E5",   // Primary (Indigo)
-  primaryDark: "#3730A3",   // Darker Indigo
-  green:       "#EA580C",   // Replaced success green accent with orange
-  greenLight:  "#FFF7ED",   // Orange light
-  red:         "#EF4444",   // Danger
-  gold:        "#F59E0B",   // Warning
-  border:      "#E5E7EB",   // Border
+  sidebarInactive: "#D7E8E3", // Inactive nav text
+  sidebarIconInactive: "#C2D9D3", // Inactive nav icons
+  text:        "#101828",   // Main heading text
+  textMid:     "#475569",   // Secondary text
+  textLight:   "#64748B",   // Muted text
+  primary:     "#008A60",   // Primary brand green
+  primaryDark: "#007F5B",   // Hover green
+  primaryButton: "#009B70", // Button green
+  green:       "#008A60",   // Success green
+  greenLight:  "#DDF8EA",   // Success background
+  red:         "#F04444",   // Red alert
+  gold:        "#F59E0B",   // Orange accent
+  goldLight:   "#FFF1DF",   // Orange background
+  purple:      "#8B5CF6",   // Purple accent
+  purpleLight: "#F1EBFF",   // Purple background
+  blue:        "#3B82F6",   // Blue accent
+  blueLight:   "#EAF2FF",   // Blue background
+  border:      "#E3EBE8",   // Border
   inputBg:     "#FFFFFF",
-  teal:        "#4F46E5",
-  tealDim:     "#7C3AED",   // Secondary (Purple)
-  navy:        "#0F172A",
-  navyMid:     "#1E293B",   // Sidebar Hover
-  tealGlow:    "rgba(79, 70, 229, 0.15)",
+  teal:        "#008A60",
+  tealDim:     "#007F5B",
+  navy:        "#063F38",
+  navyMid:     "#087F6B",   // Active nav background
+  tealGlow:    "rgba(0, 138, 96, 0.15)",
   amber:       "#F59E0B",
   // ── Employee Panel Tokens ──
-  employeePrimary:     "#0F766E",   // Deep Teal
-  employeePrimaryDark: "#115E59",
-  employeeGlow:        "rgba(15, 118, 110, 0.14)",
-  employeeIncentive:   "#0F766E",
+  employeePrimary:     "#008A60",   // Primary brand green
+  employeePrimaryDark: "#007F5B",
+  employeeGlow:        "rgba(0, 138, 96, 0.14)",
+  employeeIncentive:   "#008A60",
 };
 
 // ── Dark Theme ─────────────────────────────────────────────────────────────────
 export const DARK = {
-  bg:          "#000000",   // Black background
-  bgSecondary: "#000000",   // Black background secondary
-  card:        "#000000",   // Black card surface
-  sidebar:     "#000000",   // Black sidebar
+  bg:          "#0A0F0D",   // Very dark green tint
+  bgSecondary: "#0D1411",   // Slightly lighter
+  card:        "#0F1A17",   // Dark green card
+  sidebar:     "#063F38",   // Main sidebar dark green
+  sidebarGradient: "#07594C", // Sidebar gradient end
   sidebarText: "#FFFFFF",
-  text:        "#F8FAFC",   // Crisp text
-  textMid:     "#E4E4E7",   // Secondary labels
-  textLight:   "#A1A1AA",   // Muted hints (WCAG 2.1 AA Compliant 7.3:1)
-  primary:     "#F97316",   // Vibrant orange accent (WCAG 2.1 AA Compliant 5.5:1)
-  primaryDark: "#EA580C",   // Darker orange for gradient
-  green:       "#F97316",   // Replaced success green with orange
-  greenLight:  "#FFEDD5",   // Light orange highlight
-  red:         "#EF4444",
-  gold:        "#F59E0B",   // Warning gold
-  border:      "#27272A",   // Zinc border (provides contrast on #000000)
-  inputBg:     "#000000",   // Black background for input fields
-  teal:        "#F97316",
-  tealDim:     "#EA580C",
-  navy:        "#000000",
-  navyMid:     "#000000",
-  tealGlow:    "rgba(249, 115, 22, 0.15)",
-  amber:       "#F59E0B",
+  sidebarInactive: "#94A3B8", // Inactive nav text in dark
+  sidebarIconInactive: "#64748B", // Inactive nav icons in dark
+  text:        "#F1F5F9",   // Light text
+  textMid:     "#CBD5E1",   // Secondary labels
+  textLight:   "#94A3B8",   // Muted hints
+  primary:     "#00D4AA",   // Lighter green for dark mode
+  primaryDark: "#00B898",   // Darker green
+  primaryButton: "#00E6C2", // Button green
+  green:       "#00D4AA",   // Success green
+  greenLight:  "#0D3D35",   // Success background
+  red:         "#F87171",   // Lighter red
+  gold:        "#FBBF24",   // Lighter orange
+  goldLight:   "#1F2937",   // Orange background
+  purple:      "#A78BFA",   // Lighter purple
+  purpleLight: "#1E1B4B",   // Purple background
+  blue:        "#60A5FA",   // Lighter blue
+  blueLight:   "#1E3A8A",   // Blue background
+  border:      "#1E293B",   // Dark border
+  inputBg:     "#0F1A17",   // Dark input background
+  teal:        "#00D4AA",
+  tealDim:     "#00B898",
+  navy:        "#063F38",
+  navyMid:     "#087F6B",   // Active nav background
+  tealGlow:    "rgba(0, 212, 170, 0.15)",
+  amber:       "#FBBF24",
   // ── Employee Panel Tokens ──
-  employeePrimary:     "#2DD4BF",   // Crisp Deep Teal in Dark Mode
-  employeePrimaryDark: "#14B8A6",
-  employeeGlow:        "rgba(45, 212, 191, 0.16)",
-  employeeIncentive:   "#2DD4BF",
+  employeePrimary:     "#00D4AA",   // Light green in dark mode
+  employeePrimaryDark: "#00B898",
+  employeeGlow:        "rgba(0, 212, 170, 0.16)",
+  employeeIncentive:   "#00D4AA",
 };
 
 // ── Context ────────────────────────────────────────────────────────────────────
