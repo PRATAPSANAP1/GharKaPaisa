@@ -266,11 +266,11 @@ const listApplications = async (req, res, next) => {
         created_at
       FROM direct_card_applications
       UNION ALL
-      SELECT 
+      SELECT
         a.id::text as id,
         COALESCE(a.app_number, 'LOAN' || substring(replace(a.id::text, '-', ''), 1, 8)) as app_number,
-        COALESCE(NULLIF(a.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
-        COALESCE(NULLIF(a.customer_mobile, ''), NULLIF(c.mobile, ''), '') as mobile,
+        COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
+        COALESCE(NULLIF(l.customer_mobile, ''), NULLIF(c.mobile, ''), '') as mobile,
         COALESCE(c.pan_number, '') as pan_number,
         c.dob::text as dob,
         COALESCE(c.pincode, '') as resident_pincode,
@@ -326,6 +326,7 @@ const listApplications = async (req, res, next) => {
         a.status::text as status,
         a.created_at
       FROM applications a
+      LEFT JOIN leads l ON l.id = a.lead_id
       LEFT JOIN products p ON p.id = a.product_id
       LEFT JOIN banks b ON b.id = COALESCE(a.bank_id, p.bank_id)
       LEFT JOIN customers c ON c.id = a.customer_id
@@ -345,8 +346,8 @@ const listApplications = async (req, res, next) => {
       )
       AND COALESCE(a.source, '') != 'direct_card_applications'
       AND NOT EXISTS (
-        SELECT 1 FROM direct_card_applications d2 
-        WHERE d2.mobile = COALESCE(NULLIF(a.customer_mobile, ''), c.mobile) 
+        SELECT 1 FROM direct_card_applications d2
+        WHERE d2.mobile = COALESCE(NULLIF(l.customer_mobile, ''), c.mobile)
         AND d2.created_at >= a.created_at - INTERVAL '1 hour'
         AND d2.created_at <= a.created_at + INTERVAL '1 hour'
       )
