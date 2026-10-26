@@ -7305,15 +7305,15 @@ const getAssignableEmployees = async (req, res, next) => {
       FROM (
         SELECT id, user_id, employee_id, full_name, mobile_number, designation, department, employee_status, email_id
         FROM employees
-        WHERE (employee_status IS NULL OR UPPER(employee_status) NOT IN ('TERMINATED', 'INACTIVE'))
+        WHERE (employee_status IS NULL OR UPPER(employee_status::text) NOT IN ('TERMINATED', 'INACTIVE'))
         UNION
         SELECT id, id as user_id, employee_id, full_name, mobile as mobile_number, designation, 'Sales' as department, status as employee_status, email as email_id
         FROM users
-        WHERE (status IS NULL OR UPPER(status) NOT IN ('TERMINATED', 'INACTIVE', 'BLOCKED'))
+        WHERE (status IS NULL OR UPPER(status::text) NOT IN ('TERMINATED', 'INACTIVE', 'BLOCKED'))
           AND id NOT IN (SELECT user_id FROM employees WHERE user_id IS NOT NULL)
       ) e
       LEFT JOIN users u ON u.id = e.user_id
-      WHERE (e.employee_status IS NULL OR UPPER(e.employee_status) NOT IN ('TERMINATED', 'INACTIVE'))
+      WHERE (e.employee_status IS NULL OR UPPER(e.employee_status::text) NOT IN ('TERMINATED', 'INACTIVE'))
     `;
     const params = [];
 
