@@ -23,7 +23,7 @@ export default function EmployeeLayout() {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
 
-  const { C, theme, toggleTheme } = useTheme();
+  const { C, isDark, toggle } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -261,27 +261,27 @@ export default function EmployeeLayout() {
         <div style={{ padding: '16px 18px', borderTop: `1px solid rgba(255,255,255,0.1)`, display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>Theme</span>
-            <button 
-              onClick={toggleTheme}
+            <button
+              onClick={toggle}
               style={{
-                background: 'rgba(255,255,255,0.1)', 
+                background: 'rgba(255,255,255,0.1)',
                 border: '1px solid rgba(255,255,255,0.2)',
-                borderRadius: '20px', 
-                padding: '6px 12px', 
-                display: 'flex', 
-                alignItems: 'center', 
+                borderRadius: '20px',
+                padding: '6px 12px',
+                display: 'flex',
+                alignItems: 'center',
                 gap: '6px',
-                color: '#FFFFFF', 
-                fontSize: '12px', 
-                fontWeight: 600, 
+                color: '#FFFFFF',
+                fontSize: '12px',
+                fontWeight: 600,
                 cursor: 'pointer',
                 transition: 'background 0.18s ease'
               }}
               onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
             >
-              {theme === 'dark' ? <FaSun style={{ color: '#F59E0B' }} /> : <FaMoon style={{ color: '#FFFFFF' }} />}
-              {theme === 'dark' ? 'Light' : 'Dark'}
+              {isDark ? <FaSun style={{ color: '#F59E0B' }} /> : <FaMoon style={{ color: '#FFFFFF' }} />}
+              {isDark ? 'Light' : 'Dark'}
             </button>
           </div>
 

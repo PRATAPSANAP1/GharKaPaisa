@@ -12,7 +12,7 @@ import api from '../../../services/api';
 import NotificationSettings from '../../../components/NotificationSettings/NotificationSettings';
 
 export default function EmployeeSettingsPortal() {
-  const { C, theme, setTheme } = useTheme();
+  const { C, isDark, toggle } = useTheme();
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('account');
@@ -440,10 +440,10 @@ export default function EmployeeSettingsPortal() {
                 <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: isMobile ? '16px' : '20px', boxSizing: 'border-box', width: '100%' }}>
                   <h3 style={{ fontSize: '14.5px', fontWeight: 800, margin: '0 0 12px 0' }}>Theme Interface Mode</h3>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? '8px' : '12px' }}>
-                    <button onClick={() => setTheme('light')} style={{ padding: isMobile ? '12px 8px' : '14px', borderRadius: '12px', border: `2px solid ${theme === 'light' ? C.teal : C.border}`, background: '#FFF', color: '#0F172A', fontWeight: 800, fontSize: isMobile ? '12.5px' : '13.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    <button onClick={() => !isDark && toggle()} style={{ padding: isMobile ? '12px 8px' : '14px', borderRadius: '12px', border: `2px solid ${!isDark ? C.teal : C.border}`, background: '#FFF', color: '#0F172A', fontWeight: 800, fontSize: isMobile ? '12.5px' : '13.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                       ☀️ Light
                     </button>
-                    <button onClick={() => setTheme('dark')} style={{ padding: isMobile ? '12px 8px' : '14px', borderRadius: '12px', border: `2px solid ${theme === 'dark' ? C.teal : C.border}`, background: '#0F172A', color: '#FFF', fontWeight: 800, fontSize: isMobile ? '12.5px' : '13.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    <button onClick={() => isDark && toggle()} style={{ padding: isMobile ? '12px 8px' : '14px', borderRadius: '12px', border: `2px solid ${isDark ? C.teal : C.border}`, background: '#0F172A', color: '#FFF', fontWeight: 800, fontSize: isMobile ? '12.5px' : '13.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                       🌙 Dark
                     </button>
                   </div>
