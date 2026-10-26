@@ -74,6 +74,7 @@ export default function ManageApplications() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [claimingId, setClaimingId] = useState(null);
+  const [searchDebounceTimer, setSearchDebounceTimer] = useState(null);
 
   // ── FILTER STATES ──
   const [search, setSearch] = useState('');
@@ -309,12 +310,29 @@ export default function ManageApplications() {
 
   useEffect(() => {
     fetchApplications();
-  }, [page, limit, statusFilter, commFilter, partnerFilter, processTypeFilter, bankFilter]);
+    return () => {
+      if (searchDebounceTimer) {
+        clearTimeout(searchDebounceTimer);
+      }
+    };
+  }, [page, limit, statusFilter, commFilter, partnerFilter, processTypeFilter, bankFilter, search]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setPage(1);
     fetchApplications();
+  };
+
+  const handleSearchChange = (value) => {
+    setSearch(value);
+    if (searchDebounceTimer) {
+      clearTimeout(searchDebounceTimer);
+    }
+    const timer = setTimeout(() => {
+      setPage(1);
+      fetchApplications();
+    }, 500);
+    setSearchDebounceTimer(timer);
   };
 
   const clearAllFilters = () => {
