@@ -2440,7 +2440,7 @@ const listApplications = async (req, res, next) => {
           NULLIF(to_jsonb(pad)->>'assigned_to', ''),
           NULLIF(to_jsonb(a)->>'assigned_to_name', ''),
           NULLIF(to_jsonb(pad)->>'assigned_to_name', '')
-        ) AS assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, p.category::text as category, COALESCE(NULLIF(a.sub_category, ''), p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(a.pan_check, ''), NULLIF(pad.pan_check, ''), NULLIF(to_jsonb(a)->>'pan_check', ''), 'no') as pan_check, COALESCE(NULLIF(a.bank_current_lead_status, ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(a.requery_date, pad.requery_date), a.requery_date) as requery_date,
+        ) AS assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, p.category::text as category, COALESCE(p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(a.pan_check, ''), NULLIF(pad.pan_check, ''), NULLIF(to_jsonb(a)->>'pan_check', ''), 'no') as pan_check, COALESCE(NULLIF(a.bank_current_lead_status, ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(a.requery_date, pad.requery_date), a.requery_date) as requery_date,
         COALESCE(NULLIF(a.final_status, ''), NULLIF(pad.final_status, '')) as final_status,
         COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, '')) as decline_reason,
         COALESCE(NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as decline_code,
@@ -2517,7 +2517,7 @@ const listApplications = async (req, res, next) => {
           NULLIF(to_jsonb(pad)->>'assigned_to', ''),
           NULLIF(to_jsonb(a)->>'assigned_to_name', ''),
           NULLIF(to_jsonb(pad)->>'assigned_to_name', '')
-        ) AS assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, p.category::text as category, COALESCE(NULLIF(a.sub_category, ''), p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(a.pan_check, ''), NULLIF(pad.pan_check, ''), NULLIF(to_jsonb(a)->>'pan_check', ''), 'no') as pan_check, COALESCE(NULLIF(a.bank_current_lead_status, ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(a.requery_date, pad.requery_date), a.requery_date) as requery_date,
+        ) AS assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, p.category::text as category, COALESCE(p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(a.pan_check, ''), NULLIF(pad.pan_check, ''), NULLIF(to_jsonb(a)->>'pan_check', ''), 'no') as pan_check, COALESCE(NULLIF(a.bank_current_lead_status, ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(a.requery_date, pad.requery_date), a.requery_date) as requery_date,
         COALESCE(NULLIF(a.final_status, ''), NULLIF(pad.final_status, '')) as final_status,
         COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, '')) as decline_reason,
         COALESCE(NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as decline_code,
@@ -2730,9 +2730,9 @@ const getApplication = async (req, res, next) => {
 
     let { rows: [app] } = await query(`
       SELECT a.*, 
-        COALESCE(NULLIF(a.customer_name, ''), NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
-        COALESCE(NULLIF(a.customer_mobile, ''), NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
-        COALESCE(NULLIF(a.customer_email, ''), NULLIF(c.email, ''), NULLIF(l.email, '')) as customer_email,
+        COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
+        COALESCE(NULLIF(l.customer_mobile, ''), NULLIF(l.mobile, ''), c.mobile) as customer_mobile,
+        COALESCE(NULLIF(l.email, ''), NULLIF(c.email, '')) as customer_email,
         COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number,
         COALESCE(NULLIF(a.dob::text, ''), NULLIF(c.dob::text, '')) as dob,
         COALESCE(a.monthly_income, a.monthly_salary, c.monthly_income, l.monthly_income, a.loan_amount) as monthly_income,
@@ -2806,9 +2806,9 @@ const getApplication = async (req, res, next) => {
       if (pdRec?.application_id) {
         const { rows: [appFromPd] } = await query(`
           SELECT a.*,
-            COALESCE(NULLIF(a.customer_name, ''), NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
-            COALESCE(NULLIF(a.customer_mobile, ''), NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
-            COALESCE(NULLIF(a.customer_email, ''), NULLIF(c.email, ''), NULLIF(l.email, '')) as customer_email,
+            COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
+            COALESCE(NULLIF(l.customer_mobile, ''), NULLIF(l.mobile, ''), c.mobile) as customer_mobile,
+            COALESCE(NULLIF(l.email, ''), NULLIF(c.email, '')) as customer_email,
             COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number,
             COALESCE(NULLIF(a.dob::text, ''), NULLIF(c.dob::text, '')) as dob,
             COALESCE(a.monthly_income, a.monthly_salary, c.monthly_income, l.monthly_income, a.loan_amount) as monthly_income,
@@ -2847,9 +2847,9 @@ const getApplication = async (req, res, next) => {
       if (pslRec?.application_id) {
         const { rows: [appFromPsl] } = await query(`
           SELECT a.*,
-            COALESCE(NULLIF(a.customer_name, ''), NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
-            COALESCE(NULLIF(a.customer_mobile, ''), NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
-            COALESCE(NULLIF(a.customer_email, ''), NULLIF(c.email, ''), NULLIF(l.email, '')) as customer_email,
+            COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
+            COALESCE(NULLIF(l.customer_mobile, ''), NULLIF(l.mobile, ''), c.mobile) as customer_mobile,
+            COALESCE(NULLIF(l.email, ''), NULLIF(c.email, '')) as customer_email,
             COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number,
             COALESCE(NULLIF(a.dob::text, ''), NULLIF(c.dob::text, '')) as dob,
             COALESCE(a.monthly_income, a.monthly_salary, c.monthly_income, l.monthly_income, a.loan_amount) as monthly_income,
@@ -6569,9 +6569,9 @@ const get360ApplicationTrace = async (req, res, next) => {
         a.commission_amount,
         
         c.id AS customer_id,
-        COALESCE(NULLIF(a.customer_name, ''), NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') AS customer_name,
-        COALESCE(NULLIF(a.customer_mobile, ''), NULLIF(l.mobile, ''), c.mobile) AS customer_mobile,
-        COALESCE(NULLIF(a.customer_email, ''), NULLIF(c.email, ''), NULLIF(l.email, '')) AS customer_email,
+        COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') AS customer_name,
+        COALESCE(NULLIF(l.customer_mobile, ''), NULLIF(l.mobile, ''), c.mobile) AS customer_mobile,
+        COALESCE(NULLIF(l.email, ''), NULLIF(c.email, '')) AS customer_email,
         
         l.id AS lead_id,
         l.status AS lead_status,
