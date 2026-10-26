@@ -1658,6 +1658,8 @@ const ensureApplicationStageColumns = async () => {
 };
 
 const listApplications = async (req, res, next) => {
+  const correlationId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const startMs = Date.now();
   try {
     let { page, limit, offset } = getPaginationParams(req.query);
     limit = Math.min(Math.max(parseInt(limit) || 10, 1), 50000);
@@ -1760,10 +1762,43 @@ const listApplications = async (req, res, next) => {
 
     let opHeadBankFilterSQL = '';
     let countOpHeadBankFilterSQL = '';
-    const queryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, limit, offset, validUserId, validProcessBy, validOpHeadId, isPartnerOrTeam, validScope, validMemberId, validCategory, validCommissionStatus, validFromDate, validToDate];
-    const countQueryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, validProcessBy, validOpHeadId, validUserId, isPartnerOrTeam, validScope, validMemberId, validCategory, validCommissionStatus, validFromDate, validToDate];
+    // Canonical query parameter order for CRM application queries:
+    // $1:  validPartnerId (uuid)
+    // $2:  validStatus (text)
+    // $3:  validProductId (uuid)
+    // $4:  validBankId (uuid)
+    // $5:  validSearch (text)
+    // $6:  validUserId (uuid)
+    // $7:  validProcessBy (text)
+    // $8:  validOpHeadId (uuid)
+    // $9:  validScope (text)
+    // $10: validMemberId (uuid)
+    // $11: validCategory (text)
+    // $12: validCommissionStatus (text)
+    // $13: validFromDate (timestamp)
+    // $14: validToDate (timestamp)
+    const baseQueryParams = [
+      validPartnerId,
+      validStatus,
+      validProductId,
+      validBankId,
+      validSearch,
+      validUserId,
+      validProcessBy,
+      validOpHeadId,
+      validScope,
+      validMemberId,
+      validCategory,
+      validCommissionStatus,
+      validFromDate,
+      validToDate
+    ];
+    // List query appends limit ($15) and offset ($16):
+    const queryParams = [...baseQueryParams, limit, offset];
+    // Count and status count queries use base parameter array ($1 - $14):
+    const countQueryParams = [...baseQueryParams];
 
-    const hasAaaTable = await ensureAssignmentsTableExists();
+    // Note: ensureAssignmentsTableExists() removed from request path (handled in migrations)
     const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR', 'PHYSICAL CURABLE', 'PHYSICAL_CURABLE', 'DIGITAL CURABLE', 'DIGITAL_CURABLE', 'EMAIL CURABLE', 'EMAIL_CURABLE', 'PHYSICAL CURABLE OPERATOR', 'PHYSICAL_CURABLE_OPERATOR', 'DIGITAL CURABLE OPERATOR', 'DIGITAL_CURABLE_OPERATOR', 'EMAIL CURABLE OPERATOR', 'EMAIL_CURABLE_OPERATOR'].includes(userDesignation) || ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR', 'PHYSICAL CURABLE', 'PHYSICAL_CURABLE', 'DIGITAL CURABLE', 'DIGITAL_CURABLE', 'EMAIL CURABLE', 'EMAIL_CURABLE', 'PHYSICAL CURABLE OPERATOR', 'PHYSICAL_CURABLE_OPERATOR', 'DIGITAL CURABLE OPERATOR', 'DIGITAL_CURABLE_OPERATOR', 'EMAIL CURABLE OPERATOR', 'EMAIL_CURABLE_OPERATOR'].includes(userRole);
     const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
     const isSalesExecOnlyUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
@@ -2080,34 +2115,39 @@ const listApplications = async (req, res, next) => {
       }
     }
 
-    const partnerTeamScopeSQL = `
-      WHERE (
-        ($11::boolean = false AND ($1::uuid IS NULL OR combined.partner_id IN (
-          SELECT $1::uuid UNION SELECT $8::uuid 
-          UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $8::uuid OR referred_by_id = $8::uuid
-          UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $8::uuid OR sponsor_id = $8::uuid
-          UNION SELECT id FROM partner_profiles WHERE user_id = $8::uuid
-        )))
-        OR ($11::boolean = true AND (
+    let partnerTeamScopeSQL;
+    if (isPartnerOrTeam) {
+      partnerTeamScopeSQL = `
+        WHERE (
           combined.partner_id IN (
-            SELECT $1::uuid UNION SELECT $8::uuid 
-            UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $8::uuid OR referred_by_id = $8::uuid
-            UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $8::uuid OR sponsor_id = $8::uuid
-            UNION SELECT id FROM partner_profiles WHERE user_id = $8::uuid OR user_id = $1::uuid
+            SELECT $1::uuid UNION SELECT $6::uuid 
+            UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $6::uuid OR referred_by_id = $6::uuid
+            UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $6::uuid OR sponsor_id = $6::uuid
+            UNION SELECT id FROM partner_profiles WHERE user_id = $6::uuid OR user_id = $1::uuid
           )
-          OR combined.submitted_by = $8::uuid
-          OR combined.employee_id IN (SELECT id FROM employees WHERE user_id = $8::uuid)
-          OR (combined.assigned_to_user_id IS NOT NULL AND combined.assigned_to_user_id::text = $8::text)
-          OR (combined.assigned_to_employee_id IS NOT NULL AND combined.assigned_to_employee_id::text IN (SELECT id::text FROM employees WHERE user_id = $8::uuid))
-          OR (combined.assigned_by_user_id IS NOT NULL AND combined.assigned_by_user_id::text = $8::text)
-          OR (combined.assigned_by_employee_id IS NOT NULL AND combined.assigned_by_employee_id::text IN (SELECT id::text FROM employees WHERE user_id = $8::uuid))
+          OR combined.submitted_by = $6::uuid
+          OR combined.employee_id IN (SELECT id FROM employees WHERE user_id = $6::uuid)
+          OR (combined.assigned_to_user_id IS NOT NULL AND combined.assigned_to_user_id::text = $6::text)
+          OR (combined.assigned_to_employee_id IS NOT NULL AND combined.assigned_to_employee_id::text IN (SELECT id::text FROM employees WHERE user_id = $6::uuid))
+          OR (combined.assigned_by_user_id IS NOT NULL AND combined.assigned_by_user_id::text = $6::text)
+          OR (combined.assigned_by_employee_id IS NOT NULL AND combined.assigned_by_employee_id::text IN (SELECT id::text FROM employees WHERE user_id = $6::uuid))
           OR combined.submitted_by IN (
             SELECT user_id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
-            UNION SELECT u.id FROM users u WHERE u.created_by = $8::uuid
+            UNION SELECT u.id FROM users u WHERE u.created_by = $6::uuid
           )
-        ))
-      )
-    `;
+        )
+      `;
+    } else if (validPartnerId) {
+      partnerTeamScopeSQL = `
+        WHERE combined.partner_id IN (
+          SELECT $1::uuid 
+          UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
+          UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid
+        )
+      `;
+    } else {
+      partnerTeamScopeSQL = `WHERE 1=1`;
+    }
 
     const effectivePartnerTeamScopeSQL = partnerTeamScopeSQL;
 
@@ -2147,7 +2187,7 @@ const listApplications = async (req, res, next) => {
       OR ($2 = 'cancelled' AND (combined.status IN ('cancelled', 'cancel', 'canceled') OR LOWER(COALESCE(combined.final_status, '')) LIKE '%cancel%'))
     )`;
 
-    const { rows } = await query(`
+    const listQuerySQL = `
       SELECT * FROM (
         SELECT 
           a.id,
@@ -2215,12 +2255,13 @@ const listApplications = async (req, res, next) => {
           COALESCE(
             NULLIF(appu.employee_id, ''),
             NULLIF(appemp.employee_id, ''),
+            NULLIF(appemp_id.employee_id, ''),
             NULLIF(appu.full_name, ''),
             NULLIF(appu.email, ''),
             appu.id::text
           ) as approved_by_admin_id,
           appu.full_name as approved_by_name,
-          COALESCE(NULLIF(appu.employee_id, ''), NULLIF(appemp.employee_id, '')) as approved_by_code,
+          COALESCE(NULLIF(appu.employee_id, ''), NULLIF(appemp.employee_id, ''), NULLIF(appemp_id.employee_id, '')) as approved_by_code,
           a.commission_received_at,
           a.commission_paid_at,
           a.submitted_by,
@@ -2247,10 +2288,11 @@ const listApplications = async (req, res, next) => {
           ap.last_name as partner_last_name,
           COALESCE(
             NULLIF(su.employee_id, ''),
-            NULLIF(emp.employee_id, '')
+            NULLIF(emp.employee_id, ''),
+            NULLIF(emp_sub.employee_id, '')
           ) as emp_code,
-          emp.full_name as employee_name,
-          emp.designation as employee_designation,
+          COALESCE(emp.full_name, emp_sub.full_name) as employee_name,
+          COALESCE(emp.designation, emp_sub.designation) as employee_designation,
           su.role as submitter_role,
           a.partner_id,
           a.product_id,
@@ -2295,51 +2337,53 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN products p ON p.id = a.product_id
         LEFT JOIN banks b ON b.id = COALESCE(a.bank_id, p.bank_id)
         LEFT JOIN partner_profiles ap ON ap.id = a.partner_id
-        LEFT JOIN employees emp ON (emp.id = a.employee_id OR emp.user_id = a.submitted_by)
+        LEFT JOIN employees emp ON emp.id = a.employee_id
+        LEFT JOIN employees emp_sub ON emp_sub.user_id = a.submitted_by
         LEFT JOIN users su ON su.id = a.submitted_by
         LEFT JOIN users oh ON oh.id = COALESCE(p.operation_head_id, b.operation_head_id)
         LEFT JOIN users appu ON appu.id = a.approved_by
-        LEFT JOIN employees appemp ON (appemp.user_id = appu.id OR appemp.id = appu.id)
+        LEFT JOIN employees appemp ON appemp.user_id = appu.id
+        LEFT JOIN employees appemp_id ON appemp_id.id = appu.id
       ) combined
       ${effectivePartnerTeamScopeSQL}
         AND ${statusFilterBlockSQL}
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
         AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5 OR combined.bank_application_number ILIKE $5 OR combined.bank_ref_number ILIKE $5 OR combined.pan_number ILIKE $5))
-        AND ($9::text IS NULL OR combined.process_by = $9 OR combined.submitted_by::text = $9)
-        AND ($10::uuid IS NULL OR combined.operation_head_id = $10::uuid)
+        AND ($7::text IS NULL OR combined.process_by = $7 OR combined.submitted_by::text = $7)
+        AND ($8::uuid IS NULL OR combined.operation_head_id = $8::uuid)
         AND (
-          $12::text IS NULL OR $12::text = ''
-          OR ($12::text = 'my' AND (combined.submitted_by = $8::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $8::uuid))))
-          OR ($12::text = 'team' AND NOT (combined.submitted_by = $8::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $8::uuid))))
+          $9::text IS NULL OR $9::text = ''
+          OR ($9::text = 'my' AND (combined.submitted_by = $6::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $6::uuid))))
+          OR ($9::text = 'team' AND NOT (combined.submitted_by = $6::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $6::uuid))))
         )
-        AND ($13::uuid IS NULL OR combined.submitted_by = $13::uuid OR combined.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $13::uuid OR id = $13::uuid))
+        AND ($10::uuid IS NULL OR combined.submitted_by = $10::uuid OR combined.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $10::uuid OR id = $10::uuid))
         AND (
-          $14::text IS NULL OR $14::text = '' OR $14::text = 'all'
-          OR ($14::text IN ('loc_eoc', 'LOC/EOC', 'loc-eoc', 'LOC_EOC') AND ${locEocAppSQL})
-          OR ($14::text IN ('loan_on_credit_card', 'loc', 'LOC') AND (
+          $11::text IS NULL OR $11::text = '' OR $11::text = 'all'
+          OR ($11::text IN ('loc_eoc', 'LOC/EOC', 'loc-eoc', 'LOC_EOC') AND ${locEocAppSQL})
+          OR ($11::text IN ('loan_on_credit_card', 'loc', 'LOC') AND (
             LOWER(COALESCE(combined.sub_category, '')) = 'loc'
             OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) = 'loc')
           ))
-          OR ($14::text IN ('smart_emi', 'eoc', 'EOC') AND (
+          OR ($11::text IN ('smart_emi', 'eoc', 'EOC') AND (
             LOWER(COALESCE(combined.sub_category, '')) = 'eoc'
             OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) = 'eoc')
           ))
-          OR ($14::text = 'credit_card' AND ${creditCardAppSQL})
-          OR ($14::text IN ('loan', 'loans', 'personal_loan') AND (LOWER(combined.category::text) LIKE '%loan%' OR LOWER(combined.category::text) LIKE '%personal%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
-          OR ($14::text = 'business_loan' AND (LOWER(combined.category::text) LIKE '%business%'))
-          OR ($14::text = 'insurance' AND (LOWER(combined.category::text) LIKE '%insurance%'))
-          OR ($14::text = 'utility' AND (LOWER(combined.category::text) LIKE '%utilit%' OR LOWER(combined.category::text) LIKE '%recharge%'))
-          OR (LOWER(combined.category::text) = LOWER($14::text))
+          OR ($11::text = 'credit_card' AND ${creditCardAppSQL})
+          OR ($11::text IN ('loan', 'loans', 'personal_loan') AND (LOWER(combined.category::text) LIKE '%loan%' OR LOWER(combined.category::text) LIKE '%personal%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
+          OR ($11::text = 'business_loan' AND (LOWER(combined.category::text) LIKE '%business%'))
+          OR ($11::text = 'insurance' AND (LOWER(combined.category::text) LIKE '%insurance%'))
+          OR ($11::text = 'utility' AND (LOWER(combined.category::text) LIKE '%utilit%' OR LOWER(combined.category::text) LIKE '%recharge%'))
+          OR (LOWER(combined.category::text) = LOWER($11::text))
         )
         AND (
-          $15::text IS NULL OR $15::text = '' OR $15::text = 'all'
-          OR combined.commission_status = $15::text
-          OR ($15::text = 'released' AND combined.commission_status IN ('released', 'credited', 'paid', 'approved', 'commission_released'))
-          OR ($15::text = 'pending' AND combined.commission_status IN ('pending', 'unpaid', 'due', 'initiated'))
+          $12::text IS NULL OR $12::text = '' OR $12::text = 'all'
+          OR combined.commission_status = $12::text
+          OR ($12::text = 'released' AND combined.commission_status IN ('released', 'credited', 'paid', 'approved', 'commission_released'))
+          OR ($12::text = 'pending' AND combined.commission_status IN ('pending', 'unpaid', 'due', 'initiated'))
         )
-        AND ($16::timestamp IS NULL OR combined.created_at >= $16::timestamp)
-        AND ($17::timestamp IS NULL OR combined.created_at <= $17::timestamp)
+        AND ($13::timestamp IS NULL OR combined.created_at >= $13::timestamp)
+        AND ($14::timestamp IS NULL OR combined.created_at <= $14::timestamp)
         ${opHeadBankFilterSQL}
         ${salesExecFilterSQL}
         ${panCheckerFilterSQL}
@@ -2349,57 +2393,62 @@ const listApplications = async (req, res, next) => {
         ${querableOperatorFilterSQL}
         ${curableOperatorFilterSQL}
       ORDER BY combined.created_at DESC
-      LIMIT $6 OFFSET $7
-    `, queryParams);
+      LIMIT $15::int OFFSET $16::int
+    `;
 
-    // Count query with synchronized status filter
-    const countScopeSQL = `
-      WHERE (
-        ($9::boolean = false AND ($1::uuid IS NULL OR combined.partner_id IN (
-          SELECT $1::uuid UNION SELECT $8::uuid 
-          UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $8::uuid OR referred_by_id = $8::uuid
-          UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $8::uuid OR sponsor_id = $8::uuid
-          UNION SELECT id FROM partner_profiles WHERE user_id = $8::uuid
-        )))
-        OR ($9::boolean = true AND (
+    // Dynamic count scope based on user role/partner parameters
+    let countScopeSQL;
+    if (isPartnerOrTeam) {
+      countScopeSQL = `
+        WHERE (
           combined.partner_id IN (
-            SELECT $1::uuid UNION SELECT $8::uuid 
-            UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $8::uuid OR referred_by_id = $8::uuid
-            UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $8::uuid OR sponsor_id = $8::uuid
-            UNION SELECT id FROM partner_profiles WHERE user_id = $8::uuid OR user_id = $1::uuid
+            SELECT $1::uuid UNION SELECT $6::uuid 
+            UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $6::uuid OR referred_by_id = $6::uuid
+            UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $6::uuid OR sponsor_id = $6::uuid
+            UNION SELECT id FROM partner_profiles WHERE user_id = $6::uuid OR user_id = $1::uuid
           )
-          OR combined.submitted_by = $8::uuid
-          OR combined.employee_id IN (SELECT id FROM employees WHERE user_id = $8::uuid)
-          OR (combined.assigned_to_user_id IS NOT NULL AND combined.assigned_to_user_id::text = $8::text)
-          OR (combined.assigned_to_employee_id IS NOT NULL AND combined.assigned_to_employee_id::text IN (SELECT id::text FROM employees WHERE user_id = $8::uuid))
-          OR (combined.assigned_by_user_id IS NOT NULL AND combined.assigned_by_user_id::text = $8::text)
-          OR (combined.assigned_by_employee_id IS NOT NULL AND combined.assigned_by_employee_id::text IN (SELECT id::text FROM employees WHERE user_id = $8::uuid))
+          OR combined.submitted_by = $6::uuid
+          OR combined.employee_id IN (SELECT id FROM employees WHERE user_id = $6::uuid)
+          OR (combined.assigned_to_user_id IS NOT NULL AND combined.assigned_to_user_id::text = $6::text)
+          OR (combined.assigned_to_employee_id IS NOT NULL AND combined.assigned_to_employee_id::text IN (SELECT id::text FROM employees WHERE user_id = $6::uuid))
+          OR (combined.assigned_by_user_id IS NOT NULL AND combined.assigned_by_user_id::text = $6::text)
+          OR (combined.assigned_by_employee_id IS NOT NULL AND combined.assigned_by_employee_id::text IN (SELECT id::text FROM employees WHERE user_id = $6::uuid))
           OR combined.submitted_by IN (
             SELECT user_id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
-            UNION SELECT u.id FROM users u WHERE u.created_by = $8::uuid
+            UNION SELECT u.id FROM users u WHERE u.created_by = $6::uuid
           )
-        ))
-      )
-    `;
+        )
+      `;
+    } else if (validPartnerId) {
+      countScopeSQL = `
+        WHERE combined.partner_id IN (
+          SELECT $1::uuid 
+          UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
+          UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid
+        )
+      `;
+    } else {
+      countScopeSQL = `WHERE 1=1`;
+    }
 
     const effectiveCountScopeSQL = countScopeSQL;
 
-    const { rows: [{ count }] } = await query(`
+    const countQuerySQL = `
       SELECT COUNT(*) FROM (
         SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, COALESCE(
           NULLIF(to_jsonb(a)->>'assigned_to', ''),
           NULLIF(to_jsonb(pad)->>'assigned_to', ''),
           NULLIF(to_jsonb(a)->>'assigned_to_name', ''),
           NULLIF(to_jsonb(pad)->>'assigned_to_name', '')
-        ) AS assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_application_number', ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(to_jsonb(pad)->>'dispatch_status', '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, COALESCE(NULLIF(to_jsonb(a)->>'category', ''), p.category::text) as category, COALESCE(NULLIF(to_jsonb(a)->>'sub_category', ''), p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(to_jsonb(pad)->>'pan_check', ''), 'no') as pan_check, COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(to_jsonb(pad)->>'bank_current_lead_status', ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(to_jsonb(a)->>'requery_date', ''), NULLIF(to_jsonb(pad)->>'requery_date', '')) as requery_date,
-        COALESCE(NULLIF(to_jsonb(a)->>'final_status', ''), NULLIF(to_jsonb(pad)->>'final_status', '')) as final_status,
-        COALESCE(NULLIF(to_jsonb(a)->>'decline_reason', ''), NULLIF(to_jsonb(pad)->>'decline_reason', '')) as decline_reason,
-        COALESCE(NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as decline_code,
+        ) AS assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, p.category::text as category, COALESCE(NULLIF(a.sub_category, ''), p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(a.pan_check, ''), NULLIF(pad.pan_check, ''), NULLIF(to_jsonb(a)->>'pan_check', ''), 'no') as pan_check, COALESCE(NULLIF(a.bank_current_lead_status, ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(a.requery_date, pad.requery_date), a.requery_date) as requery_date,
+        COALESCE(NULLIF(a.final_status, ''), NULLIF(pad.final_status, '')) as final_status,
+        COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, '')) as decline_reason,
+        COALESCE(NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as decline_code,
         COALESCE(NULLIF(to_jsonb(a)->>'decline_description', ''), NULLIF(to_jsonb(pad)->>'decline_description', '')) as decline_description,
         COALESCE(NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as curing_designation,
-        COALESCE(NULLIF(to_jsonb(a)->>'primary_decline_code', ''), NULLIF(to_jsonb(pad)->>'primary_decline_code', ''), NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as primary_decline_code,
+        COALESCE(NULLIF(to_jsonb(a)->>'primary_decline_code', ''), NULLIF(to_jsonb(pad)->>'primary_decline_code', ''), NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as primary_decline_code,
         COALESCE(NULLIF(to_jsonb(a)->>'secondary_decline_code', ''), NULLIF(to_jsonb(pad)->>'secondary_decline_code', '')) as secondary_decline_code,
-        COALESCE(to_jsonb(a)->>'sales_claimed_by', to_jsonb(pad)->>'sales_claimed_by', '') as sales_claimed_by,
+        COALESCE(a.sales_claimed_by, pad.sales_claimed_by, '') as sales_claimed_by,
         NULLIF(to_jsonb(a)->>'assigned_to_user_id', '') as assigned_to_user_id,
         NULLIF(to_jsonb(a)->>'assigned_to_employee_id', '') as assigned_to_employee_id,
         NULLIF(to_jsonb(a)->>'assigned_by_user_id', '') as assigned_by_user_id,
@@ -2416,40 +2465,40 @@ const listApplications = async (req, res, next) => {
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
         AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5 OR combined.bank_application_number ILIKE $5 OR combined.bank_ref_number ILIKE $5 OR combined.pan_number ILIKE $5))
-        AND ($6::text IS NULL OR combined.process_by = $6 OR combined.submitted_by::text = $6)
-        AND ($7::uuid IS NULL OR combined.operation_head_id = $7::uuid)
+        AND ($7::text IS NULL OR combined.process_by = $7 OR combined.submitted_by::text = $7)
+        AND ($8::uuid IS NULL OR combined.operation_head_id = $8::uuid)
         AND (
-          $10::text IS NULL OR $10::text = ''
-          OR ($10::text = 'my' AND (combined.submitted_by = $8::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $8::uuid))))
-          OR ($10::text = 'team' AND NOT (combined.submitted_by = $8::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $8::uuid))))
+          $9::text IS NULL OR $9::text = ''
+          OR ($9::text = 'my' AND (combined.submitted_by = $6::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $6::uuid))))
+          OR ($9::text = 'team' AND NOT (combined.submitted_by = $6::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $6::uuid))))
         )
-        AND ($11::uuid IS NULL OR combined.submitted_by = $11::uuid OR combined.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $11::uuid OR id = $11::uuid))
+        AND ($10::uuid IS NULL OR combined.submitted_by = $10::uuid OR combined.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $10::uuid OR id = $10::uuid))
         AND (
-          $12::text IS NULL OR $12::text = '' OR $12::text = 'all'
-          OR ($12::text IN ('loc_eoc', 'LOC/EOC', 'loc-eoc', 'LOC_EOC') AND ${locEocAppSQL})
-          OR ($12::text IN ('loan_on_credit_card', 'loc', 'LOC') AND (
+          $11::text IS NULL OR $11::text = '' OR $11::text = 'all'
+          OR ($11::text IN ('loc_eoc', 'LOC/EOC', 'loc-eoc', 'LOC_EOC') AND ${locEocAppSQL})
+          OR ($11::text IN ('loan_on_credit_card', 'loc', 'LOC') AND (
             LOWER(COALESCE(combined.sub_category, '')) = 'loc'
             OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) = 'loc')
           ))
-          OR ($12::text IN ('smart_emi', 'eoc', 'EOC') AND (
+          OR ($11::text IN ('smart_emi', 'eoc', 'EOC') AND (
             LOWER(COALESCE(combined.sub_category, '')) = 'eoc'
             OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) = 'eoc')
           ))
-          OR ($12::text = 'credit_card' AND ${creditCardAppSQL})
-          OR ($12::text IN ('loan', 'loans', 'personal_loan') AND (LOWER(combined.category::text) LIKE '%loan%' OR LOWER(combined.category::text) LIKE '%personal%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
-          OR ($12::text = 'business_loan' AND (LOWER(combined.category::text) LIKE '%business%'))
-          OR ($12::text = 'insurance' AND (LOWER(combined.category::text) LIKE '%insurance%'))
-          OR ($12::text = 'utility' AND (LOWER(combined.category::text) LIKE '%utilit%' OR LOWER(combined.category::text) LIKE '%recharge%'))
-          OR (LOWER(combined.category::text) = LOWER($12::text))
+          OR ($11::text = 'credit_card' AND ${creditCardAppSQL})
+          OR ($11::text IN ('loan', 'loans', 'personal_loan') AND (LOWER(combined.category::text) LIKE '%loan%' OR LOWER(combined.category::text) LIKE '%personal%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
+          OR ($11::text = 'business_loan' AND (LOWER(combined.category::text) LIKE '%business%'))
+          OR ($11::text = 'insurance' AND (LOWER(combined.category::text) LIKE '%insurance%'))
+          OR ($11::text = 'utility' AND (LOWER(combined.category::text) LIKE '%utilit%' OR LOWER(combined.category::text) LIKE '%recharge%'))
+          OR (LOWER(combined.category::text) = LOWER($11::text))
         )
         AND (
-          $13::text IS NULL OR $13::text = '' OR $13::text = 'all'
-          OR combined.commission_status = $13::text
-          OR ($13::text = 'released' AND combined.commission_status IN ('released', 'credited', 'paid', 'approved', 'commission_released'))
-          OR ($13::text = 'pending' AND combined.commission_status IN ('pending', 'unpaid', 'due', 'initiated'))
+          $12::text IS NULL OR $12::text = '' OR $12::text = 'all'
+          OR combined.commission_status = $12::text
+          OR ($12::text = 'released' AND combined.commission_status IN ('released', 'credited', 'paid', 'approved', 'commission_released'))
+          OR ($12::text = 'pending' AND combined.commission_status IN ('pending', 'unpaid', 'due', 'initiated'))
         )
-        AND ($14::timestamp IS NULL OR combined.created_at >= $14::timestamp)
-        AND ($15::timestamp IS NULL OR combined.created_at <= $15::timestamp)
+        AND ($13::timestamp IS NULL OR combined.created_at >= $13::timestamp)
+        AND ($14::timestamp IS NULL OR combined.created_at <= $14::timestamp)
         ${countOpHeadBankFilterSQL}
         ${salesExecFilterSQL}
         ${panCheckerFilterSQL}
@@ -2458,25 +2507,25 @@ const listApplications = async (req, res, next) => {
         ${finalStatusOperatorFilterSQL}
         ${querableOperatorFilterSQL}
         ${curableOperatorFilterSQL}
-    `, countQueryParams);
+    `;
 
-    // Compute real-time canonical status counts scoped to user role & bank filters
-    const { rows: statusCountsRows } = await query(`
+    // Compute canonical status counts scoped to user role & bank filters
+    const statusCountsSQL = `
       SELECT combined.status, COALESCE(combined.final_status, '') as final_status, COALESCE(combined.bank_current_lead_status, '') as bank_current_lead_status, COUNT(*)::int as count FROM (
         SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, COALESCE(
           NULLIF(to_jsonb(a)->>'assigned_to', ''),
           NULLIF(to_jsonb(pad)->>'assigned_to', ''),
           NULLIF(to_jsonb(a)->>'assigned_to_name', ''),
           NULLIF(to_jsonb(pad)->>'assigned_to_name', '')
-        ) AS assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_application_number', ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(to_jsonb(pad)->>'bank_ref_number', '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(to_jsonb(pad)->>'dispatch_status', '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, COALESCE(NULLIF(to_jsonb(a)->>'category', ''), p.category::text) as category, COALESCE(NULLIF(to_jsonb(a)->>'sub_category', ''), p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(to_jsonb(pad)->>'pan_check', ''), 'no') as pan_check, COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(to_jsonb(pad)->>'bank_current_lead_status', ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(to_jsonb(a)->>'requery_date', ''), NULLIF(to_jsonb(pad)->>'requery_date', '')) as requery_date,
-        COALESCE(NULLIF(to_jsonb(a)->>'final_status', ''), NULLIF(to_jsonb(pad)->>'final_status', '')) as final_status,
-        COALESCE(NULLIF(to_jsonb(a)->>'decline_reason', ''), NULLIF(to_jsonb(pad)->>'decline_reason', '')) as decline_reason,
-        COALESCE(NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as decline_code,
+        ) AS assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, p.category::text as category, COALESCE(NULLIF(a.sub_category, ''), p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(a.pan_check, ''), NULLIF(pad.pan_check, ''), NULLIF(to_jsonb(a)->>'pan_check', ''), 'no') as pan_check, COALESCE(NULLIF(a.bank_current_lead_status, ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(a.requery_date, pad.requery_date), a.requery_date) as requery_date,
+        COALESCE(NULLIF(a.final_status, ''), NULLIF(pad.final_status, '')) as final_status,
+        COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, '')) as decline_reason,
+        COALESCE(NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as decline_code,
         COALESCE(NULLIF(to_jsonb(a)->>'decline_description', ''), NULLIF(to_jsonb(pad)->>'decline_description', '')) as decline_description,
         COALESCE(NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as curing_designation,
-        COALESCE(NULLIF(to_jsonb(a)->>'primary_decline_code', ''), NULLIF(to_jsonb(pad)->>'primary_decline_code', ''), NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as primary_decline_code,
+        COALESCE(NULLIF(to_jsonb(a)->>'primary_decline_code', ''), NULLIF(to_jsonb(pad)->>'primary_decline_code', ''), NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as primary_decline_code,
         COALESCE(NULLIF(to_jsonb(a)->>'secondary_decline_code', ''), NULLIF(to_jsonb(pad)->>'secondary_decline_code', '')) as secondary_decline_code,
-        COALESCE(to_jsonb(a)->>'sales_claimed_by', to_jsonb(pad)->>'sales_claimed_by', '') as sales_claimed_by,
+        COALESCE(a.sales_claimed_by, pad.sales_claimed_by, '') as sales_claimed_by,
         NULLIF(to_jsonb(a)->>'assigned_to_user_id', '') as assigned_to_user_id,
         NULLIF(to_jsonb(a)->>'assigned_to_employee_id', '') as assigned_to_employee_id,
         NULLIF(to_jsonb(a)->>'assigned_by_user_id', '') as assigned_by_user_id,
@@ -2493,40 +2542,40 @@ const listApplications = async (req, res, next) => {
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
         AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5 OR combined.bank_application_number ILIKE $5 OR combined.bank_ref_number ILIKE $5 OR combined.pan_number ILIKE $5))
-        AND ($6::text IS NULL OR combined.process_by = $6 OR combined.submitted_by::text = $6)
-        AND ($7::uuid IS NULL OR combined.operation_head_id = $7::uuid)
+        AND ($7::text IS NULL OR combined.process_by = $7 OR combined.submitted_by::text = $7)
+        AND ($8::uuid IS NULL OR combined.operation_head_id = $8::uuid)
         AND (
-          $10::text IS NULL OR $10::text = ''
-          OR ($10::text = 'my' AND (combined.submitted_by = $8::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $8::uuid))))
-          OR ($10::text = 'team' AND NOT (combined.submitted_by = $8::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $8::uuid))))
+          $9::text IS NULL OR $9::text = ''
+          OR ($9::text = 'my' AND (combined.submitted_by = $6::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $6::uuid))))
+          OR ($9::text = 'team' AND NOT (combined.submitted_by = $6::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $6::uuid))))
         )
-        AND ($11::uuid IS NULL OR combined.submitted_by = $11::uuid OR combined.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $11::uuid OR id = $11::uuid))
+        AND ($10::uuid IS NULL OR combined.submitted_by = $10::uuid OR combined.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $10::uuid OR id = $10::uuid))
         AND (
-          $12::text IS NULL OR $12::text = '' OR $12::text = 'all'
-          OR ($12::text IN ('loc_eoc', 'LOC/EOC', 'loc-eoc', 'LOC_EOC') AND ${locEocAppSQL})
-          OR ($12::text IN ('loan_on_credit_card', 'loc', 'LOC') AND (
+          $11::text IS NULL OR $11::text = '' OR $11::text = 'all'
+          OR ($11::text IN ('loc_eoc', 'LOC/EOC', 'loc-eoc', 'LOC_EOC') AND ${locEocAppSQL})
+          OR ($11::text IN ('loan_on_credit_card', 'loc', 'LOC') AND (
             LOWER(COALESCE(combined.sub_category, '')) = 'loc'
             OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) = 'loc')
           ))
-          OR ($12::text IN ('smart_emi', 'eoc', 'EOC') AND (
+          OR ($11::text IN ('smart_emi', 'eoc', 'EOC') AND (
             LOWER(COALESCE(combined.sub_category, '')) = 'eoc'
             OR (LOWER(COALESCE(combined.category::text, '')) = 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) = 'eoc')
           ))
-          OR ($12::text = 'credit_card' AND ${creditCardAppSQL})
-          OR ($12::text IN ('loan', 'loans', 'personal_loan') AND (LOWER(combined.category::text) LIKE '%loan%' OR LOWER(combined.category::text) LIKE '%personal%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
-          OR ($12::text = 'business_loan' AND (LOWER(combined.category::text) LIKE '%business%'))
-          OR ($12::text = 'insurance' AND (LOWER(combined.category::text) LIKE '%insurance%'))
-          OR ($12::text = 'utility' AND (LOWER(combined.category::text) LIKE '%utilit%' OR LOWER(combined.category::text) LIKE '%recharge%'))
-          OR (LOWER(combined.category::text) = LOWER($12::text))
+          OR ($11::text = 'credit_card' AND ${creditCardAppSQL})
+          OR ($11::text IN ('loan', 'loans', 'personal_loan') AND (LOWER(combined.category::text) LIKE '%loan%' OR LOWER(combined.category::text) LIKE '%personal%') AND LOWER(COALESCE(combined.category::text, '')) != 'loc_eoc' AND LOWER(COALESCE(combined.sub_category, '')) NOT IN ('loc', 'eoc'))
+          OR ($11::text = 'business_loan' AND (LOWER(combined.category::text) LIKE '%business%'))
+          OR ($11::text = 'insurance' AND (LOWER(combined.category::text) LIKE '%insurance%'))
+          OR ($11::text = 'utility' AND (LOWER(combined.category::text) LIKE '%utilit%' OR LOWER(combined.category::text) LIKE '%recharge%'))
+          OR (LOWER(combined.category::text) = LOWER($11::text))
         )
         AND (
-          $13::text IS NULL OR $13::text = '' OR $13::text = 'all'
-          OR combined.commission_status = $13::text
-          OR ($13::text = 'released' AND combined.commission_status IN ('released', 'credited', 'paid', 'approved', 'commission_released'))
-          OR ($13::text = 'pending' AND combined.commission_status IN ('pending', 'unpaid', 'due', 'initiated'))
+          $12::text IS NULL OR $12::text = '' OR $12::text = 'all'
+          OR combined.commission_status = $12::text
+          OR ($12::text = 'released' AND combined.commission_status IN ('released', 'credited', 'paid', 'approved', 'commission_released'))
+          OR ($12::text = 'pending' AND combined.commission_status IN ('pending', 'unpaid', 'due', 'initiated'))
         )
-        AND ($14::timestamp IS NULL OR combined.created_at >= $14::timestamp)
-        AND ($15::timestamp IS NULL OR combined.created_at <= $15::timestamp)
+        AND ($13::timestamp IS NULL OR combined.created_at >= $13::timestamp)
+        AND ($14::timestamp IS NULL OR combined.created_at <= $14::timestamp)
         ${countOpHeadBankFilterSQL}
         ${salesExecFilterSQL}
         ${panCheckerFilterSQL}
@@ -2536,7 +2585,52 @@ const listApplications = async (req, res, next) => {
         ${querableOperatorFilterSQL}
         ${curableOperatorFilterSQL}
       GROUP BY combined.status, COALESCE(combined.final_status, ''), COALESCE(combined.bank_current_lead_status, '')
-    `, countQueryParams);
+    `;
+
+    const isStatusFiltered = !!validStatus && validStatus !== 'all';
+    let listQueryMs = 0;
+    let countQueryMs = 0;
+    let statusCountQueryMs = 0;
+
+    // Concurrently run queries via Promise.all to avoid sequential waterfall latency
+    const listTask = (async () => {
+      const qStart = Date.now();
+      const res = await query(listQuerySQL, queryParams);
+      listQueryMs = Date.now() - qStart;
+      return res;
+    })();
+
+    const statusTask = (async () => {
+      const qStart = Date.now();
+      const res = await query(statusCountsSQL, countQueryParams);
+      statusCountQueryMs = Date.now() - qStart;
+      return res;
+    })();
+
+    // When status filter is not active, statusCounts already aggregates all matching rows;
+    // only execute separate count query if a specific status filter is active
+    const countTask = isStatusFiltered
+      ? (async () => {
+          const qStart = Date.now();
+          const res = await query(countQuerySQL, countQueryParams);
+          countQueryMs = Date.now() - qStart;
+          return res;
+        })()
+      : Promise.resolve(null);
+
+    const [listResult, statusResult, countResult] = await Promise.all([listTask, statusTask, countTask]);
+
+    const rows = listResult.rows;
+    const statusCountsRows = statusResult.rows;
+    let count = 0;
+
+    if (isStatusFiltered && countResult) {
+      count = parseInt(countResult.rows[0]?.count) || 0;
+    } else {
+      // Derive total directly from status count groups (exact same WHERE filters)
+      count = statusCountsRows.reduce((acc, r) => acc + (parseInt(r.count) || 0), 0);
+    }
+
     const statusCountsObj = {
       pending: 0,
       details_submitted: 0,
@@ -2584,6 +2678,23 @@ const listApplications = async (req, res, next) => {
       (statusCountsObj.rejected || 0) +
       (statusCountsObj.cancelled || 0);
 
+    const totalMs = Date.now() - startMs;
+    logger.info('[Diagnostics] Applications List Performance Telemetry', {
+      requestId: correlationId,
+      route: 'GET /applications',
+      role: userDesignation || userRole,
+      authMs: 0,
+      poolWaitMs: 0,
+      assignmentCheckMs: 0,
+      listQueryMs,
+      countQueryMs,
+      statusCountQueryMs,
+      totalMs,
+      recordsReturned: rows.length,
+      totalCount: count,
+      outcome: 'success'
+    });
+
     return res.status(200).json({
       success: true,
       message: 'Success',
@@ -2598,6 +2709,16 @@ const listApplications = async (req, res, next) => {
       timestamp: new Date().toISOString(),
     });
   } catch (err) {
+    const totalMs = Date.now() - startMs;
+    logger.error('[Diagnostics] Applications List Failed', {
+      requestId: correlationId,
+      route: 'GET /applications',
+      role: (req.user?.designation || req.user?.role || ''),
+      totalMs,
+      outcome: 'error',
+      errorCategory: err.code || err.name || 'UNKNOWN_ERROR',
+      errorMessage: err.message
+    });
     next(err);
   }
 };

@@ -1042,7 +1042,7 @@ async function generateStaffReport(req, res, next) {
       LEFT JOIN products p ON p.id = a.product_id
       LEFT JOIN banks b ON b.id = a.bank_id OR b.id = p.bank_id
       WHERE (
-        $1::text IS NULL OR a.created_by = $1::uuid OR a.assigned_to = $1::uuid OR $2::text IN ('SUPER_ADMIN', 'ADMIN')
+        $1::text IS NULL OR a.submitted_by = $1::uuid OR COALESCE(to_jsonb(a)->>'assigned_to_user_id', to_jsonb(a)->>'assigned_to') = $1::text OR $2::text IN ('SUPER_ADMIN', 'ADMIN')
       )
       ${statusFilter}
       ORDER BY a.created_at DESC
