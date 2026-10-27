@@ -976,16 +976,6 @@ router.get('/my-bonus-progress', async (req, res, next) => {
   }
 });
 
-let isLeadColsEnsured = false;
-async function ensureLeadColumns() {
-  if (isLeadColsEnsured) return;
-  try {
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS smart_emi_amount VARCHAR(50)`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS loan_required_amount VARCHAR(50)`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS tenure VARCHAR(50)`).catch(() => {});
-    isLeadColsEnsured = true;
-  } catch (_) {}
-}
 
 // POST /api/v1/employee/leads — Add Lead / Application by Employee
 router.post('/leads', async (req, res, next) => {
@@ -1005,8 +995,6 @@ router.post('/leads', async (req, res, next) => {
     const bankNameInput = card_bank || '';
     const cardNameInput = card_name || '';
 
-    // Ensure columns exist on applications table (run at most once)
-    await ensureLeadColumns();
 
     // 1. Resolve product_id and bank_id accurately
     let matchedProductId = null;

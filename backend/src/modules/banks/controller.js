@@ -339,6 +339,85 @@ const updateBankStatus = async (req, res, next) => {
   }
 };
 
+// PUT or PATCH /api/v1/banks/:id/direct-link (Super Admin & Admin — Direct Process Link management)
+const updateBankDirectLink = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const {
+      direct_process_url,
+      direct_process_enabled,
+      dsa_code,
+      channel_code,
+      utm_source,
+      utm_medium,
+      utm_campaign,
+      direct_process_notes
+    } = req.body;
+
+    // Self-healing schema check to ensure columns exist
+    await query(`
+      ALTER TABLE banks 
+        ADD COLUMN IF NOT EXISTS direct_process_url TEXT,
+        ADD COLUMN IF NOT EXISTS direct_process_enabled BOOLEAN DEFAULT TRUE,
+        ADD COLUMN IF NOT EXISTS dsa_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS channel_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS utm_source VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS utm_medium VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS utm_campaign VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS direct_process_notes TEXT
+    `).catch(() => {});
+
+    const { rows: [existing] } = await query('SELECT * FROM banks WHERE id = $1', [id]);
+    if (!existing) return notFound(res, 'Bank partner not found');
+
+    // URL validation if non-empty string is provided
+    if (direct_process_url && typeof direct_process_url === 'string' && direct_process_url.trim()) {
+      const trimmedUrl = direct_process_url.trim();
+      if (!trimmedUrl.match(/^https?:\/\//i) && !trimmedUrl.includes('.')) {
+        return error(res, 'Invalid Direct Process URL format. Please provide a valid URL (e.g. https://apply.bank.com).', 400);
+      }
+    }
+
+    const isEnabled = direct_process_enabled !== undefined ? !!direct_process_enabled : (existing.direct_process_enabled ?? true);
+
+    const { rows: [updated] } = await query(`
+      UPDATE banks SET
+        direct_process_url = $1,
+        direct_process_enabled = $2,
+        dsa_code = $3,
+        channel_code = $4,
+        utm_source = $5,
+        utm_medium = $6,
+        utm_campaign = $7,
+        direct_process_notes = $8,
+        updated_at = NOW()
+      WHERE id = $9
+      RETURNING *
+    `, [
+      direct_process_url !== undefined ? (direct_process_url ? direct_process_url.trim() : null) : existing.direct_process_url,
+      isEnabled,
+      dsa_code !== undefined ? (dsa_code ? dsa_code.trim() : null) : existing.dsa_code,
+      channel_code !== undefined ? (channel_code ? channel_code.trim() : null) : existing.channel_code,
+      utm_source !== undefined ? (utm_source ? utm_source.trim() : null) : existing.utm_source,
+      utm_medium !== undefined ? (utm_medium ? utm_medium.trim() : null) : existing.utm_medium,
+      utm_campaign !== undefined ? (utm_campaign ? utm_campaign.trim() : null) : existing.utm_campaign,
+      direct_process_notes !== undefined ? (direct_process_notes ? direct_process_notes.trim() : null) : existing.direct_process_notes,
+      id
+    ]);
+
+    await logAction(req, 'UPDATE_BANK_DIRECT_LINK', id, {
+      name: updated.name,
+      direct_process_url: updated.direct_process_url,
+      direct_process_enabled: updated.direct_process_enabled,
+      dsa_code: updated.dsa_code
+    });
+
+    return success(res, mapBankRow(updated), `Direct process link for ${updated.name} updated successfully`);
+  } catch (err) {
+    next(err);
+  }
+};
+
 // DELETE /api/v1/banks/:id (Admin/Super Admin — delete bank)
 const deleteBank = async (req, res, next) => {
   try {
@@ -551,6 +630,7 @@ module.exports = {
   createBank,
   updateBank,
   updateBankStatus,
+  updateBankDirectLink,
   deleteBank,
   getBankCardsBySlug
 };

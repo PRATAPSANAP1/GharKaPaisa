@@ -247,11 +247,19 @@ function getBankApplyLinkBackend(productName, bankName, productObj = null) {
     productObj?.apply_url ||
     productObj?.redirect_url ||
     productObj?.public_url ||
+    productObj?.direct_process_url ||
+    productObj?.bank_direct_process_url ||
+    productObj?.directProcessUrl ||
+    productObj?.bankDirectProcessUrl ||
     product?.partner_url ||
     product?.application_url ||
     product?.apply_url ||
     product?.redirect_url ||
     product?.public_url ||
+    product?.direct_process_url ||
+    product?.bank_direct_process_url ||
+    product?.directProcessUrl ||
+    product?.bankDirectProcessUrl ||
     ""
   );
 

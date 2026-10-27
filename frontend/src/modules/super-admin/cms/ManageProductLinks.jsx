@@ -4,7 +4,8 @@ import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { 
   MdFilterList, MdSearch, MdEdit, MdContentCopy, 
   MdHistory, MdBlock, MdCheckCircle, MdLibraryAdd, 
-  MdFileDownload, MdArrowBack, MdClose, MdDelete, MdAddLink, MdLaunch
+  MdFileDownload, MdArrowBack, MdClose, MdDelete, MdAddLink, MdLaunch,
+  MdAccountBalance, MdLink, MdRefresh, MdLinkOff, MdOpenInNew, MdTune
 } from 'react-icons/md';
 import AssignEmployeeLinksModal from './AssignEmployeeLinksModal';
 
@@ -29,7 +30,7 @@ const CATEGORIES = [
 ];
 
 export default function ManageProductLinks() {
-  const { C } = useTheme();
+  const { C, isDark } = useTheme();
   const S = makeS(C);
 
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
@@ -39,7 +40,7 @@ export default function ManageProductLinks() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const [activeTab, setActiveTab] = useState('global'); // 'global' | 'employee_links'
+  const [activeTab, setActiveTab] = useState('global'); // 'global' | 'bank_direct_links' | 'employee_links'
   const [assignModalOpen, setAssignModalOpen] = useState(false);
 
   const [products, setProducts] = useState([]);
@@ -48,6 +49,23 @@ export default function ManageProductLinks() {
   const [actionLoading, setActionLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  // Bank Direct Process Links state
+  const [bankSearchQuery, setBankSearchQuery] = useState('');
+  const [bankFilterStatus, setBankFilterStatus] = useState('all'); // 'all' | 'configured' | 'missing' | 'enabled' | 'disabled'
+  const [bankModalOpen, setBankModalOpen] = useState(false);
+  const [editingBank, setEditingBank] = useState(null);
+  const [bankForm, setBankForm] = useState({
+    bank_id: '',
+    direct_process_url: '',
+    direct_process_enabled: true,
+    dsa_code: '',
+    channel_code: '',
+    utm_source: 'gharkapaisa',
+    utm_medium: 'direct_bank',
+    utm_campaign: '',
+    direct_process_notes: ''
+  });
 
   // Employee Custom Links state
   const [assignedLinks, setAssignedLinks] = useState([]);
@@ -161,6 +179,20 @@ export default function ManageProductLinks() {
     setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
   };
 
+  const fetchBanksOnly = async () => {
+    try {
+      const res = await api.get('/banks', {
+        params: { limit: 250, status: 'all' }
+      });
+      if (res.data?.success) {
+        const list = Array.isArray(res.data.data) ? res.data.data : (res.data.data?.data || []);
+        setBanks(list);
+      }
+    } catch (err) {
+      console.error('Failed to load banks:', err);
+    }
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -174,7 +206,9 @@ export default function ManageProductLinks() {
             limit
           }
         }),
-        api.get('/banks')
+        api.get('/banks', {
+          params: { limit: 250, status: 'all' }
+        })
       ]);
 
       if (linksRes.data?.success) {
@@ -183,7 +217,8 @@ export default function ManageProductLinks() {
         setTotalCount(linksRes.data.data.pagination.total);
       }
       if (banksRes.data?.success) {
-        setBanks(banksRes.data.data);
+        const bankList = Array.isArray(banksRes.data.data) ? banksRes.data.data : (banksRes.data.data?.data || []);
+        setBanks(bankList);
       }
     } catch (err) {
       console.error(err);
@@ -196,6 +231,142 @@ export default function ManageProductLinks() {
   useEffect(() => {
     fetchData();
   }, [categoryFilter, bankFilter, page]);
+
+  // Bank Direct Process Link computed lists & handlers
+  const filteredBankLinks = React.useMemo(() => {
+    let list = banks || [];
+    if (bankSearchQuery.trim()) {
+      const q = bankSearchQuery.trim().toLowerCase();
+      list = list.filter(b => 
+        (b.name && b.name.toLowerCase().includes(q)) ||
+        (b.short_code && b.short_code.toLowerCase().includes(q)) ||
+        (b.dsa_code && b.dsa_code.toLowerCase().includes(q)) ||
+        (b.direct_process_url && b.direct_process_url.toLowerCase().includes(q))
+      );
+    }
+    if (bankFilterStatus === 'configured') {
+      list = list.filter(b => b.direct_process_url && String(b.direct_process_url).trim().length > 0);
+    } else if (bankFilterStatus === 'missing') {
+      list = list.filter(b => !b.direct_process_url || String(b.direct_process_url).trim().length === 0);
+    } else if (bankFilterStatus === 'enabled') {
+      list = list.filter(b => b.direct_process_enabled !== false);
+    } else if (bankFilterStatus === 'disabled') {
+      list = list.filter(b => b.direct_process_enabled === false);
+    }
+    return list;
+  }, [banks, bankSearchQuery, bankFilterStatus]);
+
+  const configuredBankCount = React.useMemo(() => {
+    return (banks || []).filter(b => b.direct_process_url && String(b.direct_process_url).trim().length > 0).length;
+  }, [banks]);
+
+  const buildFullBankUrl = (bank) => {
+    if (!bank?.direct_process_url) return '';
+    try {
+      const raw = bank.direct_process_url.trim();
+      const hasProtocol = raw.startsWith('http://') || raw.startsWith('https://');
+      const urlObj = new URL(hasProtocol ? raw : `https://${raw}`);
+      if (bank.utm_source && !urlObj.searchParams.has('utm_source')) {
+        urlObj.searchParams.set('utm_source', bank.utm_source);
+      }
+      if (bank.utm_medium && !urlObj.searchParams.has('utm_medium')) {
+        urlObj.searchParams.set('utm_medium', bank.utm_medium);
+      }
+      if (bank.utm_campaign && !urlObj.searchParams.has('utm_campaign')) {
+        urlObj.searchParams.set('utm_campaign', bank.utm_campaign);
+      }
+      if (bank.dsa_code && !urlObj.searchParams.has('dsa_code') && !urlObj.searchParams.has('DSACode') && !urlObj.searchParams.has('utm_DSA_Code')) {
+        urlObj.searchParams.set('dsa_code', bank.dsa_code);
+      }
+      return urlObj.toString();
+    } catch (err) {
+      return bank.direct_process_url;
+    }
+  };
+
+  const openBankEditModal = (bank = null) => {
+    setEditingBank(bank);
+    setBankForm({
+      bank_id: bank?.id || (banks.length > 0 ? banks[0].id : ''),
+      direct_process_url: bank?.direct_process_url || '',
+      direct_process_enabled: bank?.direct_process_enabled ?? true,
+      dsa_code: bank?.dsa_code || '',
+      channel_code: bank?.channel_code || '',
+      utm_source: bank?.utm_source || 'gharkapaisa',
+      utm_medium: bank?.utm_medium || 'direct_bank',
+      utm_campaign: bank?.utm_campaign || '',
+      direct_process_notes: bank?.direct_process_notes || ''
+    });
+    setBankModalOpen(true);
+  };
+
+  const handleSaveBankDirectLink = async (e) => {
+    e.preventDefault();
+    const targetBankId = editingBank?.id || bankForm.bank_id;
+    if (!targetBankId) {
+      alert('Please select a bank to configure.');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const payload = {
+        direct_process_url: bankForm.direct_process_url.trim(),
+        direct_process_enabled: bankForm.direct_process_enabled,
+        dsa_code: bankForm.dsa_code.trim(),
+        channel_code: bankForm.channel_code.trim(),
+        utm_source: bankForm.utm_source.trim(),
+        utm_medium: bankForm.utm_medium.trim(),
+        utm_campaign: bankForm.utm_campaign.trim(),
+        direct_process_notes: bankForm.direct_process_notes.trim()
+      };
+      const res = await api.put(`/banks/${targetBankId}/direct-link`, payload);
+      if (res.data?.success) {
+        triggerToast('Bank direct process link saved successfully!');
+        setBankModalOpen(false);
+        fetchBanksOnly();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update bank direct process link.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleToggleBankDirectProcess = async (bank) => {
+    const nextState = !bank.direct_process_enabled;
+    // Optimistic UI update
+    setBanks(prev => prev.map(b => b.id === bank.id ? { ...b, direct_process_enabled: nextState } : b));
+    try {
+      const res = await api.put(`/banks/${bank.id}/direct-link`, {
+        direct_process_enabled: nextState
+      });
+      if (res.data?.success) {
+        triggerToast(`Direct process for ${bank.name} ${nextState ? 'enabled' : 'disabled'}!`);
+      }
+    } catch (err) {
+      // Revert on error
+      setBanks(prev => prev.map(b => b.id === bank.id ? { ...b, direct_process_enabled: !nextState } : b));
+      alert('Failed to toggle direct process status.');
+    }
+  };
+
+  const handleClearBankDirectLink = async (bank) => {
+    if (!window.confirm(`Are you sure you want to remove the direct process link for ${bank.name}?`)) return;
+    try {
+      const res = await api.put(`/banks/${bank.id}/direct-link`, {
+        direct_process_url: '',
+        dsa_code: '',
+        channel_code: '',
+        direct_process_notes: ''
+      });
+      if (res.data?.success) {
+        triggerToast(`Direct process link cleared for ${bank.name}!`);
+        fetchBanksOnly();
+      }
+    } catch (err) {
+      alert('Failed to clear bank direct process link.');
+    }
+  };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -310,7 +481,23 @@ export default function ManageProductLinks() {
     let headers = [];
     let rows = [];
 
-    if (activeTab === 'employee_links') {
+    if (activeTab === 'bank_direct_links') {
+      filename = 'Bank_Direct_Process_Links_Export.csv';
+      headers = ['Bank Name', 'Short Code', 'Direct Process Status', 'Direct Process URL', 'DSA Code', 'Channel Code', 'UTM Source', 'UTM Medium', 'UTM Campaign', 'Total Products', 'Notes'];
+      rows = (filteredBankLinks || []).map(b => [
+        b.name || '',
+        b.short_code || '',
+        b.direct_process_enabled !== false ? 'Enabled' : 'Disabled',
+        buildFullBankUrl(b) || b.direct_process_url || 'Not Set',
+        b.dsa_code || '',
+        b.channel_code || '',
+        b.utm_source || '',
+        b.utm_medium || '',
+        b.utm_campaign || '',
+        b.products_count || 0,
+        b.direct_process_notes || ''
+      ]);
+    } else if (activeTab === 'employee_links') {
       filename = 'Employee_Custom_Bank_Links_Export.csv';
       headers = ['Employee Name', 'Employee Code', 'Employee Mobile', 'Product Name', 'Category', 'Bank Partner', 'Assigned Custom Bank URL', 'Incentive Amount', 'Status', 'Assigned By', 'Assigned Date'];
       rows = (assignedLinks || []).map(link => [
@@ -360,7 +547,8 @@ export default function ManageProductLinks() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    triggerToast(`Exported ${activeTab === 'employee_links' ? 'Employee Custom Bank Links' : 'Global Product Links'} CSV successfully!`);
+    const exportLabel = activeTab === 'bank_direct_links' ? 'Bank Direct Process Links' : (activeTab === 'employee_links' ? 'Employee Custom Bank Links' : 'Global Product Links');
+    triggerToast(`Exported ${exportLabel} CSV successfully!`);
   };
 
   const exportExcel = () => {
@@ -368,7 +556,23 @@ export default function ManageProductLinks() {
     let headers = [];
     let rows = [];
 
-    if (activeTab === 'employee_links') {
+    if (activeTab === 'bank_direct_links') {
+      filename = 'Bank_Direct_Process_Links_Export.xls';
+      headers = ['Bank Name', 'Short Code', 'Direct Process Status', 'Direct Process URL', 'DSA Code', 'Channel Code', 'UTM Source', 'UTM Medium', 'UTM Campaign', 'Total Products', 'Notes'];
+      rows = (filteredBankLinks || []).map(b => [
+        b.name || '',
+        b.short_code || '',
+        b.direct_process_enabled !== false ? 'Enabled' : 'Disabled',
+        buildFullBankUrl(b) || b.direct_process_url || 'Not Set',
+        b.dsa_code || '',
+        b.channel_code || '',
+        b.utm_source || '',
+        b.utm_medium || '',
+        b.utm_campaign || '',
+        b.products_count || 0,
+        b.direct_process_notes || ''
+      ]);
+    } else if (activeTab === 'employee_links') {
       filename = 'Employee_Custom_Bank_Links_Export.xls';
       headers = ['Employee Name', 'Employee Code', 'Employee Mobile', 'Product Name', 'Category', 'Bank Partner', 'Assigned Custom Bank URL', 'Incentive Amount', 'Status', 'Assigned By', 'Assigned Date'];
       rows = (assignedLinks || []).map(link => [
@@ -418,7 +622,8 @@ export default function ManageProductLinks() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    triggerToast(`Exported ${activeTab === 'employee_links' ? 'Employee Custom Bank Links' : 'Global Product Links'} Excel successfully!`);
+    const exportLabel = activeTab === 'bank_direct_links' ? 'Bank Direct Process Links' : (activeTab === 'employee_links' ? 'Employee Custom Bank Links' : 'Global Product Links');
+    triggerToast(`Exported ${exportLabel} Excel successfully!`);
   };
 
   const getAPIHost = () => {
@@ -443,10 +648,20 @@ export default function ManageProductLinks() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0 }}>Product Link Management</h2>
-          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>Manage global product links and assign employee-specific bank referral links</p>
+          <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0 }}>Product & Bank Link Management</h2>
+          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>Manage global product links, bank direct process application links, and assign employee referral links</p>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {activeTab === 'bank_direct_links' && (
+            <>
+              <button onClick={() => openBankEditModal(null)} style={{ ...S.btn('primary'), display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <MdAddLink size={18} /> Configure Bank Direct Link
+              </button>
+              <button onClick={fetchBanksOnly} style={{ ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '6px' }} title="Refresh Banks">
+                <MdRefresh size={18} /> Refresh
+              </button>
+            </>
+          )}
           {activeTab === 'employee_links' && (
             <button onClick={() => setAssignModalOpen(true)} style={{ ...S.btn('primary'), display: 'flex', alignItems: 'center', gap: '6px' }}>
               <MdAddLink size={18} /> Assign Bank Link to Employee(s)
@@ -462,17 +677,36 @@ export default function ManageProductLinks() {
       </div>
 
       {/* Tab Navigation */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: `1px solid ${C.border}`, paddingBottom: '12px' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: `1px solid ${C.border}`, paddingBottom: '12px', overflowX: 'auto' }}>
         <button
           onClick={() => setActiveTab('global')}
           style={{
             padding: '10px 18px', borderRadius: '10px', fontWeight: 800, fontSize: '13.5px', border: 'none', cursor: 'pointer',
             background: activeTab === 'global' ? C.primary : C.bgSecondary,
             color: activeTab === 'global' ? '#fff' : C.textMid,
-            transition: 'all 0.15s'
+            transition: 'all 0.15s', whiteSpace: 'nowrap'
           }}
         >
           Global Product Links
+        </button>
+        <button
+          onClick={() => setActiveTab('bank_direct_links')}
+          style={{
+            padding: '10px 18px', borderRadius: '10px', fontWeight: 800, fontSize: '13.5px', border: 'none', cursor: 'pointer',
+            background: activeTab === 'bank_direct_links' ? C.primary : C.bgSecondary,
+            color: activeTab === 'bank_direct_links' ? '#fff' : C.textMid,
+            display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.15s', whiteSpace: 'nowrap'
+          }}
+        >
+          <span>Bank Direct Process Links</span>
+          <span style={{
+            fontSize: '11px', fontWeight: 700,
+            background: activeTab === 'bank_direct_links' ? 'rgba(255,255,255,0.25)' : `${C.primary}15`,
+            color: activeTab === 'bank_direct_links' ? '#fff' : C.primary,
+            padding: '2px 8px', borderRadius: '10px'
+          }}>
+            {configuredBankCount} / {banks.length}
+          </span>
         </button>
         <button
           onClick={() => setActiveTab('employee_links')}
@@ -480,7 +714,7 @@ export default function ManageProductLinks() {
             padding: '10px 18px', borderRadius: '10px', fontWeight: 800, fontSize: '13.5px', border: 'none', cursor: 'pointer',
             background: activeTab === 'employee_links' ? C.primary : C.bgSecondary,
             color: activeTab === 'employee_links' ? '#fff' : C.textMid,
-            display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.15s'
+            display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.15s', whiteSpace: 'nowrap'
           }}
         >
           <span>Employee Custom Bank Links</span>
@@ -495,8 +729,308 @@ export default function ManageProductLinks() {
         </button>
       </div>
 
-      {/* EMPLOYEE CUSTOM LINKS VIEW */}
-      {activeTab === 'employee_links' ? (
+      {/* BANK DIRECT PROCESS LINKS VIEW */}
+      {activeTab === 'bank_direct_links' ? (
+        <div>
+          {/* Quick Metrics KPI Bar */}
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '14px', marginBottom: '20px' }}>
+            <div style={{ ...S.card, padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', borderLeft: `4px solid ${C.primary}` }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: `${C.primary}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.primary }}>
+                <MdAccountBalance size={22} />
+              </div>
+              <div>
+                <div style={{ fontSize: '11.5px', color: C.textLight, fontWeight: 700 }}>Total Partner Banks</div>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: C.text, marginTop: '2px' }}>{banks.length}</div>
+              </div>
+            </div>
+
+            <div style={{ ...S.card, padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', borderLeft: `4px solid ${C.green}` }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: `${C.green}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.green }}>
+                <MdCheckCircle size={22} />
+              </div>
+              <div>
+                <div style={{ fontSize: '11.5px', color: C.textLight, fontWeight: 700 }}>Direct Link Configured</div>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: C.green, marginTop: '2px' }}>{configuredBankCount}</div>
+              </div>
+            </div>
+
+            <div style={{ ...S.card, padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', borderLeft: `4px solid #F59E0B` }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D97706' }}>
+                <MdLinkOff size={22} />
+              </div>
+              <div>
+                <div style={{ fontSize: '11.5px', color: C.textLight, fontWeight: 700 }}>Missing Direct Link</div>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: '#D97706', marginTop: '2px' }}>{Math.max(0, banks.length - configuredBankCount)}</div>
+              </div>
+            </div>
+
+            <div style={{ ...S.card, padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', borderLeft: `4px solid #06B6D4` }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#CFFAFE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0891B2' }}>
+                <MdLink size={22} />
+              </div>
+              <div>
+                <div style={{ fontSize: '11.5px', color: C.textLight, fontWeight: 700 }}>Direct Apply Enabled</div>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: '#0891B2', marginTop: '2px' }}>
+                  {banks.filter(b => b.direct_process_enabled !== false && b.direct_process_url).length}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Search & Filter Bar */}
+          <div style={{ ...S.card, padding: '16px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+              <div style={{ flex: 1, minWidth: isMobile ? '100%' : '240px', position: 'relative' }}>
+                <input 
+                  style={{ ...S.input, paddingLeft: '34px' }} 
+                  placeholder="Search bank name, code (e.g. HDFC, SBI, TATA), DSA code, or link..." 
+                  value={bankSearchQuery} 
+                  onChange={e => setBankSearchQuery(e.target.value)} 
+                />
+                <MdSearch size={18} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} />
+              </div>
+
+              <div style={{ width: isMobile ? '100%' : '220px' }}>
+                <select 
+                  style={S.input} 
+                  value={bankFilterStatus} 
+                  onChange={e => setBankFilterStatus(e.target.value)}
+                >
+                  <option value="all">All Banks ({banks.length})</option>
+                  <option value="configured">Configured Links ({configuredBankCount})</option>
+                  <option value="missing">Missing Links ({Math.max(0, banks.length - configuredBankCount)})</option>
+                  <option value="enabled">Direct Apply Enabled</option>
+                  <option value="disabled">Direct Apply Disabled</option>
+                </select>
+              </div>
+
+              <button 
+                type="button" 
+                onClick={() => { setBankSearchQuery(''); setBankFilterStatus('all'); }} 
+                style={{ ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+
+          {/* Banks Direct Process Table */}
+          {loading ? (
+            <div style={{ ...S.card, padding: '48px', textAlign: 'center' }}>
+              <div style={{ display: 'inline-block', width: '32px', height: '32px', border: `3px solid ${C.border}`, borderTopColor: C.primary, borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+              <div style={{ marginTop: '12px', fontSize: '14px', color: C.textLight }}>Loading partner banks...</div>
+            </div>
+          ) : filteredBankLinks.length === 0 ? (
+            <div style={{ ...S.card, padding: '48px', textAlign: 'center' }}>
+              <MdAccountBalance size={48} style={{ color: C.textLight, margin: '0 auto 12px', display: 'block' }} />
+              <h3 style={{ color: C.text, margin: 0 }}>No banks matching your filter</h3>
+              <p style={{ color: C.textLight, fontSize: '13px', margin: '8px 0 16px' }}>Try resetting your search query or status filter.</p>
+              <button onClick={() => { setBankSearchQuery(''); setBankFilterStatus('all'); }} style={S.btn('primary')}>
+                Clear Filters
+              </button>
+            </div>
+          ) : (
+            <div style={{ ...S.card, overflow: 'hidden' }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '850px' }}>
+                  <thead>
+                    <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, fontSize: '12px', textTransform: 'uppercase', color: C.textLight }}>
+                      <th style={{ padding: '14px 16px', fontWeight: 800 }}>Bank Partner</th>
+                      <th style={{ padding: '14px 16px', fontWeight: 800 }}>Direct Process Application URL</th>
+                      <th style={{ padding: '14px 16px', fontWeight: 800 }}>Tracking / DSA Code</th>
+                      <th style={{ padding: '14px 16px', fontWeight: 800 }}>Direct Apply Status</th>
+                      <th style={{ padding: '14px 16px', fontWeight: 800, textAlign: 'center' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredBankLinks.map((bank) => {
+                      const hasLink = !!(bank.direct_process_url && String(bank.direct_process_url).trim().length > 0);
+                      const fullUrl = buildFullBankUrl(bank);
+                      const isEnabled = bank.direct_process_enabled !== false;
+
+                      return (
+                        <tr key={bank.id} style={{ borderBottom: `1px solid ${C.border}`, transition: 'background 0.15s' }}>
+                          {/* Bank Info */}
+                          <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              {bank.logo_url || bank.logo ? (
+                                <img 
+                                  src={bank.logo_url || bank.logo} 
+                                  alt={bank.name} 
+                                  style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '8px', background: '#fff', padding: '3px', border: `1px solid ${C.border}` }}
+                                  onError={(e) => { e.target.style.display = 'none'; }}
+                                />
+                              ) : (
+                                <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: `${C.primary}15`, color: C.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '13px' }}>
+                                  {bank.short_code ? bank.short_code.slice(0, 3) : 'BNK'}
+                                </div>
+                              )}
+                              <div>
+                                <div style={{ fontSize: '14.5px', fontWeight: 800, color: C.text, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  {bank.name}
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                                  <span style={{ fontSize: '10.5px', fontWeight: 700, padding: '1px 6px', borderRadius: '4px', background: C.bgSecondary, color: C.textLight, border: `1px solid ${C.border}` }}>
+                                    {bank.short_code || 'CODE'}
+                                  </span>
+                                  {bank.products_count !== undefined && (
+                                    <span style={{ fontSize: '11px', color: C.textLight }}>
+                                      {bank.products_count} product{bank.products_count === 1 ? '' : 's'}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Direct Process URL */}
+                          <td style={{ padding: '14px 16px', verticalAlign: 'middle', maxWidth: '360px' }}>
+                            {hasLink ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                    fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '6px',
+                                    background: `${C.green}15`, color: C.green
+                                  }}>
+                                    <MdCheckCircle size={13} /> Configured
+                                  </span>
+                                  {bank.channel_code && (
+                                    <span style={{ fontSize: '10.5px', fontWeight: 700, color: C.textLight, background: C.bgSecondary, padding: '2px 6px', borderRadius: '4px' }}>
+                                      Channel: {bank.channel_code}
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{
+                                  background: C.bgSecondary, padding: '6px 10px', borderRadius: '6px',
+                                  border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: '6px'
+                                }}>
+                                  <span style={{ fontFamily: 'monospace', fontSize: '11.5px', color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                                    {bank.direct_process_url}
+                                  </span>
+                                  <button onClick={() => handleCopy(fullUrl || bank.direct_process_url)} title="Copy Full Direct URL" style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.primary, padding: '2px' }}>
+                                    <MdContentCopy size={15} />
+                                  </button>
+                                  <a href={fullUrl || bank.direct_process_url} target="_blank" rel="noreferrer" title="Test / Open Link" style={{ color: C.textLight, padding: '2px', display: 'flex' }}>
+                                    <MdLaunch size={15} />
+                                  </a>
+                                </div>
+                                {bank.direct_process_notes && (
+                                  <div style={{ fontSize: '11px', color: C.textLight, fontStyle: 'italic', marginTop: '2px' }}>
+                                    Note: {bank.direct_process_notes}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                  fontSize: '11.5px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px',
+                                  background: '#FEF3C7', color: '#D97706'
+                                }}>
+                                  <MdLinkOff size={14} /> No Link Set
+                                </span>
+                                <button 
+                                  onClick={() => openBankEditModal(bank)} 
+                                  style={{
+                                    border: `1px solid ${C.primary}40`, background: `${C.primary}10`, color: C.primary,
+                                    padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 700
+                                  }}
+                                >
+                                  + Set Link
+                                </button>
+                              </div>
+                            )}
+                          </td>
+
+                          {/* DSA / Tracking Info */}
+                          <td style={{ padding: '14px 16px', verticalAlign: 'middle', fontSize: '12px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                              <div>
+                                <span style={{ color: C.textLight, fontSize: '11px' }}>DSA Code: </span>
+                                <strong style={{ color: bank.dsa_code ? C.primary : C.textLight }}>
+                                  {bank.dsa_code || 'None'}
+                                </strong>
+                              </div>
+                              {bank.utm_source && (
+                                <div style={{ fontSize: '11px', color: C.textLight }}>
+                                  UTM: <code style={{ color: C.text }}>{bank.utm_source}</code> / <code style={{ color: C.text }}>{bank.utm_medium || 'direct'}</code>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Direct Apply Status Toggle */}
+                          <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
+                            <button 
+                              onClick={() => handleToggleBankDirectProcess(bank)}
+                              title={isEnabled ? "Click to disable direct bank process" : "Click to enable direct bank process"}
+                              style={{
+                                border: `1px solid ${isEnabled ? C.green : C.red}40`,
+                                background: `${isEnabled ? C.green : C.red}12`,
+                                color: isEnabled ? C.green : C.red,
+                                padding: '6px 12px', borderRadius: '20px', cursor: 'pointer',
+                                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                fontSize: '11.5px', fontWeight: 700
+                              }}
+                            >
+                              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: isEnabled ? C.green : C.red }} />
+                              {isEnabled ? 'Direct Apply Active' : 'Direct Apply Disabled'}
+                            </button>
+                          </td>
+
+                          {/* Actions */}
+                          <td style={{ padding: '14px 16px', verticalAlign: 'middle', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                              <button 
+                                onClick={() => openBankEditModal(bank)} 
+                                style={{
+                                  border: `1px solid ${C.primary}40`, background: `${C.primary}10`, color: C.primary,
+                                  padding: '6px 12px', borderRadius: '8px', cursor: 'pointer',
+                                  display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700
+                                }}
+                              >
+                                <MdEdit size={14} /> Configure
+                              </button>
+                              {hasLink && (
+                                <>
+                                  <a 
+                                    href={fullUrl || bank.direct_process_url} 
+                                    target="_blank" 
+                                    rel="noreferrer"
+                                    style={{
+                                      border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text,
+                                      padding: '6px 10px', borderRadius: '8px', cursor: 'pointer',
+                                      display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', textDecoration: 'none'
+                                    }}
+                                    title="Open / Test Live Link"
+                                  >
+                                    <MdLaunch size={14} /> Test
+                                  </a>
+                                  <button 
+                                    onClick={() => handleClearBankDirectLink(bank)} 
+                                    title="Clear Direct Process Link"
+                                    style={{
+                                      border: `1px solid ${C.red}30`, background: `${C.red}08`, color: C.red,
+                                      padding: '6px 8px', borderRadius: '8px', cursor: 'pointer'
+                                    }}
+                                  >
+                                    <MdDelete size={14} />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : activeTab === 'employee_links' ? (
         <div>
           {/* Filter Bar for Employee Custom Links */}
           <div style={{ ...S.card, padding: '16px', marginBottom: '24px' }}>
@@ -1110,6 +1644,275 @@ export default function ManageProductLinks() {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIGURE BANK DIRECT PROCESS LINK MODAL */}
+      {bankModalOpen && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1050,
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div style={{
+            ...S.card,
+            width: '100%', maxWidth: '640px', maxHeight: '90vh',
+            overflowY: 'auto', padding: isMobile ? '20px' : '28px', position: 'relative',
+            borderRadius: '20px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+          }}>
+            {/* Close Button */}
+            <button 
+              onClick={() => setBankModalOpen(false)}
+              style={{
+                position: 'absolute', top: '20px', right: '20px',
+                background: C.bgSecondary, border: 'none', cursor: 'pointer',
+                width: '34px', height: '34px', borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textLight
+              }}
+            >
+              <MdClose size={20} />
+            </button>
+
+            {/* Header */}
+            <div style={{ marginBottom: '22px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '42px', height: '42px', borderRadius: '12px',
+                  background: `${C.primary}15`, color: C.primary,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <MdAccountBalance size={24} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '20px', fontWeight: 800, color: C.text, margin: 0 }}>
+                    {editingBank ? `Direct Process Link — ${editingBank.name}` : 'Configure Bank Direct Process Link'}
+                  </h3>
+                  <p style={{ fontSize: '12.5px', color: C.textLight, margin: '3px 0 0 0' }}>
+                    Configure official bank portal application URL used for direct bank lead routing
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveBankDirectLink} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              {/* Select Bank (if adding for a bank without one clicked) */}
+              {!editingBank ? (
+                <div>
+                  <label style={S.label}>Select Bank Partner *</label>
+                  <select 
+                    required 
+                    style={S.input} 
+                    value={bankForm.bank_id}
+                    onChange={e => {
+                      const selected = banks.find(b => b.id === e.target.value);
+                      setBankForm(prev => ({
+                        ...prev,
+                        bank_id: e.target.value,
+                        direct_process_url: selected?.direct_process_url || prev.direct_process_url,
+                        dsa_code: selected?.dsa_code || prev.dsa_code,
+                        channel_code: selected?.channel_code || prev.channel_code,
+                        utm_source: selected?.utm_source || prev.utm_source,
+                        utm_medium: selected?.utm_medium || prev.utm_medium,
+                        utm_campaign: selected?.utm_campaign || prev.utm_campaign,
+                        direct_process_notes: selected?.direct_process_notes || prev.direct_process_notes,
+                        direct_process_enabled: selected?.direct_process_enabled ?? true
+                      }));
+                    }}
+                  >
+                    <option value="">-- Choose a Bank Partner --</option>
+                    {banks.map(b => (
+                      <option key={b.id} value={b.id}>
+                        {b.name} ({b.short_code}) {b.direct_process_url ? '✓ Configured' : '⚠️ No Link'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  background: C.bgSecondary, padding: '12px 16px', borderRadius: '12px', border: `1px solid ${C.border}`
+                }}>
+                  {editingBank.logo_url || editingBank.logo ? (
+                    <img 
+                      src={editingBank.logo_url || editingBank.logo} 
+                      alt={editingBank.name} 
+                      style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '8px', background: '#fff', padding: '3px' }}
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: `${C.primary}15`, color: C.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
+                      {editingBank.short_code ? editingBank.short_code.slice(0, 3) : 'BNK'}
+                    </div>
+                  )}
+                  <div>
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: C.text }}>
+                      {editingBank.name}
+                    </div>
+                    <div style={{ fontSize: '12px', color: C.textLight }}>
+                      Bank Code: <strong style={{ color: C.primary }}>{editingBank.short_code}</strong>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Direct Process URL */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ ...S.label, margin: 0 }}>Official Direct Process Application URL *</label>
+                  {/* Preset Helper Button for HDFC/Tata */}
+                  {((editingBank?.short_code === 'TATA_HDFC' || editingBank?.short_code === 'HDFC' || editingBank?.name?.toUpperCase().includes('HDFC')) ||
+                    (bankForm.bank_id && banks.find(b => b.id === bankForm.bank_id)?.short_code?.includes('HDFC'))) && (
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setBankForm(prev => ({
+                          ...prev,
+                          direct_process_url: 'https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=PTN01&LCcode=PTN01&LC2=A089&SMcode=A31964#nbb',
+                          dsa_code: 'XYOH',
+                          channel_code: 'TDCC',
+                          direct_process_notes: 'Official Adobe digital onboarding journey for credit card applicants'
+                        }));
+                      }}
+                      style={{ background: 'none', border: 'none', color: C.primary, fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                    >
+                      Use Adobe HDFC Preset
+                    </button>
+                  )}
+                </div>
+                <input 
+                  type="url" 
+                  required 
+                  placeholder="https://applyonline.bank.com/cards/apply-now" 
+                  style={{ ...S.input, fontFamily: 'monospace', fontSize: '13px' }}
+                  value={bankForm.direct_process_url}
+                  onChange={e => setBankForm({ ...bankForm, direct_process_url: e.target.value })}
+                />
+                <span style={{ fontSize: '11px', color: C.textLight, marginTop: '4px', display: 'block' }}>
+                  When partners or employees submit a lead with &apos;Direct Bank&apos; process, this official portal opens automatically.
+                </span>
+              </div>
+
+              {/* DSA Code & Channel Code */}
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={S.label}>DSA Code / Partner Agent Code</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. XYOH, PUP00228" 
+                    style={S.input}
+                    value={bankForm.dsa_code}
+                    onChange={e => setBankForm({ ...bankForm, dsa_code: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label style={S.label}>Channel Code / Source Tag</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. TDCC, DSA_AGENT" 
+                    style={S.input}
+                    value={bankForm.channel_code}
+                    onChange={e => setBankForm({ ...bankForm, channel_code: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Direct Apply Enabled Switch */}
+              <div style={{
+                background: C.bgSecondary, border: `1px solid ${C.border}`,
+                padding: '12px 16px', borderRadius: '12px',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+              }}>
+                <div>
+                  <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>
+                    Direct Process Status
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: C.textLight, marginTop: '2px' }}>
+                    Enable or disable the direct bank process application option for this bank
+                  </div>
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <input 
+                    type="checkbox"
+                    checked={bankForm.direct_process_enabled}
+                    onChange={e => setBankForm({ ...bankForm, direct_process_enabled: e.target.checked })}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: bankForm.direct_process_enabled ? C.green : C.red }}>
+                    {bankForm.direct_process_enabled ? 'Active' : 'Disabled'}
+                  </span>
+                </label>
+              </div>
+
+              {/* UTM Campaign Tracking Parameters */}
+              <div style={{ border: `1px dashed ${C.border}`, padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <span style={{ fontSize: '12.5px', fontWeight: 700, color: C.text }}>
+                  UTM Tracking Parameters (Optional)
+                </span>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '10px' }}>
+                  <div>
+                    <label style={{ ...S.label, fontSize: '11px' }}>UTM Source</label>
+                    <input 
+                      type="text" 
+                      placeholder="gharkapaisa" 
+                      style={S.input}
+                      value={bankForm.utm_source}
+                      onChange={e => setBankForm({ ...bankForm, utm_source: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ ...S.label, fontSize: '11px' }}>UTM Medium</label>
+                    <input 
+                      type="text" 
+                      placeholder="direct_bank" 
+                      style={S.input}
+                      value={bankForm.utm_medium}
+                      onChange={e => setBankForm({ ...bankForm, utm_medium: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ ...S.label, fontSize: '11px' }}>UTM Campaign</label>
+                    <input 
+                      type="text" 
+                      placeholder="partner_lead" 
+                      style={S.input}
+                      value={bankForm.utm_campaign}
+                      onChange={e => setBankForm({ ...bankForm, utm_campaign: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Internal Notes */}
+              <div>
+                <label style={S.label}>Internal Notes / Processing Guidelines</label>
+                <textarea 
+                  rows={2} 
+                  placeholder="e.g. Adobe digital KYC journey, requires customer Aadhaar linked mobile..." 
+                  style={{ ...S.input, resize: 'vertical' }}
+                  value={bankForm.direct_process_notes}
+                  onChange={e => setBankForm({ ...bankForm, direct_process_notes: e.target.value })}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setBankModalOpen(false)} 
+                  style={S.btn('outline')}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={actionLoading} 
+                  style={{ ...S.btn('primary'), display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  {actionLoading ? 'Saving...' : 'Save Bank Direct Link'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

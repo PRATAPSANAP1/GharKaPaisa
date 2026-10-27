@@ -24,6 +24,10 @@ export const getBankApplyLink = (cardName, bankId, productObj = null) => {
     product?.public_url ||
     product?.publicUrl ||
     product?.bank_link ||
+    product?.direct_process_url ||
+    product?.directProcessUrl ||
+    product?.bank_direct_process_url ||
+    product?.bankDirectProcessUrl ||
     null
   );
 

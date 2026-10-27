@@ -5086,6 +5086,14 @@ const migrate = async () => {
     logger.error('Tata Floater Adobe Product migration error note:', tataFloaterErr.message);
   }
 
+  // Bank Direct Process Link Columns Migration
+  try {
+    const { migrateAddBankDirectProcessLink } = require('./migrate_add_bank_direct_process_link');
+    await migrateAddBankDirectProcessLink();
+  } catch (bankLinkErr) {
+    logger.error('Bank Direct Process Link migration error note:', bankLinkErr.message);
+  }
+
   if (require.main === module) {
     process.exit(0);
   }
