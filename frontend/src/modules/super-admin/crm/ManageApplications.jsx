@@ -240,69 +240,12 @@ export default function ManageApplications() {
         setApplications(list);
         setTotalCount(total);
         setTotalPages(computedPages);
-
-        // ── ALL ADMIN ROLES & DESIGNATION PANELS BROWSER CONSOLE AUDIT LOGGING ──
-        try {
-          const assignedList = user?.assigned_banks?.length ? user.assigned_banks : (user?.permissions?.assigned_banks || []);
-          const designationTitle = userDesignation || userRole || 'SUPER_ADMIN';
-          console.group(`%c[Admin CRM Audit - ${designationTitle}] Account & Showing Applications Inspection`, 'color: #0284c7; font-weight: 800; font-size: 13px;');
-          console.log('%c1. Account Assigned Category & Banks:', 'color: #0369a1; font-weight: 700;', {
-            designation: userDesignation || 'N/A',
-            role: userRole || 'SUPER_ADMIN',
-            user_id: user?.id,
-            name: user?.full_name || user?.name || user?.email,
-            category_assignments: user?.category_assignments || {},
-            assigned_banks_count: assignedList.length,
-            assigned_banks_list: assignedList.map(b => ({
-              bank_id: b.id || b.bank_id,
-              name: b.name || b.bank_name || b.short_code,
-              code: b.short_code || b.code,
-              assigned_category: (b.category === 'loc_eoc' || b.is_loc_eoc) ? 'LOC & EOC' : (b.category ? b.category.toUpperCase().replace('_', ' ') : 'Credit Card'),
-              is_loc_eoc: !!b.is_loc_eoc
-            }))
-          });
-          if (assignedList.length > 0) {
-            console.table(
-              assignedList.map(b => ({
-                'Bank Name': b.name || b.bank_name || b.short_code || 'Bank',
-                'Bank Code': b.short_code || b.code || '—',
-                'Assigned Category': (b.category === 'loc_eoc' || b.is_loc_eoc) ? 'LOC & EOC' : (b.category ? b.category.toUpperCase().replace('_', ' ') : 'Credit Card'),
-                'Bank ID': b.id || b.bank_id || '—'
-              }))
-            );
-          } else {
-            console.log('%cAssigned Banks: All Banks (Super Admin / Global Access)', 'color: #64748b; font-style: italic;');
-          }
-          console.log('%c2. Showing Applications Data (Category & Bank):', 'color: #059669; font-weight: 700;', {
-            total_count: total,
-            page_records_count: list.length,
-            statusFilter,
-            commFilter,
-            bankFilter: bankFilter || 'all'
-          });
-          if (list && list.length > 0) {
-            console.table(
-              list.map(a => ({
-                'App Number': a.app_number || `APP${a.id}`,
-                'Bank Name': a.bank_name || a.bank_code || 'Partner Bank',
-                'Category': a.category || (String(a.sub_category || '').toLowerCase() === 'loc' || String(a.sub_category || '').toLowerCase() === 'eoc' ? 'loc_eoc' : 'credit_card'),
-                'Sub Category': a.sub_category || '—',
-                'Product': a.product_name || '—',
-                'Status': a.status || '—',
-                'Final Status': a.final_status || '—',
-                'Customer': a.customer_name || a.full_name || '—'
-              }))
-            );
-          } else {
-            console.log('%cNo applications returned matching current filters/permissions.', 'color: #64748b; font-style: italic;');
-          }
-          console.groupEnd();
-        } catch (logErr) {
-          console.error('Admin CRM console audit error:', logErr);
-        }
       }
     } catch (e) {
       console.error('Applications load failed:', e);
+      if (e.response?.status === 503) {
+        console.error('Backend service unavailable (503)');
+      }
     } finally {
       setLoading(false);
     }
