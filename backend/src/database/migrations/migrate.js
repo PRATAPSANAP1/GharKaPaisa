@@ -5070,6 +5070,22 @@ const migrate = async () => {
     logger.error('Sales Operator Claim migration error note:', claimErr.message);
   }
 
+  // Admin Review Columns for Biometric Templates Migration
+  try {
+    const { migrateAddAdminReviewColumns } = require('./migrate_add_admin_review_columns');
+    await migrateAddAdminReviewColumns();
+  } catch (adminReviewErr) {
+    logger.error('Admin Review Columns migration error note:', adminReviewErr.message);
+  }
+
+  // Tata Floater Adobe Credit Card Product Migration
+  try {
+    const { migrateAddTataFloaterAdobeProduct } = require('./migrate_add_tata_floater_adobe_product');
+    await migrateAddTataFloaterAdobeProduct();
+  } catch (tataFloaterErr) {
+    logger.error('Tata Floater Adobe Product migration error note:', tataFloaterErr.message);
+  }
+
   if (require.main === module) {
     process.exit(0);
   }

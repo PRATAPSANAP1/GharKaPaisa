@@ -49,9 +49,11 @@ export default function AttendanceSuccess({ verResult, user, onClose }) {
       style={{
         background: '#FFFFFF',
         borderRadius: '24px',
-        padding: '36px 28px 28px',
+        padding: 'clamp(20px, 4vw, 36px) clamp(16px, 4vw, 28px) clamp(18px, 4vw, 28px)',
         width: '100%',
         maxWidth: '440px',
+        maxHeight: '90vh',
+        overflowY: 'auto',
         position: 'relative',
         boxShadow: '0 20px 40px -15px rgba(22, 199, 132, 0.15), 0 8px 16px -8px rgba(0, 0, 0, 0.04)',
         border: '1px solid #E7EAF0',

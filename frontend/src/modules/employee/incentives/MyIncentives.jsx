@@ -84,30 +84,34 @@ export default function MyIncentives() {
           </div>
 
           {/* View Switcher */}
-          <div style={{ display: 'flex', gap: '6px', background: C.card, padding: '4px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+          <div style={{ display: 'flex', gap: '6px', background: C.card, padding: '4px', borderRadius: '12px', border: `1px solid ${C.border}`, flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
             <button
               onClick={() => setActiveView('monthly')}
               style={{
-                padding: '8px 16px', borderRadius: '9px', border: 'none',
+                flex: isMobile ? 1 : 'none',
+                padding: '8px 14px', borderRadius: '9px', border: 'none',
                 background: activeView === 'monthly' ? C.teal : 'transparent',
                 color: activeView === 'monthly' ? '#FFF' : C.textMid,
-                fontSize: '13px', fontWeight: 800, cursor: 'pointer',
-                transition: 'all 0.2s ease'
+                fontSize: isMobile ? '12px' : '13px', fontWeight: 800, cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                textAlign: 'center'
               }}
             >
-              🗓️ Monthly Audit & Structure
+              🗓️ Monthly Audit
             </button>
             <button
               onClick={() => setActiveView('all')}
               style={{
-                padding: '8px 16px', borderRadius: '9px', border: 'none',
+                flex: isMobile ? 1 : 'none',
+                padding: '8px 14px', borderRadius: '9px', border: 'none',
                 background: activeView === 'all' ? C.teal : 'transparent',
                 color: activeView === 'all' ? '#FFF' : C.textMid,
-                fontSize: '13px', fontWeight: 800, cursor: 'pointer',
-                transition: 'all 0.2s ease'
+                fontSize: isMobile ? '12px' : '13px', fontWeight: 800, cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                textAlign: 'center'
               }}
             >
-              📜 All Transactions Ledger
+              📜 Ledger
             </button>
           </div>
         </div>
@@ -118,7 +122,7 @@ export default function MyIncentives() {
           <>
 
         {/* Stats Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '32px' }}>
           
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: `${C.teal}15`, color: C.teal, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>

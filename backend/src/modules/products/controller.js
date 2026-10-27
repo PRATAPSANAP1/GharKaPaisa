@@ -1312,11 +1312,11 @@ const seedNewBanksProducts = async (req, res, next) => {
           sub_category, joining_fee, interest_rate, rewards, cashback,
           lounge_access, fuel_surcharge, compare_specs, fees_structure,
           commissions_json, features_list, benefits_list, required_documents,
-          visibility, seo_metadata
+          visibility, seo_metadata, image_url, partner_url, public_url
         ) VALUES (
           $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,
           $31,$32,$33,$34,$35,$36,$37,
-          $38,$39,$40,$41,$42,$43,$44,$45
+          $38,$39,$40,$41,$42,$43,$44,$45,$46,$47,$48
         )
         ON CONFLICT (bank_id, name) DO UPDATE SET
           category = EXCLUDED.category,
@@ -1350,6 +1350,9 @@ const seedNewBanksProducts = async (req, res, next) => {
           required_documents = EXCLUDED.required_documents,
           visibility = EXCLUDED.visibility,
           seo_metadata = EXCLUDED.seo_metadata,
+          image_url = COALESCE(EXCLUDED.image_url, products.image_url),
+          partner_url = COALESCE(EXCLUDED.partner_url, products.partner_url),
+          public_url = COALESCE(EXCLUDED.public_url, products.public_url),
           is_active = true,
           status = 'Active'
         RETURNING (xmin = 0) AS is_insert
@@ -1364,7 +1367,7 @@ const seedNewBanksProducts = async (req, res, next) => {
         card.sub_category, fees.joining_fee, fees.interest_rate, card.short_description || null, card.short_description || null,
         compareSpecs.lounge_access, compareSpecs.fuel_surcharge, JSON.stringify(compareSpecs), JSON.stringify(fees),
         JSON.stringify(commissions), JSON.stringify(card.features || []), JSON.stringify(card.benefits ? [{ title: 'Key Benefits', description: card.benefits }] : []), JSON.stringify(docsArray),
-        JSON.stringify(visibility), JSON.stringify(seoMetadata)
+        JSON.stringify(visibility), JSON.stringify(seoMetadata), card.image_url || null, card.partner_url || null, card.public_url || null
       ]);
 
       if (result.rows[0]?.is_insert) inserted++; else updated++;

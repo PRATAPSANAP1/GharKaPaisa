@@ -44,6 +44,14 @@ export const getBankApplyLink = (cardName, bankId, productObj = null) => {
     return cleanUrl;
   }
 
+  const nameLower = String(product?.name || product?.cardName || cardName || '').toLowerCase();
+  const bankLower = String(product?.bank_name || product?.bank_code || bankId || '').toLowerCase();
+
+  // Fallback: Resolve canonical Adobe process URL for Tata Floater Adobe cards
+  if (nameLower.includes('floater') || (nameLower.includes('adobe') && (bankLower.includes('tata') || bankLower.includes('hdfc')))) {
+    return 'https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=PTN01&LCcode=PTN01&LC2=A089&SMcode=A31964#nbb';
+  }
+
   // Fallback: Resolve canonical direct UTM link for personal loan finance partners
   const financeUtmUrl = getFinanceDirectUrl(product || cardName);
   if (financeUtmUrl) {

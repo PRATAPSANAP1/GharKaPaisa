@@ -78,7 +78,7 @@ export default function AttendanceDashboardCard({
         background: '#FFFFFF',
         borderRadius: '20px',
         border: '1px solid #E5E7EB',
-        padding: '36px 32px',
+        padding: 'clamp(24px, 6vw, 36px) clamp(16px, 5vw, 32px)',
         maxWidth: '480px',
         width: '100%',
         margin: '0 auto',
@@ -101,7 +101,7 @@ export default function AttendanceDashboardCard({
 
       {/* Live Time */}
       <div style={{
-        fontSize: '38px',
+        fontSize: 'clamp(28px, 8vw, 38px)',
         fontWeight: 800,
         color: '#111827',
         letterSpacing: '-0.5px',

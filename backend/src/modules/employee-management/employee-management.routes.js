@@ -49,146 +49,181 @@ const resolveS3Url = async (urlOrKey) => {
 router.use(jwtAuth);
 router.use(roleCheck('SUPER_ADMIN', 'ADMIN'));
 
+let isEmployeeSchemaEnsured = false;
+let employeeSchemaPromise = null;
+
+async function ensureEmployeeSchema() {
+  if (isEmployeeSchemaEnsured) return;
+  if (employeeSchemaPromise) return employeeSchemaPromise;
+
+  employeeSchemaPromise = (async () => {
+    try {
+      // 1. Check if column admin_review_status already exists before attempting ALTER TABLE
+      const { rows: bioCols } = await query(`
+        SELECT column_name FROM information_schema.columns 
+        WHERE table_name = 'employee_biometric_templates' AND column_name = 'admin_review_status'
+      `).catch(() => ({ rows: [] }));
+
+      if (bioCols.length === 0) {
+        await query(`
+          ALTER TABLE employee_biometric_templates 
+            ADD COLUMN IF NOT EXISTS admin_review_status VARCHAR(20) DEFAULT 'PENDING',
+            ADD COLUMN IF NOT EXISTS admin_review_notes TEXT,
+            ADD COLUMN IF NOT EXISTS admin_reviewed_at TIMESTAMPTZ,
+            ADD COLUMN IF NOT EXISTS admin_reviewed_by UUID REFERENCES users(id)
+        `).catch(err => logger.warn('Biometric review columns ensure note:', err.message));
+      }
+
+      // 2. Check hierarchy columns
+      const { rows: hierCols } = await query(`
+        SELECT column_name FROM information_schema.columns 
+        WHERE table_name = 'employee_hierarchy' AND column_name = 'senior_manager_id'
+      `).catch(() => ({ rows: [] }));
+
+      if (hierCols.length === 0) {
+        await query(`
+          ALTER TABLE employee_hierarchy 
+            ADD COLUMN IF NOT EXISTS senior_manager_id UUID REFERENCES employees(id),
+            ADD COLUMN IF NOT EXISTS branch_head_id UUID REFERENCES employees(id)
+        `).catch(err => logger.warn('Hierarchy columns ensure note:', err.message));
+      }
+
+      // 3. Ensure supporting tables exist
+      await query(`
+        CREATE TABLE IF NOT EXISTS employee_bank_assignments (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+          bank_id UUID NOT NULL REFERENCES banks(id) ON DELETE CASCADE,
+          assigned_by UUID REFERENCES users(id),
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW(),
+          UNIQUE(employee_id, bank_id)
+        );
+        CREATE TABLE IF NOT EXISTS employee_verification_reminders (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+          sent_by UUID REFERENCES users(id) ON DELETE SET NULL,
+          message TEXT,
+          missing_documents JSONB,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE TABLE IF NOT EXISTS employee_bonus_rules (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+          bank_id UUID NOT NULL REFERENCES banks(id) ON DELETE CASCADE,
+          start_date DATE NOT NULL,
+          end_date DATE NOT NULL,
+          target_count INTEGER NOT NULL DEFAULT 0,
+          bonus_per_card DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+          status VARCHAR(20) DEFAULT 'ACTIVE',
+          created_by UUID REFERENCES users(id),
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE TABLE IF NOT EXISTS employee_bonus_transactions (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+          bank_id UUID NOT NULL REFERENCES banks(id) ON DELETE CASCADE,
+          application_id UUID REFERENCES applications(id) ON DELETE SET NULL,
+          bonus_rule_id UUID REFERENCES employee_bonus_rules(id) ON DELETE CASCADE,
+          bonus_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+          status VARCHAR(20) DEFAULT 'EARNED',
+          earned_at TIMESTAMPTZ DEFAULT NOW(),
+          paid_at TIMESTAMPTZ,
+          UNIQUE(application_id, bonus_rule_id)
+        );
+        CREATE TABLE IF NOT EXISTS employee_sales_reports (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+          report_date DATE NOT NULL DEFAULT CURRENT_DATE,
+          total_cards INTEGER NOT NULL DEFAULT 0,
+          remark TEXT,
+          photo_url TEXT,
+          photo_key TEXT,
+          status VARCHAR(20) DEFAULT 'Submitted',
+          submitted_at TIMESTAMPTZ DEFAULT NOW(),
+          reviewed_by UUID REFERENCES users(id),
+          reviewed_at TIMESTAMPTZ,
+          review_remark TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE TABLE IF NOT EXISTS employee_sales_report_banks (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          report_id UUID NOT NULL REFERENCES employee_sales_reports(id) ON DELETE CASCADE,
+          bank_id UUID NOT NULL REFERENCES banks(id) ON DELETE CASCADE,
+          cards_sold INTEGER NOT NULL DEFAULT 0,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE TABLE IF NOT EXISTS employee_incentive_rules (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+          bank_id UUID NOT NULL REFERENCES banks(id) ON DELETE CASCADE,
+          product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+          department_assigned BOOLEAN DEFAULT false,
+          target_cards INTEGER DEFAULT 0,
+          incentive_per_card DECIMAL(12,2) DEFAULT 0.00,
+          bonus_per_card DECIMAL(12,2) DEFAULT 0.00,
+          effective_from DATE NOT NULL,
+          effective_to DATE NOT NULL,
+          status VARCHAR(20) DEFAULT 'ACTIVE',
+          created_by UUID REFERENCES users(id),
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE TABLE IF NOT EXISTS employee_incentive_monthly_records (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+          year INTEGER NOT NULL,
+          month INTEGER NOT NULL,
+          bank_id UUID NOT NULL REFERENCES banks(id) ON DELETE CASCADE,
+          product_id UUID REFERENCES products(id) ON DELETE SET NULL,
+          department_assigned BOOLEAN DEFAULT false,
+          target_cards INTEGER DEFAULT 0,
+          approved_cards INTEGER DEFAULT 0,
+          target_achieved BOOLEAN DEFAULT false,
+          incentive_per_card DECIMAL(12,2) DEFAULT 0.00,
+          bonus_per_card DECIMAL(12,2) DEFAULT 0.00,
+          total_incentive DECIMAL(12,2) DEFAULT 0.00,
+          total_bonus DECIMAL(12,2) DEFAULT 0.00,
+          status VARCHAR(30) DEFAULT 'COMPLETED',
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW(),
+          CONSTRAINT unique_emp_month_bank UNIQUE(employee_id, year, month, bank_id)
+        );
+      `).catch(err => logger.warn('Supporting tables ensure note:', err.message));
+
+      isEmployeeSchemaEnsured = true;
+    } catch (err) {
+      logger.warn('ensureEmployeeSchema error:', err.message);
+    } finally {
+      employeeSchemaPromise = null;
+    }
+  })();
+
+  return employeeSchemaPromise;
+}
+
+let lastEmployeeSyncTime = 0;
+let isEmployeeSyncInProgress = null;
+const EMPLOYEE_SYNC_INTERVAL_MS = 60000; // Throttle candidate sync to at most once per minute
+
 // Helper function to sync registered candidates and ensure initial demo employees exist
 async function syncAndSeedEmployees() {
-  try {
-    // Ensure 5-level hierarchy columns exist on employee_hierarchy table
-    await query(`ALTER TABLE employee_hierarchy ADD COLUMN IF NOT EXISTS senior_manager_id UUID REFERENCES employees(id)`).catch(() => {});
-    await query(`ALTER TABLE employee_hierarchy ADD COLUMN IF NOT EXISTS branch_head_id UUID REFERENCES employees(id)`).catch(() => {});
+  await ensureEmployeeSchema();
 
-    // Ensure biometric templates admin review columns exist
-    await query(`ALTER TABLE employee_biometric_templates ADD COLUMN IF NOT EXISTS admin_review_status VARCHAR(20) DEFAULT 'PENDING'`).catch(() => {});
-    await query(`ALTER TABLE employee_biometric_templates ADD COLUMN IF NOT EXISTS admin_review_notes TEXT`).catch(() => {});
-    await query(`ALTER TABLE employee_biometric_templates ADD COLUMN IF NOT EXISTS admin_reviewed_at TIMESTAMPTZ`).catch(() => {});
-    await query(`ALTER TABLE employee_biometric_templates ADD COLUMN IF NOT EXISTS admin_reviewed_by UUID REFERENCES users(id)`).catch(() => {});
+  const now = Date.now();
+  if (now - lastEmployeeSyncTime < EMPLOYEE_SYNC_INTERVAL_MS) {
+    return;
+  }
 
-    // Ensure Employee Bank Assignment & Bonus Rules tables exist
-    await query(`
-      CREATE TABLE IF NOT EXISTS employee_bank_assignments (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-        bank_id UUID NOT NULL REFERENCES banks(id) ON DELETE CASCADE,
-        assigned_by UUID REFERENCES users(id),
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW(),
-        UNIQUE(employee_id, bank_id)
-      )
-    `).catch(() => {});
+  if (isEmployeeSyncInProgress) {
+    return isEmployeeSyncInProgress;
+  }
 
-    await query(`
-      CREATE TABLE IF NOT EXISTS employee_verification_reminders (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-        sent_by UUID REFERENCES users(id) ON DELETE SET NULL,
-        message TEXT,
-        missing_documents JSONB,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `).catch(() => {});
-
-    await query(`
-      CREATE TABLE IF NOT EXISTS employee_bonus_rules (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-        bank_id UUID NOT NULL REFERENCES banks(id) ON DELETE CASCADE,
-        start_date DATE NOT NULL,
-        end_date DATE NOT NULL,
-        target_count INTEGER NOT NULL DEFAULT 0,
-        bonus_per_card DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-        status VARCHAR(20) DEFAULT 'ACTIVE',
-        created_by UUID REFERENCES users(id),
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `).catch(() => {});
-
-    await query(`
-      CREATE TABLE IF NOT EXISTS employee_bonus_transactions (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-        bank_id UUID NOT NULL REFERENCES banks(id) ON DELETE CASCADE,
-        application_id UUID REFERENCES applications(id) ON DELETE SET NULL,
-        bonus_rule_id UUID REFERENCES employee_bonus_rules(id) ON DELETE CASCADE,
-        bonus_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-        status VARCHAR(20) DEFAULT 'EARNED',
-        earned_at TIMESTAMPTZ DEFAULT NOW(),
-        paid_at TIMESTAMPTZ,
-        UNIQUE(application_id, bonus_rule_id)
-      )
-    `).catch(() => {});
-
-    await query(`
-      CREATE TABLE IF NOT EXISTS employee_sales_reports (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-        report_date DATE NOT NULL DEFAULT CURRENT_DATE,
-        total_cards INTEGER NOT NULL DEFAULT 0,
-        remark TEXT,
-        photo_url TEXT,
-        photo_key TEXT,
-        status VARCHAR(20) DEFAULT 'Submitted',
-        submitted_at TIMESTAMPTZ DEFAULT NOW(),
-        reviewed_by UUID REFERENCES users(id),
-        reviewed_at TIMESTAMPTZ,
-        review_remark TEXT,
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `).catch(() => {});
-
-    await query(`
-      CREATE TABLE IF NOT EXISTS employee_sales_report_banks (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        report_id UUID NOT NULL REFERENCES employee_sales_reports(id) ON DELETE CASCADE,
-        bank_id UUID NOT NULL REFERENCES banks(id) ON DELETE CASCADE,
-        cards_sold INTEGER NOT NULL DEFAULT 0,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `).catch(() => {});
-
-    // Versioned Incentive Rules Table
-    await query(`
-      CREATE TABLE IF NOT EXISTS employee_incentive_rules (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-        bank_id UUID NOT NULL REFERENCES banks(id) ON DELETE CASCADE,
-        product_id UUID REFERENCES products(id) ON DELETE CASCADE,
-        department_assigned BOOLEAN DEFAULT false,
-        target_cards INTEGER DEFAULT 0,
-        incentive_per_card DECIMAL(12,2) DEFAULT 0.00,
-        bonus_per_card DECIMAL(12,2) DEFAULT 0.00,
-        effective_from DATE NOT NULL,
-        effective_to DATE NOT NULL,
-        status VARCHAR(20) DEFAULT 'ACTIVE',
-        created_by UUID REFERENCES users(id),
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `).catch(() => {});
-
-    // Immutable Frozen Monthly Performance Snapshots Table
-    await query(`
-      CREATE TABLE IF NOT EXISTS employee_incentive_monthly_records (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-        year INTEGER NOT NULL,
-        month INTEGER NOT NULL,
-        bank_id UUID NOT NULL REFERENCES banks(id) ON DELETE CASCADE,
-        product_id UUID REFERENCES products(id) ON DELETE SET NULL,
-        department_assigned BOOLEAN DEFAULT false,
-        target_cards INTEGER DEFAULT 0,
-        approved_cards INTEGER DEFAULT 0,
-        target_achieved BOOLEAN DEFAULT false,
-        incentive_per_card DECIMAL(12,2) DEFAULT 0.00,
-        bonus_per_card DECIMAL(12,2) DEFAULT 0.00,
-        total_incentive DECIMAL(12,2) DEFAULT 0.00,
-        total_bonus DECIMAL(12,2) DEFAULT 0.00,
-        status VARCHAR(30) DEFAULT 'COMPLETED',
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW(),
-        CONSTRAINT unique_emp_month_bank UNIQUE(employee_id, year, month, bank_id)
-      )
-    `).catch(() => {});
+  isEmployeeSyncInProgress = (async () => {
+    try {
+      lastEmployeeSyncTime = Date.now();
 
     // 1. Sync candidates from employee_candidates into users table
     await query(`
@@ -375,9 +410,14 @@ async function syncAndSeedEmployees() {
         }
       }
     }
-  } catch (err) {
-    logger.warn('syncAndSeedEmployees error:', err.message);
-  }
+    } catch (err) {
+      logger.warn('syncAndSeedEmployees error:', err.message);
+    } finally {
+      isEmployeeSyncInProgress = null;
+    }
+  })();
+
+  return isEmployeeSyncInProgress;
 }
 
 // GET /api/v1/employees — List all employees with rich search and filtering across 5 hierarchy levels
@@ -404,6 +444,14 @@ router.get('/', async (req, res, next) => {
       END
       FROM employee_hierarchy h
       WHERE h.employee_id = e.id AND h.is_active = true
+        AND e.designation IS DISTINCT FROM (CASE 
+          WHEN h.hierarchy_level = 'BRANCH_HEAD' THEN 'Branch Head'
+          WHEN h.hierarchy_level = 'SENIOR_MANAGER' THEN 'Senior Manager'
+          WHEN h.hierarchy_level = 'MANAGER' THEN 'Manager'
+          WHEN h.hierarchy_level = 'TEAM_LEADER' THEN 'Team Leader'
+          WHEN h.hierarchy_level = 'TC' THEN 'TC'
+          ELSE e.designation
+        END)
     `).catch(() => {});
 
     let whereStr = `
@@ -2900,10 +2948,14 @@ router.post('/bonus-rules/apply', async (req, res, next) => {
 });
 
 // ── 6. GET /api/v1/employees/sales-reports/super-admin — Super Admin Sales Reports Control Center ──
+let isSalesReportBanksEnsured = false;
 router.get('/sales-reports/super-admin', async (req, res, next) => {
   try {
-    // Ensure bank_name column exists in employee_sales_report_banks table
-    await query(`ALTER TABLE employee_sales_report_banks ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100)`).catch(() => {});
+    // Ensure bank_name column exists in employee_sales_report_banks table (run at most once)
+    if (!isSalesReportBanksEnsured) {
+      await query(`ALTER TABLE employee_sales_report_banks ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100)`).catch(() => {});
+      isSalesReportBanksEnsured = true;
+    }
 
     const { status, start_date, end_date, bank_id, employee_id, search } = req.query;
 

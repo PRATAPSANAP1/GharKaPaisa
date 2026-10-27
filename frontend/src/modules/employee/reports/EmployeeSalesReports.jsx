@@ -389,7 +389,7 @@ export default function EmployeeSalesReports() {
                 </button>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '18px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: isMobile ? '14px' : '18px' }}>
                 {myReports.map((report) => (
                   <div key={report.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -493,7 +493,7 @@ export default function EmployeeSalesReports() {
                 No team sales reports found matching your criteria.
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '18px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: isMobile ? '14px' : '18px' }}>
                 {filteredTeamReports.map((report) => (
                   <div key={report.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -571,7 +571,7 @@ export default function EmployeeSalesReports() {
       {/* ── CREATE SALES REPORT MODAL ── */}
       {showCreateModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '28px', maxWidth: '600px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: isMobile ? '20px' : '24px', padding: isMobile ? '20px 16px' : '28px', maxWidth: '600px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2 style={{ fontSize: '20px', fontWeight: 900, margin: 0, color: C.text }}>Create Daily Sales Report</h2>
               <button onClick={() => setShowCreateModal(false)} style={{ background: 'none', border: 'none', fontSize: '20px', color: C.textMid, cursor: 'pointer' }}>
@@ -761,7 +761,7 @@ export default function EmployeeSalesReports() {
       {/* ── REVIEW REPORT ACTION MODAL ── */}
       {selectedReportForReview && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '28px', maxWidth: '500px', width: '100%', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: isMobile ? '20px' : '24px', padding: isMobile ? '20px 16px' : '28px', maxWidth: '500px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 900, margin: 0, color: C.text }}>Review Sales Report</h3>
               <button onClick={() => setSelectedReportForReview(null)} style={{ background: 'none', border: 'none', fontSize: '18px', color: C.textMid, cursor: 'pointer' }}>

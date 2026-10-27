@@ -57,7 +57,9 @@ async function getCandidateSignedResumeUrl(rawUrl) {
 }
 
 // Helper: Ensure assigned_hr_id and selection columns exist
+let hrColumnsEnsured = false;
 async function ensureHRColumnsExist() {
+  if (hrColumnsEnsured) return;
   try {
     await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS assigned_hr_id UUID`);
     await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS assigned_hr_name VARCHAR(100)`);
@@ -66,6 +68,7 @@ async function ensureHRColumnsExist() {
     await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS offered_department VARCHAR(100)`);
     await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS expected_joining_date DATE`);
     await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS employee_id VARCHAR(50)`);
+    hrColumnsEnsured = true;
   } catch (err) {
     logger.warn('Failed to ensure HR columns on employee_candidates:', err.message);
   }

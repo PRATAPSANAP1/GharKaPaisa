@@ -49,7 +49,7 @@ export default function AttendanceTodayCard({ todayAttendance }) {
         background: '#FFFFFF',
         border: '1px solid #E2E8F0',
         borderRadius: '16px',
-        padding: '24px',
+        padding: 'clamp(16px, 4vw, 24px)',
         boxShadow: '0 4px 16px rgba(0, 0, 0, 0.03)'
       }}
     >
@@ -67,8 +67,8 @@ export default function AttendanceTodayCard({ todayAttendance }) {
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '16px'
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))',
+        gap: '12px'
       }}>
         {/* START WORK TIME */}
         <div style={{

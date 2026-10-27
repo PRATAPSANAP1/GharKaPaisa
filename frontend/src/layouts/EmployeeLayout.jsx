@@ -328,24 +328,24 @@ export default function EmployeeLayout() {
         {/* Top Navbar */}
         <header style={{ 
           height: '64px', background: C.card, borderBottom: `1px solid ${C.border}`, 
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '0 12px' : '0 32px',
           position: 'sticky', top: 0, zIndex: 99
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '16px', minWidth: 0, flex: 1 }}>
             {isMobile && (
               <button 
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                style={{ background: 'none', border: 'none', color: C.text, fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                style={{ background: 'none', border: 'none', color: C.text, fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}
               >
                 <FaBars />
               </button>
             )}
-            <h2 style={{ fontSize: '18px', fontWeight: 700, color: C.text, margin: 0 }}>
+            <h2 style={{ fontSize: isMobile ? '15px' : '18px', fontWeight: 700, color: C.text, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: isMobile ? '140px' : 'none' }}>
               {navItems.find(n => n.path === location.pathname)?.label || 'Employee Workspace'}
             </h2>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', position: 'relative' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '6px' : '14px', position: 'relative', flexShrink: 0 }}>
             <LanguageSwitcher />
 
             {/* Messenger Button */}
@@ -445,12 +445,13 @@ export default function EmployeeLayout() {
                   position: 'absolute',
                   top: '48px',
                   right: isMobile ? '-40px' : '0',
-                  width: isMobile ? '300px' : '360px',
+                  width: isMobile ? 'min(300px, calc(100vw - 20px))' : '360px',
+                  maxWidth: 'calc(100vw - 20px)',
                   background: C.card,
                   border: `1px solid ${C.border}`,
                   borderRadius: '16px',
                   boxShadow: '0 12px 36px rgba(0,0,0,0.18)',
-                  padding: '16px',
+                  padding: isMobile ? '12px' : '16px',
                   zIndex: 1000,
                   display: 'flex',
                   flexDirection: 'column',
@@ -594,7 +595,8 @@ export default function EmployeeLayout() {
                 position: 'absolute',
                 top: '50px',
                 right: 0,
-                width: '270px',
+                width: isMobile ? 'min(270px, calc(100vw - 20px))' : '270px',
+                maxWidth: 'calc(100vw - 20px)',
                 background: C.card,
                 border: `1px solid ${C.border}`,
                 borderRadius: '14px',
@@ -814,7 +816,7 @@ export default function EmployeeLayout() {
         }}>
           <div style={{
             background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px',
-            width: '100%', maxWidth: '520px', padding: '28px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+            width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto', padding: isMobile ? '20px 16px' : '28px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
             position: 'relative'
           }}>
             <button 

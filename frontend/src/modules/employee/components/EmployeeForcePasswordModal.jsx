@@ -63,13 +63,13 @@ export default function EmployeeForcePasswordModal({ isOpen, onClose }) {
 
   const modalStyle = {
     background: C.card, borderRadius: '24px', width: '100%', maxWidth: '460px',
-    overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+    maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
     border: `1px solid ${C.border}`
   };
 
   const headerStyle = {
     background: `linear-gradient(135deg, ${C.employeePrimary || '#0F766E'}, #0D9488)`,
-    padding: '28px', textAlign: 'center'
+    padding: 'clamp(18px, 4vw, 28px)', textAlign: 'center'
   };
 
   const errStyle = {

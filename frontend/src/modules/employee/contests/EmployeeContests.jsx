@@ -22,6 +22,13 @@ export default function EmployeeContests() {
   const [contests, setContests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedContest, setSelectedContest] = useState(null);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     fetchContests();
@@ -160,7 +167,7 @@ export default function EmployeeContests() {
         </div>
 
         {/* Search Input */}
-        <div style={{ position: 'relative', width: '280px' }}>
+        <div style={{ position: 'relative', width: isMobile ? '100%' : '280px' }}>
           <HiOutlineMagnifyingGlass
             size={18}
             style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }}
@@ -263,8 +270,8 @@ export default function EmployeeContests() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-            gap: '24px'
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
+            gap: isMobile ? '16px' : '24px'
           }}
         >
           {filteredContests.map((contest) => {
@@ -466,14 +473,14 @@ export default function EmployeeContests() {
             style={{
               background: C.card,
               border: `1px solid ${C.border}`,
-              borderRadius: '24px',
+              borderRadius: isMobile ? '20px' : '24px',
               width: '100%',
               maxWidth: '640px',
               maxHeight: '90vh',
               overflowY: 'auto',
               boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
               position: 'relative',
-              padding: '24px'
+              padding: isMobile ? '18px 14px' : '24px'
             }}
           >
             {/* Close Button */}
@@ -543,10 +550,10 @@ export default function EmployeeContests() {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
                   gap: '12px',
                   background: isDark ? '#1E293B' : '#F8FAFC',
-                  padding: '16px',
+                  padding: isMobile ? '12px' : '16px',
                   borderRadius: '16px',
                   border: `1px solid ${C.border}`
                 }}

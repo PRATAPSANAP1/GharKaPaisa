@@ -2227,10 +2227,10 @@ export default function PartnerProducts({
                       />
                       <div>
                         <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>
-                          {isHdfcBankProduct ? '3. Adobe direct bank process' : '3. Direct bank process'}
+                          {(isHdfcBankProduct || isTataCobrandHdfcProduct) ? '3. Adobe direct bank process' : '3. Direct bank process'}
                         </div>
                         <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
-                          {isHdfcBankProduct ? 'Immediately opens the official Adobe application form portal for direct customer application.' : 'Immediately opens the official bank portal in a new tab for direct customer application.'}
+                          {(isHdfcBankProduct || isTataCobrandHdfcProduct) ? 'Immediately opens the official Adobe application form portal for direct customer application.' : 'Immediately opens the official bank portal in a new tab for direct customer application.'}
                         </div>
                       </div>
                     </label>

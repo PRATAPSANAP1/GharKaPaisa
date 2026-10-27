@@ -153,15 +153,15 @@ export default function AttendanceSummaryView({
       {/* Modern Fintech Metric Cards */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '16px'
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))',
+        gap: '12px'
       }}>
         {/* Total Attendance Days */}
         <div style={{
           background: '#FFFFFF',
           border: '1px solid #E5E7EB',
           borderRadius: '18px',
-          padding: '22px 24px',
+          padding: '16px 18px',
           boxShadow: '0 4px 16px rgba(0,0,0,0.02)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
@@ -183,7 +183,7 @@ export default function AttendanceSummaryView({
           background: '#FFFFFF',
           border: '1px solid #E5E7EB',
           borderRadius: '18px',
-          padding: '22px 24px',
+          padding: '16px 18px',
           boxShadow: '0 4px 16px rgba(0,0,0,0.02)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
@@ -192,7 +192,7 @@ export default function AttendanceSummaryView({
               <CheckCircle2 size={20} />
             </div>
           </div>
-          <div style={{ fontSize: '30px', fontWeight: 800, color: '#16A34A', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(22px, 5vw, 30px)', fontWeight: 800, color: '#16A34A', letterSpacing: '-0.5px' }}>
             {presentDays}
           </div>
           <div style={{ fontSize: '12.5px', color: '#9CA3AF', marginTop: '4px' }}>
@@ -205,7 +205,7 @@ export default function AttendanceSummaryView({
           background: '#FFFFFF',
           border: '1px solid #E5E7EB',
           borderRadius: '18px',
-          padding: '22px 24px',
+          padding: '16px 18px',
           boxShadow: '0 4px 16px rgba(0,0,0,0.02)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
@@ -214,7 +214,7 @@ export default function AttendanceSummaryView({
               <Clock size={20} />
             </div>
           </div>
-          <div style={{ fontSize: '30px', fontWeight: 800, color: '#9333EA', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(22px, 5vw, 30px)', fontWeight: 800, color: '#9333EA', letterSpacing: '-0.5px' }}>
             {completedDays}
           </div>
           <div style={{ fontSize: '12.5px', color: '#9CA3AF', marginTop: '4px' }}>
@@ -227,7 +227,7 @@ export default function AttendanceSummaryView({
           background: '#FFFFFF',
           border: '1px solid #E5E7EB',
           borderRadius: '18px',
-          padding: '22px 24px',
+          padding: '16px 18px',
           boxShadow: '0 4px 16px rgba(0,0,0,0.02)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
@@ -236,7 +236,7 @@ export default function AttendanceSummaryView({
               <Hourglass size={20} />
             </div>
           </div>
-          <div style={{ fontSize: '30px', fontWeight: 800, color: '#D97706', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(22px, 5vw, 30px)', fontWeight: 800, color: '#D97706', letterSpacing: '-0.5px' }}>
             {displayHours}
           </div>
           <div style={{ fontSize: '12.5px', color: '#9CA3AF', marginTop: '4px' }}>
@@ -249,7 +249,7 @@ export default function AttendanceSummaryView({
           background: '#FFFFFF',
           border: '1px solid #E5E7EB',
           borderRadius: '18px',
-          padding: '22px 24px',
+          padding: '16px 18px',
           boxShadow: '0 4px 16px rgba(0,0,0,0.02)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
@@ -258,7 +258,7 @@ export default function AttendanceSummaryView({
               <TrendingUp size={20} />
             </div>
           </div>
-          <div style={{ fontSize: '30px', fontWeight: 800, color: '#0284C7', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(22px, 5vw, 30px)', fontWeight: 800, color: '#0284C7', letterSpacing: '-0.5px' }}>
             {attendancePct}%
           </div>
           <div style={{ fontSize: '12.5px', color: '#9CA3AF', marginTop: '4px' }}>
@@ -272,7 +272,7 @@ export default function AttendanceSummaryView({
         background: '#FFFFFF',
         border: '1px solid #E5E7EB',
         borderRadius: '18px',
-        padding: '24px',
+        padding: 'clamp(16px, 4vw, 24px)',
         boxShadow: '0 4px 16px rgba(0,0,0,0.02)'
       }}>
         <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#111827', margin: '0 0 16px' }}>

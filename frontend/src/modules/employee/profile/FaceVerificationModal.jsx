@@ -240,9 +240,11 @@ export default function FaceVerificationModal({
       <div style={{
         background: '#FFFFFF',
         borderRadius: '20px',
-        padding: '28px',
+        padding: 'clamp(18px, 4vw, 28px)',
         width: '100%',
         maxWidth: '480px',
+        maxHeight: '90vh',
+        overflowY: 'auto',
         position: 'relative',
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
         border: '1px solid #E5E7EB',
@@ -411,7 +413,7 @@ export default function FaceVerificationModal({
             <div style={{
               position: 'relative',
               width: '100%',
-              height: '320px',
+              height: 'clamp(220px, 38vh, 320px)',
               borderRadius: '16px',
               overflow: 'hidden',
               background: '#0F172A',
@@ -535,7 +537,7 @@ export default function FaceVerificationModal({
             <div style={{
               position: 'relative',
               width: '100%',
-              height: '280px',
+              height: 'clamp(200px, 35vh, 280px)',
               borderRadius: '16px',
               overflow: 'hidden',
               background: '#0F172A',

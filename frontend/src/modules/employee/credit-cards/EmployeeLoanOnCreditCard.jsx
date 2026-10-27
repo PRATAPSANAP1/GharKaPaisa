@@ -23,9 +23,15 @@ export default function EmployeeLoanOnCreditCard() {
   const [selectedBank, setSelectedBank] = useState('ALL');
   const [dbOffers, setDbOffers] = useState([]);
   const [loadingProds, setLoadingProds] = useState(true);
-  const [apiError, setApiError] = useState(null);
   const [showCalculator, setShowCalculator] = useState(false);
   const isMountedRef = React.useRef(true);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const getBankLogo = (bankName, defaultLogo) => {
     if (defaultLogo) return defaultLogo;
@@ -371,9 +377,9 @@ export default function EmployeeLoanOnCreditCard() {
       {showCalculator && (
         <div style={{
           background: isDark ? '#1E293B' : '#FFFFFF',
-          borderRadius: '20px',
+          borderRadius: isMobile ? '16px' : '20px',
           border: `1px solid ${C.border}`,
-          padding: '24px',
+          padding: isMobile ? '16px 14px' : '24px',
           boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 18px rgba(15,23,42,0.03)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px' }}>
@@ -588,7 +594,7 @@ export default function EmployeeLoanOnCreditCard() {
           <p style={{ color: C.textMid, fontSize: '13.5px', margin: 0 }}>There are currently no products under "Loan on Credit Card". You can add new products in Super Admin Product Management.</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: isMobile ? '14px' : '20px' }}>
           {filteredOffers.map(offer => (
             <div
               key={offer.id}
@@ -851,8 +857,8 @@ export default function EmployeeLoanOnCreditCard() {
           zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
         }}>
           <div style={{
-            background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px',
-            width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto', padding: '28px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+            background: C.card, border: `1px solid ${C.border}`, borderRadius: isMobile ? '20px' : '24px',
+            width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto', padding: isMobile ? '20px 16px' : '28px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
             position: 'relative'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

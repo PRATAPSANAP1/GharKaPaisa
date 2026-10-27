@@ -1597,64 +1597,95 @@ const manualCommission = async (req, res, next) => {
 
 const isUuid = (str) => typeof str === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
 
+let stageColumnsEnsured = false;
+let stageColumnsPromise = null;
+
 const ensureApplicationStageColumns = async () => {
   if (stageColumnsEnsured) return;
-  try {
-    await query(`
-      ALTER TABLE applications 
-      ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS remark_status VARCHAR(20) DEFAULT 'PENDING',
-      ADD COLUMN IF NOT EXISTS remark_updated BOOLEAN DEFAULT FALSE,
-      ADD COLUMN IF NOT EXISTS remark_updated_by UUID,
-      ADD COLUMN IF NOT EXISTS remark_updated_at TIMESTAMPTZ,
-      ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no',
-      ADD COLUMN IF NOT EXISTS bank_current_lead_status VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS approved_by UUID,
-      ADD COLUMN IF NOT EXISTS sales_operator_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS backend_remark TEXT,
-      ADD COLUMN IF NOT EXISTS cureble_stage VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS primary_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS secondary_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS cureble_type VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS cureble_operator_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS final_card_approval VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS soft_approval_stage VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS salas_operator_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS remark_opretor_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS user_remark TEXT
-    `).catch(() => {});
-    await query(`
-      ALTER TABLE physical_application_details
-      ADD COLUMN IF NOT EXISTS sales_operator_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS backend_remark TEXT,
-      ADD COLUMN IF NOT EXISTS cureble_stage VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS primary_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS secondary_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS cureble_type VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS cureble_operator_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS final_card_approval VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS queryable_remark VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS queryable_sales_remark TEXT,
-      ADD COLUMN IF NOT EXISTS digital_remark VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS decline_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS decline_remark TEXT,
-      ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS soft_approval_stage VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS salas_operator_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS remark_opretor_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS user_remark TEXT
-    `).catch(() => {});
-    stageColumnsEnsured = true;
-  } catch (err) {
-    // Ignore error if schema alter is locked or non-fatal
-  }
+  if (stageColumnsPromise) return stageColumnsPromise;
+
+  stageColumnsPromise = (async () => {
+    try {
+      // 1. Check if critical columns already exist in information_schema to avoid acquiring AccessExclusiveLock
+      const { rows } = await query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'applications' 
+          AND column_name IN ('sales_operator_code', 'pan_checker_code', 'remark_operator_code', 'backend_remark')
+      `);
+      if (rows && rows.length >= 4) {
+        stageColumnsEnsured = true;
+        return;
+      }
+
+      await query(`
+        ALTER TABLE applications 
+        ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS remark_status VARCHAR(20) DEFAULT 'PENDING',
+        ADD COLUMN IF NOT EXISTS remark_updated BOOLEAN DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS remark_updated_by UUID,
+        ADD COLUMN IF NOT EXISTS remark_updated_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no',
+        ADD COLUMN IF NOT EXISTS bank_current_lead_status VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS approved_by UUID,
+        ADD COLUMN IF NOT EXISTS sales_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS backend_remark TEXT,
+        ADD COLUMN IF NOT EXISTS cureble_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS primary_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS secondary_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS cureble_type VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS cureble_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS final_card_approval VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS soft_approval_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS salas_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS remark_opretor_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS user_remark TEXT
+      `).catch(() => {});
+      await query(`
+        ALTER TABLE physical_application_details
+        ADD COLUMN IF NOT EXISTS sales_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS backend_remark TEXT,
+        ADD COLUMN IF NOT EXISTS cureble_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS primary_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS secondary_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS cureble_type VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS cureble_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS final_card_approval VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS queryable_remark VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS queryable_sales_remark TEXT,
+        ADD COLUMN IF NOT EXISTS digital_remark VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS decline_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS decline_remark TEXT,
+        ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS soft_approval_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS salas_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS remark_opretor_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS user_remark TEXT,
+        ADD COLUMN IF NOT EXISTS decline_description TEXT,
+        ADD COLUMN IF NOT EXISTS curing_designation VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS primary_decline_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS primary_decline_description TEXT,
+        ADD COLUMN IF NOT EXISTS primary_curing_designation VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS secondary_decline_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS secondary_decline_description TEXT,
+        ADD COLUMN IF NOT EXISTS secondary_curing_designation VARCHAR(100)
+      `).catch(() => {});
+      stageColumnsEnsured = true;
+    } catch (err) {
+      // Ignore error if schema alter is locked or non-fatal
+    } finally {
+      stageColumnsPromise = null;
+    }
+  })();
+
+  return stageColumnsPromise;
 };
 
 const listApplications = async (req, res, next) => {
@@ -2588,34 +2619,12 @@ const listApplications = async (req, res, next) => {
     `;
 
     const isStatusFiltered = !!validStatus && validStatus !== 'all';
-    let listQueryMs = 0;
-    let countQueryMs = 0;
-    let statusCountQueryMs = 0;
 
     // Concurrently run queries via Promise.all to avoid sequential waterfall latency
-    const listTask = (async () => {
-      const qStart = Date.now();
-      const res = await query(listQuerySQL, queryParams);
-      listQueryMs = Date.now() - qStart;
-      return res;
-    })();
-
-    const statusTask = (async () => {
-      const qStart = Date.now();
-      const res = await query(statusCountsSQL, countQueryParams);
-      statusCountQueryMs = Date.now() - qStart;
-      return res;
-    })();
-
-    // When status filter is not active, statusCounts already aggregates all matching rows;
-    // only execute separate count query if a specific status filter is active
+    const listTask = query(listQuerySQL, queryParams);
+    const statusTask = query(statusCountsSQL, countQueryParams);
     const countTask = isStatusFiltered
-      ? (async () => {
-          const qStart = Date.now();
-          const res = await query(countQuerySQL, countQueryParams);
-          countQueryMs = Date.now() - qStart;
-          return res;
-        })()
+      ? query(countQuerySQL, countQueryParams)
       : Promise.resolve(null);
 
     const [listResult, statusResult, countResult] = await Promise.all([listTask, statusTask, countTask]);
@@ -2677,23 +2686,6 @@ const listApplications = async (req, res, next) => {
       (statusCountsObj.commission_received || 0) +
       (statusCountsObj.rejected || 0) +
       (statusCountsObj.cancelled || 0);
-
-    const totalMs = Date.now() - startMs;
-    logger.info('[Diagnostics] Applications List Performance Telemetry', {
-      requestId: correlationId,
-      route: 'GET /applications',
-      role: userDesignation || userRole,
-      authMs: 0,
-      poolWaitMs: 0,
-      assignmentCheckMs: 0,
-      listQueryMs,
-      countQueryMs,
-      statusCountQueryMs,
-      totalMs,
-      recordsReturned: rows.length,
-      totalCount: count,
-      outcome: 'success'
-    });
 
     return res.status(200).json({
       success: true,
@@ -5170,13 +5162,6 @@ const updateApplicationDetails = async (req, res, next) => {
       try {
         await client.query('SAVEPOINT op_code_sp');
         await client.query(`
-          ALTER TABLE applications 
-          ADD COLUMN IF NOT EXISTS sales_operator_code VARCHAR(100),
-          ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
-          ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
-          ADD COLUMN IF NOT EXISTS backend_remark TEXT
-        `);
-        await client.query(`
           UPDATE applications SET
             sales_operator_code = COALESCE($1, sales_operator_code),
             pan_checker_code = COALESCE($2, pan_checker_code),
@@ -5511,18 +5496,6 @@ const updateApplicationDetails = async (req, res, next) => {
     if (effectiveDeclineCode !== undefined || derivedCuringDesignation !== undefined || effectiveSecondaryDeclineCode !== undefined) {
       try {
         await client.query('SAVEPOINT pad_curing_sp');
-        await client.query(`
-          ALTER TABLE physical_application_details 
-            ADD COLUMN IF NOT EXISTS decline_code VARCHAR(100),
-            ADD COLUMN IF NOT EXISTS decline_description TEXT,
-            ADD COLUMN IF NOT EXISTS curing_designation VARCHAR(100),
-            ADD COLUMN IF NOT EXISTS primary_decline_code VARCHAR(100),
-            ADD COLUMN IF NOT EXISTS primary_decline_description TEXT,
-            ADD COLUMN IF NOT EXISTS primary_curing_designation VARCHAR(100),
-            ADD COLUMN IF NOT EXISTS secondary_decline_code VARCHAR(100),
-            ADD COLUMN IF NOT EXISTS secondary_decline_description TEXT,
-            ADD COLUMN IF NOT EXISTS secondary_curing_designation VARCHAR(100)
-        `);
         const isNone = !effectiveDeclineCode || String(effectiveDeclineCode).trim().toUpperCase() === 'NONE';
         const codeToSet = isNone ? 'None' : String(effectiveDeclineCode).trim();
         const descToSet = isNone ? 'None' : (derivedDeclineDesc || null);

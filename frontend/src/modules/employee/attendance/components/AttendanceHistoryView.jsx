@@ -205,11 +205,11 @@ export default function AttendanceHistoryView({
       {/* Summary KPI Cards */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-        gap: '14px'
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))',
+        gap: '12px'
       }}>
         {/* Total Days */}
-        <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '16px', padding: '18px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+        <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '16px', padding: '16px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
             <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: 600 }}>Total Days</span>
             <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#EFF6FF', color: '#0B74F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

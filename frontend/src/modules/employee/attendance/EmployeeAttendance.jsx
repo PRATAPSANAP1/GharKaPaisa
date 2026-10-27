@@ -169,14 +169,13 @@ export default function EmployeeAttendance() {
 
   return (
     <div style={{
-      padding: '24px 20px',
+      padding: 'clamp(8px, 2vw, 20px) 0',
       maxWidth: '1120px',
       margin: '0 auto',
-      background: '#F5F7FA',
       minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
-      gap: '24px'
+      gap: '20px'
     }}>
       {/* PANEL 1: MAIN ATTENDANCE DASHBOARD VIEW */}
       {activeView === 'DASHBOARD' && (

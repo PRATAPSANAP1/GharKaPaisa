@@ -35,6 +35,7 @@ export default function ManageLoanApplications() {
   const [loanTypeFilter, setLoanTypeFilter] = useState('all');
   const [locTypeFilter, setLocTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [recentTab, setRecentTab] = useState('all'); // 'all' | 'loans' | 'loc_eoc'
 
   // Filter Row
   const [searchQuery, setSearchQuery] = useState('');
@@ -242,7 +243,7 @@ export default function ManageLoanApplications() {
         source: item.source || item.processed_by || 'Direct Link',
         raw: item
       };
-    });
+    }).sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
   }, [apiLeads]);
 
   // Counts & Stats computed strictly from live database applications
@@ -300,7 +301,14 @@ export default function ManageLoanApplications() {
   const filteredApplications = useMemo(() => {
     let list = [...allApplications];
 
-    if (view === 'overview') return list.slice(0, 8);
+    if (view === 'overview') {
+      if (recentTab === 'loans') {
+        list = list.filter(a => a.category === 'Loan');
+      } else if (recentTab === 'loc_eoc') {
+        list = list.filter(a => a.category === 'LOC/EOC');
+      }
+      return list.slice(0, 8);
+    }
 
     if (view === 'loans') {
       list = list.filter(a => a.category === 'Loan');
@@ -347,7 +355,7 @@ export default function ManageLoanApplications() {
     }
 
     return list;
-  }, [allApplications, view, loanTypeFilter, locTypeFilter, statusFilter, searchQuery, selectedBank]);
+  }, [allApplications, view, recentTab, loanTypeFilter, locTypeFilter, statusFilter, searchQuery, selectedBank]);
 
   const paginatedApplications = useMemo(() => {
     if (view === 'overview') return filteredApplications;
@@ -475,6 +483,7 @@ export default function ManageLoanApplications() {
     setLoanTypeFilter('all');
     setLocTypeFilter('all');
     setStatusFilter('all');
+    setRecentTab('all');
     setPage(1);
   };
 
@@ -2372,14 +2381,130 @@ export default function ManageLoanApplications() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px',
               marginBottom: '16px'
             }}>
-              <h2 style={{ fontSize: '18px', fontWeight: 900, color: textDark, margin: 0 }}>
-                Recent Applications
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: 900, color: textDark, margin: 0 }}>
+                  Recent Applications
+                </h2>
+
+                {/* Category Toggle Tabs */}
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  background: isDark ? '#1E293B' : '#F1F5F9',
+                  padding: '3px',
+                  borderRadius: '12px',
+                  border: `1px solid ${borderCol}`
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => setRecentTab('all')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '6px 14px',
+                      borderRadius: '9px',
+                      border: 'none',
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      background: recentTab === 'all' ? (isDark ? '#3B82F6' : '#FFFFFF') : 'transparent',
+                      color: recentTab === 'all' ? (isDark ? '#FFFFFF' : '#1E40AF') : textMuted,
+                      boxShadow: recentTab === 'all' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                    }}
+                  >
+                    <span>All</span>
+                    <span style={{
+                      fontSize: '11px',
+                      padding: '1px 6px',
+                      borderRadius: '9999px',
+                      background: recentTab === 'all' ? (isDark ? 'rgba(255,255,255,0.2)' : '#DBEAFE') : (isDark ? '#334155' : '#E2E8F0'),
+                      color: recentTab === 'all' ? (isDark ? '#FFFFFF' : '#1D4ED8') : textMuted,
+                      fontWeight: 800
+                    }}>
+                      {counts.total}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRecentTab('loans')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '6px 14px',
+                      borderRadius: '9px',
+                      border: 'none',
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      background: recentTab === 'loans' ? (isDark ? '#6366F1' : '#FFFFFF') : 'transparent',
+                      color: recentTab === 'loans' ? (isDark ? '#FFFFFF' : '#4338CA') : textMuted,
+                      boxShadow: recentTab === 'loans' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                    }}
+                  >
+                    <span>Loans Only</span>
+                    <span style={{
+                      fontSize: '11px',
+                      padding: '1px 6px',
+                      borderRadius: '9999px',
+                      background: recentTab === 'loans' ? (isDark ? 'rgba(255,255,255,0.2)' : '#EDE9FE') : (isDark ? '#334155' : '#E2E8F0'),
+                      color: recentTab === 'loans' ? (isDark ? '#FFFFFF' : '#4F46E5') : textMuted,
+                      fontWeight: 800
+                    }}>
+                      {counts.totalLoan}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRecentTab('loc_eoc')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '6px 14px',
+                      borderRadius: '9px',
+                      border: 'none',
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      background: recentTab === 'loc_eoc' ? (isDark ? '#0284C7' : '#FFFFFF') : 'transparent',
+                      color: recentTab === 'loc_eoc' ? (isDark ? '#FFFFFF' : '#0369A1') : textMuted,
+                      boxShadow: recentTab === 'loc_eoc' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                    }}
+                  >
+                    <span>LOC / EOC</span>
+                    <span style={{
+                      fontSize: '11px',
+                      padding: '1px 6px',
+                      borderRadius: '9999px',
+                      background: recentTab === 'loc_eoc' ? (isDark ? 'rgba(255,255,255,0.2)' : '#E0F2FE') : (isDark ? '#334155' : '#E2E8F0'),
+                      color: recentTab === 'loc_eoc' ? (isDark ? '#FFFFFF' : '#0284C7') : textMuted,
+                      fontWeight: 800
+                    }}>
+                      {counts.totalLocEoc}
+                    </span>
+                  </button>
+                </div>
+              </div>
 
               <button
-                onClick={() => setView('loans')}
+                onClick={() => {
+                  if (recentTab === 'loc_eoc') {
+                    setView('loc_eoc');
+                  } else {
+                    setView('loans');
+                  }
+                }}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -2395,7 +2520,7 @@ export default function ManageLoanApplications() {
                   transition: 'all 0.15s'
                 }}
               >
-                <span>View All Applications</span>
+                <span>View All {recentTab === 'loc_eoc' ? 'LOC/EOC' : recentTab === 'loans' ? 'Loans' : 'Applications'}</span>
                 <ArrowRight size={14} />
               </button>
             </div>
@@ -2442,8 +2567,18 @@ export default function ManageLoanApplications() {
                       <tr>
                         <td colSpan={8} style={{ padding: '48px 20px', textAlign: 'center', color: textMuted }}>
                           <FileText size={32} style={{ margin: '0 auto 10px', opacity: 0.4 }} />
-                          <div style={{ fontWeight: 600, fontSize: '15px' }}>No loan applications found in database</div>
-                          <div style={{ fontSize: '12px', marginTop: '4px' }}>New applications created via CRM or customer forms will appear here in real-time.</div>
+                          <div style={{ fontWeight: 600, fontSize: '15px' }}>
+                            {recentTab === 'loans' 
+                              ? 'No traditional loan applications found in database' 
+                              : recentTab === 'loc_eoc' 
+                                ? 'No LOC/EOC applications found in database' 
+                                : 'No loan applications found in database'}
+                          </div>
+                          <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                            {recentTab === 'loans'
+                              ? 'Applications for Personal Loan, Business Loan, Home Loan, Car Loan etc. will appear here.'
+                              : 'New applications created via CRM or customer forms will appear here in real-time.'}
+                          </div>
                         </td>
                       </tr>
                     ) : (

@@ -19,6 +19,14 @@ import LoadingLogo from '../../../components/Loader/LoadingLogo';
 export default function EmployeeSmartEmi() {
   const { C, isDark } = useTheme();
   const { user } = useAuthStore();
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  React.useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [search, setSearch] = useState('');
   const [selectedBank, setSelectedBank] = useState('ALL');
   const [dbSchemes, setDbSchemes] = useState([]);
@@ -367,7 +375,7 @@ export default function EmployeeSmartEmi() {
           background: isDark ? '#1E293B' : '#FFFFFF',
           borderRadius: '20px',
           border: `1px solid ${C.border}`,
-          padding: '24px',
+          padding: isMobile ? '16px 14px' : '24px',
           boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 18px rgba(15,23,42,0.03)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px' }}>
@@ -520,7 +528,7 @@ export default function EmployeeSmartEmi() {
 
       {/* ── 3. SEARCH & FILTER BAR ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-        <div style={{ display: 'flex', gap: '10px', width: '100%', maxWidth: '500px' }}>
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '10px', width: '100%', maxWidth: isMobile ? '100%' : '500px' }}>
           <div style={{ position: 'relative', flex: 1 }}>
             <FaSearch size={12} color={C.textLight} style={{ position: 'absolute', left: '12px', top: '12px' }} />
             <input 
@@ -554,7 +562,8 @@ export default function EmployeeSmartEmi() {
               fontSize: '13px',
               fontWeight: 700,
               outline: 'none',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              width: isMobile ? '100%' : 'auto'
             }}
           >
             <option value="ALL">All Banks {availableBanks.length > 0 ? `(${availableBanks.length})` : ''}</option>
@@ -575,7 +584,7 @@ export default function EmployeeSmartEmi() {
           No dynamic Smart EMI schemes found matching your criteria.
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
           {filteredSchemes.map(scheme => (
             <div
               key={scheme.id}
@@ -756,16 +765,16 @@ export default function EmployeeSmartEmi() {
       {showBenefitsOffer && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
-          zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+          zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px'
         }}>
           <div style={{
             background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px',
-            width: '100%', maxWidth: '520px', maxHeight: '85vh', display: 'flex', flexDirection: 'column',
+            width: '100%', maxWidth: '520px', maxHeight: '90vh', display: 'flex', flexDirection: 'column',
             boxShadow: '0 20px 40px rgba(0,0,0,0.3)', overflow: 'hidden'
           }}>
-            <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: isMobile ? '16px 18px' : '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0 }}>
+                <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: 0 }}>
                   {showBenefitsOffer.bank} — {showBenefitsOffer.title}
                 </h3>
                 <span style={{ fontSize: '12px', color: C.textMid }}>Smart EMI Details & Key Benefits</span>
@@ -773,7 +782,7 @@ export default function EmployeeSmartEmi() {
               <button onClick={() => setShowBenefitsOffer(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', color: C.textMid }}>✕</button>
             </div>
 
-            <div style={{ padding: '24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ padding: isMobile ? '16px 18px' : '24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', background: isDark ? '#0F172A' : '#F8FAFC', padding: '14px', borderRadius: '12px' }}>
                 <div>
                   <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Min Purchase Value</span>
@@ -806,7 +815,7 @@ export default function EmployeeSmartEmi() {
               </div>
             </div>
 
-            <div style={{ padding: '16px 24px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: '10px', background: C.bgSecondary }}>
+            <div style={{ padding: isMobile ? '12px 18px' : '16px 24px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: '10px', background: C.bgSecondary }}>
               <button
                 type="button"
                 onClick={() => setShowBenefitsOffer(null)}
@@ -834,11 +843,11 @@ export default function EmployeeSmartEmi() {
       {applyScheme && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
-          zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+          zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px'
         }}>
           <div style={{
             background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px',
-            width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto', padding: '28px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+            width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto', padding: isMobile ? '20px 16px' : '28px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
             position: 'relative'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

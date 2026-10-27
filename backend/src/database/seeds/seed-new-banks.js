@@ -123,6 +123,38 @@ const NEW_BANK_CARDS = [
     seo_keywords: 'tata neu business plus hdfc credit card, tata co-brand hdfc card',
     min_age: 21, max_age: 65, min_income: 25000, display_order: 4, priority: 4
   },
+  {
+    bank_id: '1eacfa67-1187-48c7-adde-8a6edcfe9969',
+    bank_name: 'TATA CO-BRAND HDFC BANK',
+    name: 'Tata Floater Adobe Credit Card',
+    category: 'co_branded_card',
+    sub_category: 'Co-Branded Cards',
+    short_description: 'Instant Tata Floater credit card on existing HDFC limit via official Adobe digital onboarding.',
+    description: 'Tata Floater Adobe Credit Card allows existing HDFC Bank credit cardholders to instantly obtain a co-branded Tata Floater credit card sharing their existing card limit with zero separate paperwork via the Adobe digital journey.',
+    annual_fee: 'Lifetime Free / As per variant',
+    joining_fee: 'Nil',
+    interest_rate: '3.6% p.m.',
+    features: [
+      'Instant Floater card issuance on existing HDFC Bank Credit Card limit',
+      'Processed via official HDFC Bank Adobe Digital Onboarding journey',
+      'Earn up to 5% NeuCoins on Tata Neu App & partner Tata brands',
+      '1.5% NeuCoins on UPI transactions with RuPay credit card variant',
+      'Zero separate physical documentation required for existing cardholders',
+      '1% fuel surcharge waiver across all fuel stations in India'
+    ],
+    benefits: 'Instant approval on shared credit limit, Tata Neu rewards on UPI & brand spends, zero paperwork via official Adobe process.',
+    eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
+    eligibility_criteria: 'Existing HDFC Bank Credit Card holder with good repayment history, or applicant with monthly income ₹25,000+.',
+    documents_required: 'PAN Card, Aadhaar Card',
+    fees_charges: 'Joining Fee: Nil | Annual Fee: Lifetime Free / As per variant | Interest Rate: 3.6% p.m.',
+    seo_title: 'Tata Floater Adobe Credit Card – Apply Online | GharKaPaisa',
+    seo_description: 'Apply for Tata Floater Adobe Credit Card. Instant Floater card issuance on existing HDFC card limit via Adobe digital process.',
+    seo_keywords: 'tata floater adobe credit card, tata floater hdfc credit card, tata neu floater adobe, apply hdfc credit card',
+    image_url: 'https://d28wu8o6itv89p.cloudfront.net/images/TataNeuInfinityHDFCCardpng-1681283626786.png',
+    partner_url: 'https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=PTN01&LCcode=PTN01&LC2=A089&SMcode=A31964#nbb',
+    public_url: 'https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=PTN01&LCcode=PTN01&LC2=A089&SMcode=A31964#nbb',
+    min_age: 21, max_age: 65, min_income: 25000, display_order: 5, priority: 5
+  },
 
   // ─── 2. TATA CO-BRAND SBI BANK (ad9a965f-63c9-4a67-92be-058b45eea1f5) ────────
   {
@@ -533,11 +565,11 @@ async function runSeed() {
           sub_category, joining_fee, interest_rate, rewards, cashback,
           lounge_access, fuel_surcharge, compare_specs, fees_structure,
           commissions_json, features_list, benefits_list, required_documents,
-          visibility, seo_metadata, image_url
+          visibility, seo_metadata, image_url, partner_url, public_url
         ) VALUES (
           $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,
           $31,$32,$33,$34,$35,$36,$37,
-          $38,$39,$40,$41,$42,$43,$44,$45,$46
+          $38,$39,$40,$41,$42,$43,$44,$45,$46,$47,$48
         )
         ON CONFLICT (bank_id, name) DO UPDATE SET
           category = EXCLUDED.category,
@@ -572,6 +604,8 @@ async function runSeed() {
           visibility = EXCLUDED.visibility,
           seo_metadata = EXCLUDED.seo_metadata,
           image_url = COALESCE(EXCLUDED.image_url, products.image_url),
+          partner_url = COALESCE(EXCLUDED.partner_url, products.partner_url),
+          public_url = COALESCE(EXCLUDED.public_url, products.public_url),
           is_active = true,
           status = 'Active'
         RETURNING (xmin = 0) AS is_insert
@@ -586,7 +620,7 @@ async function runSeed() {
         card.sub_category, fees.joining_fee, fees.interest_rate, card.short_description || null, card.short_description || null,
         compareSpecs.lounge_access, compareSpecs.fuel_surcharge, JSON.stringify(compareSpecs), JSON.stringify(fees),
         JSON.stringify(commissions), JSON.stringify(card.features || []), JSON.stringify(card.benefits ? [{ title: 'Key Benefits', description: card.benefits }] : []), JSON.stringify(docsArray),
-        JSON.stringify(visibility), JSON.stringify(seoMetadata), card.image_url || null
+        JSON.stringify(visibility), JSON.stringify(seoMetadata), card.image_url || null, card.partner_url || null, card.public_url || null
       ]);
 
       if (result.rows[0]?.is_insert) {

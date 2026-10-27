@@ -258,8 +258,8 @@ export default function EmployeeDashboardRedesigned() {
   return (
     <div style={{ 
       background: C.bg, 
-      minHeight: '100vh', 
-      padding: isMobile ? '16px' : '24px 32px',
+      minHeight: '100%', 
+      padding: isMobile ? '4px 0 24px' : '8px 0 32px',
       fontFamily: "'Inter', sans-serif", 
       color: C.text 
     }}>
@@ -548,8 +548,8 @@ export default function EmployeeDashboardRedesigned() {
           onMouseLeave={() => setIsPaused(false)}
           style={{
             width: '100%',
-            height: isMobile ? '200px' : '300px',
-            borderRadius: '20px',
+            height: isMobile ? '180px' : '300px',
+            borderRadius: isMobile ? '16px' : '20px',
             position: 'relative',
             overflow: 'hidden',
             marginBottom: '28px',
@@ -643,14 +643,14 @@ export default function EmployeeDashboardRedesigned() {
                   gap: '6px',
                   background: '#008A60',
                   color: '#ffffff',
-                  padding: isMobile ? '6px 12px' : '8px 16px',
+                  padding: isMobile ? '5px 10px' : '8px 16px',
                   borderRadius: '10px',
-                  fontSize: isMobile ? '11px' : '13px',
+                  fontSize: isMobile ? '10.5px' : '13px',
                   fontWeight: 700,
                   boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
                   flexShrink: 0
                 }}>
-                  Explore Offer <FaArrowRight style={{ fontSize: '11px' }} />
+                  Explore <FaArrowRight style={{ fontSize: '10px' }} />
                 </div>
               </div>
             </div>
@@ -785,7 +785,7 @@ export default function EmployeeDashboardRedesigned() {
           <div style={{ 
             display: 'grid', 
             gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
-            gap: '16px' 
+            gap: isMobile ? '10px' : '16px' 
           }}>
             {[
               { 
@@ -844,7 +844,7 @@ export default function EmployeeDashboardRedesigned() {
                   background: C.card,
                   border: `1px solid ${C.border}`,
                   borderRadius: '16px',
-                  padding: '18px',
+                  padding: isMobile ? '14px 12px' : '18px',
                   boxShadow: '0 4px 14px rgba(16, 24, 40, 0.04)',
                   transition: 'all 0.25s ease',
                   cursor: 'pointer'
@@ -903,8 +903,8 @@ export default function EmployeeDashboardRedesigned() {
           
           <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
-            gap: '16px' 
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+            gap: isMobile ? '10px' : '16px' 
           }}>
             {[
               { 

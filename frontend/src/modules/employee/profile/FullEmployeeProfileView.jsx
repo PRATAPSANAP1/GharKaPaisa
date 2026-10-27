@@ -248,7 +248,7 @@ Generated On  : ${new Date().toLocaleString()}
   }
 
   return (
-    <div style={{ maxWidth: '1240px', margin: '0 auto', fontFamily: "'Inter', sans-serif", color: C.text, display: 'flex', flexDirection: 'column', gap: '12px', zoom: 0.85 }}>
+    <div style={{ maxWidth: '1240px', margin: '0 auto', fontFamily: "'Inter', sans-serif", color: C.text, display: 'flex', flexDirection: 'column', gap: '12px' }}>
       
       {/* 1. Header / Basic Information Banner */}
       <div style={{ 
@@ -439,7 +439,7 @@ Generated On  : ${new Date().toLocaleString()}
       </div>
 
       {/* 3. Quick Statistics Row (7 Cards) */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(7, 1fr)', gap: '10px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(auto-fit, minmax(min(100%, 120px), 1fr))' : 'repeat(7, 1fr)', gap: '10px' }}>
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '14px 12px', textAlign: 'center' }}>
           <span style={{ fontSize: '10.5px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', display: 'block' }}>Team Size</span>
           <strong style={{ fontSize: '18px', fontWeight: 900, color: C.teal || '#0F766E' }}>{teamSize}</strong>
@@ -831,8 +831,8 @@ Generated On  : ${new Date().toLocaleString()}
 
       {/* EDIT PROFILE MODAL — Super Admin Access Only */}
       {isSuperAdmin && showEditModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', width: '100%', maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', padding: '28px', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px' }}>
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', width: '100%', maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', padding: isMobile ? '20px 16px' : '28px', boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}>
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px' }}>
               <div>
@@ -846,7 +846,7 @@ Generated On  : ${new Date().toLocaleString()}
 
             <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', marginBottom: '4px' }}>Full Legal Name *</label>
                   <input
@@ -872,7 +872,7 @@ Generated On  : ${new Date().toLocaleString()}
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', marginBottom: '4px' }}>Mobile Number *</label>
                   <input
@@ -896,7 +896,7 @@ Generated On  : ${new Date().toLocaleString()}
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', marginBottom: '4px' }}>Department</label>
                   <input
@@ -918,7 +918,7 @@ Generated On  : ${new Date().toLocaleString()}
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', marginBottom: '4px' }}>Date of Birth</label>
                   <input
