@@ -626,6 +626,31 @@ const migrate = async () => {
   await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS remark_updated_by UUID REFERENCES users(id)`);
   await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS remark_updated_at TIMESTAMPTZ`);
 
+  // KYC Operator columns (moved from runtime DDL to migration)
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(50) DEFAULT 'PENDING'`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_remarks TEXT`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_link TEXT`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100) DEFAULT 'Vkyc pending'`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(100) DEFAULT 'Vkyc pending'`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bio_stage VARCHAR(100) DEFAULT 'Bio pending'`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS digilocker_stage VARCHAR(100) DEFAULT 'Digilocker 1 Rupee Credit/Debit Pending'`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100)`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(100)`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS last_operator_id UUID`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS last_operator_name VARCHAR(255)`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS last_operator_code VARCHAR(100)`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS last_operator_role VARCHAR(100)`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS last_operator_designation VARCHAR(100)`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS last_operated_at TIMESTAMPTZ`);
+
+  // Physical details KYC columns
+  await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100)`);
+  await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(100)`);
+  await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS bio_stage VARCHAR(100)`);
+  await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS digilocker_stage VARCHAR(100)`);
+  await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS vkyc_url TEXT`);
+  await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS kyc_remarks TEXT`);
+
   // ── Admin Bank Assignments ─────────────────────────────────────
   await query(`
     CREATE TABLE IF NOT EXISTS admin_bank_assignments (

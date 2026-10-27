@@ -6,48 +6,8 @@ const logger = require('../../config/logger');
  * Restricts access exclusively to authorized KYC Operators and eligible bank applications.
  */
 
-// Helper to ensure all required KYC and operator tracking columns exist
-let columnsChecked = false;
-const ensureKycColumns = async () => {
-  if (columnsChecked) return;
-  try {
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(50) DEFAULT 'PENDING'`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_remarks TEXT`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_status VARCHAR(50) DEFAULT 'PENDING'`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100)`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_number VARCHAR(20)`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_link TEXT`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS user_remark TEXT`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100) DEFAULT 'Vkyc pending'`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(100) DEFAULT 'Vkyc pending'`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bio_stage VARCHAR(100) DEFAULT 'Bio pending'`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS digilocker_stage VARCHAR(100) DEFAULT 'Digilocker 1 Rupee Credit/Debit Pending'`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100)`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(100)`).catch(() => {});
-    
-    // Operator tracking columns
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS last_operator_id UUID`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS last_operator_name VARCHAR(255)`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS last_operator_code VARCHAR(100)`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS last_operator_role VARCHAR(100)`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS last_operator_designation VARCHAR(100)`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS last_operated_at TIMESTAMP WITH TIME ZONE`).catch(() => {});
-
-    // Physical details columns fallback
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100)`).catch(() => {});
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(100)`).catch(() => {});
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS bio_stage VARCHAR(100)`).catch(() => {});
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS digilocker_stage VARCHAR(100)`).catch(() => {});
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS vkyc_url TEXT`).catch(() => {});
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS user_remark TEXT`).catch(() => {});
-    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS kyc_remarks TEXT`).catch(() => {});
-
-    // Immutable operator history table
-    const { migrateOperatorHistory } = require('../../database/migrations/migrate_operator_history');
-    await migrateOperatorHistory().catch(() => {});
-
-    columnsChecked = true;
-  } catch (err) {
+// Note: KYC columns are now managed in migrations/migrate.js
+// No runtime DDL needed
     logger.warn('Failed ensuring KYC and operator history columns:', err.message);
   }
 };
