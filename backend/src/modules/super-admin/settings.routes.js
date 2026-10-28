@@ -88,5 +88,14 @@ const handleUpdateSettings = async (req, res, next) => {
 router.post('/', jwtAuth, roleCheck('SUPER_ADMIN'), handleUpdateSettings);
 router.put('/', jwtAuth, roleCheck('SUPER_ADMIN'), handleUpdateSettings);
 
+// Bank-Specific Direct Process Link Management
+const bankDirectLinksCtrl = require('./bankDirectLinks.controller.js');
+router.get('/bank-direct-links', jwtAuth, bankDirectLinksCtrl.listBankDirectProcessLinks);
+router.get('/bank-direct-links/resolve-product/:productId', jwtAuth, bankDirectLinksCtrl.resolveProductDirectProcessLink);
+router.get('/bank-direct-links/:bankId', jwtAuth, bankDirectLinksCtrl.getBankDirectProcessLinkByBankId);
+router.post('/bank-direct-links', jwtAuth, roleCheck('SUPER_ADMIN'), bankDirectLinksCtrl.upsertBankDirectProcessLink);
+router.put('/bank-direct-links', jwtAuth, roleCheck('SUPER_ADMIN'), bankDirectLinksCtrl.upsertBankDirectProcessLink);
+router.put('/bank-direct-links/:bankId', jwtAuth, roleCheck('SUPER_ADMIN'), bankDirectLinksCtrl.upsertBankDirectProcessLink);
+
 module.exports = router;
 

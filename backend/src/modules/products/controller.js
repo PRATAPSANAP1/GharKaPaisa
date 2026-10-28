@@ -7,13 +7,15 @@ const uploadToS3 = s3Service.uploadToS3;
 const deleteFromS3 = s3Service.deleteFromS3;
 const getCloudFrontUrl = typeof s3Service.getCloudFrontUrl === 'function' ? s3Service.getCloudFrontUrl : ((url) => url);
 const appSettingsService = require('./application-settings.service');
+const { ensureBankDirectProcessLinksTable } = require('../../database/migrations/migrate_bank_direct_process_links');
 const logger = require('../../config/logger');
 
 // GET /products — list with filters
 const listProducts = async (req, res, next) => {
   try {
+    await ensureBankDirectProcessLinksTable();
     const { page, limit, offset } = getPaginationParams(req.query);
-    const { 
+    const {
       category, bank_id, is_active, search, commission_enabled, featured, status,
       trending, min_salary, max_salary, min_age, max_age, min_cibil,
       occupation, employment_type, city, joining_fee_type, sort_by,
@@ -28,7 +30,7 @@ const listProducts = async (req, res, next) => {
     const userRole = String(req.user?.role || '').trim().toUpperCase();
     const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
     if (isSalesExecUser && req.user?.id) {
-      where += ` AND (p.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $${idx}) OR (EXISTS (SELECT 1 FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = $${idx} AND (UPPER(b.short_code) = 'LOC_EOC' OR b.name ILIKE '%loc/eoc%' OR b.name ILIKE '%loan on card%')) AND p.category::text IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi')))` ;
+      where += ` AND (p.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $${idx}) OR (EXISTS (SELECT 1 FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = $${idx} AND (UPPER(b.short_code) = 'LOC_EOC' OR b.name ILIKE '%loc/eoc%' OR b.name ILIKE '%loan on card%')) AND p.category::text IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi')))`;
       values.push(req.user.id);
       idx++;
     }
@@ -38,10 +40,10 @@ const listProducts = async (req, res, next) => {
       values.push(is_active === 'true' || is_active === true);
     }
 
-    if (category) { 
+    if (category) {
       if (category.includes('%')) {
-        where += ` AND p.category::text ILIKE $${idx++}`; 
-        values.push(category); 
+        where += ` AND p.category::text ILIKE $${idx++}`;
+        values.push(category);
         // Exclude specialized categories from generic wildcard searches (e.g. %card% should not match loc_eoc, loan_on_credit_card, or smart_emi)
         where += ` AND COALESCE(p.category::text, '') NOT IN ('loan_on_credit_card', 'smart_emi', 'loc_eoc') AND COALESCE(p.sub_category, '') NOT ILIKE '%loan%credit%card%' AND COALESCE(p.sub_category, '') NOT ILIKE '%emi%card%'`;
       } else if (category === 'loc_eoc' || category === 'LOC/EOC' || category === 'LOC_EOC') {
@@ -53,13 +55,13 @@ const listProducts = async (req, res, next) => {
       } else if (category === 'loans' || category === 'loan') {
         where += ` AND p.category::text NOT IN ('loc_eoc', 'loan_on_credit_card', 'smart_emi') AND p.category::text ILIKE '%loan%'`;
       } else {
-        where += ` AND p.category::text = $${idx++}`; 
-        values.push(category); 
+        where += ` AND p.category::text = $${idx++}`;
+        values.push(category);
       }
     }
-    if (bank_id) { 
-      where += ` AND p.bank_id = $${idx++}`; 
-      values.push(bank_id); 
+    if (bank_id) {
+      where += ` AND p.bank_id = $${idx++}`;
+      values.push(bank_id);
     }
     if (commission_enabled) {
       where += ` AND p.commission_enabled = $${idx++}`;
@@ -85,10 +87,10 @@ const listProducts = async (req, res, next) => {
     if (is_popular === 'true' || is_popular === true) {
       where += ` AND (COALESCE(p.is_recommended, false) = true OR COALESCE(p.featured, false) = true OR COALESCE(p.is_trending, false) = true)`;
     }
-    if (search) { 
-      where += ` AND (p.name ILIKE $${idx} OR COALESCE(b.name, '') ILIKE $${idx} OR COALESCE(p.rewards, '') ILIKE $${idx} OR COALESCE(p.cashback, '') ILIKE $${idx} OR COALESCE(p.description, '') ILIKE $${idx})`; 
-      values.push(`%${search}%`); 
-      idx++; 
+    if (search) {
+      where += ` AND (p.name ILIKE $${idx} OR COALESCE(b.name, '') ILIKE $${idx} OR COALESCE(p.rewards, '') ILIKE $${idx} OR COALESCE(p.cashback, '') ILIKE $${idx} OR COALESCE(p.description, '') ILIKE $${idx})`;
+      values.push(`%${search}%`);
+      idx++;
     }
 
     // Advanced eligibility filters
@@ -116,9 +118,9 @@ const listProducts = async (req, res, next) => {
     if (sort_by === 'popular') orderBy = 'ORDER BY COALESCE(p.approval_rate, 85) DESC, COALESCE(p.commission_value, 0) DESC';
 
     const data = await query(`
-      SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo,
+      SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo, bdpl.direct_process_link as bank_direct_process_link,
              COUNT(*) OVER() as full_count
-      FROM products p LEFT JOIN banks b ON b.id = p.bank_id
+      FROM products p LEFT JOIN banks b ON b.id = p.bank_id LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = p.bank_id
       ${where}
       ${orderBy}
       LIMIT $${idx} OFFSET $${idx + 1}
@@ -129,7 +131,7 @@ const listProducts = async (req, res, next) => {
 
     const sanitizedRows = data.rows.map(prod => {
       const { full_count, ...prodData } = prod;
-      
+
       // Default metadata
       prodData.hold_days = prodData.hold_days || 7;
       prodData.approval_rate = prodData.approval_rate || 82;
@@ -159,21 +161,22 @@ const listProducts = async (req, res, next) => {
 // GET /products/:id
 const getProduct = async (req, res, next) => {
   try {
+    await ensureBankDirectProcessLinksTable();
     const idOrSlug = req.params.id;
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
 
     let product;
     if (isUUID) {
       const { rows } = await query(`
-        SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
-        FROM products p LEFT JOIN banks b ON b.id = p.bank_id WHERE p.id = $1
+        SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo, bdpl.direct_process_link as bank_direct_process_link
+        FROM products p LEFT JOIN banks b ON b.id = p.bank_id LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = p.bank_id WHERE p.id = $1
       `, [idOrSlug]);
       product = rows[0];
     } else {
       // Direct lookup by slug first
       const { rows } = await query(`
-        SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
-        FROM products p LEFT JOIN banks b ON b.id = p.bank_id 
+        SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo, bdpl.direct_process_link as bank_direct_process_link
+        FROM products p LEFT JOIN banks b ON b.id = p.bank_id LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = p.bank_id 
         WHERE LOWER(p.slug) = LOWER($1)
         LIMIT 1
       `, [idOrSlug]);
@@ -182,8 +185,8 @@ const getProduct = async (req, res, next) => {
       // Fallback to name-similarity matching
       if (!product) {
         const { rows: allActive } = await query(`
-          SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
-          FROM products p LEFT JOIN banks b ON b.id = p.bank_id
+          SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo, bdpl.direct_process_link as bank_direct_process_link
+          FROM products p LEFT JOIN banks b ON b.id = p.bank_id LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = p.bank_id
         `);
         product = allActive.find(p => {
           const nameClean = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -217,15 +220,16 @@ const getProduct = async (req, res, next) => {
       id: product.bank_id,
       name: product.bank_name,
       short_code: product.bank_code,
+      direct_process_link: product.bank_direct_process_link || null,
       logo_url: getCloudFrontUrl(product.bank_logo)
     };
 
     product.fees = product.fees_structure || {};
     product.eligibility = product.eligibility_criteria || {};
-    product.features = (product.features_list && product.features_list.length > 0) 
-      ? product.features_list 
+    product.features = (product.features_list && product.features_list.length > 0)
+      ? product.features_list
       : (featuresRes.rows.length > 0 ? featuresRes.rows.map(f => ({ title: f.title, description: f.description, icon: f.icon })) : (Array.isArray(product.features) ? product.features : []));
-    
+
     product.benefits = Array.isArray(product.benefits_list) ? product.benefits_list : [];
     product.documents = Array.isArray(product.required_documents) ? product.required_documents : (docsRes.rows.map(d => d.title || d.document_type));
     product.compare = product.compare_specs || {};
@@ -255,7 +259,7 @@ const getProduct = async (req, res, next) => {
     const viewIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || req.ip;
     const viewUa = req.headers['user-agent'];
     const { trackProductView } = require('./engagement.controller.js');
-    trackProductView(product.id, req.partner?.id || null, viewIp, viewUa).catch(() => {});
+    trackProductView(product.id, req.partner?.id || null, viewIp, viewUa).catch(() => { });
 
     return success(res, product);
   } catch (err) {
@@ -283,8 +287,8 @@ const createProduct = async (req, res, next) => {
   try {
     await ensureProductColumns();
     const body = req.body || {};
-    const { 
-      bank_id, name, category, sub_category, description, commission_type, commission_value, 
+    const {
+      bank_id, name, category, sub_category, description, commission_type, commission_value,
       min_age, max_age, min_income, display_order, annual_fee, time_period,
       short_description, logo, banner, image, commission_enabled, commission_amount,
       override_percentage, featured, public_visible, partner_visible, eligibility_criteria,
@@ -364,9 +368,9 @@ const createProduct = async (req, res, next) => {
         $40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$50,$51,$52
       ) RETURNING id
     `, [
-      bank_id, name, category, sub_category || null, description, JSON.stringify(parsedFeatures || []), 
-      JSON.stringify(parsedEligibility || {}), commission_type || 'fixed', 
-      commission_value || 0, min_age || null, max_age || null, min_income || null, display_order || 0, 
+      bank_id, name, category, sub_category || null, description, JSON.stringify(parsedFeatures || []),
+      JSON.stringify(parsedEligibility || {}), commission_type || 'fixed',
+      commission_value || 0, min_age || null, max_age || null, min_income || null, display_order || 0,
       annual_fee || null, time_period || null, image_url || null,
       short_description || null, logo || null, banner || null, image || null, isCommEnabled,
       commission_amount || 0, override_percentage || 0, isFeatured, isPubVisible,
@@ -390,9 +394,9 @@ const updateProduct = async (req, res, next) => {
     await ensureProductColumns();
     const { id } = req.params;
     const body = req.body || {};
-    const { 
+    const {
       bank_id, category, min_age, max_age, min_income, operation_head_id,
-      name, description, commission_type, commission_value, is_active, display_order, 
+      name, description, commission_type, commission_value, is_active, display_order,
       annual_fee, time_period, short_description, logo, banner, image, commission_enabled,
       commission_amount, override_percentage, featured, public_visible, partner_visible,
       eligibility_criteria, documents_required, benefits, fees_charges, apply_button_text,
@@ -573,6 +577,7 @@ const updateProduct = async (req, res, next) => {
 // GET /products/categories — grouped by category for home page
 const getProductsByCategory = async (req, res, next) => {
   try {
+    await ensureBankDirectProcessLinksTable();
     const { page, limit, offset } = getPaginationParams(req.query);
     const [count, data] = await Promise.all([
       query(`SELECT COUNT(*) FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.is_active = true AND b.is_active = true AND b.status = 'Active'`),
@@ -672,7 +677,7 @@ const resolvePartnerCommissions = async (productsList, req) => {
   }
 
   let partnerId = req?.partner?.id || req?.partner?.Partner_id;
-  
+
   if (!partnerId && req?.user && ['PARTNER', 'TEAM_MEMBER'].includes(req.user.role?.toUpperCase())) {
     const { rows: [pProfile] } = await query(
       `SELECT id FROM partner_profiles WHERE user_id = $1 LIMIT 1`,
@@ -686,7 +691,7 @@ const resolvePartnerCommissions = async (productsList, req) => {
   if (partnerId || isPartnerOrTeam) {
     const productIds = productsList.map(p => p.id).filter(Boolean);
     let rulesMap = {};
-    
+
     if (productIds.length > 0) {
       let rulesQuery = `
         SELECT product_id, partner_id, commission_type, commission_value
@@ -871,12 +876,13 @@ const listBanks = async (req, res, next) => {
 // GET /products/cards
 const getCards = async (req, res, next) => {
   try {
+    await ensureBankDirectProcessLinksTable();
     const { page, limit, offset } = getPaginationParams(req.query);
     const [count, data] = await Promise.all([
-      query(`SELECT COUNT(*) FROM products p LEFT JOIN banks b ON b.id = p.bank_id WHERE (p.is_active = true OR p.status = 'Active') AND p.category IN ('credit_card', 'co_branded_card', 'fd_card')`),
+      query(`SELECT COUNT(*) FROM products p LEFT JOIN banks b ON b.id = p.bank_id LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = p.bank_id WHERE (p.is_active = true OR p.status = 'Active') AND p.category IN ('credit_card', 'co_branded_card', 'fd_card')`),
       query(`
-        SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
-        FROM products p LEFT JOIN banks b ON b.id = p.bank_id
+        SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo, bdpl.direct_process_link as bank_direct_process_link
+        FROM products p LEFT JOIN banks b ON b.id = p.bank_id LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = p.bank_id
         WHERE (p.is_active = true OR p.status = 'Active') AND p.category IN ('credit_card', 'co_branded_card', 'fd_card')
         ORDER BY COALESCE(p.display_order, 0) ASC, COALESCE(p.commission_value, 0) DESC
         LIMIT $1 OFFSET $2
@@ -892,12 +898,13 @@ const getCards = async (req, res, next) => {
 // GET /products/loans
 const getLoans = async (req, res, next) => {
   try {
+    await ensureBankDirectProcessLinksTable();
     const { page, limit, offset } = getPaginationParams(req.query);
     const [count, data] = await Promise.all([
-      query(`SELECT COUNT(*) FROM products p LEFT JOIN banks b ON b.id = p.bank_id WHERE (p.is_active = true OR p.status = 'Active') AND p.category IN ('personal_loan', 'business_loan', 'home_loan', 'instant_loan', 'used_car_loan', 'education_loan')`),
+      query(`SELECT COUNT(*) FROM products p LEFT JOIN banks b ON b.id = p.bank_id LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = p.bank_id WHERE (p.is_active = true OR p.status = 'Active') AND p.category IN ('personal_loan', 'business_loan', 'home_loan', 'instant_loan', 'used_car_loan', 'education_loan')`),
       query(`
-        SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
-        FROM products p LEFT JOIN banks b ON b.id = p.bank_id
+        SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo, bdpl.direct_process_link as bank_direct_process_link
+        FROM products p LEFT JOIN banks b ON b.id = p.bank_id LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = p.bank_id
         WHERE (p.is_active = true OR p.status = 'Active') AND p.category IN ('personal_loan', 'business_loan', 'home_loan', 'instant_loan', 'used_car_loan', 'education_loan')
         ORDER BY COALESCE(p.display_order, 0) ASC, COALESCE(p.commission_value, 0) DESC
         LIMIT $1 OFFSET $2
@@ -913,12 +920,13 @@ const getLoans = async (req, res, next) => {
 // GET /products/insurance
 const getInsurance = async (req, res, next) => {
   try {
+    await ensureBankDirectProcessLinksTable();
     const { page, limit, offset } = getPaginationParams(req.query);
     const [count, data] = await Promise.all([
-      query(`SELECT COUNT(*) FROM products p LEFT JOIN banks b ON b.id = p.bank_id WHERE (p.is_active = true OR p.status = 'Active') AND p.category IN ('health_insurance', 'life_insurance', 'general_insurance')`),
+      query(`SELECT COUNT(*) FROM products p LEFT JOIN banks b ON b.id = p.bank_id LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = p.bank_id WHERE (p.is_active = true OR p.status = 'Active') AND p.category IN ('health_insurance', 'life_insurance', 'general_insurance')`),
       query(`
-        SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
-        FROM products p LEFT JOIN banks b ON b.id = p.bank_id
+        SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo, bdpl.direct_process_link as bank_direct_process_link
+        FROM products p LEFT JOIN banks b ON b.id = p.bank_id LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = p.bank_id
         WHERE (p.is_active = true OR p.status = 'Active') AND p.category IN ('health_insurance', 'life_insurance', 'general_insurance')
         ORDER BY COALESCE(p.display_order, 0) ASC, COALESCE(p.commission_value, 0) DESC
         LIMIT $1 OFFSET $2
@@ -946,15 +954,15 @@ const deleteProduct = async (req, res, next) => {
     }
 
     // Unlink non-critical referencing tables to clean up orphaned assignments
-    await query(`DELETE FROM employee_product_links WHERE product_id = $1`, [id]).catch(() => {});
-    await query(`DELETE FROM commission_structures WHERE product_id = $1`, [id]).catch(() => {});
-    await query(`DELETE FROM partner_saved_products WHERE product_id = $1`, [id]).catch(() => {});
-    await query(`DELETE FROM product_faq WHERE product_id = $1`, [id]).catch(() => {});
-    await query(`DELETE FROM product_videos WHERE product_id = $1`, [id]).catch(() => {});
-    await query(`DELETE FROM product_documents WHERE product_id = $1`, [id]).catch(() => {});
-    await query(`DELETE FROM product_offers WHERE product_id = $1`, [id]).catch(() => {});
-    await query(`DELETE FROM product_features WHERE product_id = $1`, [id]).catch(() => {});
-    await query(`DELETE FROM product_application_settings WHERE product_id = $1`, [id]).catch(() => {});
+    await query(`DELETE FROM employee_product_links WHERE product_id = $1`, [id]).catch(() => { });
+    await query(`DELETE FROM commission_structures WHERE product_id = $1`, [id]).catch(() => { });
+    await query(`DELETE FROM partner_saved_products WHERE product_id = $1`, [id]).catch(() => { });
+    await query(`DELETE FROM product_faq WHERE product_id = $1`, [id]).catch(() => { });
+    await query(`DELETE FROM product_videos WHERE product_id = $1`, [id]).catch(() => { });
+    await query(`DELETE FROM product_documents WHERE product_id = $1`, [id]).catch(() => { });
+    await query(`DELETE FROM product_offers WHERE product_id = $1`, [id]).catch(() => { });
+    await query(`DELETE FROM product_features WHERE product_id = $1`, [id]).catch(() => { });
+    await query(`DELETE FROM product_application_settings WHERE product_id = $1`, [id]).catch(() => { });
 
     // Check if there are customer applications referencing this product
     const { rows: [{ appCount }] } = await query(
@@ -973,7 +981,7 @@ const deleteProduct = async (req, res, next) => {
     }
 
     // Safe to delete leads and product if no applications exist
-    await query(`DELETE FROM leads WHERE product_id = $1`, [id]).catch(() => {});
+    await query(`DELETE FROM leads WHERE product_id = $1`, [id]).catch(() => { });
     await query(`DELETE FROM products WHERE id = $1`, [id]);
 
     // Log action
@@ -986,7 +994,7 @@ const deleteProduct = async (req, res, next) => {
       await query(
         `UPDATE products SET is_active = false, status = 'Archived', updated_at = NOW() WHERE id = $1`,
         [req.params.id]
-      ).catch(() => {});
+      ).catch(() => { });
       return success(res, { soft_deleted: true }, 'Product archived and marked inactive to preserve linked system records.');
     }
     next(err);
@@ -1079,16 +1087,17 @@ const deleteApplicationSettings = async (req, res, next) => {
 
 const resolveApplication = async (req, res, next) => {
   try {
+    await ensureBankDirectProcessLinksTable();
     const idOrSlug = req.params.id;
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
 
     let product;
     if (isUUID) {
-      const { rows } = await query(`SELECT p.*, b.name as bank_name FROM products p LEFT JOIN banks b ON p.bank_id = b.id WHERE p.id = $1`, [idOrSlug]);
+      const { rows } = await query(`SELECT p.*, b.name as bank_name, bdpl.direct_process_link as bank_direct_process_link FROM products p LEFT JOIN banks b ON p.bank_id = b.id LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = p.bank_id WHERE p.id = $1`, [idOrSlug]);
       product = rows[0];
     } else {
       const cleanSlug = idOrSlug.replace(/-/g, ' ').trim();
-      const { rows } = await query(`SELECT p.*, b.name as bank_name FROM products p LEFT JOIN banks b ON p.bank_id = b.id WHERE p.name ILIKE $1 OR p.category::text = $1`, [cleanSlug]);
+      const { rows } = await query(`SELECT p.*, b.name as bank_name, bdpl.direct_process_link as bank_direct_process_link FROM products p LEFT JOIN banks b ON p.bank_id = b.id LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = p.bank_id WHERE p.name ILIKE $1 OR p.category::text = $1`, [cleanSlug]);
       product = rows[0];
     }
 
@@ -1098,6 +1107,18 @@ const resolveApplication = async (req, res, next) => {
         application_url: null,
         provider_name: null,
         open_type: 'same_tab'
+      });
+    }
+
+    // Prioritize bank-specific Direct Process link when process_type === 'direct_bank'
+    if (String(req.query?.process_type || '').toLowerCase() === 'direct_bank' && product.bank_direct_process_link?.trim()) {
+      return success(res, {
+        application_type: 'external_url',
+        application_url: product.bank_direct_process_link.trim(),
+        direct_process_link: product.bank_direct_process_link.trim(),
+        provider_name: product.bank_name || 'Bank Direct Process',
+        open_type: 'new_tab',
+        button_text: product.button_text || 'Apply Now'
       });
     }
 
@@ -1112,7 +1133,7 @@ const resolveApplication = async (req, res, next) => {
         const partnerCode = req.partner?.partner_code || req.partner?.partner_code || '';
         const host = req.get('host');
         const trackingUrl = `${req.protocol}://${host}/redirect/${product.category}?id=${product.id}&partner=${partnerCode}`;
-        
+
         return success(res, {
           application_type: 'external_url',
           application_url: trackingUrl,
@@ -1189,7 +1210,7 @@ const updateStatus = async (req, res, next) => {
   try {
     const { id, is_active, status, public_visible, partner_visible } = req.body;
     if (!id) return error(res, 'Product ID is required', 400);
-    
+
     await query(`
       UPDATE products SET
         is_active = COALESCE($1, is_active),
@@ -1199,7 +1220,7 @@ const updateStatus = async (req, res, next) => {
         updated_at = NOW()
       WHERE id = $5
     `, [is_active, status, public_visible, partner_visible, id]);
-    
+
     await logAction(req, 'UPDATE_PRODUCT_STATUS', id, { status, public_visible, partner_visible });
     return success(res, {}, 'Product status and visibility updated successfully');
   } catch (err) {

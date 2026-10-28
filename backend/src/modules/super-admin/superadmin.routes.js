@@ -63,6 +63,15 @@ router.post('/products/link', linkCtrl.saveProductLink);
 router.put('/products/link/:id', linkCtrl.saveProductLink);
 router.delete('/products/link/:id', linkCtrl.deleteProductLink);
 
+// Bank-Specific Direct Process Link Management endpoints
+const bankDirectLinksCtrl = require('./bankDirectLinks.controller.js');
+router.get('/bank-direct-links', bankDirectLinksCtrl.listBankDirectProcessLinks);
+router.get('/bank-direct-links/resolve-product/:productId', bankDirectLinksCtrl.resolveProductDirectProcessLink);
+router.get('/bank-direct-links/:bankId', bankDirectLinksCtrl.getBankDirectProcessLinkByBankId);
+router.post('/bank-direct-links', bankDirectLinksCtrl.upsertBankDirectProcessLink);
+router.put('/bank-direct-links', bankDirectLinksCtrl.upsertBankDirectProcessLink);
+router.put('/bank-direct-links/:bankId', bankDirectLinksCtrl.upsertBankDirectProcessLink);
+
 // Video KYC review endpoints
 router.post('/kyc/approve', ctrl.approveKYC);
 router.post('/kyc/reject', ctrl.rejectKYC);

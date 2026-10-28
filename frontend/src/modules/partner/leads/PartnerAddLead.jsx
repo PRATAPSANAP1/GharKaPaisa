@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import api from '../../../services/api';
-import { getBankApplyLink } from '../../home/components/CreditCards/cardLinkHelper';
+import { getBankApplyLink, getDirectProcessLink } from '../../home/components/CreditCards/cardLinkHelper';
 import { MdArrowBack, MdSend, MdContentCopy, MdShare, MdOpenInNew, MdCheckCircle, MdAssignment, MdLink, MdAccountBalance, MdVerifiedUser, MdRefresh } from 'react-icons/md';
 import { isSbiProductOrBank } from '../../../utils/sbiPincodeChecker';
 import PincodeAutoComplete, { isSbiPincodeValid, isS8Pincode, getS8PincodeDetails, getAllS8Cities } from '../../../components/PincodeAutoComplete';
@@ -248,6 +248,7 @@ export default function PartnerAddLead() {
     }
 
     // Direct bank url resolution for linked_share and direct_bank
+    const directProcessUrl = getDirectProcessLink(selectedProd, selectedProd?.name, selectedProd?.bank_code || selectedProd?.bank_name);
     const directBankUrl = getBankApplyLink(selectedProd?.name, selectedProd?.bank_code || selectedProd?.bank_name, selectedProd) || selectedProd?.partner_url || selectedProd?.application_url || selectedProd?.public_url || selectedProd?.apply_url || selectedProd?.redirect_url || selectedProd?.bank_link || 'https://gharkapaisa.in';
 
     if (processType === 'linked_share' && (!customerName.trim() || !mobile.trim())) {
@@ -328,9 +329,9 @@ export default function PartnerAddLead() {
           });
           window.open(finalWaUrl, '_blank');
         } else if (processType === 'direct_bank') {
-          const targetBankUrl = leadData?.bank_url || leadData?.redirect_url || directBankUrl;
+          const targetBankUrl = leadData?.bank_url || leadData?.redirect_url || directProcessUrl;
           if (targetBankUrl) {
-            window.open(targetBankUrl, '_blank');
+            window.open(targetBankUrl, '_blank', 'noopener,noreferrer');
           }
           clearPersistedDraft();
           alert(`Direct Bank Application #${leadData?.app_number || ''} created! Opening official bank portal...`);
@@ -389,9 +390,9 @@ export default function PartnerAddLead() {
             window.open(appData.whatsapp_url, '_blank');
           }
         } else if (processType === 'direct_bank') {
-          const targetBankUrl = appData?.bank_url || appData?.redirect_url || directBankUrl;
+          const targetBankUrl = appData?.bank_url || appData?.redirect_url || directProcessUrl;
           if (targetBankUrl) {
-            window.open(targetBankUrl, '_blank');
+            window.open(targetBankUrl, '_blank', 'noopener,noreferrer');
           }
           clearPersistedDraft();
           alert(`Lead verified & Application APP#${appData?.app_number || ''} created! Official Bank portal opened.`);

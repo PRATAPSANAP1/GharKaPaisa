@@ -1,5 +1,6 @@
 const { query } = require('../../config/database');
 const { success, error } = require('../../utils/response/response');
+const { ensureBankDirectProcessLinksTable } = require('../../database/migrations/migrate_bank_direct_process_links');
 const logger = require('../../config/logger');
 
 /**
@@ -52,16 +53,19 @@ function parseUA(userAgent) {
  */
 const listProductLinks = async (req, res, next) => {
   try {
+    await ensureBankDirectProcessLinksTable();
     const { search, category, bank_id, limit = 50, page = 1 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
     let sql = `
-      SELECT p.id, p.name, p.category, p.is_active,
+      SELECT p.id, p.name, p.category, p.is_active, p.bank_id,
              p.public_url, p.partner_url, p.tracking_enabled, p.button_text, p.redirect_type,
              p.utm_source, p.utm_medium, p.utm_campaign, p.priority,
-             p.last_updated_at, b.name as bank_name, u.full_name as updated_by
+             p.last_updated_at, b.name as bank_name, u.full_name as updated_by,
+             bdpl.direct_process_link as bank_direct_process_link
       FROM products p
       JOIN banks b ON p.bank_id = b.id
+      LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = p.bank_id
       LEFT JOIN users u ON p.last_updated_by = u.id
       WHERE 1=1
     `;
@@ -115,13 +119,15 @@ const listProductLinks = async (req, res, next) => {
  */
 const getProductLink = async (req, res, next) => {
   try {
+    await ensureBankDirectProcessLinksTable();
     const { id } = req.params;
     const { rows: [link] } = await query(
-      `SELECT p.id, p.name, p.category, p.public_url, p.partner_url, p.tracking_enabled,
+      `SELECT p.id, p.name, p.category, p.bank_id, p.public_url, p.partner_url, p.tracking_enabled,
               p.button_text, p.redirect_type, p.utm_source, p.utm_medium, p.utm_campaign, p.priority,
-              p.last_updated_at, b.name as bank_name
+              p.last_updated_at, b.name as bank_name, bdpl.direct_process_link as bank_direct_process_link
        FROM products p
        JOIN banks b ON p.bank_id = b.id
+       LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = p.bank_id
        WHERE p.id = $1`,
       [id]
     );

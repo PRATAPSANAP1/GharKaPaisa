@@ -3,6 +3,7 @@ const { logAction } = require('../admin/audit.service.js');
 const { uploadToS3, deleteFromS3 } = require('../../services/aws/s3.service.js');
 const { getPaginationParams } = require('../../utils/helpers/helpers');
 const { success, created, error, notFound, paginate } = require('../../utils/response/response');
+const { ensureBankDirectProcessLinksTable } = require('../../database/migrations/migrate_bank_direct_process_links');
 
 const mapBankRow = (bank) => {
   if (!bank) return bank;
@@ -35,6 +36,7 @@ const mapBankRow = (bank) => {
 // GET /api/v1/banks (Admin/Super Admin/Public — list all banks)
 const listAllBanks = async (req, res, next) => {
   try {
+    await ensureBankDirectProcessLinksTable();
     const { page, limit, offset } = getPaginationParams(req.query);
     const { search, status, category } = req.query;
 
@@ -82,9 +84,11 @@ const listAllBanks = async (req, res, next) => {
     const dataQuery = `
       SELECT 
         b.*,
+        MAX(bdpl.direct_process_link) as direct_process_link,
         COUNT(p.id)::int as products_count,
         ARRAY_REMOVE(ARRAY_AGG(DISTINCT p.category::text), NULL) as categories
       FROM banks b
+      LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = b.id
       LEFT JOIN products p ON p.bank_id = b.id
       ${whereClause}
       GROUP BY b.id
@@ -107,11 +111,13 @@ const listAllBanks = async (req, res, next) => {
 // GET /api/v1/banks/:id
 const getBankById = async (req, res, next) => {
   try {
+    await ensureBankDirectProcessLinksTable();
     const { id } = req.params;
 
     const { rows: [bank] } = await query(`
-      SELECT b.*, COUNT(p.id)::int as products_count
+      SELECT b.*, MAX(bdpl.direct_process_link) as direct_process_link, COUNT(p.id)::int as products_count
       FROM banks b
+      LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = b.id
       LEFT JOIN products p ON p.bank_id = b.id
       WHERE b.id = $1
       GROUP BY b.id
@@ -201,6 +207,7 @@ const createBank = async (req, res, next) => {
 // PUT /api/v1/banks/:id (Admin/Super Admin — update bank)
 const updateBank = async (req, res, next) => {
   try {
+    await ensureBankDirectProcessLinksTable();
     const { id } = req.params;
     const {
       name, short_code, is_active, status, display_order,
@@ -318,6 +325,7 @@ const updateBank = async (req, res, next) => {
 // PATCH /api/v1/banks/:id/status
 const updateBankStatus = async (req, res, next) => {
   try {
+    await ensureBankDirectProcessLinksTable();
     const { id } = req.params;
     const { status } = req.body;
 
@@ -421,6 +429,7 @@ const updateBankDirectLink = async (req, res, next) => {
 // DELETE /api/v1/banks/:id (Admin/Super Admin — delete bank)
 const deleteBank = async (req, res, next) => {
   try {
+    await ensureBankDirectProcessLinksTable();
     const { id } = req.params;
 
     const { rows: [existing] } = await query('SELECT * FROM banks WHERE id = $1', [id]);
@@ -449,6 +458,7 @@ const deleteBank = async (req, res, next) => {
 // GET /api/v1/banks/active — Public, lightweight, no auth
 const getActiveBanks = async (req, res, next) => {
   try {
+    await ensureBankDirectProcessLinksTable();
     const { category } = req.query;
     let categoryClause = '';
     const values = [];
@@ -479,8 +489,10 @@ const getActiveBanks = async (req, res, next) => {
         b.short_code,
         b.logo_url as logo,
         b.display_order,
+        MAX(bdpl.direct_process_link) as direct_process_link,
         COUNT(p.id) FILTER (WHERE p.status = 'Active' OR p.is_active = true)::int as products_count
       FROM banks b
+      LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = b.id
       LEFT JOIN products p ON p.bank_id = b.id
       WHERE (b.is_active = true OR b.status = 'Active')
       ${categoryClause}
@@ -510,6 +522,7 @@ const getActiveBanks = async (req, res, next) => {
 
 const getBankCardsBySlug = async (req, res, next) => {
   try {
+    await ensureBankDirectProcessLinksTable();
     const { slug } = req.params;
     const cleanSlug = slug ? slug.replace(/-bank$/i, '').trim() : '';
 
@@ -547,9 +560,10 @@ const getBankCardsBySlug = async (req, res, next) => {
 
     // 2. Fetch the active cards (products) of this bank
     const { rows: cards } = await query(`
-      SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
+      SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo, bdpl.direct_process_link as bank_direct_process_link
       FROM products p
       JOIN banks b ON b.id = p.bank_id
+      LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = p.bank_id
       WHERE p.bank_id = $1 
         AND (p.category::text ILIKE '%card%' OR p.category::text IN ('credit_card', 'co_branded_card', 'fd_card')) 
         AND (p.is_active = true OR p.status = 'Active')

@@ -18,7 +18,7 @@ import {
 } from 'react-icons/md';
 import { FaBalanceScale } from 'react-icons/fa';
 import { getCardDetails } from '../../home/components/CreditCards/CardDetailsData';
-import { getBankApplyLink } from '../../home/components/CreditCards/cardLinkHelper';
+import { getBankApplyLink, getDirectProcessLink } from '../../home/components/CreditCards/cardLinkHelper';
 import PincodeAutoComplete, { isSbiPincodeValid, isS8Pincode, getS8PincodeDetails, getAllS8Cities } from '../../../components/PincodeAutoComplete';
 
 const CATEGORIES = [
@@ -438,6 +438,7 @@ export default function PartnerProducts({
 
     try {
       const code = partnerCode || user?.partner_code || 'PARTNER';
+      const directProcessUrl = getDirectProcessLink(selectedProduct, selectedProduct.name, selectedProduct.bank_code || selectedProduct.bank_name);
       const directBankUrl = getBankApplyLink(selectedProduct.name, selectedProduct.bank_code || selectedProduct.bank_name, selectedProduct) || selectedProduct.partner_url || selectedProduct.application_url || selectedProduct.public_url || selectedProduct.apply_url || selectedProduct.redirect_url || selectedProduct.bank_link || selectedProduct.tracking_url || `${window.location.origin}/redirect/${selectedProduct.category}?id=${selectedProduct.id}&partner=${code}`;
 
       const payload = {
@@ -454,11 +455,20 @@ export default function PartnerProducts({
       };
 
       if (processType === 'direct_bank') {
-        const bankWin = window.open(directBankUrl, '_blank');
+        if (!directProcessUrl) {
+          setToast({
+            type: 'error',
+            message: 'Direct Process link is not configured for this bank or product. Please contact Super Admin.'
+          });
+          setSubmitting(false);
+          return;
+        }
+        const bankWin = window.open(directProcessUrl, '_blank', 'noopener,noreferrer');
         api.post('/applications/partner-apply', payload).then((res) => {
           const appData = res.data?.data;
-          const targetUrl = appData?.bank_url || directBankUrl;
-          if (bankWin && !bankWin.closed && targetUrl !== directBankUrl) {
+          const targetUrl = appData?.bank_url || directProcessUrl;
+          if (bankWin && !bankWin.closed && targetUrl && targetUrl !== directProcessUrl) {
+
             bankWin.location.href = targetUrl;
           }
           usePartnerStore.getState().fetchCustomers().catch(() => {});

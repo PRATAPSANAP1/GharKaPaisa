@@ -5091,6 +5091,12 @@ const migrate = async () => {
   try {
     const { migrateSalesOperatorClaim } = require('./migrate_sales_operator_claim');
     await migrateSalesOperatorClaim();
+    try {
+      const { migrateBankDirectProcessLinks } = require('./migrate_bank_direct_process_links');
+      await migrateBankDirectProcessLinks();
+    } catch (bankLinksErr) {
+      logger.error('Bank Direct Process Links migration error note:', bankLinksErr.message);
+    }
   } catch (claimErr) {
     logger.error('Sales Operator Claim migration error note:', claimErr.message);
   }

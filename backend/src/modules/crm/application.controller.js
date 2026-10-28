@@ -10,6 +10,8 @@ const logger = require('../../config/logger');
 const { logAction } = require('../admin/audit.service.js');
 const { processTeamOverrideCommission } = require('../team/team.service.js');
 const { getBankApplyLinkBackend } = require('./lead.controller');
+const { ensureBankDirectProcessLinksTable } = require('../../database/migrations/migrate_bank_direct_process_links');
+const { resolveDirectProcessLinkForProductRow } = require('../super-admin/bankDirectLinks.controller');
 const { sendEmail, sendLeadApplicationCreatedEmail } = require('../../services/email/email.service');
 const { getHdfcCuringDesignation, getHdfcDeclineCodeInfo, HDFC_DECLINE_CODES, CURING_DESIGNATIONS } = require('../../constants/hdfcDeclineCodes');
 
@@ -3543,6 +3545,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
 
 // POST /applications/partner-apply — Submit or save draft application from Partner Panel
 const submitPartnerApplication = async (req, res, next) => {
+  await ensureBankDirectProcessLinksTable();
   const client = await getClient();
   try {
     await client.query('BEGIN');
@@ -3615,7 +3618,7 @@ const submitPartnerApplication = async (req, res, next) => {
     }
 
     const { rows: [product] } = await client.query(
-      `SELECT p.*, b.name as bank_name FROM products p LEFT JOIN banks b ON b.id = p.bank_id WHERE p.id = $1`,
+      `SELECT p.*, b.name as bank_name, b.short_code as bank_code, bdpl.direct_process_link as bank_direct_process_link FROM products p LEFT JOIN banks b ON b.id = p.bank_id LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = p.bank_id WHERE p.id = $1`,
       [product_id]
     );
     if (!product) {
@@ -3944,7 +3947,19 @@ const submitPartnerApplication = async (req, res, next) => {
         logger.warn('Share link insert non-fatal warn:', shareLinkErr.message);
       }
     } else if (process_type === 'direct_bank') {
-      bankUrl = product.partner_url?.trim() || getBankApplyLinkBackend(product.name, product.bank_name, product) || 'https://gharkapaisa.in';
+      const resolvedDirect = resolveDirectProcessLinkForProductRow(product, getBankApplyLinkBackend);
+      if (!resolvedDirect.url) {
+        await client.query('ROLLBACK');
+        return error(res, `Direct Process link is not configured for ${product.name}`, 400);
+      }
+      bankUrl = resolvedDirect.url;
+      try {
+        await client.query('SAVEPOINT direct_bank_url_sp');
+        await client.query(`UPDATE applications SET bank_url = $1 WHERE id = $2`, [bankUrl, app.id]);
+        await client.query('RELEASE SAVEPOINT direct_bank_url_sp');
+      } catch (_) {
+        await client.query('ROLLBACK TO SAVEPOINT direct_bank_url_sp').catch(() => {});
+      }
     }
 
     await client.query('COMMIT');

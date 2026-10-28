@@ -27,6 +27,7 @@ router.get('/links', optionalAuth, linkCtrl.listProductLinks);
 router.get('/link/:id', optionalAuth, linkCtrl.getProductLink);
 router.get('/', optionalAuth, productCtrl.listProducts);
 router.get('/:id/apply', optionalAuth, productCtrl.resolveApplication);
+router.get('/:id/direct-process-link', optionalAuth, require('../super-admin/bankDirectLinks.controller.js').resolveProductDirectProcessLink);
 
 // Public sub-entity endpoints (read-only)
 router.get('/:id/faqs', subEntityCtrl.getProductFaqs);

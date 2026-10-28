@@ -1,4 +1,20 @@
-import { getFinanceDirectUrl } from '../../../../utils/personalLoanHelpers';
+import { getFinanceDirectUrl } from '../../../../utils/personalLoanHelpers.js';
+
+/**
+ * Validates that a URL string uses an approved http: or https: scheme.
+ */
+export const isSafeHttpUrl = (rawUrl) => {
+  if (typeof rawUrl !== 'string') return false;
+  const trimmed = rawUrl.trim();
+  if (!trimmed || /\s/.test(trimmed)) return false;
+  try {
+    const parsed = new URL(trimmed);
+    const protocol = String(parsed.protocol || '').toLowerCase();
+    return (protocol === 'http:' || protocol === 'https:') && Boolean(parsed.hostname);
+  } catch (_) {
+    return false;
+  }
+};
 
 /**
  * Utility to resolve direct application links for bank & finance products.
@@ -60,6 +76,40 @@ export const getBankApplyLink = (cardName, bankId, productObj = null) => {
   const financeUtmUrl = getFinanceDirectUrl(product || cardName);
   if (financeUtmUrl) {
     return financeUtmUrl;
+  }
+
+  return null;
+};
+
+/**
+ * Resolves the Direct Process link for a product when the user chooses Direct Process (direct_bank).
+ * Precedence:
+ * 1. Configured bank-specific Direct Process link (bank_direct_process_link) for the product's bank.
+ * 2. Existing product-level or Direct Process fallback (getBankApplyLink).
+ * 3. null if no valid link exists anywhere.
+ */
+export const getDirectProcessLink = (productObj, cardName = '', bankId = '') => {
+  const product = productObj || (typeof cardName === 'object' ? cardName : null);
+  if (!product && !cardName) return null;
+
+  const bankConfiguredLink =
+    product?.bank_direct_process_link ||
+    product?.bank?.direct_process_link ||
+    product?.direct_process_link ||
+    null;
+
+  if (bankConfiguredLink && isSafeHttpUrl(bankConfiguredLink)) {
+    return String(bankConfiguredLink).trim();
+  }
+
+  const fallbackLink = getBankApplyLink(
+    cardName || product?.name || '',
+    bankId || product?.bank_code || product?.bank_name || '',
+    product
+  );
+
+  if (fallbackLink && isSafeHttpUrl(fallbackLink)) {
+    return String(fallbackLink).trim();
   }
 
   return null;

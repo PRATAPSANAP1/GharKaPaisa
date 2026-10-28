@@ -4,6 +4,8 @@ const { getPaginationParams } = require('../../utils/helpers/helpers');
 const logger = require('../../config/logger');
 const { sendLeadApplicationCreatedEmail } = require('../../services/email/email.service');
 const { calculatePartnerCommission } = require('../partner/commission.service.js');
+const { ensureBankDirectProcessLinksTable } = require('../../database/migrations/migrate_bank_direct_process_links');
+const { resolveDirectProcessLinkForProductRow } = require('../super-admin/bankDirectLinks.controller');
 
 const {
   logLeadTimeline,
@@ -361,13 +363,15 @@ const createLead = async (req, res, next) => {
     }
 
     // 2. Validate Product & SBI Pincode Eligibility
+    await ensureBankDirectProcessLinksTable();
     const { rows: [product] } = await query(`
       SELECT
-        p.id, p.name, p.is_active, p.bank_id, p.category, p.sub_category,
-        p.partner_url, p.public_url, p.application_url, p.apply_url, p.redirect_url,
-        b.name AS bank_name, b.short_code AS bank_code
+        p.*,
+        b.name AS bank_name, b.short_code AS bank_code,
+        bdpl.direct_process_link AS bank_direct_process_link
       FROM products p
       LEFT JOIN banks b ON b.id = p.bank_id
+      LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = p.bank_id
       WHERE p.id = $1
     `, [targetProductId]);
     if (!product || !product.is_active) {
@@ -575,7 +579,11 @@ const createLead = async (req, res, next) => {
     }
 
     if (targetProcess === 'direct_bank') {
-      const bankUrl = getBankApplyLinkBackend(product?.name, product?.bank_name || product?.bank_code, product);
+      const resolvedDirect = resolveDirectProcessLinkForProductRow(product, getBankApplyLinkBackend);
+      if (!resolvedDirect.url) {
+        return error(res, `Direct Process link is not configured for ${product.name}`, 400);
+      }
+      const bankUrl = resolvedDirect.url;
 
       const { rows: [lead] } = await query(`
         INSERT INTO leads (
@@ -866,9 +874,13 @@ const verifyLeadOtp = async (req, res, next) => {
     const appNumber = `APP${appSeq}`;
 
     // 3. Resolve Product details & Commission
+    await ensureBankDirectProcessLinksTable();
     const { rows: [product] } = await client.query(`
-      SELECT id, name, bank_id, category, commission_value, public_url, partner_url
-      FROM products WHERE id = $1
+      SELECT p.*, b.name AS bank_name, b.short_code AS bank_code, bdpl.direct_process_link AS bank_direct_process_link
+      FROM products p
+      LEFT JOIN banks b ON b.id = p.bank_id
+      LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = p.bank_id
+      WHERE p.id = $1
     `, [lead.product_id]);
 
     const initialStatus = lead.process_type === 'direct_bank' ? 'pending' : 'details_submitted';
@@ -931,7 +943,8 @@ const verifyLeadOtp = async (req, res, next) => {
         UPDATE applications SET tracking_token = $1 WHERE id = $2
       `, [trackingToken, app.id]);
     } else if (lead.process_type === 'direct_bank') {
-      bankUrl = product?.partner_url || product?.public_url || 'https://gharkapaisa.in/partner/products';
+      const resolvedDirect = resolveDirectProcessLinkForProductRow(product, getBankApplyLinkBackend);
+      bankUrl = resolvedDirect.url || product?.partner_url || product?.public_url || null;
       await client.query(`
         UPDATE applications SET bank_url = $1 WHERE id = $2
       `, [bankUrl, app.id]);
