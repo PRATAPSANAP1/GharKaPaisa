@@ -341,8 +341,27 @@ export default function ManageApplications() {
           try {
             res = await api.post(`/admin/applications/${encodeURIComponent(fallbackId)}/claim-request`);
           } catch (secondErr) {
-            if (secondErr?.response?.status === 404 && app.app_number && app.app_number !== targetId) {
-              res = await api.post(`/applications/${encodeURIComponent(app.app_number)}/claim-request`);
+            if (secondErr?.response?.status === 404) {
+              try {
+                if (app.app_number && app.app_number !== targetId) {
+                  res = await api.post(`/applications/${encodeURIComponent(app.app_number)}/claim-request`);
+                } else {
+                  throw secondErr;
+                }
+              } catch (thirdErr) {
+                if (thirdErr?.response?.status === 404) {
+                  res = await api.put(`/applications/${encodeURIComponent(targetId)}`, {
+                    claim_request: true,
+                    action: 'claim_request',
+                    sales_claimed_by: user?.id,
+                    sales_claimed_by_name: user?.full_name || user?.name || 'Sales Operator',
+                    sales_claimed_by_code: user?.user_code || user?.employee_id || '',
+                    sales_claimed_at: new Date().toISOString()
+                  });
+                } else {
+                  throw thirdErr;
+                }
+              }
             } else {
               throw secondErr;
             }

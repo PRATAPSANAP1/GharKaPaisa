@@ -55,7 +55,7 @@ jobs:
             --query "InstanceInformationList[?PingStatus=='Online'].InstanceId" \
             --output text 2>/dev/null || echo "")
 
-          ALL_CANDIDATES=$(echo "$TG_INSTANCES $ASG_INSTANCES i-07600948e01bb2aa3" | tr '\t' '\n' | tr ' ' '\n' | grep -E '^i-[a-z0-9]+' | sort -u || true)
+          ALL_CANDIDATES=$(echo "$TG_INSTANCES $ASG_INSTANCES $ONLINE_SSM i-07600948e01bb2aa3" | tr '\t' '\n' | tr ' ' '\n' | grep -E '^i-[a-z0-9]+' | sort -u || true)
 
           TARGETS=""
           if [ -n "$ONLINE_SSM" ]; then
@@ -79,7 +79,23 @@ jobs:
             --region ap-south-1 \
             --document-name "AWS-RunShellScript" \
             --instance-ids $TARGETS \
-            --parameters "commands=[\"sudo -u ubuntu -H bash -c 'cd /home/ubuntu/GharKaPaisa/backend && git fetch origin master && git reset --hard origin/master && npm ci && node --check src/server.js && (pm2 restart gharkapaisa-backend --update-env || pm2 reload gharkapaisa-backend || pm2 restart all --update-env) && pm2 save'\"]" \
+            --parameters 'commands=[
+              "set -e",
+              "echo \"=== Deploying on $(hostname) ===\"",
+              "ss -tulpn | grep :5000 || true",
+              "if [ -d /home/ubuntu/GharKaPaisa/backend ]; then",
+              "  sudo -u ubuntu -H bash -lc \"cd /home/ubuntu/GharKaPaisa/backend && git fetch origin master && git reset --hard origin/master && npm ci && node --check src/server.js\"",
+              "  sudo -u ubuntu -H bash -lc \"cd /home/ubuntu/GharKaPaisa/backend && node -e '\''require(\\\"./src/database/migrations/migrate_sales_operator_claim\\\").migrateSalesOperatorClaim().then(() => process.exit(0)).catch(() => process.exit(0))'\''\" || true",
+              "  sudo -u ubuntu -H bash -lc \"cd /home/ubuntu/GharKaPaisa/backend && (pm2 restart gharkapaisa-backend --update-env || pm2 reload gharkapaisa-backend --update-env || pm2 restart all --update-env) && pm2 save\" || true",
+              "fi",
+              "if pm2 list 2>/dev/null | grep -q online; then",
+              "  echo \"Root PM2 processes detected, reloading...\"",
+              "  pm2 restart all --update-env && pm2 save || true",
+              "fi",
+              "sleep 2",
+              "curl -s http://127.0.0.1:5000/health || true",
+              "echo \"\""
+            ]' \
             --query 'Command.CommandId' \
             --output text)
 
@@ -90,7 +106,15 @@ jobs:
             aws ssm wait command-executed \
               --region ap-south-1 \
               --command-id "$COMMAND_ID" \
-              --instance-id "$id"
+              --instance-id "$id" || true
+
+            echo "--- Output from $id ---"
+            aws ssm get-command-invocation \
+              --region ap-south-1 \
+              --command-id "$COMMAND_ID" \
+              --instance-id "$id" \
+              --query '[Status, StandardOutputContent, StandardErrorContent]' \
+              --output text || true
           done
 
       - name: Deployment complete

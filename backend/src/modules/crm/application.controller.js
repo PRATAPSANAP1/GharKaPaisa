@@ -4665,6 +4665,9 @@ const exportApplicationsCSV = async (req, res, next) => {
 };
 
 const updateApplicationDetails = async (req, res, next) => {
+  if (req.body && (req.body.claim_request === true || req.body.action === 'claim_request')) {
+    return claimApplicationRequest(req, res, next);
+  }
   const client = await getClient();
   try {
     await client.query('BEGIN');
@@ -6975,6 +6978,7 @@ const ensureSalesClaimColumns = async () => {
 
 // POST /applications/:id/claim-request — Claim application by Administrative Sales Operator
 const claimApplicationRequest = async (req, res, next) => {
+  await ensureSalesClaimColumns();
   const { id } = req.params;
   if (!id || id === 'undefined' || id === 'null' || !String(id).trim()) {
     return error(res, 'A valid Application ID is required', 400);
@@ -7362,6 +7366,7 @@ const getAssignableEmployees = async (req, res, next) => {
  * Updates sales_claimed_by and assigned_to fields, logs timeline & operator history.
  */
 const assignApplicationToSalesExecutive = async (req, res, next) => {
+  await ensureSalesClaimColumns();
   const { id } = req.params;
   const targetId = req.body.target_employee_id || req.body.target_user_id || req.body.target_id || req.body.employee_id;
   const notes = (req.body.notes || req.body.remarks || '').trim();

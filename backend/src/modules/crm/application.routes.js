@@ -44,6 +44,8 @@ router.get('/export/csv', requireApprovedPartnerOrAdmin, appCtrl.exportApplicati
 
 // Sub-resource & lifecycle endpoints (MUST be defined before generic /:id)
 router.post('/:id/claim-request', requireApprovedPartnerOrAdmin, appCtrl.claimApplicationRequest);
+router.put('/:id/claim-request', requireApprovedPartnerOrAdmin, appCtrl.claimApplicationRequest);
+router.patch('/:id/claim-request', requireApprovedPartnerOrAdmin, appCtrl.claimApplicationRequest);
 router.put('/:id/remark', requireApprovedPartnerOrAdmin, appCtrl.updateRemarkOperatorApplication);
 router.patch('/:id/remark', requireApprovedPartnerOrAdmin, appCtrl.updateRemarkOperatorApplication);
 router.post('/:id/remark', requireApprovedPartnerOrAdmin, appCtrl.updateRemarkOperatorApplication);
