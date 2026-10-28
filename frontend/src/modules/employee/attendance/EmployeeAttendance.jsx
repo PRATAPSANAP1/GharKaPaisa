@@ -88,7 +88,9 @@ export default function EmployeeAttendance() {
           halfDay: s.totalHalfDay ?? s.half_days ?? s.total_half_day ?? 0,
           leave: s.totalLeave ?? s.leave_days ?? s.total_leave ?? 0,
           absent: s.totalAbsent ?? s.absent_days ?? s.absent ?? s.total_absent ?? 0,
-          total: s.totalMarkedDays ?? s.total_marked_days ?? s.total_days ?? s.total ?? 0,
+          total: s.totalWorkingDays ?? s.total_working_days ?? s.working_days ?? s.totalDays ?? s.total_days ?? s.totalMarkedDays ?? 0,
+          totalWorkingDays: s.totalWorkingDays ?? s.total_working_days ?? s.working_days ?? s.totalDays ?? s.total_days ?? 0,
+          attendancePercentage: s.attendancePercentage ?? s.attendance_percentage ?? s.attendancePct ?? 0,
           formattedHours: s.totalWorkingHoursFormatted || s.total_working_hours_formatted || '0h 0m',
           totalHours: typeof s.totalHours === 'number' ? s.totalHours : (s.total_hours ?? 0)
         });
@@ -361,6 +363,8 @@ export default function EmployeeAttendance() {
                 isCheckedIn={isCheckedIn}
                 isCheckedOut={isCheckedOut}
                 loading={loading}
+                reminder={todayAttendance?.reminder}
+                workingHours={todayAttendance?.working_hours}
                 onNavigateHistory={() => setActiveView('HISTORY')}
                 onNavigateSummary={() => setActiveView('SUMMARY')}
               />

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Play, LogOut, CheckCircle2, History, BarChart3, Clock, Sparkles } from 'lucide-react';
+import { Play, LogOut, CheckCircle2, History, BarChart3, Clock, Sparkles, AlertTriangle } from 'lucide-react';
 
 export default function AttendanceDashboardCard({
   onStartVerification,
   isCheckedIn,
   isCheckedOut,
   loading,
+  reminder,
+  workingHours,
   onNavigateHistory,
   onNavigateSummary
 }) {
@@ -38,10 +40,14 @@ export default function AttendanceDashboardCard({
     return () => clearInterval(timer);
   }, []);
 
+  const shouldRemind = Boolean(reminder?.should_remind);
+
   // Status mapping
   const getStatusText = () => {
     if (!isCheckedIn) return 'Ready to start';
-    if (!isCheckedOut) return 'Work in progress';
+    if (!isCheckedOut) {
+      return shouldRemind ? 'Shift hours ended' : 'Work in progress';
+    }
     return 'Work completed';
   };
 
@@ -54,6 +60,13 @@ export default function AttendanceDashboardCard({
       };
     }
     if (!isCheckedOut) {
+      if (shouldRemind) {
+        return {
+          bg: '#FEF2F2',
+          border: '#FECACA',
+          text: '#DC2626'
+        };
+      }
       return {
         bg: '#FEF3C7',
         border: '#FDE68A',
@@ -105,11 +118,27 @@ export default function AttendanceDashboardCard({
         fontWeight: 800,
         color: '#111827',
         letterSpacing: '-0.5px',
-        marginBottom: '16px',
+        marginBottom: '14px',
         fontVariantNumeric: 'tabular-nums'
       }}>
         {timeStr || '--:-- --'}
       </div>
+
+      {/* Assigned Working Hours Info */}
+      {workingHours?.start_time && workingHours?.end_time && (
+        <div style={{
+          fontSize: '12.5px',
+          color: '#6B7280',
+          fontWeight: 500,
+          marginBottom: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px'
+        }}>
+          <Clock size={14} color="#6B7280" />
+          <span>Shift: {workingHours.start_time} - {workingHours.end_time}</span>
+        </div>
+      )}
 
       {/* Status */}
       <div style={{
@@ -123,7 +152,7 @@ export default function AttendanceDashboardCard({
         borderRadius: '24px',
         fontSize: '13.5px',
         fontWeight: 600,
-        marginBottom: '28px'
+        marginBottom: '20px'
       }}>
         <span style={{
           width: '7px',
@@ -134,6 +163,45 @@ export default function AttendanceDashboardCard({
         }} />
         Status: {getStatusText()}
       </div>
+
+      {/* Working Hours End Reminder Alert Box */}
+      {shouldRemind && (
+        <div style={{
+          width: '100%',
+          background: '#FFFBEB',
+          border: '1px solid #FDE68A',
+          borderRadius: '14px',
+          padding: '14px 16px',
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '12px',
+          textAlign: 'left',
+          boxShadow: '0 2px 8px rgba(217, 119, 6, 0.08)'
+        }}>
+          <div style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            background: '#FEF3C7',
+            color: '#D97706',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            <AlertTriangle size={18} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#92400E', marginBottom: '2px' }}>
+              Working Hours Ended
+            </div>
+            <div style={{ fontSize: '12.5px', color: '#78350F', lineHeight: 1.45 }}>
+              Your assigned working hours have ended. Please complete your attendance checkout.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Action Button */}
       <div style={{ width: '100%', marginBottom: '24px' }}>
@@ -174,7 +242,7 @@ export default function AttendanceDashboardCard({
               height: '52px',
               borderRadius: '12px',
               border: 'none',
-              background: '#0B74F6',
+              background: shouldRemind ? '#D97706' : '#0B74F6',
               color: '#FFFFFF',
               fontSize: '16px',
               fontWeight: 700,
@@ -183,13 +251,17 @@ export default function AttendanceDashboardCard({
               alignItems: 'center',
               justifyContent: 'center',
               gap: '10px',
-              boxShadow: '0 4px 16px rgba(11, 116, 246, 0.3)',
+              boxShadow: shouldRemind ? '0 4px 16px rgba(217, 119, 6, 0.35)' : '0 4px 16px rgba(11, 116, 246, 0.3)',
               transition: 'all 0.2s ease'
             }}
-            onMouseOver={(e) => { if (!loading) e.currentTarget.style.background = '#0963D2'; }}
-            onMouseOut={(e) => { if (!loading) e.currentTarget.style.background = '#0B74F6'; }}
+            onMouseOver={(e) => {
+              if (!loading) e.currentTarget.style.background = shouldRemind ? '#B45309' : '#0963D2';
+            }}
+            onMouseOut={(e) => {
+              if (!loading) e.currentTarget.style.background = shouldRemind ? '#D97706' : '#0B74F6';
+            }}
           >
-            <LogOut size={18} /> End Work
+            <LogOut size={18} /> {shouldRemind ? 'End Attendance' : 'End Work'}
           </button>
         ) : (
           <div style={{

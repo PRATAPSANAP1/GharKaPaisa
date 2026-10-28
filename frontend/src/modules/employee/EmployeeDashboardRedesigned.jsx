@@ -6,7 +6,7 @@ import {
   FaLightbulb, FaCreditCard, FaShieldAlt, FaLandmark, FaCoins,
   FaChartLine, FaUserPlus, FaChartBar, FaChevronLeft, FaChevronRight,
   FaUsers, FaGift, FaComments, FaCheckCircle, FaClock, FaUserCircle,
-  FaExclamationCircle, FaExternalLinkAlt
+  FaExclamationCircle, FaExternalLinkAlt, FaExclamationTriangle, FaSignOutAlt
 } from 'react-icons/fa';
 import axios from 'axios';
 import api from '../../services/api';
@@ -248,7 +248,9 @@ export default function EmployeeDashboardRedesigned() {
 
   // Determine attendance status
   const isPunchedIn = Boolean(attendanceToday?.check_in_time);
+  const isPunchedOut = Boolean(attendanceToday?.check_out_time);
   const checkInTime = attendanceToday?.check_in_time ? attendanceToday.check_in_time.slice(0, 5) : null;
+  const shouldRemindCheckout = Boolean(attendanceToday?.reminder?.should_remind);
 
   // Determine tasks status
   const missingItems = verState?.missing_items || [];
@@ -343,6 +345,72 @@ export default function EmployeeDashboardRedesigned() {
           </div>
         </div>
 
+        {/* Working Hours End Attendance Reminder Alert */}
+        {shouldRemindCheckout && (
+          <div style={{
+            background: '#FFFBEB',
+            border: '1px solid #FDE68A',
+            borderRadius: '16px',
+            padding: '16px 20px',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '14px',
+            boxShadow: '0 4px 14px rgba(217, 119, 6, 0.08)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: '1 1 300px' }}>
+              <div style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                background: '#FEF3C7',
+                color: '#D97706',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '20px',
+                flexShrink: 0
+              }}>
+                <FaExclamationTriangle />
+              </div>
+              <div>
+                <div style={{ fontSize: '15px', fontWeight: 700, color: '#92400E', marginBottom: '2px' }}>
+                  Working Hours Ended
+                </div>
+                <div style={{ fontSize: '13px', color: '#78350F' }}>
+                  Your assigned working hours have ended. Please complete your attendance checkout.
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => navigate('/employee/attendance')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: '#D97706',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '10px',
+                padding: '10px 18px',
+                fontSize: '13.5px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(217, 119, 6, 0.25)',
+                transition: 'all 0.2s ease',
+                flexShrink: 0
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#B45309'}
+              onMouseLeave={(e) => e.currentTarget.style.background = '#D97706'}
+            >
+              <FaSignOutAlt /> End Attendance
+            </button>
+          </div>
+        )}
+
         {/* Top 3 Summary Cards - Connected & Interactive */}
         <div style={{ 
           display: 'grid', 
@@ -400,14 +468,18 @@ export default function EmployeeDashboardRedesigned() {
                   fontWeight: 800,
                   padding: '2px 8px',
                   borderRadius: '10px',
-                  background: isPunchedIn ? '#D1FAE5' : '#FEF3C7',
-                  color: isPunchedIn ? '#065F46' : '#92400E'
+                  background: isPunchedOut ? '#D1FAE5' : isPunchedIn ? (shouldRemindCheckout ? '#FEE2E2' : '#DBEAFE') : '#FEF3C7',
+                  color: isPunchedOut ? '#065F46' : isPunchedIn ? (shouldRemindCheckout ? '#DC2626' : '#1D4ED8') : '#92400E'
                 }}>
-                  {isPunchedIn ? 'Present' : 'Not Marked'}
+                  {isPunchedOut ? 'Completed' : isPunchedIn ? (shouldRemindCheckout ? 'Checkout Needed' : 'Working') : 'Not Marked'}
                 </span>
               </div>
               <div style={{ fontSize: '13px', color: C.textMid, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {isPunchedIn ? `Checked in at ${checkInTime || 'Today'}` : 'Mark your daily attendance with face scan'}
+                {isPunchedOut 
+                  ? 'Attendance completed for today' 
+                  : isPunchedIn 
+                    ? (shouldRemindCheckout ? 'Shift ended — Please complete checkout' : `Checked in at ${checkInTime || 'Today'}`)
+                    : 'Mark your daily attendance with face scan'}
               </div>
             </div>
             <FaArrowRight style={{ color: C.green, fontSize: '16px', flexShrink: 0 }} />

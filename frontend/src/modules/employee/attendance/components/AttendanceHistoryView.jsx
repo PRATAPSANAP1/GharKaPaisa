@@ -20,11 +20,16 @@ export default function AttendanceHistoryView({
     ? history 
     : (Array.isArray(history?.records) ? history.records : []);
 
-  // Calculate Completed & Attendance % safely from real data
-  const completedCount = summary?.completed ?? safeHistory.filter(item => item.check_in_time && item.check_out_time).length;
-  const presentCount = summary?.present ?? safeHistory.filter(item => item.check_in_time).length;
-  const totalDays = summary?.total || safeHistory.length || 0;
-  const attendancePct = totalDays > 0 ? Math.round((presentCount / totalDays) * 100) : (presentCount > 0 ? 100 : 0);
+  // Calculate non-duplicated attendance metrics
+  const presentCount = summary?.present ?? summary?.totalPresent ?? summary?.present_days ?? safeHistory.filter(item => item.check_in_time).length;
+  const totalWorkingDays = summary?.totalWorkingDays ?? summary?.total_working_days ?? summary?.working_days ?? summary?.totalDays ?? summary?.total_days ?? summary?.total ?? 0;
+  const attendancePct = typeof summary?.attendancePercentage === 'number'
+    ? summary.attendancePercentage
+    : typeof summary?.attendance_percentage === 'number'
+      ? summary.attendance_percentage
+      : (totalWorkingDays > 0 ? Math.round((presentCount / totalWorkingDays) * 100) : (presentCount > 0 ? 100 : 0));
+
+  const workHours = summary?.totalWorkingHoursFormatted || summary?.total_working_hours_formatted || summary?.formattedHours || '0h 0m';
 
   const formatTime = (timeStr) => {
     if (!timeStr) return '--';
@@ -61,13 +66,18 @@ export default function AttendanceHistoryView({
   };
 
   const formatDuration = (row) => {
-    if (row.total_hours) return `${row.total_hours} hrs`;
+    if (row.duration_formatted && row.duration_formatted !== '--') {
+      return row.duration_formatted;
+    }
     if (!row.check_in_time || !row.check_out_time) return '--';
     const diff = new Date(row.check_out_time) - new Date(row.check_in_time);
-    if (diff <= 0) return '0h 0m';
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    return `${hours}h ${mins}m`;
+    const totalSecs = Math.max(0, Math.floor(diff / 1000));
+    if (totalSecs < 60) return '1 min';
+    const mins = Math.floor(totalSecs / 60);
+    if (mins < 60) return `${mins} min${mins === 1 ? '' : 's'}`;
+    const hours = Math.floor(mins / 60);
+    const remMins = mins % 60;
+    return remMins === 0 ? `${hours}h` : `${hours}h ${remMins}m`;
   };
 
   const getStatusBadge = (row) => {
@@ -84,12 +94,23 @@ export default function AttendanceHistoryView({
     if (rawStatus === 'ABSENT') {
       return { label: 'Absent', bg: '#FEE2E2', color: '#DC2626' };
     }
+
+    // Determine whether session is completed, active, or missing checkout
     if (row.check_in_time && row.check_out_time) {
       return { label: 'Present', bg: '#DCFCE7', color: '#16A34A' };
     }
-    if (row.check_in_time) {
+
+    if (row.check_in_time && !row.check_out_time) {
+      const todayStr = new Date().toLocaleDateString('en-CA');
+      const rowDateStr = (row.date || row.attendance_date || '').substring(0, 10);
+      const isHistorical = rowDateStr && rowDateStr < todayStr;
+
+      if (row.is_missing_checkout || isHistorical) {
+        return { label: 'Checkout Missing', bg: '#FEE2E2', color: '#DC2626' };
+      }
       return { label: 'Working', bg: '#DBEAFE', color: '#2563EB' };
     }
+
     return { label: 'Not Started', bg: '#F3F4F6', color: '#6B7280' };
   };
 
@@ -202,13 +223,13 @@ export default function AttendanceHistoryView({
         </div>
       </div>
 
-      {/* Summary KPI Cards */}
+      {/* Summary KPI Cards: Clean, non-redundant metrics */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))',
         gap: '12px'
       }}>
-        {/* Total Days */}
+        {/* Total Working Days */}
         <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '16px', padding: '16px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
             <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: 600 }}>Total Days</span>
@@ -216,7 +237,7 @@ export default function AttendanceHistoryView({
               <Calendar size={17} />
             </div>
           </div>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#111827' }}>{totalDays}</div>
+          <div style={{ fontSize: '24px', fontWeight: 700, color: '#111827' }}>{totalWorkingDays}</div>
         </div>
 
         {/* Present Days */}
@@ -230,15 +251,15 @@ export default function AttendanceHistoryView({
           <div style={{ fontSize: '24px', fontWeight: 700, color: '#16A34A' }}>{presentCount}</div>
         </div>
 
-        {/* Completed Days */}
+        {/* Work Hours */}
         <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '16px', padding: '18px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: 600 }}>Completed</span>
+            <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: 600 }}>Work Hours</span>
             <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#F3E8FF', color: '#9333EA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Clock size={17} />
             </div>
           </div>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#9333EA' }}>{completedCount}</div>
+          <div style={{ fontSize: '24px', fontWeight: 700, color: '#9333EA' }}>{workHours}</div>
         </div>
 
         {/* Attendance % */}

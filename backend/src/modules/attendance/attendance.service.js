@@ -5,6 +5,26 @@ const { logAction } = require('../admin/audit.service');
 const isValidUuid = (str) => typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
 /**
+ * Helper: format duration in human-readable form (e.g. "1 min", "25 mins", "2h 15m")
+ * Prevents misleading "0.0 hrs" for short sessions.
+ */
+function formatHumanDuration(seconds) {
+  if (seconds === null || seconds === undefined || isNaN(seconds)) return '--';
+  const sec = Math.max(0, Math.round(Number(seconds)));
+  if (sec < 60) return '1 min'; // sessions under 1 min display as 1 min instead of 0.0 hrs
+  const mins = Math.floor(sec / 60);
+  if (mins < 60) {
+    return `${mins} min${mins === 1 ? '' : 's'}`;
+  }
+  const hours = Math.floor(mins / 60);
+  const remainingMins = mins % 60;
+  if (remainingMins === 0) {
+    return `${hours}h`;
+  }
+  return `${hours}h ${remainingMins}m`;
+}
+
+/**
  * Helper to resolve employeeId from reqUser or user_id mapping.
  * Ensures that candidate codes like "CAND10003" or "EMP1001" are resolved into valid employee UUIDs.
  */
@@ -61,9 +81,242 @@ const resolveEmployeeId = async (reqUser) => {
  * Get current Asia/Kolkata date string (YYYY-MM-DD)
  */
 const getKolkataDateString = async () => {
-  const { rows } = await query(`SELECT (NOW() AT TIME ZONE 'Asia/Kolkata')::DATE::TEXT AS today_date`);
-  return rows[0].today_date;
+  try {
+    const { rows } = await query(`SELECT (NOW() AT TIME ZONE 'Asia/Kolkata')::DATE::TEXT AS today_date`);
+    if (rows && rows[0] && rows[0].today_date) {
+      return rows[0].today_date;
+    }
+  } catch (e) {}
+  const { getKolkataTimeInfo } = require('../auth/workingHours.service');
+  return getKolkataTimeInfo().dateStr;
 };
+
+/**
+ * Helper: Resolve applicable working hours configuration for an employee for a specific date.
+ * Strictly respects USER > DESIGNATION > ROLE > GLOBAL precedence, day schedules,
+ * holidays, weekly offs, extensions, and overnight shifts.
+ */
+async function resolveEmployeeWorkingHoursContext(authEmpId, reqUser, targetDateStr = null) {
+  const { 
+    ensureWorkingHoursTables, 
+    resolvePolicyForUser, 
+    resolveHolidayForUser, 
+    timeToMinutes, 
+    getKolkataTimeInfo 
+  } = require('../auth/workingHours.service');
+
+  await ensureWorkingHoursTables();
+
+  const timeInfo = getKolkataTimeInfo(targetDateStr ? new Date(targetDateStr + 'T12:00:00+05:30') : new Date());
+  const dateStr = targetDateStr || timeInfo.dateStr;
+  const dayName = timeInfo.dayName;
+
+  // 1. Resolve employee and linked user from DB
+  let emp = null;
+  if (authEmpId) {
+    try {
+      const { rows } = await query(
+        `SELECT e.id, e.employee_id, e.user_id, e.designation, e.department, e.employee_status,
+                u.role, u.is_active as user_is_active
+         FROM employees e
+         LEFT JOIN users u ON u.id = e.user_id
+         WHERE e.id = $1 LIMIT 1`,
+        [authEmpId]
+      );
+      emp = rows[0] || null;
+    } catch (e) {
+      logger.error('Error fetching employee context for working hours:', e.message);
+    }
+  }
+
+  const userContext = {
+    id: emp?.user_id || reqUser?.id || null,
+    role: emp?.role || reqUser?.role || 'EMPLOYEE',
+    designation: emp?.designation || reqUser?.designation || '',
+    employee_id: emp?.id || authEmpId
+  };
+
+  // 2. Resolve holiday (USER > DESIGNATION > ROLE > GLOBAL)
+  const holiday = await resolveHolidayForUser(userContext, dateStr);
+
+  // 3. Resolve policy (USER > DESIGNATION > ROLE > GLOBAL)
+  const policy = await resolvePolicyForUser(userContext, dayName);
+
+  const isConfigAssigned = Boolean(policy && policy.policyId);
+  const isPolicyEnabled = policy ? policy.isEnabled !== false : true;
+
+  // Check schedule for dayName
+  const dayKey = dayName.toLowerCase();
+  const daySched = policy?.scheduleConfig ? policy.scheduleConfig[dayKey] : null;
+  const isWorkingDay = daySched ? daySched.is_working !== false : (dayKey !== 'sunday');
+  const isWeeklyOff = !isWorkingDay;
+
+  let baseStartTimeStr = daySched?.start_time || policy?.startTime || '09:30 AM';
+  let baseEndTimeStr = daySched?.end_time || policy?.endTime || '08:00 PM';
+
+  // 4. Check temporary extension for dateStr
+  let isExtended = false;
+  let effectiveEndTimeStr = baseEndTimeStr;
+  let effectiveStartTimeStr = baseStartTimeStr;
+
+  try {
+    const { rows: extensionRows } = await query(`
+      SELECT * FROM admin_working_hour_extensions
+      WHERE (extension_date = $1::date OR ($1::date >= start_date AND $1::date <= end_date))
+        AND is_revoked IS NOT TRUE
+        AND (
+          user_id = $2 
+          OR ($2 = ANY(user_ids))
+          OR apply_to = 'ALL'
+          OR (apply_to IN ('ROLE', 'COMBINED') AND $3 = ANY(roles))
+          OR (apply_to IN ('DESIGNATION', 'COMBINED') AND ($4 = ANY(designations) OR EXISTS (SELECT 1 FROM unnest(designations) d WHERE LOWER(d) = LOWER($4))))
+        )
+      ORDER BY 
+        CASE 
+          WHEN user_id = $2 OR ($2 = ANY(user_ids)) THEN 1
+          WHEN apply_to IN ('DESIGNATION', 'COMBINED') AND ($4 = ANY(designations) OR EXISTS (SELECT 1 FROM unnest(designations) d WHERE LOWER(d) = LOWER($4))) THEN 2
+          WHEN apply_to IN ('ROLE', 'COMBINED') AND $3 = ANY(roles) THEN 3
+          ELSE 4
+        END ASC,
+        created_at DESC
+      LIMIT 1
+    `, [dateStr, userContext.id, String(userContext.role).toUpperCase(), userContext.designation]);
+
+    if (extensionRows.length > 0) {
+      const ext = extensionRows[0];
+      if (ext.extended_start_time) {
+        effectiveStartTimeStr = ext.extended_start_time;
+        isExtended = true;
+      }
+      if (ext.extended_end_time) {
+        effectiveEndTimeStr = ext.extended_end_time;
+        isExtended = true;
+      }
+    }
+  } catch (extErr) {
+    logger.warn('Error checking working hour extensions:', extErr.message);
+  }
+
+  // 5. Calculate shift start & end timestamps in Asia/Kolkata
+  const startMinutes = timeToMinutes(effectiveStartTimeStr);
+  const endMinutes = timeToMinutes(effectiveEndTimeStr);
+  const isOvernight = endMinutes <= startMinutes;
+
+  // Build ISO timestamp for shift end
+  let shiftEndDateStr = dateStr;
+  if (isOvernight) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const nextDayObj = new Date(Date.UTC(y, m - 1, d + 1));
+    shiftEndDateStr = nextDayObj.toISOString().slice(0, 10);
+  }
+
+  const endH = String(Math.floor(endMinutes / 60)).padStart(2, '0');
+  const endM = String(endMinutes % 60).padStart(2, '0');
+  const shiftEndIso = `${shiftEndDateStr}T${endH}:${endM}:00+05:30`;
+  const shiftEndDate = new Date(shiftEndIso);
+
+  const startH = String(Math.floor(startMinutes / 60)).padStart(2, '0');
+  const startM = String(startMinutes % 60).padStart(2, '0');
+  const shiftStartIso = `${dateStr}T${startH}:${startM}:00+05:30`;
+  const shiftStartDate = new Date(shiftStartIso);
+
+  return {
+    assigned: isConfigAssigned,
+    isEnabled: isPolicyEnabled,
+    policyName: policy?.policyName || 'Default Operating Schedule',
+    startTime: effectiveStartTimeStr,
+    endTime: effectiveEndTimeStr,
+    shiftStartDate,
+    shiftEndDate,
+    shiftStartIso,
+    shiftEndIso,
+    isOvernight,
+    isWorkingDay,
+    isWeeklyOff,
+    isHoliday: Boolean(holiday),
+    holidayName: holiday?.holiday_name || null,
+    isExtended,
+    timezone: 'Asia/Kolkata',
+    missingConfig: !isConfigAssigned
+  };
+}
+
+/**
+ * Authoritative helper: Determine whether an end-attendance reminder should be displayed.
+ * Rules:
+ * 1. Before attendance marked: no warning.
+ * 2. Active before shift end: no warning.
+ * 3. Active when shift end reached/passed: show warning.
+ * 4. Completed attendance: no warning.
+ * 5. Holiday / weekly off without attendance: no warning.
+ * 6. Missing config: no warning, report missing config cleanly.
+ */
+function evaluateAttendanceReminder({ attendance, workingHoursConfig, now = new Date() }) {
+  const hasActiveSession = Boolean(attendance && attendance.check_in_time && !attendance.check_out_time);
+  const isCompleted = Boolean(attendance && attendance.check_in_time && attendance.check_out_time);
+
+  // Rule 1: Before attendance is marked
+  if (!attendance || !attendance.check_in_time) {
+    return {
+      should_remind: false,
+      message: null,
+      shift_end_time: workingHoursConfig?.endTime || null,
+      is_active_session: false,
+      is_completed: false,
+      missing_config: Boolean(workingHoursConfig?.missingConfig)
+    };
+  }
+
+  // Rule 4: If checkout has already been completed
+  if (isCompleted) {
+    return {
+      should_remind: false,
+      message: null,
+      shift_end_time: workingHoursConfig?.endTime || null,
+      is_active_session: false,
+      is_completed: true,
+      missing_config: Boolean(workingHoursConfig?.missingConfig)
+    };
+  }
+
+  // Rule 6: If there is no valid working-hours assignment
+  if (workingHoursConfig?.missingConfig) {
+    return {
+      should_remind: false,
+      message: 'No assigned working hours configuration found. Please check with your administrator.',
+      shift_end_time: null,
+      is_active_session: hasActiveSession,
+      is_completed: false,
+      missing_config: true
+    };
+  }
+
+  // Rule 2 & 3: Check shift end time
+  const shiftEndTime = workingHoursConfig.shiftEndDate;
+  const isShiftEnded = shiftEndTime ? now.getTime() >= shiftEndTime.getTime() : false;
+
+  if (hasActiveSession && isShiftEnded) {
+    return {
+      should_remind: true,
+      message: 'Your assigned working hours have ended. Please complete your attendance checkout.',
+      shift_end_time: workingHoursConfig.endTime,
+      shift_end_iso: workingHoursConfig.shiftEndIso,
+      is_active_session: true,
+      is_completed: false,
+      missing_config: false
+    };
+  }
+
+  return {
+    should_remind: false,
+    message: null,
+    shift_end_time: workingHoursConfig.endTime,
+    shift_end_iso: workingHoursConfig.shiftEndIso,
+    is_active_session: true,
+    is_completed: false,
+    missing_config: false
+  };
+}
 
 /**
  * 1. Employee Check-In
@@ -225,7 +478,7 @@ const checkIn = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
 };
 
 /**
- * 2. Employee Check-Out
+ * 2. Employee Check-Out (Idempotent and concurrency-safe)
  */
 const checkOut = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
   const authEmpId = await resolveEmployeeId(reqUser);
@@ -236,61 +489,21 @@ const checkOut = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
     throw error;
   }
 
-  if (!verificationSessionId) {
-    const error = new Error('verification_session_id is required for check-out');
-    error.statusCode = 400;
-    throw error;
-  }
-
-  // 1. Validate Phase 6-3 verification session
-  const { rows: [session] } = await query(
-    `SELECT id, employee_id, status, expires_at, consumed_at FROM attendance_verification_sessions WHERE id = $1 LIMIT 1`,
-    [verificationSessionId]
-  );
-
-  if (!session) {
-    const error = new Error('Attendance verification session not found');
-    error.statusCode = 404;
-    throw error;
-  }
-
-  if (session.employee_id !== authEmpId) {
-    const error = new Error('Unauthorized: Verification session does not belong to authenticated employee');
-    error.statusCode = 403;
-    throw error;
-  }
-
-  if (session.status !== 'PASSED') {
-    const error = new Error(`Verification session is not PASSED (Current status: ${session.status}). Check-out rejected.`);
-    error.statusCode = 403;
-    throw error;
-  }
-
-  if (session.consumed_at) {
-    const error = new Error('Verification session has already been consumed. Please perform verification again.');
-    error.statusCode = 409;
-    error.code = 'VERIFICATION_SESSION_ALREADY_USED';
-    throw error;
-  }
-
-  if (new Date(session.expires_at) < new Date()) {
-    const error = new Error('Verification session has expired. Please perform verification again.');
-    error.statusCode = 410;
-    throw error;
-  }
-
   const todayDate = await getKolkataDateString();
   const client = await getClient();
 
   try {
     await client.query('BEGIN');
 
-    // 2. Fetch today's attendance record
+    // 1. Fetch today's attendance record
     const { rows: [existing] } = await client.query(
-      `SELECT id, check_in_time, check_out_time FROM employee_attendance WHERE employee_id = $1 AND attendance_date = $2 FOR UPDATE`,
+      `SELECT id, employee_id, attendance_date, check_in_time, check_out_time, status, verification_status, verification_reference, source 
+       FROM employee_attendance 
+       WHERE employee_id = $1 AND attendance_date = $2 FOR UPDATE`,
       [authEmpId, todayDate]
     );
 
+    // Rule: Must be checked in first
     if (!existing || !existing.check_in_time) {
       await client.query('ROLLBACK');
       const error = new Error('Please start work before ending your work session.');
@@ -299,11 +512,62 @@ const checkOut = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
       throw error;
     }
 
+    // Rule: Idempotency. If checkout is already recorded, return the completed record cleanly without error
     if (existing.check_out_time) {
+      await client.query('COMMIT');
+      logger.info(`[ATTENDANCE] Check-out already completed for employee ${authEmpId} on ${todayDate}. Returning existing record idempotently.`);
+      return {
+        ...existing,
+        already_completed: true,
+      };
+    }
+
+    if (!verificationSessionId) {
       await client.query('ROLLBACK');
-      const error = new Error('Work has already been ended for today.');
+      const error = new Error('verification_session_id is required for check-out');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // 2. Validate Phase 6-3 verification session
+    const { rows: [session] } = await client.query(
+      `SELECT id, employee_id, status, expires_at, consumed_at FROM attendance_verification_sessions WHERE id = $1 LIMIT 1`,
+      [verificationSessionId]
+    );
+
+    if (!session) {
+      await client.query('ROLLBACK');
+      const error = new Error('Attendance verification session not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (session.employee_id !== authEmpId) {
+      await client.query('ROLLBACK');
+      const error = new Error('Unauthorized: Verification session does not belong to authenticated employee');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    if (session.status !== 'PASSED') {
+      await client.query('ROLLBACK');
+      const error = new Error(`Verification session is not PASSED (Current status: ${session.status}). Check-out rejected.`);
+      error.statusCode = 403;
+      throw error;
+    }
+
+    if (session.consumed_at) {
+      await client.query('ROLLBACK');
+      const error = new Error('Verification session has already been consumed. Please perform verification again.');
       error.statusCode = 409;
-      error.code = 'ATTENDANCE_ALREADY_COMPLETED';
+      error.code = 'VERIFICATION_SESSION_ALREADY_USED';
+      throw error;
+    }
+
+    if (new Date(session.expires_at) < new Date()) {
+      await client.query('ROLLBACK');
+      const error = new Error('Verification session has expired. Please perform verification again.');
+      error.statusCode = 410;
       throw error;
     }
 
@@ -356,6 +620,7 @@ const checkOut = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
 
 /**
  * 3. Get Today's Attendance for authenticated employee
+ * Enriched with server-authoritative working hours config and reminder evaluation.
  */
 const getTodayAttendance = async ({ reqUser }) => {
   const authEmpId = await resolveEmployeeId(reqUser);
@@ -371,11 +636,50 @@ const getTodayAttendance = async ({ reqUser }) => {
     [authEmpId, todayDate]
   );
 
-  return attendance || null;
+  const whConfig = await resolveEmployeeWorkingHoursContext(authEmpId, reqUser, todayDate);
+  const reminder = evaluateAttendanceReminder({
+    attendance,
+    workingHoursConfig: whConfig,
+    now: new Date()
+  });
+
+  const baseRecord = attendance || {
+    id: null,
+    employee_id: authEmpId,
+    attendance_date: todayDate,
+    check_in_time: null,
+    check_out_time: null,
+    status: null,
+    verification_status: null,
+    verification_reference: null,
+    source: null,
+    matched_environment_code: null,
+    created_at: null,
+    updated_at: null
+  };
+
+  return {
+    ...baseRecord,
+    working_hours: {
+      assigned: whConfig.assigned,
+      start_time: whConfig.startTime,
+      end_time: whConfig.endTime,
+      shift_end_iso: whConfig.shiftEndIso,
+      shift_start_iso: whConfig.shiftStartIso,
+      is_working_day: whConfig.isWorkingDay,
+      is_weekly_off: whConfig.isWeeklyOff,
+      is_holiday: whConfig.isHoliday,
+      holiday_name: whConfig.holidayName,
+      is_overnight: whConfig.isOvernight,
+      missing_config: whConfig.missingConfig
+    },
+    reminder
+  };
 };
 
 /**
  * 4. Get Attendance History for authenticated employee
+ * Identifies incomplete past sessions and formats short durations cleanly.
  */
 const getMyAttendance = async ({ reqUser, month, year, limit = 31, page = 1 }) => {
   const now = new Date();
@@ -394,6 +698,7 @@ const getMyAttendance = async ({ reqUser, month, year, limit = 31, page = 1 }) =
   }
 
   const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+  const todayDate = await getKolkataDateString();
 
   const { rows } = await query(
     `SELECT 
@@ -410,6 +715,11 @@ const getMyAttendance = async ({ reqUser, month, year, limit = 31, page = 1 }) =
        created_at,
        CASE 
          WHEN check_in_time IS NOT NULL AND check_out_time IS NOT NULL 
+         THEN EXTRACT(EPOCH FROM (check_out_time - check_in_time))::BIGINT
+         ELSE NULL 
+       END AS duration_seconds,
+       CASE 
+         WHEN check_in_time IS NOT NULL AND check_out_time IS NOT NULL 
          THEN ROUND((EXTRACT(EPOCH FROM (check_out_time - check_in_time)) / 3600.0)::numeric, 1)
          ELSE NULL 
        END AS total_hours
@@ -421,6 +731,30 @@ const getMyAttendance = async ({ reqUser, month, year, limit = 31, page = 1 }) =
      LIMIT $4 OFFSET $5`,
     [authEmpId, targetMonth, targetYear, limit, offset]
   );
+
+  const enrichedRecords = rows.map(r => {
+    const isCompleted = Boolean(r.check_in_time && r.check_out_time);
+    const isActiveToday = Boolean(r.check_in_time && !r.check_out_time && r.attendance_date === todayDate);
+    const isMissingCheckout = Boolean(r.check_in_time && !r.check_out_time && r.attendance_date < todayDate);
+
+    let displayStatus = (r.status || 'PRESENT').toUpperCase();
+    if (isCompleted) {
+      displayStatus = 'COMPLETED';
+    } else if (isActiveToday) {
+      displayStatus = 'WORKING';
+    } else if (isMissingCheckout) {
+      displayStatus = 'CHECKOUT_MISSING';
+    }
+
+    return {
+      ...r,
+      duration_formatted: formatHumanDuration(r.duration_seconds),
+      display_status: displayStatus,
+      is_active: isActiveToday,
+      is_completed: isCompleted,
+      is_missing_checkout: isMissingCheckout
+    };
+  });
 
   const { rows: [countRow] } = await query(
     `SELECT COUNT(*)::INT AS total 
@@ -436,12 +770,13 @@ const getMyAttendance = async ({ reqUser, month, year, limit = 31, page = 1 }) =
     year: targetYear,
     totalRecords: countRow ? countRow.total : 0,
     total: countRow ? countRow.total : 0,
-    records: rows,
+    records: enrichedRecords,
   };
 };
 
 /**
  * 5. Get Monthly Attendance Summary for authenticated employee
+ * Respects existing attendance calendar, assigned working days, holidays, weekly offs, and approved leaves.
  */
 const getMySummary = async ({ reqUser, month, year }) => {
   const now = new Date();
@@ -475,29 +810,129 @@ const getMySummary = async ({ reqUser, month, year }) => {
       total_absent: 0,
       absent_days: 0,
       absent: 0,
+      totalWorkingDays: 0,
+      total_working_days: 0,
+      total_days: 0,
+      totalDays: 0,
       totalMarkedDays: 0,
       total_marked_days: 0,
-      total_days: 0,
       total: 0,
+      attendance_percentage: 0,
+      attendancePercentage: 0,
+      attendance_rate: 0,
+      attendancePct: 0,
       totalWorkingHoursFormatted: '0h 0m',
       total_working_hours_formatted: '0h 0m',
       totalWorkingSeconds: 0,
       total_working_seconds: 0,
       totalHours: 0,
       total_hours: 0,
+      weekly_offs: 0,
+      holidays: 0
     };
   }
 
-  const { rows } = await query(
+  const { ensureWorkingHoursTables, resolvePolicyForUser, getKolkataTimeInfo } = require('../auth/workingHours.service');
+  await ensureWorkingHoursTables();
+
+  const todayDate = await getKolkataDateString();
+  const kolkataNow = getKolkataTimeInfo();
+  const isCurrentMonth = (targetMonth === (now.getMonth() + 1) && targetYear === now.getFullYear());
+
+  // 1. Resolve employee profile context
+  let emp = null;
+  try {
+    const { rows } = await query(
+      `SELECT e.id, e.employee_id, e.user_id, e.designation, e.department, u.role
+       FROM employees e
+       LEFT JOIN users u ON u.id = e.user_id
+       WHERE e.id = $1 LIMIT 1`,
+      [authEmpId]
+    );
+    emp = rows[0] || null;
+  } catch (e) {}
+
+  const userContext = {
+    id: emp?.user_id || reqUser?.id || null,
+    role: emp?.role || reqUser?.role || 'EMPLOYEE',
+    designation: emp?.designation || reqUser?.designation || '',
+    employee_id: emp?.id || authEmpId
+  };
+
+  const samplePolicy = await resolvePolicyForUser(userContext, 'MONDAY');
+  const schedConfig = samplePolicy?.scheduleConfig || {
+    monday: { is_working: true },
+    tuesday: { is_working: true },
+    wednesday: { is_working: true },
+    thursday: { is_working: true },
+    friday: { is_working: true },
+    saturday: { is_working: true },
+    sunday: { is_working: false }
+  };
+
+  // 2. Fetch active holidays in target month
+  const daysInMonth = new Date(targetYear, targetMonth, 0).getDate();
+  const startOfMonthStr = `${targetYear}-${String(targetMonth).padStart(2, '0')}-01`;
+  const endOfMonthStr = `${targetYear}-${String(targetMonth).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+
+  let holidayDateSet = new Set();
+  try {
+    const { rows: holidayRows } = await query(`
+      SELECT holiday_date::TEXT AS holiday_date
+      FROM admin_working_hour_holidays
+      WHERE is_active = TRUE
+        AND holiday_date >= $1::date AND holiday_date <= $2::date
+        AND (
+          (scope_type = 'USER' AND user_id = $3)
+          OR (scope_type = 'DESIGNATION' AND $4 = ANY(designations))
+          OR (scope_type = 'ROLE' AND $5 = ANY(roles))
+          OR (scope_type = 'GLOBAL')
+        )
+    `, [startOfMonthStr, endOfMonthStr, userContext.id, userContext.designation, String(userContext.role).toUpperCase()]);
+
+    holidayDateSet = new Set(holidayRows.map(h => h.holiday_date.substring(0, 10)));
+  } catch (hErr) {
+    logger.warn('Error fetching holidays for attendance summary:', hErr.message);
+  }
+
+  // 3. Compute working days, weekly offs, and holidays across month
+  const dayNames = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+  let totalWorkingDays = 0;
+  let weeklyOffCount = 0;
+  let holidayCount = 0;
+  let elapsedWorkingDays = 0;
+
+  const currentKolkataDay = isCurrentMonth ? parseInt(kolkataNow.dateStr.split('-')[2], 10) : daysInMonth;
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dayDateStr = `${targetYear}-${String(targetMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dateObj = new Date(Date.UTC(targetYear, targetMonth - 1, day));
+    const dayName = dayNames[dateObj.getUTCDay()];
+    const dayKey = dayName.toLowerCase();
+
+    const isWorkingInSchedule = schedConfig[dayKey] ? schedConfig[dayKey].is_working !== false : (dayKey !== 'sunday');
+    const isHoliday = holidayDateSet.has(dayDateStr);
+
+    if (!isWorkingInSchedule) {
+      weeklyOffCount++;
+    } else if (isHoliday) {
+      holidayCount++;
+    } else {
+      totalWorkingDays++;
+      if (day <= currentKolkataDay) {
+        elapsedWorkingDays++;
+      }
+    }
+  }
+
+  // 4. Query employee attendance records for month
+  const { rows: attRecords } = await query(
     `SELECT 
-       COUNT(*) FILTER (WHERE check_in_time IS NOT NULL OR status IN ('PRESENT', 'LATE', 'HALF_DAY'))::INT AS total_present,
-       COUNT(*) FILTER (WHERE check_in_time IS NOT NULL AND check_out_time IS NOT NULL)::INT AS total_completed,
-       COUNT(*) FILTER (WHERE status = 'LATE')::INT AS total_late,
-       COUNT(*) FILTER (WHERE status = 'HALF_DAY')::INT AS total_half_day,
-       COUNT(*) FILTER (WHERE status = 'LEAVE')::INT AS total_leave,
-       COUNT(*) FILTER (WHERE status = 'ABSENT')::INT AS total_absent,
-       COUNT(*)::INT AS total_marked_days,
-       COALESCE(SUM(EXTRACT(EPOCH FROM (check_out_time - check_in_time))), 0)::BIGINT AS total_working_seconds
+       attendance_date::TEXT AS attendance_date,
+       check_in_time,
+       check_out_time,
+       status,
+       COALESCE(EXTRACT(EPOCH FROM (check_out_time - check_in_time)), 0)::BIGINT AS working_seconds
      FROM employee_attendance 
      WHERE employee_id = $1 
        AND EXTRACT(MONTH FROM attendance_date) = $2 
@@ -505,63 +940,115 @@ const getMySummary = async ({ reqUser, month, year }) => {
     [authEmpId, targetMonth, targetYear]
   );
 
-  const summary = rows[0] || {};
-  const totalSeconds = Number(summary.total_working_seconds || 0);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const totalHoursDecimal = Number((totalSeconds / 3600).toFixed(1));
+  let presentCount = 0;
+  let completedCount = 0;
+  let lateCount = 0;
+  let halfDayCount = 0;
+  let leaveCount = 0;
+  let absentCount = 0;
+  let totalWorkingSeconds = 0;
 
-  const presentVal = Number(summary.total_present || 0);
-  const completedVal = Number(summary.total_completed || 0);
-  const lateVal = Number(summary.total_late || 0);
-  const halfDayVal = Number(summary.total_half_day || 0);
-  const leaveVal = Number(summary.total_leave || 0);
-  const absentVal = Number(summary.total_absent || 0);
-  const markedDaysVal = Number(summary.total_marked_days || 0);
+  for (const rec of attRecords) {
+    const rawStatus = (rec.status || 'PRESENT').toUpperCase();
+    const hasCheckIn = Boolean(rec.check_in_time);
+    const hasCheckOut = Boolean(rec.check_out_time);
+
+    if (rawStatus === 'LEAVE') {
+      leaveCount++;
+    } else if (rawStatus === 'ABSENT') {
+      absentCount++;
+    }
+
+    if (rawStatus === 'LATE') lateCount++;
+    if (rawStatus === 'HALF_DAY') halfDayCount++;
+
+    if (hasCheckIn || ['PRESENT', 'LATE', 'HALF_DAY'].includes(rawStatus)) {
+      presentCount++;
+    }
+
+    // Do NOT count active session as completed! Only count completed if both check_in and check_out exist
+    if (hasCheckIn && hasCheckOut) {
+      completedCount++;
+      totalWorkingSeconds += Number(rec.working_seconds || 0);
+    }
+  }
+
+  // 5. Calculate Attendance Rate % respecting calendar, assigned working days, holidays, weekly offs, and approved leaves
+  const activeWorkingDaysDenominator = isCurrentMonth 
+    ? Math.max(0, elapsedWorkingDays - leaveCount)
+    : Math.max(0, totalWorkingDays - leaveCount);
+
+  let attendancePct = 0;
+  if (activeWorkingDaysDenominator > 0) {
+    attendancePct = Math.min(100, Math.round((presentCount / activeWorkingDaysDenominator) * 100));
+  } else if (presentCount > 0) {
+    attendancePct = 100;
+  }
+
+  const hours = Math.floor(totalWorkingSeconds / 3600);
+  const minutes = Math.floor((totalWorkingSeconds % 3600) / 60);
   const hoursFormatted = `${hours}h ${minutes}m`;
+  const totalHoursDecimal = Number((totalWorkingSeconds / 3600).toFixed(1));
 
   return {
     month: targetMonth,
     year: targetYear,
-    totalPresent: presentVal,
-    total_present: presentVal,
-    present_days: presentVal,
-    present: presentVal,
 
-    totalCompleted: completedVal,
-    total_completed: completedVal,
-    completed_days: completedVal,
-    completed: completedVal,
+    // Core KPIs
+    totalWorkingDays,
+    total_working_days: totalWorkingDays,
+    totalDays: totalWorkingDays,
+    total_days: totalWorkingDays,
+    working_days: totalWorkingDays,
+    calendar_days: daysInMonth,
+    elapsed_working_days: elapsedWorkingDays,
 
-    totalLate: lateVal,
-    total_late: lateVal,
-    late_days: lateVal,
-    late: lateVal,
+    totalPresent: presentCount,
+    total_present: presentCount,
+    present_days: presentCount,
+    present: presentCount,
 
-    totalHalfDay: halfDayVal,
-    total_half_day: halfDayVal,
-    half_days: halfDayVal,
+    totalCompleted: completedCount,
+    total_completed: completedCount,
+    completed_days: completedCount,
+    completed: completedCount,
 
-    totalLeave: leaveVal,
-    total_leave: leaveVal,
-    leave_days: leaveVal,
+    attendance_percentage: attendancePct,
+    attendancePercentage: attendancePct,
+    attendance_rate: attendancePct,
+    attendancePct,
 
-    totalAbsent: absentVal,
-    total_absent: absentVal,
-    absent_days: absentVal,
-    absent: absentVal,
+    totalLate: lateCount,
+    total_late: lateCount,
+    late_days: lateCount,
+    late: lateCount,
 
-    totalMarkedDays: markedDaysVal,
-    total_marked_days: markedDaysVal,
-    total_days: markedDaysVal,
-    total: markedDaysVal,
+    totalHalfDay: halfDayCount,
+    total_half_day: halfDayCount,
+    half_days: halfDayCount,
+
+    totalLeave: leaveCount,
+    total_leave: leaveCount,
+    leave_days: leaveCount,
+
+    totalAbsent: absentCount,
+    total_absent: absentCount,
+    absent_days: absentCount,
+    absent: absentCount,
+
+    totalMarkedDays: attRecords.length,
+    total_marked_days: attRecords.length,
+    total: totalWorkingDays,
 
     totalWorkingHoursFormatted: hoursFormatted,
     total_working_hours_formatted: hoursFormatted,
-    totalWorkingSeconds: totalSeconds,
-    total_working_seconds: totalSeconds,
+    totalWorkingSeconds: totalWorkingSeconds,
+    total_working_seconds: totalWorkingSeconds,
     totalHours: totalHoursDecimal,
     total_hours: totalHoursDecimal,
+
+    weekly_offs: weeklyOffCount,
+    holidays: holidayCount
   };
 };
 
@@ -571,4 +1058,8 @@ module.exports = {
   getTodayAttendance,
   getMyAttendance,
   getMySummary,
+  formatHumanDuration,
+  resolveEmployeeWorkingHoursContext,
+  evaluateAttendanceReminder,
 };
+

@@ -17,13 +17,12 @@ export default function AttendanceSummaryView({
     : (Array.isArray(history?.records) ? history.records : []);
 
   // Compute metrics from real backend summary & history records
-  const totalDays = summary?.total || safeHistory.length || 0;
-  const presentDays = summary?.present ?? safeHistory.filter(item => item?.check_in_time).length;
-  const completedDays = summary?.completed ?? safeHistory.filter(item => item?.check_in_time && item?.check_out_time).length;
-  const lateDays = summary?.late ?? safeHistory.filter(item => (item?.status || '').toUpperCase() === 'LATE').length;
-  const halfDays = summary?.halfDay ?? safeHistory.filter(item => (item?.status || '').toUpperCase() === 'HALF_DAY').length;
-  const leaveDays = summary?.leave ?? safeHistory.filter(item => (item?.status || '').toUpperCase() === 'LEAVE').length;
-  const absentDays = summary?.absent ?? safeHistory.filter(item => (item?.status || '').toUpperCase() === 'ABSENT').length;
+  const totalDays = summary?.totalWorkingDays ?? summary?.total_working_days ?? summary?.working_days ?? summary?.totalDays ?? summary?.total_days ?? summary?.total ?? safeHistory.length ?? 0;
+  const presentDays = summary?.present ?? summary?.totalPresent ?? summary?.present_days ?? safeHistory.filter(item => item?.check_in_time).length;
+  const lateDays = summary?.late ?? summary?.totalLate ?? summary?.late_days ?? safeHistory.filter(item => (item?.status || '').toUpperCase() === 'LATE').length;
+  const halfDays = summary?.halfDay ?? summary?.totalHalfDay ?? summary?.half_days ?? safeHistory.filter(item => (item?.status || '').toUpperCase() === 'HALF_DAY').length;
+  const leaveDays = summary?.leave ?? summary?.totalLeave ?? summary?.leave_days ?? safeHistory.filter(item => (item?.status || '').toUpperCase() === 'LEAVE').length;
+  const absentDays = summary?.absent ?? summary?.totalAbsent ?? summary?.absent_days ?? safeHistory.filter(item => (item?.status || '').toUpperCase() === 'ABSENT').length;
 
   // Calculate total hours
   const calculatedHoursFromHistory = safeHistory.reduce((acc, curr) => {
@@ -38,9 +37,13 @@ export default function AttendanceSummaryView({
   const totalHours = summary?.totalHours || summary?.total_hours || calculatedHoursFromHistory;
   const displayHours = summary?.formattedHours && summary.formattedHours !== '0h 0m' 
     ? summary.formattedHours 
-    : `${Number(totalHours).toFixed(1)} hrs`;
+    : (summary?.totalWorkingHoursFormatted || summary?.total_working_hours_formatted || `${Number(totalHours).toFixed(1)} hrs`);
 
-  const attendancePct = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : (presentDays > 0 ? 100 : 0);
+  const attendancePct = typeof summary?.attendancePercentage === 'number'
+    ? summary.attendancePercentage
+    : typeof summary?.attendance_percentage === 'number'
+      ? summary.attendance_percentage
+      : (totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : (presentDays > 0 ? 100 : 0));
   const monthName = new Date(selectedYear, selectedMonth - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' });
 
   return (
@@ -197,28 +200,6 @@ export default function AttendanceSummaryView({
           </div>
           <div style={{ fontSize: '12.5px', color: '#9CA3AF', marginTop: '4px' }}>
             Logged present sessions
-          </div>
-        </div>
-
-        {/* Completed Days */}
-        <div style={{
-          background: '#FFFFFF',
-          border: '1px solid #E5E7EB',
-          borderRadius: '18px',
-          padding: '16px 18px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.02)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <span style={{ fontSize: '13.5px', color: '#6B7280', fontWeight: 600 }}>Completed Days</span>
-            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#F3E8FF', color: '#9333EA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Clock size={20} />
-            </div>
-          </div>
-          <div style={{ fontSize: 'clamp(22px, 5vw, 30px)', fontWeight: 800, color: '#9333EA', letterSpacing: '-0.5px' }}>
-            {completedDays}
-          </div>
-          <div style={{ fontSize: '12.5px', color: '#9CA3AF', marginTop: '4px' }}>
-            Started & ended sessions
           </div>
         </div>
 
