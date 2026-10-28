@@ -2,73 +2,58 @@ const { query } = require('../config/database');
 const { releaseHold } = require('../modules/wallet/service');
 const logger = require('../config/logger');
 
-let commissionReleaseDaysEnsured = false;
-const ensureCommissionReleaseDaysColumn = async () => {
-  if (commissionReleaseDaysEnsured) return;
-  try {
-    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS commission_release_days INT DEFAULT 7`);
-    commissionReleaseDaysEnsured = true;
-  } catch (err) {
-    // Ignore error if schema alter is non-fatal
-  }
-};
-
 /**
- * Job to automatically release matured commission holds.
- * Rules:
- * - Credit Cards & Insurance: Released after 7 days hold.
- * - Loans: Released after 30 days hold (or immediate upon disbursal approval).
+ * Automated Cron/Interval Job to release commissions held beyond the product's
+ * configured commission_release_days (default 7 days).
+ * Runs every 6 hours and once on server startup.
  */
 const processCommissionHoldReleases = async () => {
-  logger.info('Running Commission Hold Release Job...');
   try {
-    await ensureCommissionReleaseDaysColumn();
-    // Find all wallet_ledger entries pending approval older than maturity days
-    const { rows: pendingHolds } = await query(`
-      SELECT l.id, l.partner_id, l.application_id, l.credit, l.transaction_type, l.created_at,
-             p.category::text as product_category,
-             COALESCE((to_jsonb(p)->>'commission_release_days')::int, CASE WHEN COALESCE(p.category::text, 'credit_card') IN ('credit_card', 'insurance', 'health_insurance', 'life_insurance', 'general_insurance') THEN 7 ELSE 30 END) as release_days
-      FROM wallet_ledger l
-      LEFT JOIN applications a ON a.id = l.application_id
-      LEFT JOIN products p ON p.id = a.product_id
-      WHERE l.status = 'Pending Approval'
-        AND l.credit > 0
-        AND (a.id IS NULL OR a.status::text NOT IN ('rejected', 'cancelled'))
-        AND (
-          ((to_jsonb(p)->>'commission_release_days')::int IS NOT NULL AND l.created_at <= NOW() - ((to_jsonb(p)->>'commission_release_days')::int || ' days')::interval)
-          OR ((to_jsonb(p)->>'commission_release_days')::int IS NULL AND COALESCE(p.category::text, 'credit_card') IN ('credit_card', 'insurance', 'health_insurance', 'life_insurance', 'general_insurance') AND l.created_at <= NOW() - INTERVAL '7 days')
-          OR ((to_jsonb(p)->>'commission_release_days')::int IS NULL AND COALESCE(p.category::text, 'credit_card') NOT IN ('credit_card', 'insurance', 'health_insurance', 'life_insurance', 'general_insurance') AND l.created_at <= NOW() - INTERVAL '30 days')
-        )
+    // Find all applications where:
+    // 1. commission_status is 'approved' (which means commission was credited to hold_balance)
+    // 2. approved_at + commission_release_days <= NOW()
+    const { rows: eligibleApps } = await query(`
+      SELECT 
+        a.id AS application_id,
+        a.app_number,
+        a.partner_id,
+        a.commission_amount,
+        a.approved_at,
+        COALESCE(p.commission_release_days, 7) AS release_days
+      FROM applications a
+      JOIN products p ON p.id = a.product_id
+      WHERE a.commission_status = 'approved'
+        AND a.partner_id IS NOT NULL
+        AND a.commission_amount > 0
+        AND COALESCE(a.approved_at, a.updated_at, a.created_at) <= NOW() - (COALESCE(p.commission_release_days, 7) * INTERVAL '1 day')
     `);
 
-    logger.info(`Found ${pendingHolds.length} matured commission hold entries to release.`);
+    if (!eligibleApps || eligibleApps.length === 0) {
+      return { releasedCount: 0 };
+    }
 
-    let successCount = 0;
-    let failCount = 0;
+    logger.info(`[CommissionHoldReleaseJob] Found ${eligibleApps.length} applications eligible for commission hold release.`);
 
-    for (const hold of pendingHolds) {
+    let releasedCount = 0;
+    for (const app of eligibleApps) {
       try {
-        await releaseHold(hold.partner_id, hold.credit, {
-          txn_id: hold.id,
-          application_id: hold.application_id,
-          reference_type: 'automated_hold_release',
-          description: `Automated ${hold.release_days || 7}-day hold release for ${hold.product_category || 'commission'}`
-        });
-        successCount++;
-      } catch (err) {
-        failCount++;
-        logger.error(`Failed to release hold ID ${hold.id} for partner ${hold.partner_id}:`, err.message);
+        await releaseHold(
+          app.partner_id,
+          app.application_id,
+          null // System automated release
+        );
+        releasedCount++;
+        logger.info(`[CommissionHoldReleaseJob] Released hold for Application ${app.app_number || app.application_id} (Partner: ${app.partner_id}, Amount: ₹${app.commission_amount})`);
+      } catch (releaseErr) {
+        logger.warn(`[CommissionHoldReleaseJob] Skipped/Failed hold release for Application ${app.app_number || app.application_id}: ${releaseErr.message}`);
       }
     }
 
-    logger.info(`Commission Hold Release Job Completed: ${successCount} released, ${failCount} failed.`);
-    return { total: pendingHolds.length, success: successCount, failed: failCount };
+    return { releasedCount };
   } catch (err) {
-    logger.error('Error executing Commission Hold Release Job:', err.message);
-    throw err;
+    logger.error('[CommissionHoldReleaseJob] Error executing commission hold release job:', err.message);
+    return { releasedCount: 0, error: err.message };
   }
 };
 
-module.exports = {
-  processCommissionHoldReleases
-};
+module.exports = { processCommissionHoldReleases };

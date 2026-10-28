@@ -531,6 +531,10 @@ const migrate = async () => {
   await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS created_by UUID`);
   await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS updated_by UUID`);
   await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS commission_release_days INT DEFAULT 7`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS joining_fee VARCHAR(255)`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS processing_fee VARCHAR(255)`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS interest_rate VARCHAR(255)`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS operation_head_id UUID REFERENCES users(id) ON DELETE SET NULL`);
 
   // ── Commission Structure (overrides per Partner/product) ────────
   await query(`
@@ -4543,6 +4547,15 @@ const migrate = async () => {
           updated_at TIMESTAMPTZ DEFAULT NOW()
         );
 
+        CREATE TABLE IF NOT EXISTS bank_requirements (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          bank_id UUID REFERENCES banks(id) ON DELETE CASCADE,
+          product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+          fields JSONB NOT NULL DEFAULT '[]'::jsonb,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
         CREATE TABLE IF NOT EXISTS application_audit_logs (
           id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
           application_id UUID REFERENCES applications(id) ON DELETE CASCADE,
@@ -5087,10 +5100,16 @@ const migrate = async () => {
     logger.error('Account Activation Lifecycle migration error note:', accountLifecycleErr.message);
   }
 
-  // Administrative Sales Operator Claim Migration
+  // Administrative Sales Operator Claim & Application Employee Assignment Migration
   try {
     const { migrateSalesOperatorClaim } = require('./migrate_sales_operator_claim');
     await migrateSalesOperatorClaim();
+    try {
+      const { migrateApplicationEmployeeAssignment } = require('./migrate_application_employee_assignment');
+      await migrateApplicationEmployeeAssignment();
+    } catch (empAssignErr) {
+      logger.error('Application Employee Assignment migration error note:', empAssignErr.message);
+    }
     try {
       const { migrateBankDirectProcessLinks } = require('./migrate_bank_direct_process_links');
       await migrateBankDirectProcessLinks();

@@ -7,13 +7,11 @@ const uploadToS3 = s3Service.uploadToS3;
 const deleteFromS3 = s3Service.deleteFromS3;
 const getCloudFrontUrl = typeof s3Service.getCloudFrontUrl === 'function' ? s3Service.getCloudFrontUrl : ((url) => url);
 const appSettingsService = require('./application-settings.service');
-const { ensureBankDirectProcessLinksTable } = require('../../database/migrations/migrate_bank_direct_process_links');
 const logger = require('../../config/logger');
 
 // GET /products — list with filters
 const listProducts = async (req, res, next) => {
   try {
-    await ensureBankDirectProcessLinksTable();
     const { page, limit, offset } = getPaginationParams(req.query);
     const {
       category, bank_id, is_active, search, commission_enabled, featured, status,
@@ -161,7 +159,6 @@ const listProducts = async (req, res, next) => {
 // GET /products/:id
 const getProduct = async (req, res, next) => {
   try {
-    await ensureBankDirectProcessLinksTable();
     const idOrSlug = req.params.id;
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
 
@@ -267,25 +264,9 @@ const getProduct = async (req, res, next) => {
   }
 };
 
-let _productColumnsEnsured = false;
-const ensureProductColumns = async () => {
-  if (_productColumnsEnsured) return;
-  try {
-    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS joining_fee VARCHAR(255)`);
-    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS processing_fee VARCHAR(255)`);
-    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS interest_rate VARCHAR(255)`);
-    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS sub_category VARCHAR(100)`);
-    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS operation_head_id UUID REFERENCES users(id) ON DELETE SET NULL`);
-    _productColumnsEnsured = true;
-  } catch (e) {
-    // Ignore if DB in restricted mode
-  }
-};
-
 // POST /products (Admin/Super Admin)
 const createProduct = async (req, res, next) => {
   try {
-    await ensureProductColumns();
     const body = req.body || {};
     const {
       bank_id, name, category, sub_category, description, commission_type, commission_value,
@@ -391,7 +372,6 @@ const createProduct = async (req, res, next) => {
 // PUT /products/:id (Admin)
 const updateProduct = async (req, res, next) => {
   try {
-    await ensureProductColumns();
     const { id } = req.params;
     const body = req.body || {};
     const {
@@ -577,7 +557,6 @@ const updateProduct = async (req, res, next) => {
 // GET /products/categories — grouped by category for home page
 const getProductsByCategory = async (req, res, next) => {
   try {
-    await ensureBankDirectProcessLinksTable();
     const { page, limit, offset } = getPaginationParams(req.query);
     const [count, data] = await Promise.all([
       query(`SELECT COUNT(*) FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.is_active = true AND b.is_active = true AND b.status = 'Active'`),
@@ -876,7 +855,6 @@ const listBanks = async (req, res, next) => {
 // GET /products/cards
 const getCards = async (req, res, next) => {
   try {
-    await ensureBankDirectProcessLinksTable();
     const { page, limit, offset } = getPaginationParams(req.query);
     const [count, data] = await Promise.all([
       query(`SELECT COUNT(*) FROM products p LEFT JOIN banks b ON b.id = p.bank_id LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = p.bank_id WHERE (p.is_active = true OR p.status = 'Active') AND p.category IN ('credit_card', 'co_branded_card', 'fd_card')`),
@@ -898,7 +876,6 @@ const getCards = async (req, res, next) => {
 // GET /products/loans
 const getLoans = async (req, res, next) => {
   try {
-    await ensureBankDirectProcessLinksTable();
     const { page, limit, offset } = getPaginationParams(req.query);
     const [count, data] = await Promise.all([
       query(`SELECT COUNT(*) FROM products p LEFT JOIN banks b ON b.id = p.bank_id LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = p.bank_id WHERE (p.is_active = true OR p.status = 'Active') AND p.category IN ('personal_loan', 'business_loan', 'home_loan', 'instant_loan', 'used_car_loan', 'education_loan')`),
@@ -920,7 +897,6 @@ const getLoans = async (req, res, next) => {
 // GET /products/insurance
 const getInsurance = async (req, res, next) => {
   try {
-    await ensureBankDirectProcessLinksTable();
     const { page, limit, offset } = getPaginationParams(req.query);
     const [count, data] = await Promise.all([
       query(`SELECT COUNT(*) FROM products p LEFT JOIN banks b ON b.id = p.bank_id LEFT JOIN bank_direct_process_links bdpl ON bdpl.bank_id = p.bank_id WHERE (p.is_active = true OR p.status = 'Active') AND p.category IN ('health_insurance', 'life_insurance', 'general_insurance')`),
@@ -1087,7 +1063,6 @@ const deleteApplicationSettings = async (req, res, next) => {
 
 const resolveApplication = async (req, res, next) => {
   try {
-    await ensureBankDirectProcessLinksTable();
     const idOrSlug = req.params.id;
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
 

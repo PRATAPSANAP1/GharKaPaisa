@@ -14,33 +14,8 @@ const { OTP_PEPPER } = require('../../config/jwt');
 // Helper to hash OTP
 const hashOtp = (otp) => crypto.createHmac('sha256', OTP_PEPPER || 'gkp-otp-secret-key').update(String(otp)).digest('hex');
 
-// Helper: Ensure tables and sequence exist safely
-async function ensurePublicTablesExist() {
-  try {
-    await query(`CREATE SEQUENCE IF NOT EXISTS candidate_reference_seq START 10001`);
-    await query(`
-      CREATE TABLE IF NOT EXISTS otp_verifications (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        identity VARCHAR(255) NOT NULL,
-        otp_hash VARCHAR(255) NOT NULL,
-        expires_at TIMESTAMPTZ NOT NULL,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `);
-    await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS hr_name VARCHAR(100)`);
-    await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS target_role VARCHAR(100)`);
-    await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS referred_by_employee_id UUID`);
-    await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS referred_by_employee_id UUID`);
-    await query(`ALTER TABLE employee_candidates ALTER COLUMN total_experience_years TYPE NUMERIC(10,2) USING total_experience_years::NUMERIC(10,2)`).catch(e => logger.warn('ALTER employee_candidates total_experience_years:', e.message));
-    await query(`ALTER TABLE employee_joining_details ALTER COLUMN total_experience_years TYPE NUMERIC(10,2) USING total_experience_years::NUMERIC(10,2)`).catch(e => logger.warn('ALTER employee_joining_details total_experience_years:', e.message));
-  } catch (err) {
-    logger.warn('Failed to ensure public tables exist:', err.message);
-  }
-}
-
 // Helper: Generate candidate reference code (e.g. CAND10001)
 async function generateCandidateReferenceCode() {
-  await ensurePublicTablesExist();
   try {
     const { rows } = await query(`SELECT nextval('candidate_reference_seq') as seq`);
     const seqNum = rows[0]?.seq || Math.floor(10000 + Math.random() * 90000);
@@ -54,7 +29,6 @@ async function generateCandidateReferenceCode() {
 // POST /api/v1/public/careers/verify-mobile — Send mobile OTP
 router.post('/verify-mobile', async (req, res, next) => {
   try {
-    await ensurePublicTablesExist();
     const { mobile_number } = req.body;
     if (!mobile_number) {
       return res.status(400).json({ success: false, message: 'Valid 10-digit mobile number required' });
@@ -110,7 +84,6 @@ router.post('/verify-mobile', async (req, res, next) => {
 // POST /api/v1/public/careers/verify-email — Send email OTP
 router.post('/verify-email', async (req, res, next) => {
   try {
-    await ensurePublicTablesExist();
     const { email_id, email } = req.body;
     const targetEmail = email_id || email;
     if (!targetEmail) {
@@ -178,7 +151,6 @@ router.post('/verify-email', async (req, res, next) => {
 // POST /api/v1/public/careers/verify-otp — Verify OTP from PostgreSQL
 router.post('/verify-otp', async (req, res, next) => {
   try {
-    await ensurePublicTablesExist();
     const { mobile_number, email_id, otp, mobile_otp, email_otp, type } = req.body;
     let verified = false;
 
@@ -241,8 +213,6 @@ router.post('/verify-otp', async (req, res, next) => {
 // POST /api/v1/public/careers/register — Candidate Registration
 router.post('/register', upload.single('resume'), async (req, res, next) => {
   try {
-    await ensurePublicTablesExist();
-
     const {
       full_name, mobile_number, email_id, date_of_birth, current_address,
       highest_qualification, passing_year, experience_type, total_experience_years,
