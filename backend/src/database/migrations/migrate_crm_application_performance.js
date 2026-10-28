@@ -109,16 +109,7 @@ const migrateCrmApplicationPerformance = async () => {
         ADD COLUMN IF NOT EXISTS last_operator_code VARCHAR(100),
         ADD COLUMN IF NOT EXISTS final_status_operator_code VARCHAR(100),
         ADD COLUMN IF NOT EXISTS last_operated_at TIMESTAMPTZ,
-        ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS cureble_stage VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS primary_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS secondary_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS cureble_type VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS cureble_operator_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS final_card_approval VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS soft_approval_stage VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS salas_operator_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS remark_opretor_code VARCHAR(100)
+        ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100)
     `);
 
     // 3. Ensure columns on physical_application_details table
@@ -129,20 +120,6 @@ const migrateCrmApplicationPerformance = async () => {
         ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
         ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
         ADD COLUMN IF NOT EXISTS backend_remark TEXT,
-        ADD COLUMN IF NOT EXISTS cureble_stage VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS primary_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS secondary_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS cureble_type VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS cureble_operator_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS final_card_approval VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS queryable_remark VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS queryable_sales_remark TEXT,
-        ADD COLUMN IF NOT EXISTS digital_remark VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS decline_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS decline_remark TEXT,
-        ADD COLUMN IF NOT EXISTS soft_approval_stage VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS salas_operator_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS remark_opretor_code VARCHAR(100),
         ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100),
         ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100),
         ADD COLUMN IF NOT EXISTS income_details VARCHAR(100),

@@ -6,16 +6,15 @@ const logger = require('../../config/logger');
 const migrateMessenger = async () => {
   logger.info('Running Messenger migrations...');
 
-  const client = await pool.connect();
   try {
-    await client.query('BEGIN');
+    await query('BEGIN');
 
     // Add user active tracking columns if not existing
-    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMPTZ DEFAULT NOW()`);
-    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_logout_at TIMESTAMPTZ`);
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMPTZ DEFAULT NOW()`);
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_logout_at TIMESTAMPTZ`);
 
     // 1. Conversations table
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS conversations (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         conversation_type VARCHAR(50) NOT NULL DEFAULT 'DIRECT', -- 'DIRECT', 'GROUP', 'APPLICATION', 'DEPARTMENT', 'ANNOUNCEMENT'
@@ -32,12 +31,12 @@ const migrateMessenger = async () => {
       )
     `);
 
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_conversations_type ON conversations(conversation_type)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_conversations_application_id ON conversations(application_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated_at DESC)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_conversations_type ON conversations(conversation_type)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_conversations_application_id ON conversations(application_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated_at DESC)`);
 
     // 2. Conversation Participants table
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS conversation_participants (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
@@ -54,15 +53,15 @@ const migrateMessenger = async () => {
       )
     `);
 
-    await client.query(`ALTER TABLE conversation_participants ADD COLUMN IF NOT EXISTS cleared_at TIMESTAMPTZ`);
-    await client.query(`UPDATE conversations SET name = NULL WHERE conversation_type = 'DIRECT'`);
+    await query(`ALTER TABLE conversation_participants ADD COLUMN IF NOT EXISTS cleared_at TIMESTAMPTZ`);
+    await query(`UPDATE conversations SET name = NULL WHERE conversation_type = 'DIRECT'`);
 
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_conv_participants_conv_id ON conversation_participants(conversation_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_conv_participants_user_id ON conversation_participants(user_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_conv_participants_user_left ON conversation_participants(user_id, left_at)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_conv_participants_conv_id ON conversation_participants(conversation_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_conv_participants_user_id ON conversation_participants(user_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_conv_participants_user_left ON conversation_participants(user_id, left_at)`);
 
     // 3. Messages table
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS messages (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
@@ -77,13 +76,13 @@ const migrateMessenger = async () => {
       )
     `);
 
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_messages_conv_id ON messages(conversation_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON messages(sender_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at DESC)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_messages_conv_created ON messages(conversation_id, created_at DESC)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_messages_conv_id ON messages(conversation_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON messages(sender_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at DESC)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_messages_conv_created ON messages(conversation_id, created_at DESC)`);
 
     // 4. Message Attachments table
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS message_attachments (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
@@ -96,13 +95,13 @@ const migrateMessenger = async () => {
       )
     `);
 
-    await client.query(`ALTER TABLE message_attachments ALTER COLUMN file_size TYPE BIGINT USING file_size::bigint`);
-    await client.query(`ALTER TABLE message_attachments ALTER COLUMN file_url TYPE TEXT`);
-    await client.query(`ALTER TABLE message_attachments ALTER COLUMN storage_key TYPE TEXT`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_message_attachments_msg_id ON message_attachments(message_id)`);
+    await query(`ALTER TABLE message_attachments ALTER COLUMN file_size TYPE BIGINT USING file_size::bigint`);
+    await query(`ALTER TABLE message_attachments ALTER COLUMN file_url TYPE TEXT`);
+    await query(`ALTER TABLE message_attachments ALTER COLUMN storage_key TYPE TEXT`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_message_attachments_msg_id ON message_attachments(message_id)`);
 
     // 5. Message Reads table
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS message_reads (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
@@ -112,11 +111,11 @@ const migrateMessenger = async () => {
       )
     `);
 
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_message_reads_user ON message_reads(user_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_message_reads_msg_user ON message_reads(message_id, user_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_message_reads_user ON message_reads(user_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_message_reads_msg_user ON message_reads(message_id, user_id)`);
 
     // 6. Blocked Users table
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS blocked_users (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -127,7 +126,7 @@ const migrateMessenger = async () => {
     `);
 
     // 8. Messenger Assignments table
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS messenger_assignments (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         account_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -142,21 +141,19 @@ const migrateMessenger = async () => {
       )
     `);
 
-    await client.query(`ALTER TABLE messenger_assignments ADD COLUMN IF NOT EXISTS removed_by UUID REFERENCES users(id) ON DELETE SET NULL`);
-    await client.query(`ALTER TABLE messenger_assignments ADD COLUMN IF NOT EXISTS removed_at TIMESTAMPTZ`);
+    await query(`ALTER TABLE messenger_assignments ADD COLUMN IF NOT EXISTS removed_by UUID REFERENCES users(id) ON DELETE SET NULL`);
+    await query(`ALTER TABLE messenger_assignments ADD COLUMN IF NOT EXISTS removed_at TIMESTAMPTZ`);
 
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_messenger_assignments_account ON messenger_assignments(account_user_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_messenger_assignments_target ON messenger_assignments(assigned_messenger_user_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_messenger_assignments_account ON messenger_assignments(account_user_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_messenger_assignments_target ON messenger_assignments(assigned_messenger_user_id)`);
 
-    await client.query('COMMIT');
+    await query('COMMIT');
     logger.info('Messenger migrations completed successfully');
     return { success: true, message: 'Messenger migrations completed' };
   } catch (error) {
-    await client.query('ROLLBACK');
+    await query('ROLLBACK');
     logger.error('Messenger migration failed:', error);
     throw error;
-  } finally {
-    client.release();
   }
 };
 

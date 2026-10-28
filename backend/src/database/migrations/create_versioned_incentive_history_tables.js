@@ -18,12 +18,11 @@ const logger = require('../../config/logger');
 const migrateVersionedIncentiveTables = async () => {
   logger.info('Running Versioned Incentive Rules & Monthly Performance Snapshot migrations...');
 
-  const client = await pool.connect();
   try {
-    await client.query('BEGIN');
+    await query('BEGIN');
 
     // 1. Versioned Incentive Rules Table
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS employee_incentive_rules (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
@@ -42,12 +41,12 @@ const migrateVersionedIncentiveTables = async () => {
       )
     `);
 
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_emp_inc_rules_emp ON employee_incentive_rules(employee_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_emp_inc_rules_bank ON employee_incentive_rules(bank_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_emp_inc_rules_dates ON employee_incentive_rules(effective_from, effective_to)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_emp_inc_rules_emp ON employee_incentive_rules(employee_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_emp_inc_rules_bank ON employee_incentive_rules(bank_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_emp_inc_rules_dates ON employee_incentive_rules(effective_from, effective_to)`);
 
     // 2. Frozen Monthly Performance Snapshots Table
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS employee_incentive_monthly_records (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
@@ -70,11 +69,11 @@ const migrateVersionedIncentiveTables = async () => {
       )
     `);
 
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_emp_inc_monthly_emp ON employee_incentive_monthly_records(employee_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_emp_inc_monthly_ym ON employee_incentive_monthly_records(year, month)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_emp_inc_monthly_bank ON employee_incentive_monthly_records(bank_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_emp_inc_monthly_emp ON employee_incentive_monthly_records(employee_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_emp_inc_monthly_ym ON employee_incentive_monthly_records(year, month)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_emp_inc_monthly_bank ON employee_incentive_monthly_records(bank_id)`);
 
-    await client.query('COMMIT');
+    await query('COMMIT');
     logger.info('Versioned Incentive Rules & Monthly Performance Snapshot migrations completed successfully');
 
     return {
@@ -82,11 +81,9 @@ const migrateVersionedIncentiveTables = async () => {
       message: 'Versioned Incentive Rules & Monthly Performance Snapshot migrations completed successfully'
     };
   } catch (error) {
-    await client.query('ROLLBACK');
+    await query('ROLLBACK');
     logger.error('Versioned Incentive migration failed:', error);
     throw error;
-  } finally {
-    client.release();
   }
 };
 

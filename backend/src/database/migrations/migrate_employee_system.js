@@ -23,16 +23,15 @@ async function addEnumValue(typeName, valName) {
 const migrateEmployeeSystem = async () => {
   logger.info('Running Employee Management System migrations...');
 
-  // Ensure HR and EMPLOYEE are in user_role ENUM (must be executed outside transaction block)
-  await addEnumValue('user_role', 'HR');
-  await addEnumValue('user_role', 'EMPLOYEE');
-
-  const client = await pool.connect();
   try {
-    await client.query('BEGIN');
+    // Ensure HR and EMPLOYEE are in user_role ENUM (must be executed outside transaction block)
+    await addEnumValue('user_role', 'HR');
+    await addEnumValue('user_role', 'EMPLOYEE');
+
+    await query('BEGIN');
 
     // ── 1. Employee Candidates Table ────────────────────────────────────────────────
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS employee_candidates (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         reference_code VARCHAR(20) UNIQUE NOT NULL,
@@ -81,14 +80,14 @@ const migrateEmployeeSystem = async () => {
     `);
 
     // Create indexes for employee_candidates
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_candidates_reference_code ON employee_candidates(reference_code)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_candidates_mobile ON employee_candidates(mobile_number)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_candidates_email ON employee_candidates(email_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_candidates_status ON employee_candidates(interview_status)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_candidates_interviewer ON employee_candidates(interviewer_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_candidates_reference_code ON employee_candidates(reference_code)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_candidates_mobile ON employee_candidates(mobile_number)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_candidates_email ON employee_candidates(email_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_candidates_status ON employee_candidates(interview_status)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_candidates_interviewer ON employee_candidates(interviewer_id)`);
 
     // ── 2. Employees Table ────────────────────────────────────────────────────────
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS employees (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         employee_id VARCHAR(20) UNIQUE NOT NULL,
@@ -131,16 +130,16 @@ const migrateEmployeeSystem = async () => {
     `);
 
     // Create indexes for employees
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employees_employee_id ON employees(employee_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employees_mobile ON employees(mobile_number)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employees_email ON employees(email_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employees_designation ON employees(designation)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employees_department ON employees(department)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employees_status ON employees(employee_status)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employees_user_id ON employees(user_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employees_employee_id ON employees(employee_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employees_mobile ON employees(mobile_number)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employees_email ON employees(email_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employees_designation ON employees(designation)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employees_department ON employees(department)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employees_status ON employees(employee_status)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employees_user_id ON employees(user_id)`);
 
     // ── 3. Employee Joining Details Table ───────────────────────────────────────────
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS employee_joining_details (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         employee_id UUID NOT NULL REFERENCES employees(id) UNIQUE,
@@ -190,11 +189,11 @@ const migrateEmployeeSystem = async () => {
       )
     `);
 
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_joining_details_employee_id ON employee_joining_details(employee_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_joining_details_status ON employee_joining_details(form_status)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_joining_details_employee_id ON employee_joining_details(employee_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_joining_details_status ON employee_joining_details(form_status)`);
 
     // ── 4. Employee KYC Table ───────────────────────────────────────────────────────
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS employee_kyc (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         employee_id UUID NOT NULL REFERENCES employees(id) UNIQUE,
@@ -228,17 +227,17 @@ const migrateEmployeeSystem = async () => {
       )
     `);
 
-    await client.query(`ALTER TABLE employee_kyc ADD COLUMN IF NOT EXISTS pan_status VARCHAR(20) DEFAULT 'PENDING'`);
-    await client.query(`ALTER TABLE employee_kyc ADD COLUMN IF NOT EXISTS aadhaar_status VARCHAR(20) DEFAULT 'PENDING'`);
-    await client.query(`ALTER TABLE employee_kyc ADD COLUMN IF NOT EXISTS bank_status VARCHAR(20) DEFAULT 'PENDING'`);
+    await query(`ALTER TABLE employee_kyc ADD COLUMN IF NOT EXISTS pan_status VARCHAR(20) DEFAULT 'PENDING'`);
+    await query(`ALTER TABLE employee_kyc ADD COLUMN IF NOT EXISTS aadhaar_status VARCHAR(20) DEFAULT 'PENDING'`);
+    await query(`ALTER TABLE employee_kyc ADD COLUMN IF NOT EXISTS bank_status VARCHAR(20) DEFAULT 'PENDING'`);
 
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_kyc_employee_id ON employee_kyc(employee_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_kyc_status ON employee_kyc(kyc_status)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_kyc_pan ON employee_kyc(pan_number)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_kyc_aadhaar ON employee_kyc(aadhaar_number)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_kyc_employee_id ON employee_kyc(employee_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_kyc_status ON employee_kyc(kyc_status)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_kyc_pan ON employee_kyc(pan_number)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_kyc_aadhaar ON employee_kyc(aadhaar_number)`);
 
     // ── 5. Employee Documents Table ───────────────────────────────────────────────
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS employee_documents (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         employee_id UUID NOT NULL REFERENCES employees(id),
@@ -257,12 +256,12 @@ const migrateEmployeeSystem = async () => {
       )
     `);
 
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_documents_employee_id ON employee_documents(employee_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_documents_type ON employee_documents(document_type)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_documents_status ON employee_documents(verification_status)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_documents_employee_id ON employee_documents(employee_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_documents_type ON employee_documents(document_type)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_documents_status ON employee_documents(verification_status)`);
 
     // ── 6. Employee Terms Acceptance Table ───────────────────────────────────────
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS employee_terms_acceptance (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         employee_id UUID NOT NULL REFERENCES employees(id) UNIQUE,
@@ -285,11 +284,11 @@ const migrateEmployeeSystem = async () => {
       )
     `);
 
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_terms_employee_id ON employee_terms_acceptance(employee_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_terms_status ON employee_terms_acceptance(verification_status)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_terms_employee_id ON employee_terms_acceptance(employee_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_terms_status ON employee_terms_acceptance(verification_status)`);
 
     // ── 7. Employee Product Links Table (CRITICAL) ─────────────────────────────────────
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS employee_product_links (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         employee_id UUID NOT NULL REFERENCES employees(id),
@@ -308,12 +307,12 @@ const migrateEmployeeSystem = async () => {
       )
     `);
 
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_product_links_employee_id ON employee_product_links(employee_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_product_links_product_id ON employee_product_links(product_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_product_links_status ON employee_product_links(status)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_product_links_employee_id ON employee_product_links(employee_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_product_links_product_id ON employee_product_links(product_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_product_links_status ON employee_product_links(status)`);
 
     // ── 8. Employee Incentive Transactions Table ─────────────────────────────────
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS employee_incentive_transactions (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         employee_id UUID NOT NULL REFERENCES employees(id),
@@ -337,17 +336,17 @@ const migrateEmployeeSystem = async () => {
       )
     `);
 
-    await client.query(`ALTER TABLE employee_incentive_transactions ALTER COLUMN status TYPE VARCHAR(50)`);
-    await client.query(`ALTER TABLE employee_incentive_transactions ALTER COLUMN transaction_type TYPE VARCHAR(50)`);
-    await client.query(`ALTER TABLE employee_incentive_transactions ALTER COLUMN application_status TYPE VARCHAR(50)`);
+    await query(`ALTER TABLE employee_incentive_transactions ALTER COLUMN status TYPE VARCHAR(50)`);
+    await query(`ALTER TABLE employee_incentive_transactions ALTER COLUMN transaction_type TYPE VARCHAR(50)`);
+    await query(`ALTER TABLE employee_incentive_transactions ALTER COLUMN application_status TYPE VARCHAR(50)`);
 
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_incentive_employee_id ON employee_incentive_transactions(employee_id)`);
-    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_emp_incentive_tx_app_id ON employee_incentive_transactions(application_id) WHERE application_id IS NOT NULL;`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_incentive_status ON employee_incentive_transactions(status)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_incentive_type ON employee_incentive_transactions(transaction_type)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_incentive_employee_id ON employee_incentive_transactions(employee_id)`);
+    await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_emp_incentive_tx_app_id ON employee_incentive_transactions(application_id) WHERE application_id IS NOT NULL;`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_incentive_status ON employee_incentive_transactions(status)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_incentive_type ON employee_incentive_transactions(transaction_type)`);
 
     // ── 9. Employee Onboarding Checklist Table ─────────────────────────────────────
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS employee_onboarding_checklist (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         employee_id UUID NOT NULL REFERENCES employees(id) UNIQUE,
@@ -379,11 +378,11 @@ const migrateEmployeeSystem = async () => {
       )
     `);
 
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_onboarding_employee_id ON employee_onboarding_checklist(employee_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_onboarding_progress ON employee_onboarding_checklist(overall_progress)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_onboarding_employee_id ON employee_onboarding_checklist(employee_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_onboarding_progress ON employee_onboarding_checklist(overall_progress)`);
 
     // ── 10. Employee Hierarchy Table (Denormalized Approach) ───────────────────────────────
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS employee_hierarchy (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         employee_id UUID NOT NULL REFERENCES employees(id),
@@ -398,45 +397,28 @@ const migrateEmployeeSystem = async () => {
       )
     `);
 
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_hierarchy_employee_id ON employee_hierarchy(employee_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_hierarchy_team_leader_id ON employee_hierarchy(team_leader_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_hierarchy_manager_id ON employee_hierarchy(manager_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_hierarchy_level ON employee_hierarchy(hierarchy_level)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_hierarchy_employee_id ON employee_hierarchy(employee_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_hierarchy_team_leader_id ON employee_hierarchy(team_leader_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_hierarchy_manager_id ON employee_hierarchy(manager_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_hierarchy_level ON employee_hierarchy(hierarchy_level)`);
 
     // ── 11. Modify Existing Applications Table ─────────────────────────────────────────
-    await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS employee_id UUID REFERENCES employees(id)`);
-    await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS employee_link_id UUID REFERENCES employee_product_links(id)`);
-    await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS source_type VARCHAR(20) DEFAULT 'PARTNER'`); // 'PARTNER', 'EMPLOYEE'
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS employee_id UUID REFERENCES employees(id)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS employee_link_id UUID REFERENCES employee_product_links(id)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS source_type VARCHAR(20) DEFAULT 'PARTNER'`); // 'PARTNER', 'EMPLOYEE'
 
     // Create indexes for employee-related application queries
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_applications_employee_id ON applications(employee_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_applications_employee_link_id ON applications(employee_link_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_applications_source_type ON applications(source_type)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_applications_employee_id ON applications(employee_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_applications_employee_link_id ON applications(employee_link_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_applications_source_type ON applications(source_type)`);
 
     // ── 12. Create Sequence for Employee ID Generation ───────────────────────────────────
-    await client.query(`CREATE SEQUENCE IF NOT EXISTS employee_id_seq START 10001`);
+    await query(`CREATE SEQUENCE IF NOT EXISTS employee_id_seq START 10001`);
 
     // ── 13. Create Sequence for Candidate Reference Code Generation ─────────────────────
-    await client.query(`CREATE SEQUENCE IF NOT EXISTS candidate_reference_seq START 10001`);
+    await query(`CREATE SEQUENCE IF NOT EXISTS candidate_reference_seq START 10001`);
 
-    // ── 14. Public Career Registration OTP & Candidate Columns ─────────────────────────
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS otp_verifications (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        identity VARCHAR(100) NOT NULL,
-        otp_hash VARCHAR(255) NOT NULL,
-        expires_at TIMESTAMPTZ NOT NULL,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `);
-    await client.query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS hr_name VARCHAR(100)`);
-    await client.query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS target_role VARCHAR(100)`);
-    await client.query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS referred_by_employee_id UUID`);
-    await client.query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS referred_by_employee_id UUID`);
-    await client.query(`ALTER TABLE employee_candidates ALTER COLUMN total_experience_years TYPE NUMERIC(10,2) USING COALESCE(total_experience_years, 0)::numeric(10,2)`);
-    await client.query(`ALTER TABLE employee_joining_details ALTER COLUMN total_experience_years TYPE NUMERIC(10,2) USING COALESCE(total_experience_years, 0)::numeric(10,2)`);
-
-    await client.query('COMMIT');
+    await query('COMMIT');
     logger.info('Employee Management System migrations completed successfully');
 
     return {
@@ -464,11 +446,9 @@ const migrateEmployeeSystem = async () => {
     };
 
   } catch (error) {
-    await client.query('ROLLBACK');
+    await query('ROLLBACK');
     logger.error('Employee Management System migration failed:', error);
     throw error;
-  } finally {
-    client.release();
   }
 };
 

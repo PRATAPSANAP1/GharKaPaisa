@@ -4,26 +4,25 @@ const { query, pool } = require('../../config/database');
 
 async function runCleanup() {
   console.log('Running Employee Incentive Lifecycle Cleanup SQL Migration...');
-  const client = await pool.connect();
   try {
-    await client.query('BEGIN');
+    await query('BEGIN');
 
     // 1) Standardize statuses to PENDING, HOLD, RELEASE
-    const relRes = await client.query(`
+    const relRes = await query(`
       UPDATE employee_incentive_transactions
       SET status = 'RELEASE'
       WHERE status IN ('RELEASED', 'PAID', 'COMPLETED')
     `);
     console.log(`Updated ${relRes.rowCount} records to status 'RELEASE'`);
 
-    const holdRes = await client.query(`
+    const holdRes = await query(`
       UPDATE employee_incentive_transactions
       SET status = 'HOLD'
       WHERE status IN ('ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING')
     `);
     console.log(`Updated ${holdRes.rowCount} records to status 'HOLD'`);
 
-    const pendRes = await client.query(`
+    const pendRes = await query(`
       UPDATE employee_incentive_transactions
       SET status = 'PENDING'
       WHERE status NOT IN ('RELEASE', 'HOLD')
@@ -31,7 +30,7 @@ async function runCleanup() {
     console.log(`Updated ${pendRes.rowCount} remaining records to status 'PENDING'`);
 
     // 2) Delete orphaned incentives attached to non-approved applications
-    const delRes = await client.query(`
+    const delRes = await query(`
       DELETE FROM employee_incentive_transactions it
       USING applications a
       WHERE it.application_id = a.id
@@ -39,24 +38,14 @@ async function runCleanup() {
     `);
     console.log(`Deleted ${delRes.rowCount} orphaned/invalid incentive records linked to non-approved applications`);
 
-    await client.query('COMMIT');
+    await query('COMMIT');
     console.log('Employee Incentive Lifecycle Cleanup SQL Migration completed successfully!');
   } catch (err) {
-    await client.query('ROLLBACK');
+    await query('ROLLBACK');
     console.error('Cleanup migration failed:', err);
-    if (require.main !== module) {
-      throw err;
-    }
   } finally {
-    client.release();
-    if (require.main === module) {
-      await pool.end();
-    }
+    await pool.end();
   }
 }
 
-if (require.main === module) {
-  runCleanup();
-}
-
-module.exports = runCleanup;
+runCleanup();

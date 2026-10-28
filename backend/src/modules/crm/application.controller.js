@@ -10,6 +10,7 @@ const logger = require('../../config/logger');
 const { logAction } = require('../admin/audit.service.js');
 const { processTeamOverrideCommission } = require('../team/team.service.js');
 const { getBankApplyLinkBackend } = require('./lead.controller');
+const { ensureBankDirectProcessLinksTable } = require('../../database/migrations/migrate_bank_direct_process_links');
 const { resolveDirectProcessLinkForProductRow } = require('../super-admin/bankDirectLinks.controller');
 const { sendEmail, sendLeadApplicationCreatedEmail } = require('../../services/email/email.service');
 const { getHdfcCuringDesignation, getHdfcDeclineCodeInfo, HDFC_DECLINE_CODES, CURING_DESIGNATIONS } = require('../../constants/hdfcDeclineCodes');
@@ -42,7 +43,31 @@ const isHdfcCreditCardApp = (app, pRow) => {
   return isCreditCard;
 };
 
-// Note: application_admin_assignments table is managed via database migrations
+// Helper to safely ensure application_admin_assignments table exists
+const ensureAssignmentsTableExists = async () => {
+  try {
+    const { rows } = await query(`SELECT to_regclass('public.application_admin_assignments') as tbl_exists`);
+    if (rows[0] && rows[0].tbl_exists) return true;
+    await query(`
+      CREATE TABLE IF NOT EXISTS application_admin_assignments (
+        id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        application_id UUID NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+        admin_user_id  UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        assigned_by    UUID REFERENCES users(id),
+        assigned_at    TIMESTAMPTZ DEFAULT NOW(),
+        completed_at   TIMESTAMPTZ,
+        status         VARCHAR(20) DEFAULT 'PENDING',
+        created_at     TIMESTAMPTZ DEFAULT NOW(),
+        updated_at     TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(application_id, admin_user_id)
+      )
+    `);
+    return true;
+  } catch (err) {
+    logger.warn('application_admin_assignments table check/create warning:', err.message);
+    return false;
+  }
+};
 
 // Helper to parse DOB string formats (e.g. "03091994", "03-09-1994", "1994-09-03") to ISO Date YYYY-MM-DD
 const parseDobToIso = (raw) => {
@@ -1574,7 +1599,96 @@ const manualCommission = async (req, res, next) => {
 
 const isUuid = (str) => typeof str === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
 
-// Note: application stage columns are managed via database migrations
+let stageColumnsEnsured = false;
+let stageColumnsPromise = null;
+
+const ensureApplicationStageColumns = async () => {
+  if (stageColumnsEnsured) return;
+  if (stageColumnsPromise) return stageColumnsPromise;
+
+  stageColumnsPromise = (async () => {
+    try {
+      // 1. Check if critical columns already exist in information_schema to avoid acquiring AccessExclusiveLock
+      const { rows } = await query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'applications' 
+          AND column_name IN ('sales_operator_code', 'pan_checker_code', 'remark_operator_code', 'backend_remark')
+      `);
+      if (rows && rows.length >= 4) {
+        stageColumnsEnsured = true;
+        return;
+      }
+
+      await query(`
+        ALTER TABLE applications 
+        ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS remark_status VARCHAR(20) DEFAULT 'PENDING',
+        ADD COLUMN IF NOT EXISTS remark_updated BOOLEAN DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS remark_updated_by UUID,
+        ADD COLUMN IF NOT EXISTS remark_updated_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no',
+        ADD COLUMN IF NOT EXISTS bank_current_lead_status VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS approved_by UUID,
+        ADD COLUMN IF NOT EXISTS sales_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS backend_remark TEXT,
+        ADD COLUMN IF NOT EXISTS cureble_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS primary_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS secondary_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS cureble_type VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS cureble_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS final_card_approval VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS soft_approval_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS salas_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS remark_opretor_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS user_remark TEXT
+      `).catch(() => {});
+      await query(`
+        ALTER TABLE physical_application_details
+        ADD COLUMN IF NOT EXISTS sales_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS backend_remark TEXT,
+        ADD COLUMN IF NOT EXISTS cureble_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS primary_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS secondary_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS cureble_type VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS cureble_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS final_card_approval VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS queryable_remark VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS queryable_sales_remark TEXT,
+        ADD COLUMN IF NOT EXISTS digital_remark VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS decline_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS decline_remark TEXT,
+        ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS soft_approval_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS salas_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS remark_opretor_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS user_remark TEXT,
+        ADD COLUMN IF NOT EXISTS decline_description TEXT,
+        ADD COLUMN IF NOT EXISTS curing_designation VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS primary_decline_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS primary_decline_description TEXT,
+        ADD COLUMN IF NOT EXISTS primary_curing_designation VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS secondary_decline_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS secondary_decline_description TEXT,
+        ADD COLUMN IF NOT EXISTS secondary_curing_designation VARCHAR(100)
+      `).catch(() => {});
+      stageColumnsEnsured = true;
+    } catch (err) {
+      // Ignore error if schema alter is locked or non-fatal
+    } finally {
+      stageColumnsPromise = null;
+    }
+  })();
+
+  return stageColumnsPromise;
+};
 
 const listApplications = async (req, res, next) => {
   const correlationId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -2121,52 +2235,53 @@ const listApplications = async (req, res, next) => {
           1::int as update_count,
           COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number,
           COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, ''), NULLIF(a.bank_application_number, ''), NULLIF(pad.bank_application_number, '')) as bank_ref_number,
-          COALESCE(NULLIF(a.ipa_stage, ''), NULLIF(pad.ipa_stage, ''), NULLIF(a.iqa_stage, ''), NULLIF(pad.iqa_stage, '')) as ipa_stage,
-          COALESCE(NULLIF(a.kyc_stage, ''), NULLIF(pad.kyc_stage, ''), NULLIF(a.vkyc_stage, ''), NULLIF(a.vkyc_status, ''), NULLIF(pad.vkyc_stage, '')) as kyc_stage,
-          a.card_approval_stage as card_approval_stage,
-          a.digital_card_issued as digital_card_issued,
+          COALESCE(NULLIF(to_jsonb(a)->>'ipa_stage', ''), NULLIF(to_jsonb(pad)->>'ipa_stage', ''), NULLIF(a.iqa_stage, ''), NULLIF(pad.iqa_stage, '')) as ipa_stage,
+          COALESCE(NULLIF(to_jsonb(a)->>'kyc_stage', ''), NULLIF(to_jsonb(pad)->>'kyc_stage', ''), NULLIF(a.vkyc_stage, ''), NULLIF(a.vkyc_status, ''), NULLIF(pad.vkyc_stage, '')) as kyc_stage,
+          (to_jsonb(a)->>'card_approval_stage') as card_approval_stage,
+          (to_jsonb(a)->>'digital_card_issued') as digital_card_issued,
           COALESCE(NULLIF(a.appcode_status, ''), NULLIF(pad.appcode_status, '')) as appcode_status,
-          COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status,
-          COALESCE(NULLIF(a.soft_approval_stage, ''), NULLIF(pad.soft_approval_stage, ''), NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, '')) as soft_approval_stage,
+          COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(to_jsonb(pad)->>'dispatch_status', '')) as dispatch_status,
+          COALESCE(NULLIF(to_jsonb(a)->>'soft_approval_stage', ''), NULLIF(to_jsonb(pad)->>'soft_approval_stage', ''), NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, '')) as soft_approval_stage,
           COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, '')) as soft_approval_status,
           COALESCE(NULLIF(a.iqa_stage, ''), NULLIF(pad.iqa_stage, '')) as iqa_stage,
           COALESCE(NULLIF(a.vkyc_stage, ''), NULLIF(a.vkyc_status, ''), NULLIF(pad.vkyc_stage, '')) as vkyc_stage,
           COALESCE(NULLIF(a.vkyc_status, ''), NULLIF(a.vkyc_stage, ''), NULLIF(pad.vkyc_stage, '')) as vkyc_status,
           COALESCE(NULLIF(a.vkyc_url, ''), NULLIF(pad.vkyc_url, '')) as vkyc_url,
           COALESCE(
+            NULLIF(to_jsonb(a)->>'user_remark', ''),
+            NULLIF(to_jsonb(pad)->>'user_remark', ''),
             NULLIF(a.user_remark, ''),
-            NULLIF(pad.user_remark, ''),
             NULLIF(a.notes, ''),
             NULLIF(a.bank_remark, ''),
             NULLIF(pad.bank_remark, ''),
             'NA'
           ) as bank_remark,
-          COALESCE(NULLIF(a.user_remark, ''), NULLIF(pad.user_remark, ''), a.notes, a.operational_remarks) as user_remark,
-          COALESCE(a.user_remark, a.notes) as notes,
-          COALESCE(NULLIF(a.final_status, ''), NULLIF(pad.final_status, '')) as final_status,
-          COALESCE(NULLIF(a.app_file_generated, ''), NULLIF(pad.app_file_generated, '')) as app_file_generated,
-          COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, '')) as decline_reason,
-          COALESCE(NULLIF(a.eligible_reqd, ''), NULLIF(pad.eligible_reqd, '')) as eligible_reqd,
-          COALESCE(NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as decline_code,
-          COALESCE(NULLIF(a.decline_description, ''), NULLIF(pad.decline_description, '')) as decline_description,
-          COALESCE(NULLIF(a.curing_designation, ''), NULLIF(pad.curing_designation, '')) as curing_designation,
-          COALESCE(NULLIF(a.primary_decline_code, ''), NULLIF(pad.primary_decline_code, ''), NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as primary_decline_code,
-          COALESCE(NULLIF(a.primary_decline_description, ''), NULLIF(pad.primary_decline_description, ''), NULLIF(a.decline_description, ''), NULLIF(pad.decline_description, '')) as primary_decline_description,
-          COALESCE(NULLIF(a.primary_curing_designation, ''), NULLIF(pad.primary_curing_designation, ''), NULLIF(a.curing_designation, ''), NULLIF(pad.curing_designation, '')) as primary_curing_designation,
-          COALESCE(NULLIF(a.secondary_decline_code, ''), NULLIF(pad.secondary_decline_code, '')) as secondary_decline_code,
-          COALESCE(NULLIF(a.secondary_decline_description, ''), NULLIF(pad.secondary_decline_description, '')) as secondary_decline_description,
-          COALESCE(NULLIF(a.secondary_curing_designation, ''), NULLIF(pad.secondary_curing_designation, '')) as secondary_curing_designation,
-          a.last_operator_name as last_operator_name,
-          a.last_operator_role as last_operator_role,
-          a.last_operator_designation as last_operator_designation,
-          a.last_operator_code as last_operator_code,
-          a.final_status_operator_code as final_status_operator_code,
-          NULLIF(a.last_operated_at::text, '') as last_operated_at,
-          COALESCE(NULLIF(a.last_operator_name, ''), NULLIF(a.last_operator_code, ''), 'Not Assigned') as currently_working_by,
-          COALESCE(a.sales_claimed_by, pad.sales_claimed_by, '') as sales_claimed_by,
-          COALESCE(a.sales_claimed_by_name, pad.sales_claimed_by_name, '') as sales_claimed_by_name,
-          COALESCE(a.sales_claimed_by_code, pad.sales_claimed_by_code, '') as sales_claimed_by_code,
-          NULLIF(COALESCE(a.sales_claimed_at::text, pad.sales_claimed_at::text, ''), '') as sales_claimed_at,
+          COALESCE(NULLIF(to_jsonb(a)->>'user_remark', ''), NULLIF(to_jsonb(pad)->>'user_remark', ''), to_jsonb(a)->>'notes', to_jsonb(a)->>'operational_remarks') as user_remark,
+          COALESCE(to_jsonb(a)->>'user_remark', to_jsonb(a)->>'notes') as notes,
+          COALESCE(NULLIF(to_jsonb(a)->>'final_status', ''), NULLIF(to_jsonb(pad)->>'final_status', '')) as final_status,
+          COALESCE(NULLIF(to_jsonb(a)->>'app_file_generated', ''), NULLIF(to_jsonb(pad)->>'app_file_generated', '')) as app_file_generated,
+          COALESCE(NULLIF(to_jsonb(a)->>'decline_reason', ''), NULLIF(to_jsonb(pad)->>'decline_reason', '')) as decline_reason,
+          COALESCE(NULLIF(to_jsonb(a)->>'eligible_reqd', ''), NULLIF(to_jsonb(pad)->>'eligible_reqd', '')) as eligible_reqd,
+          COALESCE(NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as decline_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'decline_description', ''), NULLIF(to_jsonb(pad)->>'decline_description', '')) as decline_description,
+          COALESCE(NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as curing_designation,
+          COALESCE(NULLIF(to_jsonb(a)->>'primary_decline_code', ''), NULLIF(to_jsonb(pad)->>'primary_decline_code', ''), NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as primary_decline_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'primary_decline_description', ''), NULLIF(to_jsonb(pad)->>'primary_decline_description', ''), NULLIF(to_jsonb(a)->>'decline_description', ''), NULLIF(to_jsonb(pad)->>'decline_description', '')) as primary_decline_description,
+          COALESCE(NULLIF(to_jsonb(a)->>'primary_curing_designation', ''), NULLIF(to_jsonb(pad)->>'primary_curing_designation', ''), NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as primary_curing_designation,
+          COALESCE(NULLIF(to_jsonb(a)->>'secondary_decline_code', ''), NULLIF(to_jsonb(pad)->>'secondary_decline_code', '')) as secondary_decline_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'secondary_decline_description', ''), NULLIF(to_jsonb(pad)->>'secondary_decline_description', '')) as secondary_decline_description,
+          COALESCE(NULLIF(to_jsonb(a)->>'secondary_curing_designation', ''), NULLIF(to_jsonb(pad)->>'secondary_curing_designation', '')) as secondary_curing_designation,
+          (to_jsonb(a)->>'last_operator_name') as last_operator_name,
+          (to_jsonb(a)->>'last_operator_role') as last_operator_role,
+          (to_jsonb(a)->>'last_operator_designation') as last_operator_designation,
+          (to_jsonb(a)->>'last_operator_code') as last_operator_code,
+          (to_jsonb(a)->>'final_status_operator_code') as final_status_operator_code,
+          NULLIF(to_jsonb(a)->>'last_operated_at', '') as last_operated_at,
+          COALESCE(NULLIF(to_jsonb(a)->>'last_operator_name', ''), NULLIF(to_jsonb(a)->>'last_operator_code', ''), 'Not Assigned') as currently_working_by,
+          COALESCE(to_jsonb(a)->>'sales_claimed_by', to_jsonb(pad)->>'sales_claimed_by', '') as sales_claimed_by,
+          COALESCE(to_jsonb(a)->>'sales_claimed_by_name', to_jsonb(pad)->>'sales_claimed_by_name', '') as sales_claimed_by_name,
+          COALESCE(to_jsonb(a)->>'sales_claimed_by_code', to_jsonb(pad)->>'sales_claimed_by_code', '') as sales_claimed_by_code,
+          NULLIF(COALESCE(to_jsonb(a)->>'sales_claimed_at', to_jsonb(pad)->>'sales_claimed_at', ''), '') as sales_claimed_at,
           a.submitted_at,
           a.approved_at,
           a.approved_by,
@@ -2198,7 +2313,7 @@ const listApplications = async (req, res, next) => {
           c.monthly_income,
           p.name as product_name,
           COALESCE(NULLIF(to_jsonb(a)->>'category', ''), p.category::text) as category,
-          COALESCE(NULLIF(to_jsonb(a)->>'sub_category', ''), p.sub_category, a.metadata->>'product_type') as sub_category,
+          COALESCE(NULLIF(to_jsonb(a)->>'sub_category', ''), p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category,
           b.name as bank_name,
           b.short_code as bank_code,
           ap.partner_code,
@@ -2217,37 +2332,37 @@ const listApplications = async (req, res, next) => {
           COALESCE(a.bank_id, p.bank_id) as bank_id,
           COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id,
           oh.full_name as operation_head_name,
-          COALESCE(NULLIF(a.pan_check, ''), NULLIF(pad.pan_check, ''), 'no') as pan_check,
-          COALESCE(NULLIF(a.bank_current_lead_status, ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status,
-          COALESCE(NULLIF(a.requery_date::text, ''), NULLIF(pad.requery_date::text, '')) as requery_date,
-          COALESCE(NULLIF(a.remark_status, ''), 'PENDING') as remark_status,
+          COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(to_jsonb(pad)->>'pan_check', ''), 'no') as pan_check,
+          COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(to_jsonb(pad)->>'bank_current_lead_status', ''), 'None') as bank_current_lead_status,
+          COALESCE(NULLIF(to_jsonb(a)->>'requery_date', ''), NULLIF(to_jsonb(pad)->>'requery_date', '')) as requery_date,
+          COALESCE(NULLIF(to_jsonb(a)->>'remark_status', ''), 'PENDING') as remark_status,
           COALESCE(to_jsonb(a)->>'assigned_to', to_jsonb(pad)->>'assigned_to') as assigned_to,
-          COALESCE(NULLIF(a.sales_operator_code, ''), NULLIF(pad.sales_operator_code, ''), NULLIF(a.salas_operator_code, ''), NULLIF(pad.salas_operator_code, '')) as sales_operator_code,
-          COALESCE(NULLIF(a.sales_operator_code, ''), NULLIF(pad.sales_operator_code, ''), NULLIF(a.salas_operator_code, ''), NULLIF(pad.salas_operator_code, '')) as salas_operator_code,
-          COALESCE(NULLIF(a.pan_checker_code, ''), NULLIF(pad.pan_checker_code, '')) as pan_checker_code,
-          COALESCE(NULLIF(a.remark_operator_code, ''), NULLIF(pad.remark_operator_code, ''), NULLIF(a.remark_opretor_code, ''), NULLIF(pad.remark_opretor_code, '')) as remark_operator_code,
-          COALESCE(NULLIF(a.remark_operator_code, ''), NULLIF(pad.remark_operator_code, ''), NULLIF(a.remark_opretor_code, ''), NULLIF(pad.remark_opretor_code, '')) as remark_opretor_code,
-          COALESCE(NULLIF(a.backend_remark, ''), NULLIF(pad.backend_remark, '')) as backend_remark,
-          COALESCE(NULLIF(a.cureble_stage, ''), NULLIF(pad.cureble_stage, ''), NULLIF(pad.queryable_remark, ''), NULLIF(to_jsonb(a)->>'curable_stage', ''), NULLIF(to_jsonb(pad)->>'curable_stage', '')) as cureble_stage,
-          COALESCE(NULLIF(a.primary_code, ''), NULLIF(pad.primary_code, ''), NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as primary_code,
-          COALESCE(NULLIF(a.secondary_code, ''), NULLIF(pad.secondary_code, '')) as secondary_code,
-          COALESCE(NULLIF(a.cureble_type, ''), NULLIF(pad.cureble_type, ''), NULLIF(pad.digital_remark, ''), NULLIF(to_jsonb(a)->>'curable_type', ''), NULLIF(to_jsonb(pad)->>'curable_type', '')) as cureble_type,
-          COALESCE(NULLIF(a.cureble_operator_code, ''), NULLIF(pad.cureble_operator_code, ''), NULLIF(to_jsonb(a)->>'curable_executive', ''), NULLIF(to_jsonb(pad)->>'curable_executive', '')) as cureble_operator_code,
-          COALESCE(NULLIF(a.final_card_approval, ''), NULLIF(pad.final_card_approval, ''), NULLIF(a.card_approval_stage, ''), NULLIF(pad.card_approval_stage, ''), NULLIF(a.digital_card_issued, ''), NULLIF(pad.digital_card_issued, '')) as final_card_approval,
+          COALESCE(NULLIF(to_jsonb(a)->>'sales_operator_code', ''), NULLIF(to_jsonb(pad)->>'sales_operator_code', ''), NULLIF(to_jsonb(a)->>'salas_operator_code', ''), NULLIF(to_jsonb(pad)->>'salas_operator_code', '')) as sales_operator_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'sales_operator_code', ''), NULLIF(to_jsonb(pad)->>'sales_operator_code', ''), NULLIF(to_jsonb(a)->>'salas_operator_code', ''), NULLIF(to_jsonb(pad)->>'salas_operator_code', '')) as salas_operator_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'pan_checker_code', ''), NULLIF(to_jsonb(pad)->>'pan_checker_code', '')) as pan_checker_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'remark_operator_code', ''), NULLIF(to_jsonb(pad)->>'remark_operator_code', ''), NULLIF(to_jsonb(a)->>'remark_opretor_code', ''), NULLIF(to_jsonb(pad)->>'remark_opretor_code', '')) as remark_operator_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'remark_operator_code', ''), NULLIF(to_jsonb(pad)->>'remark_operator_code', ''), NULLIF(to_jsonb(a)->>'remark_opretor_code', ''), NULLIF(to_jsonb(pad)->>'remark_opretor_code', '')) as remark_opretor_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'backend_remark', ''), NULLIF(to_jsonb(pad)->>'backend_remark', '')) as backend_remark,
+          COALESCE(NULLIF(to_jsonb(a)->>'cureble_stage', ''), NULLIF(to_jsonb(pad)->>'cureble_stage', ''), NULLIF(to_jsonb(a)->>'queryable_remark', ''), NULLIF(to_jsonb(pad)->>'queryable_remark', ''), NULLIF(to_jsonb(a)->>'curable_stage', ''), NULLIF(to_jsonb(pad)->>'curable_stage', '')) as cureble_stage,
+          COALESCE(NULLIF(to_jsonb(a)->>'primary_code', ''), NULLIF(to_jsonb(pad)->>'primary_code', ''), NULLIF(to_jsonb(a)->>'decline_code', ''), NULLIF(to_jsonb(pad)->>'decline_code', '')) as primary_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'secondary_code', ''), NULLIF(to_jsonb(pad)->>'secondary_code', '')) as secondary_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'cureble_type', ''), NULLIF(to_jsonb(pad)->>'cureble_type', ''), NULLIF(to_jsonb(a)->>'digital_remark', ''), NULLIF(to_jsonb(pad)->>'digital_remark', ''), NULLIF(to_jsonb(a)->>'curable_type', ''), NULLIF(to_jsonb(pad)->>'curable_type', '')) as cureble_type,
+          COALESCE(NULLIF(to_jsonb(a)->>'cureble_operator_code', ''), NULLIF(to_jsonb(pad)->>'cureble_operator_code', ''), NULLIF(to_jsonb(a)->>'curable_executive', ''), NULLIF(to_jsonb(pad)->>'curable_executive', '')) as cureble_operator_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'final_card_approval', ''), NULLIF(to_jsonb(pad)->>'final_card_approval', ''), NULLIF(to_jsonb(a)->>'card_approval_stage', ''), NULLIF(to_jsonb(pad)->>'card_approval_stage', ''), NULLIF(to_jsonb(a)->>'digital_card_issued', ''), NULLIF(to_jsonb(pad)->>'digital_card_issued', '')) as final_card_approval,
           COALESCE(a.commission_amount, 0) as incentive_amount,
-          COALESCE(a.remark_updated, false) as remark_updated,
-          NULLIF(a.remark_updated_by::text, '') as remark_updated_by,
-          NULLIF(a.remark_updated_at::text, '') as remark_updated_at,
-          NULLIF(a.assigned_to_employee_id::text, '') as assigned_to_employee_id,
-          NULLIF(a.assigned_to_user_id::text, '') as assigned_to_user_id,
-          COALESCE(NULLIF(a.assigned_to_name, ''), NULLIF(pad.assigned_to_name, '')) as assigned_to_name,
-          COALESCE(NULLIF(a.assigned_to_code, ''), NULLIF(pad.assigned_to_code, '')) as assigned_to_code,
-          NULLIF(a.assigned_by_user_id::text, '') as assigned_by_user_id,
-          NULLIF(a.assigned_by_employee_id::text, '') as assigned_by_employee_id,
-          COALESCE(NULLIF(a.assigned_by_name, ''), NULLIF(pad.assigned_by_name, '')) as assigned_by_name,
-          COALESCE(NULLIF(a.assigned_by_code, ''), NULLIF(pad.assigned_by_code, '')) as assigned_by_code,
-          NULLIF(COALESCE(a.assigned_at::text, pad.assigned_at::text, ''), '') as assigned_at,
-          COALESCE(NULLIF(a.assignment_notes, ''), NULLIF(pad.assignment_notes, '')) as assignment_notes
+          CASE WHEN LOWER(COALESCE(to_jsonb(a)->>'remark_updated', '')) IN ('true', '1', 'yes') THEN true ELSE false END as remark_updated,
+          NULLIF(to_jsonb(a)->>'remark_updated_by', '') as remark_updated_by,
+          NULLIF(to_jsonb(a)->>'remark_updated_at', '') as remark_updated_at,
+          NULLIF(to_jsonb(a)->>'assigned_to_employee_id', '') as assigned_to_employee_id,
+          NULLIF(to_jsonb(a)->>'assigned_to_user_id', '') as assigned_to_user_id,
+          COALESCE(NULLIF(to_jsonb(a)->>'assigned_to_name', ''), NULLIF(to_jsonb(pad)->>'assigned_to_name', '')) as assigned_to_name,
+          COALESCE(NULLIF(to_jsonb(a)->>'assigned_to_code', ''), NULLIF(to_jsonb(pad)->>'assigned_to_code', '')) as assigned_to_code,
+          NULLIF(to_jsonb(a)->>'assigned_by_user_id', '') as assigned_by_user_id,
+          NULLIF(to_jsonb(a)->>'assigned_by_employee_id', '') as assigned_by_employee_id,
+          COALESCE(NULLIF(to_jsonb(a)->>'assigned_by_name', ''), NULLIF(to_jsonb(pad)->>'assigned_by_name', '')) as assigned_by_name,
+          COALESCE(NULLIF(to_jsonb(a)->>'assigned_by_code', ''), NULLIF(to_jsonb(pad)->>'assigned_by_code', '')) as assigned_by_code,
+          NULLIF(COALESCE(to_jsonb(a)->>'assigned_at', to_jsonb(pad)->>'assigned_at', ''), '') as assigned_at,
+          COALESCE(NULLIF(to_jsonb(a)->>'assignment_notes', ''), NULLIF(to_jsonb(pad)->>'assignment_notes', '')) as assignment_notes
         FROM applications a
         LEFT JOIN physical_application_details pad ON pad.application_id = a.id
         LEFT JOIN leads l ON l.id = a.lead_id
@@ -2356,21 +2471,21 @@ const listApplications = async (req, res, next) => {
         SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, COALESCE(
           NULLIF(to_jsonb(a)->>'assigned_to', ''),
           NULLIF(to_jsonb(pad)->>'assigned_to', ''),
-          NULLIF(a.assigned_to_name, ''),
-          NULLIF(pad.assigned_to_name, '')
-        ) AS assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, p.category::text as category, COALESCE(p.sub_category, a.metadata->>'product_type') as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(a.pan_check, ''), NULLIF(pad.pan_check, ''), 'no') as pan_check, COALESCE(NULLIF(a.bank_current_lead_status, ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(a.requery_date, pad.requery_date), a.requery_date) as requery_date,
+          NULLIF(to_jsonb(a)->>'assigned_to_name', ''),
+          NULLIF(to_jsonb(pad)->>'assigned_to_name', '')
+        ) AS assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, p.category::text as category, COALESCE(p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(a.pan_check, ''), NULLIF(pad.pan_check, ''), NULLIF(to_jsonb(a)->>'pan_check', ''), 'no') as pan_check, COALESCE(NULLIF(a.bank_current_lead_status, ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(a.requery_date, pad.requery_date), a.requery_date) as requery_date,
         COALESCE(NULLIF(a.final_status, ''), NULLIF(pad.final_status, '')) as final_status,
         COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, '')) as decline_reason,
         COALESCE(NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as decline_code,
-        COALESCE(NULLIF(a.decline_description, ''), NULLIF(pad.decline_description, '')) as decline_description,
-        COALESCE(NULLIF(a.curing_designation, ''), NULLIF(pad.curing_designation, '')) as curing_designation,
-        COALESCE(NULLIF(a.primary_decline_code, ''), NULLIF(pad.primary_decline_code, ''), NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as primary_decline_code,
-        COALESCE(NULLIF(a.secondary_decline_code, ''), NULLIF(pad.secondary_decline_code, '')) as secondary_decline_code,
+        COALESCE(NULLIF(to_jsonb(a)->>'decline_description', ''), NULLIF(to_jsonb(pad)->>'decline_description', '')) as decline_description,
+        COALESCE(NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as curing_designation,
+        COALESCE(NULLIF(to_jsonb(a)->>'primary_decline_code', ''), NULLIF(to_jsonb(pad)->>'primary_decline_code', ''), NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as primary_decline_code,
+        COALESCE(NULLIF(to_jsonb(a)->>'secondary_decline_code', ''), NULLIF(to_jsonb(pad)->>'secondary_decline_code', '')) as secondary_decline_code,
         COALESCE(a.sales_claimed_by, pad.sales_claimed_by, '') as sales_claimed_by,
         NULLIF(to_jsonb(a)->>'assigned_to_user_id', '') as assigned_to_user_id,
-        NULLIF(a.assigned_to_employee_id::text, '') as assigned_to_employee_id,
-        NULLIF(a.assigned_by_user_id::text, '') as assigned_by_user_id,
-        NULLIF(a.assigned_by_employee_id::text, '') as assigned_by_employee_id
+        NULLIF(to_jsonb(a)->>'assigned_to_employee_id', '') as assigned_to_employee_id,
+        NULLIF(to_jsonb(a)->>'assigned_by_user_id', '') as assigned_by_user_id,
+        NULLIF(to_jsonb(a)->>'assigned_by_employee_id', '') as assigned_by_employee_id
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
@@ -2433,21 +2548,21 @@ const listApplications = async (req, res, next) => {
         SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, COALESCE(
           NULLIF(to_jsonb(a)->>'assigned_to', ''),
           NULLIF(to_jsonb(pad)->>'assigned_to', ''),
-          NULLIF(a.assigned_to_name, ''),
-          NULLIF(pad.assigned_to_name, '')
-        ) AS assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, p.category::text as category, COALESCE(p.sub_category, a.metadata->>'product_type') as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(a.pan_check, ''), NULLIF(pad.pan_check, ''), 'no') as pan_check, COALESCE(NULLIF(a.bank_current_lead_status, ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(a.requery_date, pad.requery_date), a.requery_date) as requery_date,
+          NULLIF(to_jsonb(a)->>'assigned_to_name', ''),
+          NULLIF(to_jsonb(pad)->>'assigned_to_name', '')
+        ) AS assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, COALESCE(a.bank_id, p.bank_id) as bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.name as product_name, p.category::text as category, COALESCE(p.sub_category, (to_jsonb(a)->'metadata'->>'product_type')) as sub_category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(a.pan_check, ''), NULLIF(pad.pan_check, ''), NULLIF(to_jsonb(a)->>'pan_check', ''), 'no') as pan_check, COALESCE(NULLIF(a.bank_current_lead_status, ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(a.requery_date, pad.requery_date), a.requery_date) as requery_date,
         COALESCE(NULLIF(a.final_status, ''), NULLIF(pad.final_status, '')) as final_status,
         COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, '')) as decline_reason,
         COALESCE(NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as decline_code,
-        COALESCE(NULLIF(a.decline_description, ''), NULLIF(pad.decline_description, '')) as decline_description,
-        COALESCE(NULLIF(a.curing_designation, ''), NULLIF(pad.curing_designation, '')) as curing_designation,
-        COALESCE(NULLIF(a.primary_decline_code, ''), NULLIF(pad.primary_decline_code, ''), NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as primary_decline_code,
-        COALESCE(NULLIF(a.secondary_decline_code, ''), NULLIF(pad.secondary_decline_code, '')) as secondary_decline_code,
+        COALESCE(NULLIF(to_jsonb(a)->>'decline_description', ''), NULLIF(to_jsonb(pad)->>'decline_description', '')) as decline_description,
+        COALESCE(NULLIF(to_jsonb(a)->>'curing_designation', ''), NULLIF(to_jsonb(pad)->>'curing_designation', '')) as curing_designation,
+        COALESCE(NULLIF(to_jsonb(a)->>'primary_decline_code', ''), NULLIF(to_jsonb(pad)->>'primary_decline_code', ''), NULLIF(a.decline_code, ''), NULLIF(pad.decline_code, '')) as primary_decline_code,
+        COALESCE(NULLIF(to_jsonb(a)->>'secondary_decline_code', ''), NULLIF(to_jsonb(pad)->>'secondary_decline_code', '')) as secondary_decline_code,
         COALESCE(a.sales_claimed_by, pad.sales_claimed_by, '') as sales_claimed_by,
         NULLIF(to_jsonb(a)->>'assigned_to_user_id', '') as assigned_to_user_id,
-        NULLIF(a.assigned_to_employee_id::text, '') as assigned_to_employee_id,
-        NULLIF(a.assigned_by_user_id::text, '') as assigned_by_user_id,
-        NULLIF(a.assigned_by_employee_id::text, '') as assigned_by_employee_id
+        NULLIF(to_jsonb(a)->>'assigned_to_employee_id', '') as assigned_to_employee_id,
+        NULLIF(to_jsonb(a)->>'assigned_by_user_id', '') as assigned_by_user_id,
+        NULLIF(to_jsonb(a)->>'assigned_by_employee_id', '') as assigned_by_employee_id
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
@@ -3309,6 +3424,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
 
     if (opId) {
       try {
+        await ensureOperatorHistoryTable();
         await query(`
           INSERT INTO application_operator_history (
             application_id, operator_id, operator_name, operator_role, operator_designation, operator_code, action_type, field_changes, notes, created_at
@@ -3429,6 +3545,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
 
 // POST /applications/partner-apply — Submit or save draft application from Partner Panel
 const submitPartnerApplication = async (req, res, next) => {
+  await ensureBankDirectProcessLinksTable();
   const client = await getClient();
   try {
     await client.query('BEGIN');
@@ -5675,6 +5792,17 @@ const getBankRequirements = async (req, res, next) => {
   try {
     const { bank_id, product_id } = req.query;
 
+    await query(`
+      CREATE TABLE IF NOT EXISTS bank_requirements (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        bank_id UUID REFERENCES banks(id) ON DELETE CASCADE,
+        product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+        fields JSONB NOT NULL DEFAULT '[]'::jsonb,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
     let sql = `
       SELECT br.*, b.name as bank_name, p.name as product_name
       FROM bank_requirements br
@@ -5685,11 +5813,11 @@ const getBankRequirements = async (req, res, next) => {
     const params = [];
     if (bank_id) {
       params.push(bank_id);
-      sql += ` AND br.bank_id = ${params.length}`;
+      sql += ` AND br.bank_id = $${params.length}`;
     }
     if (product_id) {
       params.push(product_id);
-      sql += ` AND br.product_id = ${params.length}`;
+      sql += ` AND br.product_id = $${params.length}`;
     }
 
     const { rows } = await query(sql, params);
@@ -5730,6 +5858,17 @@ const saveBankRequirements = async (req, res, next) => {
     if (!bank_id || !Array.isArray(fields)) {
       return error(res, 'Bank ID and array of fields are required', 400);
     }
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS bank_requirements (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        bank_id UUID REFERENCES banks(id) ON DELETE CASCADE,
+        product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+        fields JSONB NOT NULL DEFAULT '[]'::jsonb,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
 
     const { rows: [reqRow] } = await query(`
       INSERT INTO bank_requirements (bank_id, product_id, fields, updated_at)
@@ -6741,6 +6880,7 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
 
 const getRemarkOperatorDashboard = async (req, res, next) => {
   try {
+    await ensureApplicationStageColumns();
     const userId = req.user.id;
     const { rows: bankRows } = await query(`SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`, [userId]);
     const assignedBankIds = bankRows.map(b => b.bank_id);
@@ -6757,7 +6897,7 @@ const getRemarkOperatorDashboard = async (req, res, next) => {
       FROM applications a
       JOIN products p ON p.id = a.product_id
       WHERE ${bankCondition}
-        AND COALESCE(NULLIF(a.remark_status, ''), 'PENDING') = 'PENDING'
+        AND COALESCE(NULLIF(to_jsonb(a)->>'remark_status', ''), 'PENDING') = 'PENDING'
     `, params);
 
     const { rows: [completedRes] } = await query(`
@@ -6765,9 +6905,9 @@ const getRemarkOperatorDashboard = async (req, res, next) => {
       FROM applications a
       JOIN products p ON p.id = a.product_id
       WHERE ${bankCondition}
-        AND COALESCE(a.remark_status, '') = 'COMPLETED'
-        AND (a.remark_updated_by::text = $1::text OR $1 IS NULL)
-        AND DATE(a.remark_updated_at) = CURRENT_DATE
+        AND COALESCE(to_jsonb(a)->>'remark_status', '') = 'COMPLETED'
+        AND (to_jsonb(a)->>'remark_updated_by' = $1::text OR $1 IS NULL)
+        AND DATE(NULLIF(to_jsonb(a)->>'remark_updated_at', '')::timestamptz) = CURRENT_DATE
     `, [userId]);
 
     return success(res, {
@@ -6780,9 +6920,22 @@ const getRemarkOperatorDashboard = async (req, res, next) => {
   }
 };
 
+let operatorHistoryChecked = false;
+const ensureOperatorHistoryTable = async () => {
+  if (operatorHistoryChecked) return;
+  try {
+    const { migrateOperatorHistory } = require('../../database/migrations/migrate_operator_history');
+    await migrateOperatorHistory();
+    operatorHistoryChecked = true;
+  } catch (err) {
+    logger.warn('Failed ensuring operator history table:', err.message);
+  }
+};
+
 // GET /applications/:id/operator-history — Fetch full operator audit trail
 const getApplicationOperatorHistory = async (req, res, next) => {
   try {
+    await ensureOperatorHistoryTable();
     const { id } = req.params;
     const { rows } = await query(`
       SELECT 
@@ -6811,8 +6964,21 @@ const getApplicationOperatorHistory = async (req, res, next) => {
   }
 };
 
+let salesClaimColumnsEnsured = false;
+const ensureSalesClaimColumns = async () => {
+  if (salesClaimColumnsEnsured) return;
+  try {
+    const { migrateSalesOperatorClaim } = require('../../database/migrations/migrate_sales_operator_claim');
+    await migrateSalesOperatorClaim();
+    salesClaimColumnsEnsured = true;
+  } catch (err) {
+    logger.warn('Defensive ensure sales claim columns note:', err.message);
+  }
+};
+
 // POST /applications/:id/claim-request — Claim application by Administrative Sales Operator
 const claimApplicationRequest = async (req, res, next) => {
+  await ensureSalesClaimColumns();
   const { id } = req.params;
   if (!id || id === 'undefined' || id === 'null' || !String(id).trim()) {
     return error(res, 'A valid Application ID is required', 400);
@@ -7051,6 +7217,7 @@ const claimApplicationRequest = async (req, res, next) => {
 
     // Also record in operator history
     try {
+      await ensureOperatorHistoryTable();
       await client.query(`
         INSERT INTO application_operator_history (
           application_id,
@@ -7199,6 +7366,7 @@ const getAssignableEmployees = async (req, res, next) => {
  * Updates sales_claimed_by and assigned_to fields, logs timeline & operator history.
  */
 const assignApplicationToSalesExecutive = async (req, res, next) => {
+  await ensureSalesClaimColumns();
   const { id } = req.params;
   const targetId = req.body.target_employee_id || req.body.target_user_id || req.body.target_id || req.body.employee_id;
   const notes = (req.body.notes || req.body.remarks || '').trim();
@@ -7507,6 +7675,7 @@ const assignApplicationToSalesExecutive = async (req, res, next) => {
 
     // 8. Add entry in application_operator_history
     try {
+      await ensureOperatorHistoryTable();
       await client.query(`
         INSERT INTO application_operator_history (
           application_id,

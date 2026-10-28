@@ -18,12 +18,11 @@ const logger = require('../../config/logger');
 const migrateEmployeeBonusDepartments = async () => {
   logger.info('Running Employee Bonus & Department Assignment System migrations...');
 
-  const client = await pool.connect();
   try {
-    await client.query('BEGIN');
+    await query('BEGIN');
 
     // 1. Employee Bank / Department Assignments Table
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS employee_bank_assignments (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
@@ -35,11 +34,11 @@ const migrateEmployeeBonusDepartments = async () => {
       )
     `);
 
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_bank_assignments_emp ON employee_bank_assignments(employee_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_bank_assignments_bank ON employee_bank_assignments(bank_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_bank_assignments_emp ON employee_bank_assignments(employee_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_bank_assignments_bank ON employee_bank_assignments(bank_id)`);
 
     // 2. Employee Bonus Rules Table
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS employee_bonus_rules (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
@@ -55,13 +54,13 @@ const migrateEmployeeBonusDepartments = async () => {
       )
     `);
 
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_bonus_rules_emp ON employee_bonus_rules(employee_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_bonus_rules_bank ON employee_bonus_rules(bank_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_bonus_rules_dates ON employee_bonus_rules(start_date, end_date)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_bonus_rules_status ON employee_bonus_rules(status)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_bonus_rules_emp ON employee_bonus_rules(employee_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_bonus_rules_bank ON employee_bonus_rules(bank_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_bonus_rules_dates ON employee_bonus_rules(start_date, end_date)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_bonus_rules_status ON employee_bonus_rules(status)`);
 
     // 3. Employee Bonus Transactions Table (Historical ledger)
-    await client.query(`
+    await query(`
       CREATE TABLE IF NOT EXISTS employee_bonus_transactions (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
@@ -76,12 +75,12 @@ const migrateEmployeeBonusDepartments = async () => {
       )
     `);
 
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_bonus_tx_emp ON employee_bonus_transactions(employee_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_bonus_tx_bank ON employee_bonus_transactions(bank_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_bonus_tx_app ON employee_bonus_transactions(application_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_employee_bonus_tx_rule ON employee_bonus_transactions(bonus_rule_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_bonus_tx_emp ON employee_bonus_transactions(employee_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_bonus_tx_bank ON employee_bonus_transactions(bank_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_bonus_tx_app ON employee_bonus_transactions(application_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_employee_bonus_tx_rule ON employee_bonus_transactions(bonus_rule_id)`);
 
-    await client.query('COMMIT');
+    await query('COMMIT');
     logger.info('Employee Bonus & Department Assignment migrations completed successfully');
 
     return {
@@ -89,11 +88,9 @@ const migrateEmployeeBonusDepartments = async () => {
       message: 'Employee Bonus & Department Assignment System migrations completed successfully'
     };
   } catch (error) {
-    await client.query('ROLLBACK');
+    await query('ROLLBACK');
     logger.error('Employee Bonus & Department Assignment migration failed:', error);
     throw error;
-  } finally {
-    client.release();
   }
 };
 
