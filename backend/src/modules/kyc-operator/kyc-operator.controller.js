@@ -8,9 +8,7 @@ const logger = require('../../config/logger');
 
 // Note: KYC columns are now managed in migrations/migrate.js
 // No runtime DDL needed
-    logger.warn('Failed ensuring KYC and operator history columns:', err.message);
-  }
-};
+const ensureKycColumns = async () => {};
 
 // Helper to format operator code
 const getOperatorCode = (user) => {
