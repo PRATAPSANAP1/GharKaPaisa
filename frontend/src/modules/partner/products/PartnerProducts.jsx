@@ -344,6 +344,11 @@ export default function PartnerProducts({
     });
   };
 
+  const [adobeSupportLinks, setAdobeSupportLinks] = useState({
+    hdfc_tata_neu_adobe_support_link: 'https://applyonline.hdfc.bank.in/cards/credit-cards?CHANNELSOURCE=SWCC&CHANNEL=DSA&DSACode=XSPY&LGcode=PTY01&LCcode=PTY01&LC2=PTY01&SMcode=S54558',
+    tata_cobrand_hdfc_adobe_support_link: 'https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=YOH5&LCcode=YOH5&LC2=A222&SMcode=S54558'
+  });
+
   const fetchProducts = async () => {
     try {
       const res = await api.get('/products', { params: { is_active: 'true', limit: 1000 } });
@@ -357,8 +362,22 @@ export default function PartnerProducts({
     }
   };
 
+  const fetchAdobeSupportSettings = async () => {
+    try {
+      const res = await api.get('/settings');
+      const data = res.data?.data || res.data || {};
+      setAdobeSupportLinks(prev => ({
+        hdfc_tata_neu_adobe_support_link: data.hdfc_tata_neu_adobe_support_link || prev.hdfc_tata_neu_adobe_support_link,
+        tata_cobrand_hdfc_adobe_support_link: data.tata_cobrand_hdfc_adobe_support_link || prev.tata_cobrand_hdfc_adobe_support_link
+      }));
+    } catch (_) {
+      // Fallback to default links if settings fetch fails
+    }
+  };
+
   useEffect(() => {
     fetchProducts();
+    fetchAdobeSupportSettings();
   }, []);
 
   const handleApply = (product) => {
@@ -387,6 +406,15 @@ export default function PartnerProducts({
     String(selectedProduct?.bank_name || selectedProduct?.bank_code || selectedProduct?.name || '').toUpperCase().includes('TATA CO BRAND HDFC') ||
     (String(selectedProduct?.bank_name || selectedProduct?.bank_code || selectedProduct?.name || '').toUpperCase().includes('TATA') &&
      String(selectedProduct?.bank_name || selectedProduct?.bank_code || selectedProduct?.name || '').toUpperCase().includes('HDFC'));
+
+  const selectedProdNameUpper = String(selectedProduct?.name || '').toUpperCase();
+  const isHdfcTataNeuProduct =
+    (selectedProdNameUpper.includes('TATA NEU INFINITY') || selectedProdNameUpper.includes('TATA NEU PLUS')) &&
+    !selectedProdNameUpper.includes('BUSINESS') &&
+    !selectedProdNameUpper.includes('FLOATER');
+  const adobeSupportHref = isHdfcTataNeuProduct
+    ? adobeSupportLinks.hdfc_tata_neu_adobe_support_link
+    : adobeSupportLinks.tata_cobrand_hdfc_adobe_support_link;
 
   const selectedProdCat = String(selectedProduct?.category || '').toLowerCase();
   const isLocEoc = ['loc', 'eoc', 'loc_eoc', 'loan_on_credit_card', 'smart_emi', 'loan_on_card', 'card_on_loan'].includes(selectedProdCat);
@@ -1967,9 +1995,9 @@ export default function PartnerProducts({
                 <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>
                   {isEmployee ? "Incentive: " : "Payout: "}<strong style={{ color: C.green }}>₹{parseFloat(selectedProduct.commission_value || 0).toLocaleString('en-IN')}</strong>
                 </p>
-                {isTataCobrandHdfcProduct && (
+                {(isHdfcTataNeuProduct || isTataCobrandHdfcProduct) && (
                   <a
-                    href="https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=PTN01&LCcode=PTN01&LC2=A089&SMcode=A31964#nbb"
+                    href={adobeSupportHref}
                     target="_blank"
                     rel="noreferrer"
                     style={{

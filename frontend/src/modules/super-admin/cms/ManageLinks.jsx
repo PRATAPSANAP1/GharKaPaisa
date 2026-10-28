@@ -54,7 +54,9 @@ export default function ManageLinks() {
   const [settings, setSettings] = useState({
     sbi_cc_digital_journey_link: 'https://www.sbicard.com/sprint/',
     hdfc_fd_wes_cc_link: 'https://applyonline.hdfcbank.com/credit-cards.html',
-    digital_journey_link: 'https://www.sbicard.com/sprint/'
+    digital_journey_link: 'https://www.sbicard.com/sprint/',
+    hdfc_tata_neu_adobe_support_link: 'https://applyonline.hdfc.bank.in/cards/credit-cards?CHANNELSOURCE=SWCC&CHANNEL=DSA&DSACode=XSPY&LGcode=PTY01&LCcode=PTY01&LC2=PTY01&SMcode=S54558',
+    tata_cobrand_hdfc_adobe_support_link: 'https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=YOH5&LCcode=YOH5&LC2=A222&SMcode=S54558'
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -90,7 +92,9 @@ export default function ManageLinks() {
         ...prev,
         sbi_cc_digital_journey_link: data.sbi_cc_digital_journey_link || data.digital_journey_link || prev.sbi_cc_digital_journey_link,
         hdfc_fd_wes_cc_link: data.hdfc_fd_wes_cc_link || prev.hdfc_fd_wes_cc_link,
-        digital_journey_link: data.digital_journey_link || prev.digital_journey_link
+        digital_journey_link: data.digital_journey_link || prev.digital_journey_link,
+        hdfc_tata_neu_adobe_support_link: data.hdfc_tata_neu_adobe_support_link || prev.hdfc_tata_neu_adobe_support_link,
+        tata_cobrand_hdfc_adobe_support_link: data.tata_cobrand_hdfc_adobe_support_link || prev.tata_cobrand_hdfc_adobe_support_link
       }));
     } catch (err) {
       console.error('Failed to fetch settings:', err);
@@ -283,6 +287,18 @@ export default function ManageLinks() {
       title: '2. HDFC FD-WES CC Link',
       description: 'External destination URL opened when users click the "HDFC FD-WES CC" quick-action card on the Home Page.',
       placeholder: 'https://applyonline.hdfcbank.com/credit-cards.html'
+    },
+    {
+      key: 'hdfc_tata_neu_adobe_support_link',
+      title: '3. HDFC Bank (Tata Neu Infinity & Tata Neu Plus) — Adobe Support Link',
+      description: 'Destination URL opened when clicking the "📄 Adobe Support" button in the Apply form for Tata Neu Infinity HDFC Bank Credit Card and Tata Neu Plus HDFC Bank Credit Card.',
+      placeholder: 'https://applyonline.hdfc.bank.in/cards/credit-cards?CHANNELSOURCE=SWCC&CHANNEL=DSA&DSACode=XSPY&LGcode=PTY01&LCcode=PTY01&LC2=PTY01&SMcode=S54558'
+    },
+    {
+      key: 'tata_cobrand_hdfc_adobe_support_link',
+      title: '4. Tata Co-Brand HDFC Bank — Adobe Support Link',
+      description: 'Destination URL opened when clicking the "📄 Adobe Support" button in the Apply form for Tata Co-Brand HDFC Bank products.',
+      placeholder: 'https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=YOH5&LCcode=YOH5&LC2=A222&SMcode=S54558'
     }
   ];
 
@@ -400,9 +416,6 @@ export default function ManageLinks() {
                   <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: C.text }}>
                     {selectedBankHasExistingLink ? 'Update Bank Direct Process Link' : 'Assign Bank Direct Process Link'}
                   </h2>
-                  <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: C.textMute }}>
-                    Assigned link applies automatically to Direct Process for the selected bank&apos;s products.
-                  </p>
                 </div>
               </div>
               <button
@@ -629,9 +642,6 @@ export default function ManageLinks() {
                     </a>
                   )}
                 </div>
-                <p style={{ margin: '6px 0 0', fontSize: '12px', color: C.textMute }}>
-                  Enter a valid <code>http://</code> or <code>https://</code> application URL. When a user selects Direct Process on any product belonging to this bank, this URL will be used.
-                </p>
               </div>
 
               {/* Action Buttons */}

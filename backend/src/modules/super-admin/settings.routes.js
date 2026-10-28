@@ -6,6 +6,11 @@ const roleCheck = require('../../middleware/authorization/role.middleware.js');
 const { success, error } = require('../../utils/response/response');
 const { logAction } = require('../admin/audit.service.js');
 
+const DEFAULT_PUBLIC_SETTINGS = {
+  hdfc_tata_neu_adobe_support_link: 'https://applyonline.hdfc.bank.in/cards/credit-cards?CHANNELSOURCE=SWCC&CHANNEL=DSA&DSACode=XSPY&LGcode=PTY01&LCcode=PTY01&LC2=PTY01&SMcode=S54558',
+  tata_cobrand_hdfc_adobe_support_link: 'https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=YOH5&LCcode=YOH5&LC2=A222&SMcode=S54558'
+};
+
 const PUBLIC_ALLOWLIST = new Set([
   'company_name',
   'company_phone',
@@ -20,7 +25,9 @@ const PUBLIC_ALLOWLIST = new Set([
   'maintenance_mode',
   'digital_journey_link',
   'sbi_cc_digital_journey_link',
-  'hdfc_fd_wes_cc_link'
+  'hdfc_fd_wes_cc_link',
+  'hdfc_tata_neu_adobe_support_link',
+  'tata_cobrand_hdfc_adobe_support_link'
 ]);
 
 // Public or global check to fetch settings (Filtered for public consumption)
@@ -37,7 +44,7 @@ router.get('/', async (req, res, next) => {
         acc[curr.key] = curr.value;
       }
       return acc;
-    }, {});
+    }, { ...DEFAULT_PUBLIC_SETTINGS });
 
     return success(res, settings);
   } catch (err) {

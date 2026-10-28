@@ -1272,14 +1272,18 @@ const migrate = async () => {
   await query(`
     CREATE TABLE IF NOT EXISTS system_settings (
       key VARCHAR(100) PRIMARY KEY,
-      value VARCHAR(255) NOT NULL
+      value TEXT NOT NULL
     )
   `);
+  await query(`ALTER TABLE system_settings ALTER COLUMN value TYPE TEXT`);
 
   // Seed default system setting if not exists
   await query(`
     INSERT INTO system_settings (key, value)
-    VALUES ('admin_privacy_mode', 'off')
+    VALUES
+      ('admin_privacy_mode', 'off'),
+      ('hdfc_tata_neu_adobe_support_link', 'https://applyonline.hdfc.bank.in/cards/credit-cards?CHANNELSOURCE=SWCC&CHANNEL=DSA&DSACode=XSPY&LGcode=PTY01&LCcode=PTY01&LC2=PTY01&SMcode=S54558'),
+      ('tata_cobrand_hdfc_adobe_support_link', 'https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=YOH5&LCcode=YOH5&LC2=A222&SMcode=S54558')
     ON CONFLICT (key) DO NOTHING
   `);
 
