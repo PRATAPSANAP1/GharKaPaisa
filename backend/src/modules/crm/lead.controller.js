@@ -795,6 +795,28 @@ const createLead = async (req, res, next) => {
       }, 'Lead Punching application logged successfully.');
     } catch (txErr) {
       await client.query('ROLLBACK');
+      if (txErr.code === '23505' || txErr.message?.includes('idx_active_lead_product_mobile') || txErr.message?.includes('duplicate key')) {
+        const constraint = String(txErr.constraint || txErr.message || '').toLowerCase();
+        if (constraint.includes('idx_active_lead_product_mobile') || constraint.includes('leads') || constraint.includes('lead')) {
+          return res.status(409).json({
+            success: false,
+            code: 'DUPLICATE_LEAD',
+            message: 'An active lead already exists for this mobile number and product.'
+          });
+        }
+        if (constraint.includes('app') || constraint.includes('application')) {
+          return res.status(409).json({
+            success: false,
+            code: 'DUPLICATE_APPLICATION',
+            message: 'An active application already exists for this mobile number and product.'
+          });
+        }
+        return res.status(409).json({
+          success: false,
+          code: 'DUPLICATE_ENTRY',
+          message: 'An active record already exists for this mobile number and product.'
+        });
+      }
       throw txErr;
     } finally {
       client.release();
@@ -1039,6 +1061,17 @@ const verifyLeadOtp = async (req, res, next) => {
     }, 'Lead verified successfully and converted to application.');
   } catch (err) {
     await client.query('ROLLBACK');
+    if (err.code === '23505') {
+      const { rows: [existingApp] } = await query(`SELECT * FROM applications WHERE lead_id = $1`, [id]).catch(() => ({ rows: [] }));
+      if (existingApp) {
+        return success(res, existingApp, 'Lead was already converted to application.');
+      }
+      return res.status(409).json({
+        success: false,
+        code: 'DUPLICATE_APPLICATION',
+        message: 'An application already exists for this lead or customer.'
+      });
+    }
     next(err);
   } finally {
     client.release();

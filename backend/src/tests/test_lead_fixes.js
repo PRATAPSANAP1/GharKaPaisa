@@ -215,6 +215,66 @@ async function runAsyncTest(name, fn) {
     assert.strictEqual(jsonBody.message, 'Only administrators can update lead status');
   });
 
+  // Runtime mock test: createLead handles unique constraint idx_active_lead_product_mobile with 409
+  runTest('Controller Unit: createLead converts unique constraint violation 23505 to 409 DUPLICATE_LEAD', async () => {
+    const { createLead } = require('../modules/crm/lead.controller.js');
+    let statusCode = 0;
+    let jsonBody = null;
+    const req = {
+      body: {
+        product_id: '11111111-2222-3333-4444-555555555555',
+        customer_name: 'Test Customer',
+        mobile: '9876543210'
+      },
+      user: { role: 'SUPER_ADMIN', id: '00000000-1111-2222-3333-444444444444' }
+    };
+    const res = {
+      status(code) { statusCode = code; return this; },
+      json(body) { jsonBody = body; return this; }
+    };
+
+    const db = require('../config/database');
+    const origQuery = db.query;
+    const origGetClient = db.getClient;
+    try {
+      db.query = async (text) => {
+        if (text.includes('FROM products')) {
+          return { rows: [{ id: req.body.product_id, is_active: true, name: 'Card', bank_id: 'bank-1' }] };
+        }
+        if (text.includes('FROM applications') || text.includes('FROM leads')) {
+          return { rows: [] }; // Passes duplicate pre-check
+        }
+        return { rows: [] };
+      };
+
+      db.getClient = async () => ({
+        query: async (text) => {
+          if (text === 'BEGIN') return {};
+          if (text === 'ROLLBACK') return {};
+          if (text.includes('INSERT INTO customers')) {
+            return { rows: [{ id: 'cust-1' }] };
+          }
+          if (text.includes('INSERT INTO leads')) {
+            const err = new Error('duplicate key value violates unique constraint "idx_active_lead_product_mobile"');
+            err.code = '23505';
+            err.constraint = 'idx_active_lead_product_mobile';
+            throw err;
+          }
+          return { rows: [] };
+        },
+        release: () => {}
+      });
+
+      await createLead(req, res, (err) => { if (err) throw err; });
+      assert.strictEqual(statusCode, 409, 'Expected status code 409 on duplicate key error');
+      assert.strictEqual(jsonBody.code, 'DUPLICATE_LEAD', 'Expected code DUPLICATE_LEAD');
+      assert.strictEqual(jsonBody.message, 'An active lead already exists for this mobile number and product.');
+    } finally {
+      db.query = origQuery;
+      db.getClient = origGetClient;
+    }
+  });
+
   console.log(bold('\n======================================================'));
   console.log(`Summary: ${passed} passed, ${failed} failed`);
   console.log(bold('======================================================\n'));
@@ -224,3 +284,4 @@ async function runAsyncTest(name, fn) {
   }
   process.exit(0);
 })();
+
