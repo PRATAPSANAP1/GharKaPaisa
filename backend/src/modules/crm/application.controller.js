@@ -15,6 +15,13 @@ const { resolveDirectProcessLinkForProductRow } = require('../super-admin/bankDi
 const { sendEmail, sendLeadApplicationCreatedEmail } = require('../../services/email/email.service');
 const { getHdfcCuringDesignation, getHdfcDeclineCodeInfo, HDFC_DECLINE_CODES, CURING_DESIGNATIONS } = require('../../constants/hdfcDeclineCodes');
 const cache = require('../../services/cache.service');
+const {
+  DEFAULT_APPLICATIONS_CACHE_TTL,
+  buildApplicationListCacheKey,
+  getCachedApplicationList,
+  setCachedApplicationList,
+  invalidateApplicationsCache
+} = require('../../services/applicationCache.service');
 
 // Helper to determine strictly if an application belongs to HDFC Bank Credit Card (and not LOC/EOC)
 const isHdfcCreditCardApp = (app, pRow) => {
@@ -286,6 +293,7 @@ const submitApplication = async (req, res, next) => {
     // Referral clicks update omitted
 
     await client.query('COMMIT');
+    await invalidateApplicationsCache({ action: 'submit_application', appId: app.id });
 
     try {
       const { recalculateTeamMetrics } = require('../partner/partner.controller.js');
@@ -478,6 +486,7 @@ const submitPublicApplication = async (req, res, next) => {
     await logTimeline(client, app.id, 'submitted', 'Customer Submitted Form', 'Verified lead details saved.', sysUserId);
 
     await client.query('COMMIT');
+    await invalidateApplicationsCache({ action: 'submit_public_application', appId: app.id });
 
     if (partnerId) {
       try {
@@ -1001,6 +1010,7 @@ const updateStatus = async (req, res, next) => {
     // Click status updates omitted
 
     await client.query('COMMIT');
+    await invalidateApplicationsCache({ action: 'update_status', appId: id });
 
     // Notifications
     const { rows: [partner] } = await query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [app.partner_id]);
@@ -1542,6 +1552,7 @@ const reassignApplication = async (req, res, next) => {
     await logAction(req, 'REASSIGN_APPLICATION', targetAppId, { target_partner: partner.id });
 
     await client.query('COMMIT');
+    await invalidateApplicationsCache({ action: 'reassign_application', appId: targetAppId });
     return success(res, {}, 'Application successfully reassigned.');
   } catch (err) {
     await client.query('ROLLBACK');
@@ -1699,7 +1710,9 @@ const listApplications = async (req, res, next) => {
     const isExportRequest = req.query.export === 'true' || parseInt(req.query.limit) > 1000;
     // Bounded pagination: normal interactive requests capped at 200; export requests capped at safe 10,000 ceiling
     const maxLimitAllowed = isExportRequest ? 10000 : 200;
-    limit = Math.min(Math.max(parseInt(limit) || 10, 1), maxLimitAllowed);
+    const defaultPageSize = 25;
+    const requestedLimit = req.query.limit !== undefined ? parseInt(req.query.limit) : defaultPageSize;
+    limit = Math.min(Math.max(isNaN(requestedLimit) ? defaultPageSize : requestedLimit, 1), maxLimitAllowed);
     offset = (Math.max(parseInt(page) || 1, 1) - 1) * limit;
 
     const { status, partner_id, partner_id: q_partner_id, product_id, search, bank_id, process_by, operation_head_id, operation_head, member_id, category, from_date, to_date, start_date, end_date, period } = req.query;
@@ -1834,6 +1847,40 @@ const listApplications = async (req, res, next) => {
     const queryParams = [...baseQueryParams, limit, offset];
     // Count and status count queries use base parameter array ($1 - $14):
     const countQueryParams = [...baseQueryParams];
+
+    // Check cached response for interactive application requests
+    const cacheKey = buildApplicationListCacheKey(req, {
+      page,
+      limit,
+      status: validStatus,
+      partner_id: validPartnerId,
+      product_id: validProductId,
+      search,
+      bank_id: validBankId,
+      process_by: validProcessBy,
+      operation_head_id: validOpHeadId,
+      member_id: validMemberId,
+      category: validCategory,
+      commission_status: validCommissionStatus,
+      from_date: validFromDate,
+      to_date: validToDate,
+      scope: validScope
+    });
+
+    if (!isExportRequest) {
+      const cachedData = await getCachedApplicationList(cacheKey);
+      if (cachedData) {
+        const hitDurationMs = Date.now() - startMs;
+        res.setHeader('X-Cache', 'HIT');
+        res.setHeader('X-Response-Time', `${hitDurationMs}ms`);
+        logger.debug('[AppCache] Served GET /applications from cache', {
+          userId: req.user?.id,
+          role: userRole,
+          durationMs: hitDurationMs
+        });
+        return res.status(200).json(cachedData);
+      }
+    }
 
     // Note: ensureAssignmentsTableExists() removed from request path (handled in migrations)
     const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR', 'PHYSICAL CURABLE', 'PHYSICAL_CURABLE', 'DIGITAL CURABLE', 'DIGITAL_CURABLE', 'EMAIL CURABLE', 'EMAIL_CURABLE', 'PHYSICAL CURABLE OPERATOR', 'PHYSICAL_CURABLE_OPERATOR', 'DIGITAL CURABLE OPERATOR', 'DIGITAL_CURABLE_OPERATOR', 'EMAIL CURABLE OPERATOR', 'EMAIL_CURABLE_OPERATOR'].includes(userDesignation) || ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR', 'QUERABLE OPERATOR', 'QUERABLE_OPERATOR', 'QUERYABLE OPERATOR', 'QUERYABLE_OPERATOR', 'PHYSICAL CURABLE', 'PHYSICAL_CURABLE', 'DIGITAL CURABLE', 'DIGITAL_CURABLE', 'EMAIL CURABLE', 'EMAIL_CURABLE', 'PHYSICAL CURABLE OPERATOR', 'PHYSICAL_CURABLE_OPERATOR', 'DIGITAL CURABLE OPERATOR', 'DIGITAL_CURABLE_OPERATOR', 'EMAIL CURABLE OPERATOR', 'EMAIL_CURABLE_OPERATOR'].includes(userRole);
@@ -2441,7 +2488,7 @@ const listApplications = async (req, res, next) => {
         ${finalStatusOperatorFilterSQL}
         ${querableOperatorFilterSQL}
         ${curableOperatorFilterSQL}
-      ORDER BY combined.created_at DESC
+      ORDER BY combined.created_at DESC, combined.id DESC
       LIMIT $15::int OFFSET $16::int
     `;
 
@@ -2710,7 +2757,7 @@ const listApplications = async (req, res, next) => {
       (statusCountsObj.rejected || 0) +
       (statusCountsObj.cancelled || 0);
 
-    return res.status(200).json({
+    const responsePayload = {
       success: true,
       message: 'Success',
       data: rows,
@@ -2726,7 +2773,18 @@ const listApplications = async (req, res, next) => {
       },
       status_counts: statusCountsObj,
       timestamp: new Date().toISOString(),
-    });
+    };
+
+    if (!isExportRequest) {
+      await setCachedApplicationList(cacheKey, responsePayload, DEFAULT_APPLICATIONS_CACHE_TTL).catch(cacheErr => {
+        logger.warn('[AppCache] Failed to store application list in cache:', cacheErr.message);
+      });
+    }
+
+    const missDurationMs = Date.now() - startMs;
+    res.setHeader('X-Cache', 'MISS');
+    res.setHeader('X-Response-Time', `${missDurationMs}ms`);
+    return res.status(200).json(responsePayload);
   } catch (err) {
     const totalMs = Date.now() - startMs;
     logger.error('[Diagnostics] Applications List Failed', {
@@ -4119,6 +4177,7 @@ const bulkUpdateStatus = async (req, res, next) => {
     }
 
     await client.query('COMMIT');
+    await invalidateApplicationsCache({ action: 'bulk_update_status', count: ids.length });
     await logAction(req, 'BULK_UPDATE_APPLICATION_STATUS', null, { ids, status: normalizedStatus });
 
     return success(res, { updated: updatedApps.length, status: normalizedStatus }, `${updatedApps.length} applications updated to ${normalizedStatus}`);
@@ -5646,6 +5705,7 @@ const updateApplicationDetails = async (req, res, next) => {
     }
 
     await client.query('COMMIT');
+    await invalidateApplicationsCache({ action: 'update_application_details', appId: updatedApp?.id || app?.id });
     return success(res, updatedApp, 'Application details updated successfully');
   } catch (err) {
     await client.query('ROLLBACK');
@@ -6052,6 +6112,7 @@ const deleteApplication = async (req, res, next) => {
     await logAction(req, isLeadOnly ? 'DELETE_LEAD' : 'DELETE_APPLICATION', id, { app_number: app.app_number, customer_id: targetCustomerId }, null, null, client);
 
     await client.query('COMMIT');
+    await invalidateApplicationsCache({ action: 'delete_application', appId: id });
     return success(res, {}, 'Application, lead, and customer details deleted successfully from database');
   } catch (err) {
     await client.query('ROLLBACK');
@@ -6894,6 +6955,7 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
     });
 
     await client.query('COMMIT');
+    await invalidateApplicationsCache({ action: 'update_remark_operator', appId: app.id });
     return success(res, { application_id: app.id, remark_status: 'COMPLETED' }, 'Remark updated successfully. Application marked as completed in queue.');
   } catch (err) {
     await client.query('ROLLBACK');
@@ -7278,6 +7340,7 @@ const claimApplicationRequest = async (req, res, next) => {
     }).catch(() => {});
 
     await client.query('COMMIT');
+    await invalidateApplicationsCache({ action: 'claim_application_request', appId: app.id });
 
     return success(res, {
       application_id: app.id,
@@ -7744,6 +7807,7 @@ const assignApplicationToSalesExecutive = async (req, res, next) => {
     }).catch(() => {});
 
     await client.query('COMMIT');
+    await invalidateApplicationsCache({ action: 'assign_sales_executive', appId: app.id });
 
     // 10. Notify target user if targetUserId exists
     if (targetUserId) {
@@ -7978,6 +8042,7 @@ const assignApplicationToEmployee = async (req, res, next) => {
     }).catch(() => {});
 
     await client.query('COMMIT');
+    await invalidateApplicationsCache({ action: 'assign_employee', appId: app.id });
 
     // 9. Send notification to target employee user if user_id exists
     if (targetEmp.user_id) {
