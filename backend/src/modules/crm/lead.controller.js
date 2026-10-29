@@ -269,7 +269,17 @@ function getBankApplyLinkBackend(productName, bankName, productObj = null) {
 
   // If URL is missing, check canonical UTM links for Finance NBFC partners or Tata Adobe floater
   if (!cleanUrl) {
-    if (nameStr.includes('floater') || (nameStr.includes('adobe') && (bankStr.includes('tata') || bankStr.includes('hdfc')))) {
+    const nameUpper = nameStr.toUpperCase();
+    const prodBankId = String(productObj?.bank_id || product?.bank_id || '').trim();
+    const isTargetTataNeu =
+      (nameUpper.includes('TATA NEU INFINITY') || nameUpper.includes('TATA NEU PLUS')) &&
+      !nameUpper.includes('BUSINESS') &&
+      !nameUpper.includes('FLOATER') &&
+      (!prodBankId || prodBankId === '1eacfa67-1187-48c7-adde-8a6edcfe9969' || bankStr.includes('tata') || bankStr.includes('hdfc'));
+
+    if (isTargetTataNeu) {
+      cleanUrl = 'https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=YOH5&LCcode=YOH5&LC2=A222&SMcode=S54558';
+    } else if (nameStr.includes('floater') || (nameStr.includes('adobe') && (bankStr.includes('tata') || bankStr.includes('hdfc')))) {
       cleanUrl = 'https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=PTN01&LCcode=PTN01&LC2=A089&SMcode=A31964#nbb';
     } else if (nameStr.includes('tata') || bankStr.includes('tata')) {
       cleanUrl = FINANCE_PRODUCT_LINKS_BACKEND.tata;

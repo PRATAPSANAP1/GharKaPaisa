@@ -55,7 +55,7 @@ export default function ManageLinks() {
     sbi_cc_digital_journey_link: 'https://www.sbicard.com/sprint/',
     hdfc_fd_wes_cc_link: 'https://applyonline.hdfcbank.com/credit-cards.html',
     digital_journey_link: 'https://www.sbicard.com/sprint/',
-    hdfc_tata_neu_adobe_support_link: 'https://applyonline.hdfc.bank.in/cards/credit-cards?CHANNELSOURCE=SWCC&CHANNEL=DSA&DSACode=XSPY&LGcode=PTY01&LCcode=PTY01&LC2=PTY01&SMcode=S54558',
+    hdfc_tata_neu_adobe_support_link: 'https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=YOH5&LCcode=YOH5&LC2=A222&SMcode=S54558',
     tata_cobrand_hdfc_adobe_support_link: 'https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=YOH5&LCcode=YOH5&LC2=A222&SMcode=S54558'
   });
   const [loading, setLoading] = useState(true);
@@ -292,7 +292,7 @@ export default function ManageLinks() {
       key: 'hdfc_tata_neu_adobe_support_link',
       title: '3. HDFC Bank (Tata Neu Infinity & Tata Neu Plus) — Adobe Support Link',
       description: 'Destination URL opened when clicking the "📄 Adobe Support" button in the Apply form for Tata Neu Infinity HDFC Bank Credit Card and Tata Neu Plus HDFC Bank Credit Card.',
-      placeholder: 'https://applyonline.hdfc.bank.in/cards/credit-cards?CHANNELSOURCE=SWCC&CHANNEL=DSA&DSACode=XSPY&LGcode=PTY01&LCcode=PTY01&LC2=PTY01&SMcode=S54558'
+      placeholder: 'https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=YOH5&LCcode=YOH5&LC2=A222&SMcode=S54558'
     },
     {
       key: 'tata_cobrand_hdfc_adobe_support_link',

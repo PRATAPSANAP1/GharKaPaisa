@@ -81,12 +81,40 @@ export const getBankApplyLink = (cardName, bankId, productObj = null) => {
   return null;
 };
 
+const TATA_BANK_ID = '1eacfa67-1187-48c7-adde-8a6edcfe9969';
+const TATA_NEU_DIRECT_FALLBACK_LINK = 'https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=YOH5&LCcode=YOH5&LC2=A222&SMcode=S54558';
+
+/**
+ * Checks whether a product is a Tata Neu Plus or Tata Neu Infinity card
+ * under TATA CO-BRAND HDFC BANK (excluding Business and Floater variants).
+ */
+export const isTataNeuPlusOrInfinity = (product) => {
+  if (!product) return false;
+  const nameUpper = String(
+    product?.name || product?.cardName || (typeof product === 'string' ? product : '')
+  ).toUpperCase();
+  const matchesName =
+    (nameUpper.includes('TATA NEU INFINITY') || nameUpper.includes('TATA NEU PLUS')) &&
+    !nameUpper.includes('BUSINESS') &&
+    !nameUpper.includes('FLOATER');
+  if (!matchesName) return false;
+
+  const bankId = String(product?.bank_id || '').trim();
+  if (bankId) {
+    if (bankId === TATA_BANK_ID) return true;
+    const bankUpper = String(product?.bank_name || product?.bank_code || bankId).toUpperCase();
+    return bankUpper.includes('TATA') || bankUpper.includes('HDFC');
+  }
+  return true;
+};
+
 /**
  * Resolves the Direct Process link for a product when the user chooses Direct Process (direct_bank).
  * Precedence:
  * 1. Configured bank-specific Direct Process link (bank_direct_process_link) for the product's bank.
  * 2. Existing product-level or Direct Process fallback (getBankApplyLink).
- * 3. null if no valid link exists anywhere.
+ * 3. Last-resort default for Tata Neu Plus / Tata Neu Infinity.
+ * 4. null if no valid link exists anywhere.
  */
 export const getDirectProcessLink = (productObj, cardName = '', bankId = '') => {
   const product = productObj || (typeof cardName === 'object' ? cardName : null);
@@ -110,6 +138,11 @@ export const getDirectProcessLink = (productObj, cardName = '', bankId = '') => 
 
   if (fallbackLink && isSafeHttpUrl(fallbackLink)) {
     return String(fallbackLink).trim();
+  }
+
+  const candidateProduct = product || { name: cardName, bank_id: bankId };
+  if (isTataNeuPlusOrInfinity(candidateProduct)) {
+    return TATA_NEU_DIRECT_FALLBACK_LINK;
   }
 
   return null;
