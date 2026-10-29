@@ -323,12 +323,14 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
   const handleExportDownload = async () => {
     setExporting(true);
     try {
-      let filtered = [];
+      let isTruncated = false;
+      let totalAvailable = 0;
 
       try {
         const queryParams = {
           page: 1,
-          limit: 50000,
+          limit: 10000,
+          export: 'true'
         };
 
         if (period !== 'all') {
@@ -350,6 +352,8 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
         const res = await api.get('/applications', { params: queryParams });
         if (res.data?.success && Array.isArray(res.data?.data)) {
           filtered = res.data.data;
+          totalAvailable = res.data?.pagination?.total_matching || res.data?.pagination?.total || 0;
+          isTruncated = Boolean(res.data?.pagination?.is_truncated || (totalAvailable > filtered.length));
         } else if (Array.isArray(res.data)) {
           filtered = res.data;
         } else {
@@ -706,6 +710,12 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
       document.body.removeChild(link);
       setTimeout(() => URL.revokeObjectURL(url), 100);
 
+      if (isTruncated) {
+        setTimeout(() => {
+          alert(`⚠️ Export Limit Notice:\n\nShowing the most recent ${filtered.length.toLocaleString('en-IN')} records out of ${totalAvailable.toLocaleString('en-IN')} matching applications.\n\nTo export all records, please select a narrower date range or filter.`);
+        }, 150);
+      }
+
       onClose();
     } catch (err) {
       console.error(err);
@@ -896,6 +906,11 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
                       : 'Download CSV Report'
               }
             </button>
+          </div>
+
+          {/* Export Limit Safety Notice */}
+          <div style={{ textAlign: 'center', marginTop: '6px', fontSize: '11px', color: C.textLight, lineHeight: '1.4' }}>
+            <span>ℹ️ Exports are safely capped at 10,000 records per file. Narrow the date range if your dataset exceeds 10,000 applications.</span>
           </div>
         </div>
       </div>

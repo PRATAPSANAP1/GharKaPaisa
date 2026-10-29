@@ -4,25 +4,26 @@ const { query, pool } = require('../../config/database');
 
 async function runCleanup() {
   console.log('Running Employee Incentive Lifecycle Cleanup SQL Migration...');
+  const client = await pool.connect();
   try {
-    await query('BEGIN');
+    await client.query('BEGIN');
 
     // 1) Standardize statuses to PENDING, HOLD, RELEASE
-    const relRes = await query(`
+    const relRes = await client.query(`
       UPDATE employee_incentive_transactions
       SET status = 'RELEASE'
       WHERE status IN ('RELEASED', 'PAID', 'COMPLETED')
     `);
     console.log(`Updated ${relRes.rowCount} records to status 'RELEASE'`);
 
-    const holdRes = await query(`
+    const holdRes = await client.query(`
       UPDATE employee_incentive_transactions
       SET status = 'HOLD'
       WHERE status IN ('ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING')
     `);
     console.log(`Updated ${holdRes.rowCount} records to status 'HOLD'`);
 
-    const pendRes = await query(`
+    const pendRes = await client.query(`
       UPDATE employee_incentive_transactions
       SET status = 'PENDING'
       WHERE status NOT IN ('RELEASE', 'HOLD')
@@ -30,7 +31,7 @@ async function runCleanup() {
     console.log(`Updated ${pendRes.rowCount} remaining records to status 'PENDING'`);
 
     // 2) Delete orphaned incentives attached to non-approved applications
-    const delRes = await query(`
+    const delRes = await client.query(`
       DELETE FROM employee_incentive_transactions it
       USING applications a
       WHERE it.application_id = a.id
@@ -38,12 +39,17 @@ async function runCleanup() {
     `);
     console.log(`Deleted ${delRes.rowCount} orphaned/invalid incentive records linked to non-approved applications`);
 
-    await query('COMMIT');
+    await client.query('COMMIT');
     console.log('Employee Incentive Lifecycle Cleanup SQL Migration completed successfully!');
   } catch (err) {
-    await query('ROLLBACK');
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackErr) {
+      console.error('Cleanup migration rollback failed:', rollbackErr);
+    }
     console.error('Cleanup migration failed:', err);
   } finally {
+    client.release();
     await pool.end();
   }
 }

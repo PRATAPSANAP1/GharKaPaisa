@@ -413,11 +413,12 @@ export default function FaceVerificationModal({
             <div style={{
               position: 'relative',
               width: '100%',
-              height: 'clamp(220px, 38vh, 320px)',
-              borderRadius: '16px',
+              maxWidth: '100%',
+              aspectRatio: '4/3',
+              borderRadius: '12px',
               overflow: 'hidden',
               background: '#0F172A',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -439,8 +440,9 @@ export default function FaceVerificationModal({
               {/* Oval Face Positioning Guide */}
               <div style={{
                 position: 'absolute',
-                width: '180px',
-                height: '240px',
+                width: '50%',
+                maxWidth: '180px',
+                aspectRatio: '3/4',
                 borderRadius: '50%',
                 border: '2.5px dashed rgba(255, 255, 255, 0.85)',
                 boxShadow: '0 0 0 9999px rgba(15, 23, 42, 0.45)',
@@ -451,12 +453,15 @@ export default function FaceVerificationModal({
               <div style={{
                 position: 'absolute',
                 bottom: '12px',
+                left: '50%',
+                transform: 'translateX(-50%)',
                 background: 'rgba(15, 23, 42, 0.75)',
                 color: '#FFFFFF',
-                fontSize: '12.5px',
+                fontSize: '12px',
                 fontWeight: 600,
                 padding: '4px 12px',
-                borderRadius: '14px'
+                borderRadius: '12px',
+                whiteSpace: 'nowrap'
               }}>
                 Position your face inside the frame
               </div>
@@ -537,11 +542,12 @@ export default function FaceVerificationModal({
             <div style={{
               position: 'relative',
               width: '100%',
-              height: 'clamp(200px, 35vh, 280px)',
-              borderRadius: '16px',
+              maxWidth: '100%',
+              aspectRatio: '4/3',
+              borderRadius: '12px',
               overflow: 'hidden',
               background: '#0F172A',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

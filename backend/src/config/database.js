@@ -24,7 +24,8 @@ const poolOptions = process.env.DATABASE_URL
     };
 
 // Enhanced Connection Pool Settings for High Availability and Connection Resiliency
-poolOptions.max = Math.max(parseInt(process.env.DB_POOL_MAX) || 40, 30);
+const configuredPoolMax = parseInt(process.env.DB_POOL_MAX);
+poolOptions.max = (!isNaN(configuredPoolMax) && configuredPoolMax > 0) ? configuredPoolMax : 30;
 poolOptions.min = (process.env.NODE_ENV === 'test' || process.env.SKIP_DB === 'true') ? 0 : (parseInt(process.env.DB_POOL_MIN) || 2);
 poolOptions.idleTimeoutMillis = parseInt(process.env.DB_IDLE_TIMEOUT) || parseInt(process.env.DB_IDLE_TIMEOUT_MS) || 30000;
 // Enforce minimum 20000ms safe floor for connectionTimeoutMillis to protect against burst queueing
@@ -62,14 +63,47 @@ const getActivePool = () => {
   return pool;
 };
 
+// Helper to determine if a query is safely retryable (idempotent read operations only)
+const isReadOnlyQuery = (sqlText) => {
+  if (!sqlText || typeof sqlText !== 'string') return false;
+  // Strip SQL comments (single-line -- and multi-line /* ... */) to find true command
+  const stripped = sqlText
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/--.*$/gm, ' ')
+    .trim();
+  const clean = stripped.toUpperCase();
+
+  // Guard against SELECT ... INTO (table creation) or SELECT ... FOR UPDATE / FOR SHARE (row-level locking)
+  if (clean.startsWith('SELECT') || clean.startsWith('EXPLAIN') || clean.startsWith('SHOW')) {
+    if (/\b(INTO\s+TEMPORARY|INTO\s+TEMP|INTO\s+TABLE|INTO\s+[A-Z0-9_"]+|FOR\s+UPDATE|FOR\s+SHARE|FOR\s+NO\s+KEY\s+UPDATE)\b/.test(clean)) {
+      return false;
+    }
+    return true;
+  }
+  // For CTEs (WITH ...), ensure no data-modifying expressions using word boundaries (e.g. inserted_at column is safe)
+  if (clean.startsWith('WITH') && !/\b(INSERT\s+INTO|UPDATE\s+|DELETE\s+FROM|DROP\s+|ALTER\s+|TRUNCATE\s+)\b/.test(clean)) {
+    return true;
+  }
+  return false;
+};
+
 // Helper: run a query with transient connection failure retry logic
 const query = async (text, params, retries = 2) => {
   const start = Date.now();
   const currentPool = getActivePool();
+
+  if (currentPool.waitingCount > 0) {
+    logger.warn(`Database connection pool contention: Total=${currentPool.totalCount}/${currentPool.options.max}, Idle=${currentPool.idleCount}, Waiting=${currentPool.waitingCount}`);
+  }
+
   try {
     const res = await currentPool.query(text, params);
     const duration = Date.now() - start;
-    logger.debug(`Query executed in ${duration}ms`, { query: text });
+    if (duration > 1500) {
+      logger.warn(`Slow database query detected (${duration}ms)`, { query: typeof text === 'string' ? text.substring(0, 300) : 'object' });
+    } else {
+      logger.debug(`Query executed in ${duration}ms`, { query: text });
+    }
     return res;
   } catch (err) {
     const isPoolEnded = err.message && err.message.includes('Cannot use a pool after calling end');
@@ -91,7 +125,10 @@ const query = async (text, params, retries = 2) => {
     const isReservedSlots = err.message && err.message.includes('remaining connection slots are reserved');
     const isDeadlock = err.code === '40P01' || (err.message && err.message.includes('deadlock detected'));
 
-    if (isPoolExhausted || isTransientNetwork || isReservedSlots || isDeadlock) {
+    // Non-idempotent write queries must NOT be automatically retried on network drops to prevent duplicate data
+    const isSafeToRetry = isDeadlock || (isReadOnlyQuery(text) && (isTransientNetwork || isPoolExhausted || isReservedSlots));
+
+    if ((isPoolExhausted || isTransientNetwork || isReservedSlots || isDeadlock) && isSafeToRetry) {
       logger.warn(`DB Connection status on error (${isDeadlock ? 'Deadlock' : (isPoolExhausted ? 'Pool Exhausted' : 'Network')}): Total=${currentPool.totalCount}, Idle=${currentPool.idleCount}, Waiting=${currentPool.waitingCount}`, { error: err.message });
 
       // Circuit Breaker against Retry Storms:
@@ -113,6 +150,8 @@ const query = async (text, params, retries = 2) => {
         await new Promise((resolve) => setTimeout(resolve, delay));
         return query(text, params, retries - 1);
       }
+    } else if (isTransientNetwork && !isReadOnlyQuery(text)) {
+      logger.warn('Skipping automatic retry on transient network error for non-idempotent write query to prevent duplicate processing', { error: err.message });
     }
 
     if (process.env.NODE_ENV !== 'production') {

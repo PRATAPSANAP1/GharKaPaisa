@@ -103,19 +103,28 @@ const uploadToS3 = async (buffer, originalName, folder = 'kyc') => {
   }
   const key = `${folder}/${uuidv4()}${ext}`;
 
+  // Sanitize original filename for metadata (remove path components and special chars)
+  const sanitizedOriginalName = originalName
+    .split(/[/\\]/)
+    .pop()
+    .replace(/[^a-zA-Z0-9._-]/g, '_');
+
   await s3Client.send(new PutObjectCommand({
     Bucket: BUCKET,
     Key: key,
     Body: buffer,
     ContentType: MIME_MAP[ext] || 'video/mp4',
     ServerSideEncryption: 'AES256',
+    Metadata: {
+      'original-filename': sanitizedOriginalName
+    }
   }));
 
   const cfDomain = getCloudFrontDomain();
   const url = `https://${cfDomain}/${key}`;
 
-  logger.info(`Uploaded to S3 and mapped to CloudFront: ${key} -> ${url}`);
-  return { url, key };
+  logger.info(`Uploaded to S3 and mapped to CloudFront: ${key} -> ${url} (original: ${sanitizedOriginalName})`);
+  return { url, key, originalFilename: sanitizedOriginalName };
 };
 
 // Generate a temporary signed URL (for secure document viewing)

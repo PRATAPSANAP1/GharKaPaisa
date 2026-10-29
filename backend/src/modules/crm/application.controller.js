@@ -14,6 +14,7 @@ const { ensureBankDirectProcessLinksTable } = require('../../database/migrations
 const { resolveDirectProcessLinkForProductRow } = require('../super-admin/bankDirectLinks.controller');
 const { sendEmail, sendLeadApplicationCreatedEmail } = require('../../services/email/email.service');
 const { getHdfcCuringDesignation, getHdfcDeclineCodeInfo, HDFC_DECLINE_CODES, CURING_DESIGNATIONS } = require('../../constants/hdfcDeclineCodes');
+const cache = require('../../services/cache.service');
 
 // Helper to determine strictly if an application belongs to HDFC Bank Credit Card (and not LOC/EOC)
 const isHdfcCreditCardApp = (app, pRow) => {
@@ -1695,7 +1696,10 @@ const listApplications = async (req, res, next) => {
   const startMs = Date.now();
   try {
     let { page, limit, offset } = getPaginationParams(req.query);
-    limit = Math.min(Math.max(parseInt(limit) || 10, 1), 50000);
+    const isExportRequest = req.query.export === 'true' || parseInt(req.query.limit) > 1000;
+    // Bounded pagination: normal interactive requests capped at 200; export requests capped at safe 10,000 ceiling
+    const maxLimitAllowed = isExportRequest ? 10000 : 200;
+    limit = Math.min(Math.max(parseInt(limit) || 10, 1), maxLimitAllowed);
     offset = (Math.max(parseInt(page) || 1, 1) - 1) * limit;
 
     const { status, partner_id, partner_id: q_partner_id, product_id, search, bank_id, process_by, operation_head_id, operation_head, member_id, category, from_date, to_date, start_date, end_date, period } = req.query;
@@ -1887,26 +1891,38 @@ const listApplications = async (req, res, next) => {
 
     if (!isPartnerOrTeam && !isSuperAdmin && req.user?.id) {
       let resAssignments;
-      try {
-        resAssignments = await query(`
-          SELECT aba.bank_id, COALESCE(aba.category, 'credit_card') as category, b.short_code, b.name 
-          FROM admin_bank_assignments aba
-          LEFT JOIN banks b ON b.id = aba.bank_id
-          WHERE aba.admin_id = $1
-             OR aba.admin_id IN (SELECT id FROM employees WHERE user_id = $1)
-             OR aba.admin_id IN (SELECT user_id FROM employees WHERE id = $1)
-        `, [req.user.id]);
-      } catch (abaErr) {
-        resAssignments = await query(`
-          SELECT aba.bank_id, 'credit_card' as category, b.short_code, b.name 
-          FROM admin_bank_assignments aba
-          LEFT JOIN banks b ON b.id = aba.bank_id
-          WHERE aba.admin_id = $1
-             OR aba.admin_id IN (SELECT id FROM employees WHERE user_id = $1)
-             OR aba.admin_id IN (SELECT user_id FROM employees WHERE id = $1)
-        `, [req.user.id]);
+      
+      // Try cache for bank assignments (5 minute TTL)
+      const bankAssignmentsCacheKey = `admin_bank_assignments:${req.user.id}`;
+      const cachedAssignments = await cache.get(bankAssignmentsCacheKey);
+      if (cachedAssignments) {
+        abRows = cachedAssignments;
+      } else {
+        try {
+          resAssignments = await query(`
+            SELECT aba.bank_id, COALESCE(aba.category, 'credit_card') as category, b.short_code, b.name 
+            FROM admin_bank_assignments aba
+            LEFT JOIN banks b ON b.id = aba.bank_id
+            WHERE aba.admin_id = $1
+               OR aba.admin_id IN (SELECT id FROM employees WHERE user_id = $1)
+               OR aba.admin_id IN (SELECT user_id FROM employees WHERE id = $1)
+          `, [req.user.id]);
+        } catch (abaErr) {
+          resAssignments = await query(`
+            SELECT aba.bank_id, 'credit_card' as category, b.short_code, b.name 
+            FROM admin_bank_assignments aba
+            LEFT JOIN banks b ON b.id = aba.bank_id
+            WHERE aba.admin_id = $1
+               OR aba.admin_id IN (SELECT id FROM employees WHERE user_id = $1)
+               OR aba.admin_id IN (SELECT user_id FROM employees WHERE id = $1)
+          `, [req.user.id]);
+        }
+        abRows = resAssignments.rows;
+        // Cache bank assignments for 5 minutes
+        await cache.set(bankAssignmentsCacheKey, abRows, 300).catch(err => {
+          logger.warn('[Cache] Failed to cache bank assignments:', err.message);
+        });
       }
-      abRows = resAssignments.rows;
 
       const buildSingleBankMatchSQL = (b) => {
         const bId = b.bank_id;
@@ -2621,10 +2637,13 @@ const listApplications = async (req, res, next) => {
     `;
 
     const isStatusFiltered = !!validStatus && validStatus !== 'all';
+    // Fast-path: For dashboard recent widgets (limit <= 5 with no status/search filters), bypass expensive global status scan
+    const isSmallDashboardPreview = limit <= 5 && !validStatus && !validSearch && !validFromDate && !validToDate;
 
-    // Concurrently run queries via Promise.all to avoid sequential waterfall latency
     const listTask = query(listQuerySQL, queryParams);
-    const statusTask = query(statusCountsSQL, countQueryParams);
+    const statusTask = isSmallDashboardPreview
+      ? Promise.resolve({ rows: [] })
+      : query(statusCountsSQL, countQueryParams);
     const countTask = isStatusFiltered
       ? query(countQuerySQL, countQueryParams)
       : Promise.resolve(null);
@@ -2635,7 +2654,9 @@ const listApplications = async (req, res, next) => {
     const statusCountsRows = statusResult.rows;
     let count = 0;
 
-    if (isStatusFiltered && countResult) {
+    if (isSmallDashboardPreview) {
+      count = rows.length;
+    } else if (isStatusFiltered && countResult) {
       count = parseInt(countResult.rows[0]?.count) || 0;
     } else {
       // Derive total directly from status count groups (exact same WHERE filters)
@@ -2698,6 +2719,10 @@ const listApplications = async (req, res, next) => {
         page: parseInt(page),
         limit: parseInt(limit),
         totalPages: Math.ceil(parseInt(count) / limit),
+        is_truncated: isExportRequest && parseInt(count) > rows.length,
+        total_matching: parseInt(count),
+        returned_count: rows.length,
+        max_export_limit: isExportRequest ? maxLimitAllowed : undefined,
       },
       status_counts: statusCountsObj,
       timestamp: new Date().toISOString(),

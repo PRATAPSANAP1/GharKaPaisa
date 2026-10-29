@@ -378,6 +378,30 @@ export default function ManageEmployeeIncentives() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: "'Inter', sans-serif" }}>
 
+      {/* ── SEPARATION OF CONCERNS BANNER ── */}
+      <div style={{
+        background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)',
+        borderRadius: '16px',
+        padding: '14px 20px',
+        color: '#FFFFFF',
+        display: 'flex',
+        justify: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '12px',
+        boxShadow: '0 4px 15px rgba(49, 46, 129, 0.25)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ background: 'rgba(255,255,255,0.15)', padding: '10px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <FaUserTie size={22} color="#A5B4FC" />
+          </div>
+          <div>
+            <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 900, letterSpacing: '-0.2px' }}>
+              Employee Incentives
+            </h4>
+          </div>
+        </div>
+      </div>
       {/* ── TOP HEADER ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div>

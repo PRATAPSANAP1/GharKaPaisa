@@ -1230,13 +1230,15 @@ const migrate = async () => {
   `);
 
   await query(`
-    ALTER TABLE banners 
+    ALTER TABLE banners
     ADD COLUMN IF NOT EXISTS target_page VARCHAR(255) DEFAULT 'all',
     ADD COLUMN IF NOT EXISTS link_type VARCHAR(50) DEFAULT 'custom',
     ADD COLUMN IF NOT EXISTS click_url VARCHAR(500) DEFAULT '/credit-cards',
     ADD COLUMN IF NOT EXISTS click_url_home VARCHAR(500),
     ADD COLUMN IF NOT EXISTS click_url_partner VARCHAR(500),
-    ADD COLUMN IF NOT EXISTS click_url_employee VARCHAR(500);
+    ADD COLUMN IF NOT EXISTS click_url_employee VARCHAR(500),
+    ADD COLUMN IF NOT EXISTS click_url_referral VARCHAR(500),
+    ADD COLUMN IF NOT EXISTS original_filename VARCHAR(255);
   `);
 
   // Drop update trigger on banners if exists and recreate

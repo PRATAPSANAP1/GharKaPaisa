@@ -14,9 +14,12 @@ backend/firebase-service-account.json
 # Internal Documentation & Reports
 documentation/
 **/docs/
+!backend/docs/
+!backend/docs/**
 *.md
 !/README.md
 !/MOBILE_VS_WEBSITE_IMPLEMENTATION_AUDIT.md
+!backend/docs/*.md
 *.docx
 *.pdf
 *.xlsx

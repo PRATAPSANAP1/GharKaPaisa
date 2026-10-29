@@ -15,6 +15,7 @@ import AssignSalesExecutiveModal from './AssignSalesExecutiveModal';
 import ExportApplicationsModal from '../../../components/Admin/ExportApplicationsModal';
 import LoadingLogo from '../../../components/Loader/LoadingLogo';
 import { useAuthStore } from '../../../app/store/authStore';
+import { useLocalStorageCache } from '../../../hooks/useLocalStorageCache';
 import {
   CURING_DESIGNATION_BADGES,
   getHdfcCuringDesignation
@@ -109,9 +110,23 @@ export default function ManageApplications() {
   const [employeesList, setEmployeesList] = useState([]);
   const abortControllerRef = useRef(null);
 
+  // Client-side cache for agents/partners/employees (10 minute TTL)
+  const { getCache, setCache, clearCache } = useLocalStorageCache('admin_app_', 10 * 60 * 1000);
+
   useEffect(() => {
     const fetchAgents = async () => {
       try {
+        // Try cache first
+        const cachedPartners = getCache('partners');
+        const cachedEmployees = getCache('employees');
+        
+        if (cachedPartners && cachedEmployees) {
+          console.log('[Client Cache] Using cached agents data');
+          setPartnersList(cachedPartners);
+          setEmployeesList(cachedEmployees);
+          return;
+        }
+
         const isAdminUser = ['ADMIN', 'SUPER_ADMIN'].includes(userRole);
         const [pRes, eRes] = await Promise.all([
           isAdminUser ? api.get('/admin/partners', { params: { limit: 1000 } }).catch(() => null) : Promise.resolve(null),
@@ -123,12 +138,14 @@ export default function ManageApplications() {
           pArr = pArr.rows || Object.values(pArr).find(v => Array.isArray(v)) || [];
         }
         setPartnersList(Array.isArray(pArr) ? pArr : []);
+        setCache('partners', Array.isArray(pArr) ? pArr : []);
 
         let eArr = eRes?.data?.data?.employees || eRes?.data?.data || eRes?.data?.employees || eRes?.data || [];
         if (!Array.isArray(eArr) && typeof eArr === 'object') {
           eArr = eArr.rows || Object.values(eArr).find(v => Array.isArray(v)) || [];
         }
         setEmployeesList(Array.isArray(eArr) ? eArr : []);
+        setCache('employees', Array.isArray(eArr) ? eArr : []);
       } catch (err) {
         console.error('Error fetching agents for filter:', err);
       }
