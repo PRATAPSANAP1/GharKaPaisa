@@ -8,6 +8,7 @@ const { uploadToS3 } = require('../../services/aws/s3.service');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } }); // 100MB limit for video & KYC uploads
 const { calculateEmployeeVerificationState } = require('../employee-management/verification.service');
+const cache = require('../../services/cache.service');
 const {
   DOCUMENT_TYPES,
   normalizeDocumentType,
@@ -332,26 +333,105 @@ router.get('/profile', async (req, res, next) => {
     const empCode = req.employee.employee_id || req.employee.emp_code;
     const empMobile = req.employee.mobile_number || req.employee.mobile;
 
-    // 1. Employee profile record (strict join on candidate_id or exact reference_code)
-    const empRes = await query(`
-      SELECT e.*, c.resume_url
-      FROM employees e
-      LEFT JOIN employee_candidates c ON (e.candidate_id IS NOT NULL AND c.id = e.candidate_id) OR (e.candidate_id IS NULL AND c.reference_code = e.employee_id)
-      WHERE e.id = $1
-    `, [empId]);
+    // Try cache first (5 minute TTL)
+    const cacheKey = `employee:profile:${empId}`;
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      logger.debug(`[Cache] Employee profile cache hit for empId: ${empId}`);
+      return res.json({ success: true, data: cached, cached: true });
+    }
+
+    // Execute all 10 independent sub-queries in parallel via Promise.all to eliminate sequential waterfall
+    const [
+      empRes,
+      joiningRes,
+      kycRes,
+      docsRes,
+      termsRes,
+      hierarchyRes,
+      incRes,
+      appsRes,
+      leadsRes,
+      teamRes
+    ] = await Promise.all([
+      // 1. Employee profile record (strict join on candidate_id or exact reference_code)
+      query(`
+        SELECT e.*, c.resume_url
+        FROM employees e
+        LEFT JOIN employee_candidates c ON (e.candidate_id IS NOT NULL AND c.id = e.candidate_id) OR (e.candidate_id IS NULL AND c.reference_code = e.employee_id)
+        WHERE e.id = $1
+      `, [empId]),
+
+      // 2. Joining details
+      query(
+        `SELECT * FROM employee_joining_details WHERE employee_id = $1 ORDER BY created_at DESC LIMIT 1`,
+        [empId]
+      ),
+
+      // 3. KYC details
+      query(
+        `SELECT * FROM employee_kyc WHERE employee_id = $1 ORDER BY created_at DESC LIMIT 1`,
+        [empId]
+      ),
+
+      // 4. Documents
+      query(
+        `SELECT * FROM employee_documents WHERE employee_id = $1 ORDER BY created_at DESC`,
+        [empId]
+      ),
+
+      // 5. Terms acceptance
+      query(
+        `SELECT * FROM employee_terms_acceptance WHERE employee_id = $1 ORDER BY accepted_at DESC LIMIT 1`,
+        [empId]
+      ),
+
+      // 6. Hierarchy
+      query(`
+        SELECT h.*, tl.full_name as team_leader_name, mgr.full_name as manager_name
+        FROM employee_hierarchy h
+        LEFT JOIN employees tl ON tl.id = h.team_leader_id
+        LEFT JOIN employees mgr ON mgr.id = h.manager_id
+        WHERE h.employee_id = $1 AND h.is_active = true
+      `, [empId]),
+
+      // 7. Incentives summary
+      query(`
+        SELECT 
+          COALESCE(SUM(amount), 0) as total_incentives,
+          COALESCE(SUM(CASE WHEN UPPER(status::text) IN ('PAID', 'COMPLETED') THEN amount ELSE 0 END), 0) as paid_incentives,
+          COALESCE(SUM(CASE WHEN UPPER(status::text) = 'PENDING' THEN amount ELSE 0 END), 0) as pending_incentives
+        FROM employee_incentive_transactions
+        WHERE employee_id = $1
+      `, [empId]).catch(() => ({ rows: [{ total_incentives: 0, paid_incentives: 0, pending_incentives: 0 }] })),
+
+      // 8. Dynamic performance & team statistics
+      query(`
+        SELECT 
+          COUNT(*) as total_applications,
+          COUNT(*) FILTER (WHERE UPPER(status::text) IN ('APPROVED', 'DISBURSED', 'COMPLETED')) as approved_applications
+        FROM applications
+        WHERE employee_id = $1 OR submitted_by = $2
+      `, [empId, req.user.id]),
+
+      // 9. Leads count
+      query(`
+        SELECT COUNT(*) as leads_count
+        FROM customers
+        WHERE created_by = $1
+      `, [req.user.id]),
+
+      // 10. Team size
+      query(`
+        SELECT 
+          COUNT(*) as team_size,
+          COUNT(*) FILTER (WHERE is_active = true) as active_members
+        FROM employee_hierarchy
+        WHERE manager_id = $1 OR team_leader_id = $1
+      `, [empId])
+    ]);
+
     const employee = empRes.rows[0] || req.employee;
-
-    // 2. Joining details
-    const joiningRes = await query(
-      `SELECT * FROM employee_joining_details WHERE employee_id = $1 ORDER BY created_at DESC LIMIT 1`,
-      [empId]
-    );
-
-    // 3. KYC details
-    const kycRes = await query(
-      `SELECT * FROM employee_kyc WHERE employee_id = $1 ORDER BY created_at DESC LIMIT 1`,
-      [empId]
-    );
     let kycData = kycRes.rows[0] || null;
     if (kycData) {
       if (!kycData.kyc_status) {
@@ -370,91 +450,44 @@ router.get('/profile', async (req, res, next) => {
       }
     }
 
-    // 4. Documents
-    const docsRes = await query(
-      `SELECT * FROM employee_documents WHERE employee_id = $1 ORDER BY created_at DESC`,
-      [empId]
-    );
-
-    // 5. Terms acceptance
-    const termsRes = await query(
-      `SELECT * FROM employee_terms_acceptance WHERE employee_id = $1 ORDER BY accepted_at DESC LIMIT 1`,
-      [empId]
-    );
-
-    // 6. Hierarchy
-    const hierarchyRes = await query(`
-      SELECT h.*, tl.full_name as team_leader_name, mgr.full_name as manager_name
-      FROM employee_hierarchy h
-      LEFT JOIN employees tl ON tl.id = h.team_leader_id
-      LEFT JOIN employees mgr ON mgr.id = h.manager_id
-      WHERE h.employee_id = $1 AND h.is_active = true
-    `, [empId]);
-
-    // 7. Incentives summary
-    const incRes = await query(`
-      SELECT 
-        COALESCE(SUM(amount), 0) as total_incentives,
-        COALESCE(SUM(CASE WHEN UPPER(status::text) IN ('PAID', 'COMPLETED') THEN amount ELSE 0 END), 0) as paid_incentives,
-        COALESCE(SUM(CASE WHEN UPPER(status::text) = 'PENDING' THEN amount ELSE 0 END), 0) as pending_incentives
-      FROM employee_incentive_transactions
-      WHERE employee_id = $1
-    `, [empId]).catch(() => ({ rows: [{ total_incentives: 0, paid_incentives: 0, pending_incentives: 0 }] }));
-
-    // 8. Dynamic performance & team statistics
-    const appsRes = await query(`
-      SELECT 
-        COUNT(*) as total_applications,
-        COUNT(*) FILTER (WHERE UPPER(status::text) IN ('APPROVED', 'DISBURSED', 'COMPLETED')) as approved_applications
-      FROM applications
-      WHERE employee_id = $1 OR submitted_by = $2
-    `, [empId, req.user.id]);
-
-    const leadsRes = await query(`
-      SELECT COUNT(*) as leads_count
-      FROM customers
-      WHERE created_by = $1
-    `, [req.user.id]);
-
-    const teamRes = await query(`
-      SELECT 
-        COUNT(*) as team_size,
-        COUNT(*) FILTER (WHERE is_active = true) as active_members
-      FROM employee_hierarchy
-      WHERE manager_id = $1 OR team_leader_id = $1
-    `, [empId]);
-
     const appsData = appsRes.rows[0] || {};
     const leadsData = leadsRes.rows[0] || {};
     const teamData = teamRes.rows[0] || {};
 
-    res.json({
-      success: true,
-      data: {
-        employee: {
-          ...employee,
-          total_applications: parseInt(appsData.total_applications || 0),
-          approved_applications: parseInt(appsData.approved_applications || 0),
-          leads_count: parseInt(leadsData.leads_count || 0),
-          team_size: parseInt(teamData.team_size || 0),
-          active_members: parseInt(teamData.active_members || 0)
-        },
-        joining_details: joiningRes.rows[0] || null,
-        kyc: kycData,
-        terms: termsRes.rows[0] || null,
-        documents: docsRes.rows || [],
-        hierarchy: {
-          ...(hierarchyRes.rows[0] || {}),
-          team_size: parseInt(teamData.team_size || 0),
-          active_members: parseInt(teamData.active_members || 0)
-        },
-        incentives_summary: incRes.rows[0] || null,
+    const responseData = {
+      employee: {
+        ...employee,
         total_applications: parseInt(appsData.total_applications || 0),
         approved_applications: parseInt(appsData.approved_applications || 0),
         leads_count: parseInt(leadsData.leads_count || 0),
         team_size: parseInt(teamData.team_size || 0),
         active_members: parseInt(teamData.active_members || 0)
-      }
+      },
+      joining_details: joiningRes.rows[0] || null,
+      kyc: kycData,
+      terms: termsRes.rows[0] || null,
+      documents: docsRes.rows || [],
+      hierarchy: {
+        ...(hierarchyRes.rows[0] || {}),
+        team_size: parseInt(teamData.team_size || 0),
+        active_members: parseInt(teamData.active_members || 0)
+      },
+      incentives_summary: incRes.rows[0] || null,
+      total_applications: parseInt(appsData.total_applications || 0),
+      approved_applications: parseInt(appsData.approved_applications || 0),
+      leads_count: parseInt(leadsData.leads_count || 0),
+      team_size: parseInt(teamData.team_size || 0),
+      active_members: parseInt(teamData.active_members || 0)
+    };
+
+    // Cache the response for 5 minutes
+    await cache.set(cacheKey, responseData, 300).catch(err => {
+      logger.warn('[Cache] Failed to cache employee profile:', err.message);
+    });
+
+    res.json({
+      success: true,
+      data: responseData
     });
   } catch (err) {
     next(err);
@@ -475,6 +508,14 @@ router.post('/joining-form', async (req, res, next) => {
       referred_by, recruitment_source, bank_account_holder_name, bank_account_number,
       ifsc_code, pan_number, aadhaar_number, declaration_accepted
     } = req.body;
+
+    // Invalidate cache when joining form is submitted
+    await cache.del(`employee:profile:${empId}`).catch(err => {
+      logger.warn('[Cache] Failed to invalidate employee profile cache:', err.message);
+    });
+    await cache.del(`employee:verification:${empId}`).catch(err => {
+      logger.warn('[Cache] Failed to invalidate verification status cache:', err.message);
+    });
 
     const safeParseInt = (val, defaultVal = null) => {
       if (val === null || val === undefined || val === '') return defaultVal;
@@ -558,6 +599,14 @@ router.post('/terms-acceptance', upload.single('video'), async (req, res, next) 
     const empId = req.employee.id;
     const { terms_version = '1.0', terms_content, accepted = true } = req.body;
 
+    // Invalidate cache when terms are accepted
+    await cache.del(`employee:profile:${empId}`).catch(err => {
+      logger.warn('[Cache] Failed to invalidate employee profile cache:', err.message);
+    });
+    await cache.del(`employee:verification:${empId}`).catch(err => {
+      logger.warn('[Cache] Failed to invalidate verification status cache:', err.message);
+    });
+
     let video_url = null;
     let video_key = null;
     let video_file_name = null;
@@ -609,6 +658,14 @@ router.post('/kyc', upload.fields([
 ]), async (req, res, next) => {
   try {
     const empId = req.employee.id;
+
+    // Invalidate cache when KYC is submitted
+    await cache.del(`employee:profile:${empId}`).catch(err => {
+      logger.warn('[Cache] Failed to invalidate employee profile cache:', err.message);
+    });
+    await cache.del(`employee:verification:${empId}`).catch(err => {
+      logger.warn('[Cache] Failed to invalidate verification status cache:', err.message);
+    });
 
     // 1. Mandatory 3-Step Pre-requisite Check: Joining Form and Terms Acceptance must be completed first
     const checklistRes = await query(`SELECT * FROM employee_onboarding_checklist WHERE employee_id = $1`, [empId]);
@@ -1095,10 +1152,19 @@ router.post('/leads', async (req, res, next) => {
 
     const processByVal = process_by || 'Punching Only';
 
+    const cleanNumeric = (val) => {
+      if (val === null || val === undefined || val === '') return null;
+      const num = parseFloat(String(val).replace(/[^0-9.]/g, ''));
+      return isNaN(num) ? null : num;
+    };
+    const parsedSmartEmiAmount = cleanNumeric(smart_emi_amount);
+    const parsedLoanRequired = cleanNumeric(loan_required_amount);
+    const parsedTenure = tenure ? (parseInt(String(tenure).replace(/[^0-9]/g, '')) || null) : null;
+
     const metadataObj = {
-      smart_emi_amount: smart_emi_amount || null,
-      loan_required_amount: loan_required_amount || null,
-      tenure: tenure || null,
+      smart_emi_amount: parsedSmartEmiAmount,
+      loan_required_amount: parsedLoanRequired,
+      tenure: parsedTenure,
       card_bank: bankNameInput,
       card_name: cardNameInput,
       product_type: leadCategory,
@@ -1118,7 +1184,7 @@ router.post('/leads', async (req, res, next) => {
       ) RETURNING *`,
       [
         app_number, customerId, matchedProductId, matchedBankId, req.user.id, empId, linkId, incentiveAmt, full_name, mobile,
-        smart_emi_amount || null, loan_required_amount || null, tenure || null, JSON.stringify(metadataObj), processByVal
+        parsedSmartEmiAmount, parsedLoanRequired, parsedTenure, JSON.stringify(metadataObj), processByVal
       ]
     );
 
@@ -1731,6 +1797,15 @@ async function getMonthlyIncentiveReportData(employeeId, targetYear, targetMonth
 router.get('/verification-status', async (req, res, next) => {
   try {
     const empId = req.employee.id;
+
+    // Try cache first (5 minute TTL)
+    const cacheKey = `employee:verification:${empId}`;
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      logger.debug(`[Cache] Verification status cache hit for empId: ${empId}`);
+      return res.json({ success: true, data: cached, cached: true });
+    }
+
     const vState = await calculateEmployeeVerificationState(empId);
 
     // Fetch latest reminder sent to this employee
@@ -1739,12 +1814,19 @@ router.get('/verification-status', async (req, res, next) => {
       [empId]
     );
 
+    const responseData = {
+      ...vState,
+      latest_reminder: reminderRes.rows[0] || null
+    };
+
+    // Cache the response for 5 minutes
+    await cache.set(cacheKey, responseData, 300).catch(err => {
+      logger.warn('[Cache] Failed to cache verification status:', err.message);
+    });
+
     res.json({
       success: true,
-      data: {
-        ...vState,
-        latest_reminder: reminderRes.rows[0] || null
-      }
+      data: responseData
     });
   } catch (err) {
     next(err);
@@ -1756,6 +1838,14 @@ router.post('/upload-document', upload.single('file'), async (req, res, next) =>
   try {
     const empId = req.employee.id;
     const { document_type } = req.body;
+
+    // Invalidate cache when document is uploaded
+    await cache.del(`employee:profile:${empId}`).catch(err => {
+      logger.warn('[Cache] Failed to invalidate employee profile cache:', err.message);
+    });
+    await cache.del(`employee:verification:${empId}`).catch(err => {
+      logger.warn('[Cache] Failed to invalidate verification status cache:', err.message);
+    });
 
     if (!document_type || !req.file) {
       return res.status(400).json({ success: false, message: 'document_type and file are required' });
@@ -1847,6 +1937,14 @@ router.post('/submit-verification', async (req, res, next) => {
   try {
     const empId = req.employee.id;
     const vState = await calculateEmployeeVerificationState(empId);
+
+    // Invalidate cache when verification is submitted
+    await cache.del(`employee:profile:${empId}`).catch(err => {
+      logger.warn('[Cache] Failed to invalidate employee profile cache:', err.message);
+    });
+    await cache.del(`employee:verification:${empId}`).catch(err => {
+      logger.warn('[Cache] Failed to invalidate verification status cache:', err.message);
+    });
 
     // Transition any uploaded documents in NOT_STARTED to UNDER_REVIEW
     await query(`

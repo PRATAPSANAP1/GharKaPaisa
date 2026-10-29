@@ -97,15 +97,15 @@ const getKolkataDateString = async () => {
  * holidays, weekly offs, extensions, and overnight shifts.
  */
 async function resolveEmployeeWorkingHoursContext(authEmpId, reqUser, targetDateStr = null) {
-  const { 
-    ensureWorkingHoursTables, 
-    resolvePolicyForUser, 
-    resolveHolidayForUser, 
-    timeToMinutes, 
-    getKolkataTimeInfo 
+  const {
+    resolvePolicyForUser,
+    resolveHolidayForUser,
+    timeToMinutes,
+    getKolkataTimeInfo
   } = require('../auth/workingHours.service');
 
-  await ensureWorkingHoursTables();
+  // Note: ensureWorkingHoursTables() removed - tables should be created via migrations
+  // This eliminates runtime schema checks on every request
 
   const timeInfo = getKolkataTimeInfo(targetDateStr ? new Date(targetDateStr + 'T12:00:00+05:30') : new Date());
   const dateStr = targetDateStr || timeInfo.dateStr;

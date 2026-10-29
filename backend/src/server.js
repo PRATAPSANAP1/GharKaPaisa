@@ -179,6 +179,7 @@ app.use(morgan('combined', {
 
 // ── Health Check ───────────────────────────────────────────────
 const { getValkeyStatus, closeValkeyClients } = require('./config/redis');
+const cache = require('./services/cache.service');
 
 app.get('/health', async (req, res) => {
   try {
@@ -191,6 +192,7 @@ app.get('/health', async (req, res) => {
       environment: process.env.NODE_ENV,
       database: 'connected',
       socket_adapter: getValkeyStatus() ? 'ready' : 'not_ready',
+      cache: cache.isEnabled() ? 'enabled' : 'disabled',
       pool: {
         total: db.pool.totalCount,
         idle: db.pool.idleCount,
@@ -297,6 +299,9 @@ const startServer = async () => {
     // Verify DB connectivity before listening
     await db.query('SELECT 1');
     logger.info('Database connection verified successfully.');
+
+    // Initialize Redis cache client
+    await cache.initCacheClient();
 
     // Database migration execution on startup (controlled via AUTO_MIGRATE flag in production)
     if (process.env.AUTO_MIGRATE === 'true' || process.env.NODE_ENV !== 'production') {

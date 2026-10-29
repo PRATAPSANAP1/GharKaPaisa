@@ -67,6 +67,7 @@ export default function ManageBanners() {
   
   const [imageFile, setImageFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
   // Image Cropper Modal States
   const [cropModalOpen, setCropModalOpen] = useState(false);
@@ -133,6 +134,7 @@ export default function ManageBanners() {
   // ─── MODAL TRIGGER CONTROLS ───────────────────────────────────────────────
   const openAddModal = () => {
     setEditItem(null);
+    setUploadError("");
     const initialPanels = activeTab === "all" ? ['home', 'partner', 'referral', 'employee'] : [activeTab];
     setForm({
       title: "",
@@ -142,10 +144,10 @@ export default function ManageBanners() {
       display_order: banners.length + 1,
       is_active: true,
       target_panels: initialPanels,
-      
+
       link_type_home: "page",
       click_url_home: "/credit-cards",
-      
+
       link_type_partner: "page",
       click_url_partner: "/partner/credit-cards",
 
@@ -162,6 +164,7 @@ export default function ManageBanners() {
 
   const openEditModal = (item) => {
     setEditItem(item);
+    setUploadError("");
     const panels = parseTargetPanels(item.target_page);
 
     setForm({
@@ -172,7 +175,7 @@ export default function ManageBanners() {
       display_order: item.display_order || 0,
       is_active: item.is_active !== undefined ? item.is_active : true,
       target_panels: panels,
-      
+
       link_type_home: "page",
       click_url_home: item.click_url_home || item.click_url || "/credit-cards",
 
@@ -671,16 +674,50 @@ export default function ManageBanners() {
               <div>
                 <label style={S.label}>Banner Image Assignment</label>
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px", background: C.bgSecondary, padding: "14px", borderRadius: "12px", border: `1px solid ${C.border}` }}>
+
+                  {/* Recommended Dimensions Info */}
+                  <div style={{
+                    background: `${C.teal}10`,
+                    border: `1px solid ${C.teal}30`,
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                    fontSize: "11.5px",
+                    color: C.text
+                  }}>
+                    <div style={{ fontWeight: 800, color: C.teal, marginBottom: "4px" }}>
+                      📐 Recommended Banner Specifications
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                      <span>• Aspect Ratio: <strong>3:1</strong> (Recommended: 1200×400 pixels)</span>
+                      <span>• Max File Size: <strong>5 MB</strong></span>
+                      <span>• Accepted Formats: <strong>JPEG, PNG</strong></span>
+                      <span>• Use the <strong>"3:1 Hero Banner"</strong> preset in the cropper for best results</span>
+                      <span>• Images will be displayed with <strong>object-fit: cover</strong> at center</span>
+                    </div>
+                  </div>
+
                   <div>
                     <label style={{ fontSize: "11.5px", fontWeight: 800, color: C.textLight, display: "block", marginBottom: "6px" }}>
                       Option A: Upload & Crop Image File
                     </label>
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/jpg"
                       onChange={(e) => {
                         const file = e.target.files[0];
+                        setUploadError("");
                         if (file) {
+                          // Validate file size (5MB)
+                          if (file.size > 5 * 1024 * 1024) {
+                            setUploadError("File size exceeds 5 MB limit. Please choose a smaller image.");
+                            return;
+                          }
+                          // Validate file type
+                          const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+                          if (!validTypes.includes(file.type)) {
+                            setUploadError("Only JPEG and PNG images are allowed.");
+                            return;
+                          }
                           const reader = new FileReader();
                           reader.onload = () => {
                             setCropRawImg(reader.result);
@@ -691,6 +728,20 @@ export default function ManageBanners() {
                       }}
                       style={{ fontSize: "12.5px", color: C.text }}
                     />
+                    {uploadError && (
+                      <div style={{
+                        marginTop: "6px",
+                        fontSize: "11px",
+                        color: C.red,
+                        fontWeight: 700,
+                        padding: "6px 10px",
+                        background: `${C.red}10`,
+                        borderRadius: "6px",
+                        border: `1px solid ${C.red}30`
+                      }}>
+                        ⚠️ {uploadError}
+                      </div>
+                    )}
                   </div>
 
                   {/* Cropped Preview Indicator */}
@@ -1014,10 +1065,10 @@ export default function ManageBanners() {
               <label style={{ fontSize: "11px", fontWeight: 800, color: C.textLight, display: "block", marginBottom: "6px" }}>ASPECT RATIO PRESET</label>
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 {[
-                  { label: "3:1 Hero Banner", ratio: "3:1" },
-                  { label: "16:9 Wide Banner", ratio: "16:9" },
-                  { label: "4:3 Card Banner", ratio: "4:3" },
-                  { label: "1:1 Square", ratio: "1:1" }
+                  { label: "3:1 Hero Banner ⭐ Employee Recommended", ratio: "3:1", recommended: true },
+                  { label: "16:9 Wide Banner", ratio: "16:9", recommended: false },
+                  { label: "4:3 Card Banner", ratio: "4:3", recommended: false },
+                  { label: "1:1 Square", ratio: "1:1", recommended: false }
                 ].map(item => (
                   <button
                     key={item.ratio}
@@ -1029,14 +1080,18 @@ export default function ManageBanners() {
                       fontSize: "12px",
                       fontWeight: 800,
                       cursor: "pointer",
-                      border: `1px solid ${cropRatio === item.ratio ? C.teal : C.border}`,
-                      background: cropRatio === item.ratio ? `${C.teal}20` : C.card,
-                      color: cropRatio === item.ratio ? C.teal : C.text
+                      border: `1px solid ${cropRatio === item.ratio ? C.teal : item.recommended ? `${C.teal}50` : C.border}`,
+                      background: cropRatio === item.ratio ? `${C.teal}20` : item.recommended ? `${C.teal}10` : C.card,
+                      color: cropRatio === item.ratio ? C.teal : item.recommended ? C.teal : C.text,
+                      position: "relative"
                     }}
                   >
                     {item.label}
                   </button>
                 ))}
+              </div>
+              <div style={{ fontSize: "10px", color: C.textLight, marginTop: "4px" }}>
+                ⭐ Recommended for Employee Dashboard banner display
               </div>
             </div>
 

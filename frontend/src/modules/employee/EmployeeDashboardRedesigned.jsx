@@ -72,6 +72,8 @@ export default function EmployeeDashboardRedesigned() {
   // Banner carousel state
   const [bannerIndex, setBannerIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [bannerLoading, setBannerLoading] = useState({});
+  const [bannerErrors, setBannerErrors] = useState({});
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -197,6 +199,15 @@ export default function EmployeeDashboardRedesigned() {
     click_url: b.click_url || '/employee/credit-cards'
   }));
 
+  // Initialize loading state for banners
+  useEffect(() => {
+    const initialLoading = {};
+    bannerSlides.forEach((_, idx) => {
+      initialLoading[idx] = true;
+    });
+    setBannerLoading(initialLoading);
+  }, [bannerSlides.length]);
+
   // Auto-rotate offer banners
   useEffect(() => {
     if (isPaused || bannerSlides.length <= 1) return;
@@ -223,6 +234,16 @@ export default function EmployeeDashboardRedesigned() {
     } else {
       navigate(target);
     }
+  };
+
+  const handleBannerImageLoad = (idx) => {
+    setBannerLoading(prev => ({ ...prev, [idx]: false }));
+    setBannerErrors(prev => ({ ...prev, [idx]: false }));
+  };
+
+  const handleBannerImageError = (idx) => {
+    setBannerLoading(prev => ({ ...prev, [idx]: false }));
+    setBannerErrors(prev => ({ ...prev, [idx]: true }));
   };
 
   if (loading) {
@@ -615,19 +636,16 @@ export default function EmployeeDashboardRedesigned() {
         </div>
 
         {/* Dynamic Offer Banner Carousel (Replacing Static Promotional Box) */}
-        <div 
+        <div
+          className="offer-banner"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
           style={{
-            width: '100%',
-            height: isMobile ? '180px' : '300px',
-            borderRadius: isMobile ? '16px' : '20px',
-            position: 'relative',
-            overflow: 'hidden',
             marginBottom: '28px',
             boxShadow: isDark ? '0 10px 30px rgba(0,0,0,0.4)' : '0 8px 30px rgba(16, 24, 40, 0.08)',
             border: `1px solid ${C.border}`,
-            background: isDark ? C.card : '#FFFFFF'
+            background: isDark ? C.card : '#FFFFFF',
+            position: 'relative'
           }}
         >
           {bannerSlides.map((slide, idx) => (
@@ -650,18 +668,36 @@ export default function EmployeeDashboardRedesigned() {
                 overflow: 'hidden'
               }}
             >
+              {bannerLoading[idx] !== false && (
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: '#0F172A',
+                  zIndex: 1
+                }}>
+                  <div className="banner-spinner" style={{
+                    width: '32px',
+                    height: '32px',
+                    border: '3px solid rgba(255,255,255,0.3)',
+                    borderTopColor: '#008A60',
+                    borderRadius: '50%'
+                  }} />
+                </div>
+              )}
+
               <img
-                src={slide.bgImage}
+                src={bannerErrors[idx] ? offerBanner : slide.bgImage}
                 alt={slide.title || 'GharKaPaisa Offer'}
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = offerBanner;
-                }}
+                onLoad={() => handleBannerImageLoad(idx)}
+                onError={() => handleBannerImageError(idx)}
                 style={{
                   width: '100%',
                   height: '100%',
                   objectFit: 'cover',
-                  objectPosition: 'center',
+                  objectPosition: 'center center',
                   display: 'block'
                 }}
               />
