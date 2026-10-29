@@ -2644,7 +2644,7 @@ const listApplications = async (req, res, next) => {
     const statusTask = isSmallDashboardPreview
       ? Promise.resolve({ rows: [] })
       : query(statusCountsSQL, countQueryParams);
-    const countTask = isStatusFiltered
+    const countTask = (isStatusFiltered || isSmallDashboardPreview)
       ? query(countQuerySQL, countQueryParams)
       : Promise.resolve(null);
 
@@ -2654,9 +2654,7 @@ const listApplications = async (req, res, next) => {
     const statusCountsRows = statusResult.rows;
     let count = 0;
 
-    if (isSmallDashboardPreview) {
-      count = rows.length;
-    } else if (isStatusFiltered && countResult) {
+    if (countResult) {
       count = parseInt(countResult.rows[0]?.count) || 0;
     } else {
       // Derive total directly from status count groups (exact same WHERE filters)

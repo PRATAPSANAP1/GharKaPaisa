@@ -323,6 +323,7 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
   const handleExportDownload = async () => {
     setExporting(true);
     try {
+      let filtered = [];
       let isTruncated = false;
       let totalAvailable = 0;
 

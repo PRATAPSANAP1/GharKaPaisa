@@ -150,10 +150,16 @@ export default function EmployeeDashboardRedesigned() {
 
         if (cachedProfile && cachedAttendance && cachedApps && cachedVer && cachedBanners) {
           console.log('[Client Cache] Using cached dashboard data');
-          setEmployee(cachedProfile.employee);
+          const emp = cachedProfile.employee || cachedProfile.data?.employee || cachedProfile;
+          setEmployee(emp);
           setAttendanceToday(cachedAttendance);
-          setRecentApplications(cachedApps.slice(0, 5));
-          setTotalApplicationsCount(cachedApps.total || cachedApps.length);
+          const appsList = Array.isArray(cachedApps)
+            ? cachedApps
+            : (Array.isArray(cachedApps?.items)
+                ? cachedApps.items
+                : Object.keys(cachedApps || {}).filter(k => !isNaN(k)).map(k => cachedApps[k]));
+          setRecentApplications(appsList.slice(0, 5));
+          setTotalApplicationsCount(cachedApps?.total ?? (cachedApps?.length !== undefined ? cachedApps.length : appsList.length));
           setVerState(cachedVer);
           setApiBanners(cachedBanners);
           setLoading(false);
@@ -172,7 +178,8 @@ export default function EmployeeDashboardRedesigned() {
 
       if (profileRes.status === 'fulfilled' && profileRes.value?.data?.success) {
         const profileData = profileRes.value.data;
-        setEmployee(profileData.employee);
+        const emp = profileData.employee || profileData.data?.employee || profileData;
+        setEmployee(emp);
         setCache('profile', profileData);
       }
 
@@ -183,13 +190,16 @@ export default function EmployeeDashboardRedesigned() {
       }
 
       if (appsRes.status === 'fulfilled' && appsRes.value?.data?.success) {
-        const appsData = appsRes.value.data.data;
+        const rawApps = appsRes.value?.data || {};
+        const appsData = Array.isArray(rawApps.data) ? rawApps.data : (Array.isArray(rawApps) ? rawApps : []);
         if (Array.isArray(appsData)) {
           setRecentApplications(appsData.slice(0, 5));
         }
-        const totalCount = appsRes.pagination?.total !== undefined ? appsRes.pagination.total : appsData.length;
+        const totalCount = rawApps.pagination?.total !== undefined
+          ? rawApps.pagination.total
+          : (rawApps.total !== undefined ? rawApps.total : appsData.length);
         setTotalApplicationsCount(totalCount);
-        setCache('applications', { ...appsData, total: totalCount });
+        setCache('applications', { items: appsData, total: totalCount });
       }
 
       if (verRes.status === 'fulfilled' && verRes.value?.data?.success) {

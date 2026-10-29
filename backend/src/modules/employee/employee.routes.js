@@ -338,7 +338,23 @@ router.get('/profile', async (req, res, next) => {
     const cached = await cache.get(cacheKey);
     if (cached) {
       logger.debug(`[Cache] Employee profile cache hit for empId: ${empId}`);
-      return res.json({ success: true, data: cached, cached: true });
+      return res.json({
+        success: true,
+        data: cached,
+        employee: cached.employee,
+        joining_details: cached.joining_details,
+        kyc: cached.kyc,
+        terms: cached.terms,
+        documents: cached.documents,
+        hierarchy: cached.hierarchy,
+        incentives_summary: cached.incentives_summary,
+        total_applications: cached.total_applications,
+        approved_applications: cached.approved_applications,
+        leads_count: cached.leads_count,
+        team_size: cached.team_size,
+        active_members: cached.active_members,
+        cached: true
+      });
     }
 
     // Execute all 10 independent sub-queries in parallel via Promise.all to eliminate sequential waterfall
@@ -487,7 +503,19 @@ router.get('/profile', async (req, res, next) => {
 
     res.json({
       success: true,
-      data: responseData
+      data: responseData,
+      employee: responseData.employee,
+      joining_details: responseData.joining_details,
+      kyc: responseData.kyc,
+      terms: responseData.terms,
+      documents: responseData.documents,
+      hierarchy: responseData.hierarchy,
+      incentives_summary: responseData.incentives_summary,
+      total_applications: responseData.total_applications,
+      approved_applications: responseData.approved_applications,
+      leads_count: responseData.leads_count,
+      team_size: responseData.team_size,
+      active_members: responseData.active_members
     });
   } catch (err) {
     next(err);
@@ -1803,7 +1831,23 @@ router.get('/verification-status', async (req, res, next) => {
     const cached = await cache.get(cacheKey);
     if (cached) {
       logger.debug(`[Cache] Verification status cache hit for empId: ${empId}`);
-      return res.json({ success: true, data: cached, cached: true });
+      return res.json({
+        success: true,
+        data: cached,
+        employee: cached.employee,
+        joining_details: cached.joining_details,
+        kyc: cached.kyc,
+        terms: cached.terms,
+        documents: cached.documents,
+        hierarchy: cached.hierarchy,
+        incentives_summary: cached.incentives_summary,
+        total_applications: cached.total_applications,
+        approved_applications: cached.approved_applications,
+        leads_count: cached.leads_count,
+        team_size: cached.team_size,
+        active_members: cached.active_members,
+        cached: true
+      });
     }
 
     const vState = await calculateEmployeeVerificationState(empId);
@@ -1826,7 +1870,19 @@ router.get('/verification-status', async (req, res, next) => {
 
     res.json({
       success: true,
-      data: responseData
+      data: responseData,
+      employee: responseData.employee,
+      joining_details: responseData.joining_details,
+      kyc: responseData.kyc,
+      terms: responseData.terms,
+      documents: responseData.documents,
+      hierarchy: responseData.hierarchy,
+      incentives_summary: responseData.incentives_summary,
+      total_applications: responseData.total_applications,
+      approved_applications: responseData.approved_applications,
+      leads_count: responseData.leads_count,
+      team_size: responseData.team_size,
+      active_members: responseData.active_members
     });
   } catch (err) {
     next(err);
