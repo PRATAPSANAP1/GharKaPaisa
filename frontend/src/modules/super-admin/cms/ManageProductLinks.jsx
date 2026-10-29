@@ -157,9 +157,11 @@ export default function ManageProductLinks() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [reason, setReason] = useState('Link configuration updated');
+  const [linkAdobeUrlError, setLinkAdobeUrlError] = useState('');
   const [form, setForm] = useState({
     public_url: '',
     partner_url: '',
+    adobe_support_url: '',
     tracking_enabled: true,
     button_text: 'Apply Now',
     redirect_type: 'new_tab',
@@ -374,12 +376,14 @@ export default function ManageProductLinks() {
     fetchData();
   };
 
-  const openEditModal = (product) => {
+    const openEditModal = async (product) => {
     setSelectedProduct(product);
     setReason('Link configuration updated');
+    setLinkAdobeUrlError('');
     setForm({
       public_url: product.public_url || '',
       partner_url: product.partner_url || '',
+      adobe_support_url: product.adobe_support_url || '',
       tracking_enabled: product.tracking_enabled ?? true,
       button_text: product.button_text || 'Apply Now',
       redirect_type: product.redirect_type || 'new_tab',
@@ -389,14 +393,51 @@ export default function ManageProductLinks() {
       priority: product.priority || 0
     });
     setModalOpen(true);
+
+    try {
+      const res = await api.get(`/products/link/${product.id}`);
+      if (res.data?.success && res.data.data) {
+        const d = res.data.data;
+        setForm(prev => ({
+          ...prev,
+          public_url: d.public_url ?? prev.public_url,
+          partner_url: d.partner_url ?? prev.partner_url,
+          adobe_support_url: d.adobe_support_url ?? prev.adobe_support_url,
+          tracking_enabled: d.tracking_enabled ?? prev.tracking_enabled,
+          button_text: d.button_text || prev.button_text,
+          redirect_type: d.redirect_type || prev.redirect_type,
+          utm_source: d.utm_source ?? prev.utm_source,
+          utm_medium: d.utm_medium ?? prev.utm_medium,
+          utm_campaign: d.utm_campaign ?? prev.utm_campaign,
+          priority: d.priority ?? prev.priority
+        }));
+      }
+    } catch (_) {}
   };
 
-  const handleSave = async (e) => {
+    const handleSave = async (e) => {
     e.preventDefault();
+    if (form.adobe_support_url && form.adobe_support_url.trim()) {
+      const trimmed = form.adobe_support_url.trim();
+      let valid = false;
+      try {
+        const parsed = new URL(trimmed);
+        valid = (parsed.protocol === 'http:' || parsed.protocol === 'https:') && Boolean(parsed.hostname) && !/\s/.test(trimmed);
+      } catch (_) {
+        valid = false;
+      }
+      if (!valid) {
+        setLinkAdobeUrlError('Please enter a valid http:// or https:// URL for Adobe Support.');
+        return;
+      }
+    }
     setActionLoading(true);
     try {
       const payload = {
         ...form,
+        adobe_support_url: form.adobe_support_url ? form.adobe_support_url.trim() : null,
+        public_url: form.public_url ? form.public_url.trim() : null,
+        partner_url: form.partner_url ? form.partner_url.trim() : null,
         reason
       };
       
@@ -422,6 +463,7 @@ export default function ManageProductLinks() {
       const payload = {
         public_url: product.public_url,
         partner_url: product.partner_url,
+        adobe_support_url: product.adobe_support_url || null,
         tracking_enabled: enable,
         reason: `${enable ? 'Enabled' : 'Disabled'} tracking`
       };
@@ -447,6 +489,7 @@ export default function ManageProductLinks() {
     setForm({
       public_url: product.public_url || '',
       partner_url: product.partner_url || '',
+      adobe_support_url: product.adobe_support_url || '',
       tracking_enabled: product.tracking_enabled ?? true,
       button_text: product.button_text || 'Apply Now',
       redirect_type: product.redirect_type || 'new_tab',
@@ -515,7 +558,7 @@ export default function ManageProductLinks() {
       ]);
     } else {
       filename = 'Global_Product_Links_Export.csv';
-      headers = ['Product Name', 'Category', 'Bank Partner', 'Public URL', 'Partner URL', 'Short Link', 'Deep Link', 'Tracking Status', 'Priority'];
+      headers = ['Product Name', 'Category', 'Bank Partner', 'Public URL', 'Partner URL', 'Adobe Support URL', 'Short Link', 'Deep Link', 'Tracking Status', 'Priority'];
       rows = (products || []).map(p => {
         const shortLink = `${getAPIHost()}/redirect/${p.category}?id=${p.id}`;
         const deepLink = `${getAPIHost()}/r/AGP_PARTNER/${p.id}`;
@@ -525,6 +568,7 @@ export default function ManageProductLinks() {
           p.bank_name || '',
           p.public_url || '',
           p.partner_url || '',
+          p.adobe_support_url || '',
           shortLink,
           deepLink,
           p.tracking_enabled ? 'Active' : 'Disabled',
@@ -1245,7 +1289,7 @@ export default function ManageProductLinks() {
                             </button>
                           )}
                         </div>
-                        <div>
+                                                <div>
                           <span style={{ fontSize: '10px', fontWeight: 700, color: C.primary, background: `${C.primary}15`, padding: '2px 6px', borderRadius: '4px', marginRight: '6px' }}>Partner</span>
                           <span style={{ fontFamily: 'monospace', fontSize: '11px', wordBreak: 'break-all' }}>
                             {p.partner_url ? p.partner_url : <span style={{ color: C.textLight }}>Not Configured</span>}
@@ -1256,6 +1300,17 @@ export default function ManageProductLinks() {
                             </button>
                           )}
                         </div>
+                        {p.adobe_support_url && (
+                          <div style={{ marginTop: '4px' }}>
+                            <span style={{ fontSize: '10px', fontWeight: 700, color: '#DC2626', background: 'rgba(220,38,38,0.12)', padding: '2px 6px', borderRadius: '4px', marginRight: '6px' }}>Adobe</span>
+                            <span style={{ fontFamily: 'monospace', fontSize: '11px', wordBreak: 'break-all' }}>
+                              {p.adobe_support_url}
+                            </span>
+                            <button onClick={() => handleCopy(p.adobe_support_url)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', color: C.primary }}>
+                              <MdContentCopy size={12} />
+                            </button>
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: '14px 16px', verticalAlign: 'top', maxWidth: '280px' }}>
                         <div style={{ marginBottom: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1375,7 +1430,7 @@ export default function ManageProductLinks() {
                 </div>
               )}
 
-              {/* URLs Row */}
+                            {/* URLs Row */}
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                 <div style={{ flex: 1, minWidth: '240px' }}>
                   <label style={S.label}>Public Direct URL (Customers)</label>
@@ -1397,6 +1452,63 @@ export default function ManageProductLinks() {
                     onChange={e => setForm({ ...form, partner_url: e.target.value })}
                   />
                 </div>
+              </div>
+
+              {/* Dedicated Adobe Support URL field */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <label style={{ ...S.label, margin: 0 }}>Adobe Support URL</label>
+                  {form.adobe_support_url && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForm(prev => ({ ...prev, adobe_support_url: '' }));
+                        setLinkAdobeUrlError('');
+                      }}
+                      style={{ background: 'none', border: 'none', color: C.red, fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                    >
+                      Clear URL
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="url"
+                  placeholder="https://applyonline.hdfc.bank.in/cards/credit-cards.html?..."
+                  style={{
+                    ...S.input,
+                    fontFamily: 'monospace',
+                    fontSize: '12.5px',
+                    borderColor: linkAdobeUrlError ? C.red : undefined
+                  }}
+                  value={form.adobe_support_url}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setForm(prev => ({ ...prev, adobe_support_url: val }));
+                    if (!val.trim()) {
+                      setLinkAdobeUrlError('');
+                    } else {
+                      try {
+                        const parsed = new URL(val.trim());
+                        if ((parsed.protocol === 'http:' || parsed.protocol === 'https:') && Boolean(parsed.hostname) && !/\s/.test(val.trim())) {
+                          setLinkAdobeUrlError('');
+                        } else {
+                          setLinkAdobeUrlError('Must be a valid http:// or https:// URL.');
+                        }
+                      } catch (_) {
+                        setLinkAdobeUrlError('Must be a valid http:// or https:// URL.');
+                      }
+                    }
+                  }}
+                />
+                {linkAdobeUrlError ? (
+                  <span style={{ fontSize: '11px', color: C.red, marginTop: '4px', display: 'block', fontWeight: 600 }}>
+                    {linkAdobeUrlError}
+                  </span>
+                ) : (
+                  <span style={{ fontSize: '11px', color: C.textLight, marginTop: '4px', display: 'block' }}>
+                    Controls the Adobe Support button for the selected product. Clear this field to disable the Adobe Support button.
+                  </span>
+                )}
               </div>
 
               {/* General Options Row */}

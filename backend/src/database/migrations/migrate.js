@@ -5129,6 +5129,14 @@ const migrate = async () => {
     logger.error('Bank Direct Process Link migration error note:', bankLinkErr.message);
   }
 
+  // Product Adobe Support URL Column Migration
+  try {
+    const { migrateAddAdobeSupportUrl } = require('./migrate_add_adobe_support_url');
+    await migrateAddAdobeSupportUrl();
+  } catch (adobeUrlErr) {
+    logger.error('Product Adobe Support URL migration error note:', adobeUrlErr.message);
+  }
+
   if (require.main === module) {
     process.exit(0);
   }

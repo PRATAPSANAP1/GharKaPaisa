@@ -4,6 +4,59 @@ const { ensureBankDirectProcessLinksTable } = require('../../database/migrations
 const logger = require('../../config/logger');
 
 /**
+ * Validates that adobe_support_url is either empty/null (when clearing) or a strict http/https URL.
+ */
+function validateAdobeSupportUrl(rawValue) {
+  if (rawValue === undefined) {
+    return { provided: false, valid: true, value: undefined };
+  }
+  if (rawValue === null) {
+    return { provided: true, valid: true, value: null };
+  }
+  if (typeof rawValue !== 'string') {
+    return {
+      provided: true,
+      valid: false,
+      error: 'Adobe Support URL must be a valid http:// or https:// URL.'
+    };
+  }
+  const trimmed = rawValue.trim();
+  if (!trimmed) {
+    return { provided: true, valid: true, value: null };
+  }
+  if (/\s/.test(trimmed) || !/^https?:\/\//i.test(trimmed) || trimmed.length > 2048) {
+    return {
+      provided: true,
+      valid: false,
+      error: 'Adobe Support URL must be a valid http:// or https:// URL.'
+    };
+  }
+  try {
+    const parsed = new URL(trimmed);
+    const protocol = String(parsed.protocol || '').toLowerCase();
+    const hostname = String(parsed.hostname || '').trim();
+    if (
+      (protocol !== 'http:' && protocol !== 'https:') ||
+      !hostname ||
+      (hostname !== 'localhost' && !hostname.includes('.'))
+    ) {
+      return {
+        provided: true,
+        valid: false,
+        error: 'Adobe Support URL must be a valid http:// or https:// URL.'
+      };
+    }
+    return { provided: true, valid: true, value: trimmed };
+  } catch (_) {
+    return {
+      provided: true,
+      valid: false,
+      error: 'Adobe Support URL must be a valid http:// or https:// URL.'
+    };
+  }
+}
+
+/**
  * Helper to parse device type, OS, and browser name from a user agent string.
  */
 function parseUA(userAgent) {
@@ -59,7 +112,7 @@ const listProductLinks = async (req, res, next) => {
 
     let sql = `
       SELECT p.id, p.name, p.category, p.is_active, p.bank_id,
-             p.public_url, p.partner_url, p.tracking_enabled, p.button_text, p.redirect_type,
+             p.public_url, p.partner_url, p.adobe_support_url, p.tracking_enabled, p.button_text, p.redirect_type,
              p.utm_source, p.utm_medium, p.utm_campaign, p.priority,
              p.last_updated_at, b.name as bank_name, u.full_name as updated_by,
              bdpl.direct_process_link as bank_direct_process_link
@@ -122,7 +175,7 @@ const getProductLink = async (req, res, next) => {
     await ensureBankDirectProcessLinksTable();
     const { id } = req.params;
     const { rows: [link] } = await query(
-      `SELECT p.id, p.name, p.category, p.bank_id, p.public_url, p.partner_url, p.tracking_enabled,
+      `SELECT p.id, p.name, p.category, p.bank_id, p.public_url, p.partner_url, p.adobe_support_url, p.tracking_enabled,
               p.button_text, p.redirect_type, p.utm_source, p.utm_medium, p.utm_campaign, p.priority,
               p.last_updated_at, b.name as bank_name, bdpl.direct_process_link as bank_direct_process_link
        FROM products p
@@ -165,6 +218,7 @@ const saveProductLink = async (req, res, next) => {
     const {
       public_url,
       partner_url,
+      adobe_support_url,
       tracking_enabled = true,
       button_text = 'Apply Now',
       redirect_type = 'new_tab',
@@ -174,6 +228,11 @@ const saveProductLink = async (req, res, next) => {
       priority = 0,
       reason = 'Configuration updated'
     } = req.body;
+
+    const adobeValidation = validateAdobeSupportUrl(adobe_support_url);
+    if (!adobeValidation.valid) {
+      return error(res, adobeValidation.error, 400);
+    }
 
     // URL validations
     const isValidUrl = (urlStr) => {
@@ -215,7 +274,7 @@ const saveProductLink = async (req, res, next) => {
 
     // 1. Get original values for audit trail
     const { rows: [oldProduct] } = await query(
-      `SELECT public_url, partner_url FROM products WHERE id = $1`,
+      `SELECT public_url, partner_url, adobe_support_url FROM products WHERE id = $1`,
       [id]
     );
 
@@ -223,25 +282,31 @@ const saveProductLink = async (req, res, next) => {
       return error(res, 'Product not found', 404);
     }
 
+    const nextPublicUrl = public_url !== undefined ? (public_url || null) : (oldProduct.public_url || null);
+    const nextPartnerUrl = partner_url !== undefined ? (partner_url || null) : (oldProduct.partner_url || null);
+    const nextAdobeSupportUrl = adobeValidation.provided ? adobeValidation.value : (oldProduct.adobe_support_url ?? null);
+
     // 2. Perform updates
     const { rows: [updated] } = await query(
       `UPDATE products
        SET public_url = $1,
            partner_url = $2,
-           tracking_enabled = $3,
-           button_text = $4,
-           redirect_type = $5,
-           utm_source = $6,
-           utm_medium = $7,
-           utm_campaign = $8,
-           priority = $9,
-           last_updated_by = $10,
+           adobe_support_url = $3,
+           tracking_enabled = $4,
+           button_text = $5,
+           redirect_type = $6,
+           utm_source = $7,
+           utm_medium = $8,
+           utm_campaign = $9,
+           priority = $10,
+           last_updated_by = $11,
            last_updated_at = NOW()
-       WHERE id = $11
+       WHERE id = $12
        RETURNING *`,
       [
-        public_url || null,
-        partner_url || null,
+        nextPublicUrl,
+        nextPartnerUrl,
+        nextAdobeSupportUrl,
         tracking_enabled,
         button_text,
         redirect_type,
@@ -260,14 +325,21 @@ const saveProductLink = async (req, res, next) => {
       clientIp = clientIp.split('::ffff:')[1];
     }
 
+    const auditOldUrl = adobeValidation.provided && oldProduct.adobe_support_url !== nextAdobeSupportUrl && (oldProduct.public_url || '') === (nextPublicUrl || '')
+      ? (oldProduct.adobe_support_url || '')
+      : (oldProduct.public_url || oldProduct.adobe_support_url || '');
+    const auditNewUrl = adobeValidation.provided && oldProduct.adobe_support_url !== nextAdobeSupportUrl && (oldProduct.public_url || '') === (nextPublicUrl || '')
+      ? (nextAdobeSupportUrl || '')
+      : (nextPublicUrl || nextAdobeSupportUrl || '');
+
     await query(
       `INSERT INTO product_link_audits (
          product_id, old_url, new_url, updated_by, reason, ip_address
        ) VALUES ($1, $2, $3, $4, $5, $6)`,
       [
         id,
-        oldProduct.public_url || '',
-        public_url || '',
+        auditOldUrl,
+        auditNewUrl,
         req.user.id,
         reason,
         clientIp
@@ -288,7 +360,7 @@ const deleteProductLink = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { rows: [oldProduct] } = await query(
-      `SELECT public_url, partner_url FROM products WHERE id = $1`,
+      `SELECT public_url, partner_url, adobe_support_url FROM products WHERE id = $1`,
       [id]
     );
 
@@ -300,6 +372,7 @@ const deleteProductLink = async (req, res, next) => {
       `UPDATE products
        SET public_url = NULL,
            partner_url = NULL,
+           adobe_support_url = NULL,
            last_updated_by = $1,
            last_updated_at = NOW()
        WHERE id = $2
@@ -318,7 +391,7 @@ const deleteProductLink = async (req, res, next) => {
        ) VALUES ($1, $2, NULL, $3, $4, $5)`,
       [
         id,
-        oldProduct.public_url || '',
+        oldProduct.public_url || oldProduct.adobe_support_url || '',
         req.user.id,
         'Reset/Deleted link configuration',
         clientIp
@@ -531,6 +604,7 @@ const logClick = async (req, res, next) => {
 };
 
 module.exports = {
+  validateAdobeSupportUrl,
   listProductLinks,
   getProductLink,
   saveProductLink,

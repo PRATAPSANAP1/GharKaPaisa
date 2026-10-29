@@ -92,6 +92,7 @@ export default function ManageProducts() {
   const [editItem, setEditItem] = useState(null);
   const [modalTab, setModalTab] = useState("core"); // core, eligibility, commission, redirect, seo
   const [submitting, setSubmitting] = useState(false);
+  const [adobeUrlError, setAdobeUrlError] = useState("");
 
   // Form State
   const [form, setForm] = useState({
@@ -142,6 +143,7 @@ export default function ManageProducts() {
     // Redirect & App Settings
     application_url: "",
     partner_url: "",
+    adobe_support_url: "",
     redirect_type: "new_tab", // same_tab, new_tab
     tracking_enabled: true,
     apply_button_text: "Apply Now",
@@ -207,6 +209,7 @@ export default function ManageProducts() {
 
   const openAddModal = () => {
     setEditItem(null);
+    setAdobeUrlError("");
     setModalTab("core");
     setForm({
       name: "",
@@ -246,6 +249,7 @@ export default function ManageProducts() {
       commission_release_rule: "standard",
       application_url: "",
       partner_url: "",
+      adobe_support_url: "",
       redirect_type: "new_tab",
       tracking_enabled: true,
       apply_button_text: "Apply Now",
@@ -260,6 +264,7 @@ export default function ManageProducts() {
 
   const openEditModal = async (item) => {
     setEditItem(item);
+    setAdobeUrlError("");
     setModalTab("core");
 
     const buildFormFromItem = (prod) => ({
@@ -300,6 +305,7 @@ export default function ManageProducts() {
       commission_release_rule: prod.commission_release_rule || "standard",
       application_url: prod.application_url || prod.public_url || "",
       partner_url: prod.partner_url || "",
+      adobe_support_url: prod.adobe_support_url || "",
       redirect_type: prod.redirect_type || "new_tab",
       tracking_enabled: prod.tracking_enabled ?? true,
       apply_button_text: prod.apply_button_text || "Apply Now",
@@ -323,8 +329,24 @@ export default function ManageProducts() {
     }
   };
 
-  const handleSubmit = async (e) => {
+    const handleSubmit = async (e) => {
     e.preventDefault();
+    if (form.adobe_support_url && form.adobe_support_url.trim()) {
+      const trimmedUrl = form.adobe_support_url.trim();
+      let valid = false;
+      try {
+        const parsed = new URL(trimmedUrl);
+        valid = (parsed.protocol === 'http:' || parsed.protocol === 'https:') && Boolean(parsed.hostname) && !/\s/.test(trimmedUrl);
+      } catch (_) {
+        valid = false;
+      }
+      if (!valid) {
+        setAdobeUrlError('Please enter a valid http:// or https:// URL for Adobe Support.');
+        setModalTab('redirect');
+        triggerToast('Please enter a valid http:// or https:// URL for Adobe Support.', 'error');
+        return;
+      }
+    }
     setSubmitting(true);
     try {
       let parsedFeatures = [];
@@ -336,6 +358,8 @@ export default function ManageProducts() {
 
       const payload = {
         ...form,
+        adobe_support_url: form.adobe_support_url ? form.adobe_support_url.trim() : null,
+        public_url: form.application_url ? form.application_url.trim() : null,
         features: parsedFeatures,
         is_active: form.status !== "Inactive",
         eligibility: {
@@ -913,6 +937,63 @@ export default function ManageProducts() {
               {/* REDIRECT & APP SETTINGS TAB */}
               {modalTab === "redirect" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  {/* Dedicated Adobe Support URL field */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label style={{ ...S.label, margin: 0 }}>Adobe Support URL</label>
+                      {form.adobe_support_url && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForm(prev => ({ ...prev, adobe_support_url: '' }));
+                            setAdobeUrlError('');
+                          }}
+                          style={{ background: 'none', border: 'none', color: C.red, fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                        >
+                          Clear URL
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="url"
+                      placeholder="https://applyonline.hdfc.bank.in/cards/credit-cards.html?..."
+                      style={{
+                        ...S.input,
+                        fontFamily: 'monospace',
+                        fontSize: '12.5px',
+                        borderColor: adobeUrlError ? C.red : undefined
+                      }}
+                      value={form.adobe_support_url}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setForm(prev => ({ ...prev, adobe_support_url: val }));
+                        if (!val.trim()) {
+                          setAdobeUrlError('');
+                        } else {
+                          try {
+                            const parsed = new URL(val.trim());
+                            if ((parsed.protocol === 'http:' || parsed.protocol === 'https:') && Boolean(parsed.hostname) && !/\s/.test(val.trim())) {
+                              setAdobeUrlError('');
+                            } else {
+                              setAdobeUrlError('Must be a valid http:// or https:// URL.');
+                            }
+                          } catch (_) {
+                            setAdobeUrlError('Must be a valid http:// or https:// URL.');
+                          }
+                        }
+                      }}
+                    />
+                    {adobeUrlError ? (
+                      <span style={{ fontSize: '11px', color: C.red, marginTop: '4px', display: 'block', fontWeight: 600 }}>
+                        {adobeUrlError}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '11px', color: C.textLight, marginTop: '4px', display: 'block' }}>
+                        Controls the Adobe Support button for the selected product. Leave empty to disable the Adobe Support button.
+                      </span>
+                    )}
+                  </div>
+
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                     <div>
                       <label style={S.label}>Public Application Redirect Link *</label>
@@ -1028,6 +1109,9 @@ export default function ManageProducts() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", background: C.bgSecondary, padding: "12px", borderRadius: "10px" }}>
                 <div>
                   <strong>Status Visibility:</strong> {viewProduct.status}
+                </div>
+                <div>
+                  <strong>Adobe Support:</strong> {viewProduct.adobe_support_url ? "Configured" : "None"}
                 </div>
                 <div>
                   <strong>Annual Fee:</strong> {viewProduct.annual_fee || "N/A"}
