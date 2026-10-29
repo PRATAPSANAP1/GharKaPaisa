@@ -12,6 +12,7 @@ import axios from 'axios';
 import api from '../../services/api';
 import { getApiV1Url } from '../../config/api';
 import LoadingLogo from '../../components/Loader/LoadingLogo';
+import { useLocalStorageCache } from '../../hooks/useLocalStorageCache';
 
 // Static Banner Image Assets
 import offerBanner from '../home/components/banner/offerbanner.png';
@@ -87,7 +88,49 @@ export default function EmployeeDashboardRedesigned() {
     setCurrentDate(now.toLocaleDateString('en-IN', options));
   }, []);
 
-  const fetchDashboardData = async () => {
+  // Client-side cache helpers
+  const CACHE_PREFIX = 'employee_dashboard_cache_';
+  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+  const getCache = (key) => {
+    try {
+      const cached = localStorage.getItem(`${CACHE_PREFIX}${key}`);
+      if (!cached) return null;
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp > CACHE_TTL) {
+        localStorage.removeItem(`${CACHE_PREFIX}${key}`);
+        return null;
+      }
+      return data;
+    } catch (err) {
+      return null;
+    }
+  };
+
+  const setCache = (key, data) => {
+    try {
+      localStorage.setItem(`${CACHE_PREFIX}${key}`, JSON.stringify({
+        data,
+        timestamp: Date.now()
+      }));
+    } catch (err) {
+      console.warn('Failed to set cache:', err);
+    }
+  };
+
+  const clearCache = () => {
+    try {
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith(CACHE_PREFIX)) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (err) {
+      console.warn('Failed to clear cache:', err);
+    }
+  };
+
+  const fetchDashboardData = async (forceRefresh = false) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -96,6 +139,27 @@ export default function EmployeeDashboardRedesigned() {
         return;
       }
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      // Try client-side cache first (unless force refresh)
+      if (!forceRefresh) {
+        const cachedProfile = getCache('profile');
+        const cachedAttendance = getCache('attendance');
+        const cachedApps = getCache('applications');
+        const cachedVer = getCache('verification');
+        const cachedBanners = getCache('banners');
+
+        if (cachedProfile && cachedAttendance && cachedApps && cachedVer && cachedBanners) {
+          console.log('[Client Cache] Using cached dashboard data');
+          setEmployee(cachedProfile.employee);
+          setAttendanceToday(cachedAttendance);
+          setRecentApplications(cachedApps.slice(0, 5));
+          setTotalApplicationsCount(cachedApps.total || cachedApps.length);
+          setVerState(cachedVer);
+          setApiBanners(cachedBanners);
+          setLoading(false);
+          return;
+        }
+      }
 
       // Concurrent fetch for employee profile, attendance, applications, and verification status
       const [profileRes, attendanceRes, appsRes, verRes, bannersRes] = await Promise.allSettled([
@@ -107,11 +171,15 @@ export default function EmployeeDashboardRedesigned() {
       ]);
 
       if (profileRes.status === 'fulfilled' && profileRes.value?.data?.success) {
-        setEmployee(profileRes.value.data.data.employee);
+        const profileData = profileRes.value.data;
+        setEmployee(profileData.employee);
+        setCache('profile', profileData);
       }
 
       if (attendanceRes.status === 'fulfilled' && attendanceRes.value?.data?.data) {
-        setAttendanceToday(attendanceRes.value.data.data);
+        const attendanceData = attendanceRes.value.data.data;
+        setAttendanceToday(attendanceData);
+        setCache('attendance', attendanceData);
       }
 
       if (appsRes.status === 'fulfilled' && appsRes.value?.data?.success) {
@@ -119,21 +187,22 @@ export default function EmployeeDashboardRedesigned() {
         if (Array.isArray(appsData)) {
           setRecentApplications(appsData.slice(0, 5));
         }
-        if (appsRes.value.data.pagination?.total !== undefined) {
-          setTotalApplicationsCount(appsRes.value.data.pagination.total);
-        } else if (Array.isArray(appsData)) {
-          setTotalApplicationsCount(appsData.length);
-        }
+        const totalCount = appsRes.pagination?.total !== undefined ? appsRes.pagination.total : appsData.length;
+        setTotalApplicationsCount(totalCount);
+        setCache('applications', { ...appsData, total: totalCount });
       }
 
       if (verRes.status === 'fulfilled' && verRes.value?.data?.success) {
-        setVerState(verRes.value.data.data);
+        const verData = verRes.value.data.data;
+        setVerState(verData);
+        setCache('verification', verData);
       }
 
       if (bannersRes.status === 'fulfilled' && bannersRes.value?.data?.data) {
         const banners = bannersRes.value.data.data;
         if (Array.isArray(banners) && banners.length > 0) {
           setApiBanners(banners);
+          setCache('banners', banners);
         }
       }
     } catch (err) {
@@ -149,6 +218,24 @@ export default function EmployeeDashboardRedesigned() {
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  // Clear cache when user logs out or switches (optional)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Refresh data when tab becomes visible (optional - comment out if not needed)
+        // fetchDashboardData(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // Force refresh function
+  const forceRefresh = () => {
+    clearCache();
+    fetchDashboardData(true);
+  };
 
   // Built-in Default Offer Banners
   const defaultOfferBanners = [

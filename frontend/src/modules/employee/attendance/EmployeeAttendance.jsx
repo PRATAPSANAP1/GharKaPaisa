@@ -4,6 +4,7 @@ import { ArrowLeft, Clock, Calendar, CheckCircle2, ShieldCheck, AlertTriangle } 
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../../app/store/authStore';
 import attendanceService from '../../../services/attendance.service';
+import { useLocalStorageCache } from '../../../hooks/useLocalStorageCache';
 
 import AttendanceDashboardCard from './components/AttendanceDashboardCard';
 import AttendanceHistoryView from './components/AttendanceHistoryView';
@@ -43,9 +44,31 @@ export default function EmployeeAttendance() {
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
 
-  const fetchAttendanceData = useCallback(async () => {
+  // Client-side cache (2 minute TTL for attendance data)
+  const { getCache, setCache, clearCache } = useLocalStorageCache('emp_att_', 2 * 60 * 1000);
+
+  const fetchAttendanceData = useCallback(async (forceRefresh = false) => {
     try {
       setLoading(true);
+      
+      const cacheKey = `${selectedMonth}-${selectedYear}`;
+      
+      // Try client-side cache first (unless force refresh)
+      if (!forceRefresh) {
+        const cachedToday = getCache('today');
+        const cachedHistory = getCache(`history_${cacheKey}`);
+        const cachedSummary = getCache(`summary_${cacheKey}`);
+        
+        if (cachedToday && cachedHistory && cachedSummary) {
+          console.log('[Client Cache] Using cached attendance data');
+          setTodayAttendance(cachedToday);
+          setHistory(cachedHistory);
+          setSummary(cachedSummary);
+          setLoading(false);
+          return;
+        }
+      }
+
       const [todayRes, historyRes, summaryRes, enrollRes] = await Promise.allSettled([
         attendanceService.getTodayAttendance(),
         attendanceService.getMyAttendance(selectedMonth, selectedYear),
@@ -64,7 +87,9 @@ export default function EmployeeAttendance() {
       }
 
       if (todayRes.status === 'fulfilled' && todayRes.value) {
-        setTodayAttendance(todayRes.value.data || todayRes.value || null);
+        const todayData = todayRes.value.data || todayRes.value || null;
+        setTodayAttendance(todayData);
+        setCache('today', todayData);
       }
 
       if (historyRes.status === 'fulfilled' && historyRes.value) {
@@ -75,13 +100,14 @@ export default function EmployeeAttendance() {
             ? hData.records
             : [];
         setHistory(records);
+        setCache(`history_${cacheKey}`, records);
       } else {
         setHistory([]);
       }
 
       if (summaryRes.status === 'fulfilled' && summaryRes.value) {
         const s = summaryRes.value?.data || summaryRes.value || {};
-        setSummary({
+        const summaryData = {
           present: s.totalPresent ?? s.present_days ?? s.present ?? s.total_present ?? 0,
           completed: s.totalCompleted ?? s.completed_days ?? s.completed ?? s.total_completed ?? 0,
           late: s.totalLate ?? s.late_days ?? s.late ?? s.total_late ?? 0,
@@ -93,14 +119,16 @@ export default function EmployeeAttendance() {
           attendancePercentage: s.attendancePercentage ?? s.attendance_percentage ?? s.attendancePct ?? 0,
           formattedHours: s.totalWorkingHoursFormatted || s.total_working_hours_formatted || '0h 0m',
           totalHours: typeof s.totalHours === 'number' ? s.totalHours : (s.total_hours ?? 0)
-        });
+        };
+        setSummary(summaryData);
+        setCache(`summary_${cacheKey}`, summaryData);
       }
     } catch (err) {
       console.error('Error fetching attendance:', err);
     } finally {
       setLoading(false);
     }
-  }, [selectedMonth, selectedYear]);
+  }, [selectedMonth, selectedYear, getCache, setCache]);
 
   useEffect(() => {
     fetchAttendanceData();
@@ -124,8 +152,10 @@ export default function EmployeeAttendance() {
   }, [isCheckedIn, isFaceEnrolled, navigate]);
 
   const handleVerificationSuccess = useCallback(() => {
-    fetchAttendanceData();
-  }, [fetchAttendanceData]);
+    // Clear cache when attendance is marked (check-in/check-out)
+    clearCache();
+    fetchAttendanceData(true);
+  }, [fetchAttendanceData, clearCache]);
 
   const handleFaceEnrollmentSuccess = useCallback(() => {
     setIsFaceEnrolled(true);
