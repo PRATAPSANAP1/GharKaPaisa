@@ -290,14 +290,14 @@ export default function ManageLinks() {
     },
     {
       key: 'hdfc_tata_neu_adobe_support_link',
-      title: '3. HDFC Bank (Tata Neu Infinity & Tata Neu Plus) — Adobe Support Link',
-      description: 'Destination URL opened when clicking the "📄 Adobe Support" button in the Apply form for Tata Neu Infinity HDFC Bank Credit Card and Tata Neu Plus HDFC Bank Credit Card.',
-      placeholder: 'https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=YOH5&LCcode=YOH5&LC2=A222&SMcode=S54558'
+      title: '3. TATA CO-BRAND HDFC / Tata Neu — Adobe Support Link 1 (SWCC)',
+      description: 'Destination URL opened when clicking the "📄 Adobe Support (SWCC)" button in the Apply form for TATA CO-BRAND HDFC BANK and Tata Neu products.',
+      placeholder: 'https://applyonline.hdfc.bank.in/cards/credit-cards?CHANNELSOURCE=SWCC&CHANNEL=DSA&DSACode=XSPY&LGcode=PTY01&LCcode=PTY01&LC2=PTY01&SMcode=S54558'
     },
     {
       key: 'tata_cobrand_hdfc_adobe_support_link',
-      title: '4. Tata Co-Brand HDFC Bank — Adobe Support Link',
-      description: 'Destination URL opened when clicking the "📄 Adobe Support" button in the Apply form for Tata Co-Brand HDFC Bank products.',
+      title: '4. TATA CO-BRAND HDFC BANK — Adobe Support Link 2 (TDCC)',
+      description: 'Destination URL opened when clicking the "📄 Adobe Support (TDCC)" button in the Apply form for TATA CO-BRAND HDFC BANK products.',
       placeholder: 'https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=YOH5&LCcode=YOH5&LC2=A222&SMcode=S54558'
     }
   ];

@@ -1995,28 +1995,78 @@ export default function PartnerProducts({
                 <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>
                   {isEmployee ? "Incentive: " : "Payout: "}<strong style={{ color: C.green }}>₹{parseFloat(selectedProduct.commission_value || 0).toLocaleString('en-IN')}</strong>
                 </p>
-                {(isHdfcTataNeuProduct || isTataCobrandHdfcProduct) && (
-                  <a
-                    href={adobeSupportHref}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{
-                      padding: '5px 12px',
-                      borderRadius: '8px',
-                      background: 'linear-gradient(135deg, #FF0000 0%, #CC0000 100%)',
-                      color: '#FFFFFF',
-                      fontWeight: 800,
-                      fontSize: '12px',
-                      textDecoration: 'none',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      boxShadow: '0 2px 8px rgba(255,0,0,0.3)'
-                    }}
-                  >
-                    📄 Adobe Support
-                  </a>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  {isTataCobrandHdfcProduct ? (
+                    <>
+                      <a
+                        href={adobeSupportLinks.hdfc_tata_neu_adobe_support_link}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Open Adobe Support SWCC Portal"
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: '8px',
+                          background: 'linear-gradient(135deg, #FF0000 0%, #CC0000 100%)',
+                          color: '#FFFFFF',
+                          fontWeight: 800,
+                          fontSize: '12px',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          boxShadow: '0 2px 8px rgba(255,0,0,0.3)',
+                          transition: 'transform 0.15s ease'
+                        }}
+                      >
+                        📄 Adobe Support (SWCC)
+                      </a>
+                      <a
+                        href={adobeSupportLinks.tata_cobrand_hdfc_adobe_support_link}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Open Adobe Support TDCC Portal"
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: '8px',
+                          background: 'linear-gradient(135deg, #4F46E5 0%, #3730A3 100%)',
+                          color: '#FFFFFF',
+                          fontWeight: 800,
+                          fontSize: '12px',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          boxShadow: '0 2px 8px rgba(79,70,229,0.35)',
+                          transition: 'transform 0.15s ease'
+                        }}
+                      >
+                        📄 Adobe Support (TDCC)
+                      </a>
+                    </>
+                  ) : isHdfcTataNeuProduct ? (
+                    <a
+                      href={adobeSupportLinks.hdfc_tata_neu_adobe_support_link}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Open Adobe Support SWCC Portal"
+                      style={{
+                        padding: '5px 12px',
+                        borderRadius: '8px',
+                        background: 'linear-gradient(135deg, #FF0000 0%, #CC0000 100%)',
+                        color: '#FFFFFF',
+                        fontWeight: 800,
+                        fontSize: '12px',
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        boxShadow: '0 2px 8px rgba(255,0,0,0.3)'
+                      }}
+                    >
+                      📄 Adobe Support (SWCC)
+                    </a>
+                  ) : null}
+                </div>
               </div>
             </div>
 

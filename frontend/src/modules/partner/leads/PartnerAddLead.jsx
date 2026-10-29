@@ -127,6 +127,25 @@ export default function PartnerAddLead() {
   const [shareResult, setShareResult] = useState(null);
   const [copied, setCopied] = useState(false);
 
+  const [adobeSupportLinks, setAdobeSupportLinks] = useState({
+    hdfc_tata_neu_adobe_support_link: 'https://applyonline.hdfc.bank.in/cards/credit-cards?CHANNELSOURCE=SWCC&CHANNEL=DSA&DSACode=XSPY&LGcode=PTY01&LCcode=PTY01&LC2=PTY01&SMcode=S54558',
+    tata_cobrand_hdfc_adobe_support_link: 'https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=YOH5&LCcode=YOH5&LC2=A222&SMcode=S54558'
+  });
+
+  useEffect(() => {
+    const fetchAdobeLinks = async () => {
+      try {
+        const res = await api.get('/settings');
+        const data = res.data?.data || res.data || {};
+        setAdobeSupportLinks(prev => ({
+          hdfc_tata_neu_adobe_support_link: data.hdfc_tata_neu_adobe_support_link || prev.hdfc_tata_neu_adobe_support_link,
+          tata_cobrand_hdfc_adobe_support_link: data.tata_cobrand_hdfc_adobe_support_link || prev.tata_cobrand_hdfc_adobe_support_link
+        }));
+      } catch (_) {}
+    };
+    fetchAdobeLinks();
+  }, []);
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -880,6 +899,114 @@ export default function PartnerAddLead() {
                 </option>
               ))}
             </select>
+
+            {/* TATA CO-BRAND HDFC ADOBE DIGITAL APPLICATION PORTALS */}
+            {(() => {
+              const selectedProd = products.find(p => String(p.id) === String(selectedProductId));
+              const isTataCobrandHdfc = selectedProd && (
+                selectedProd.bank_id === '1eacfa67-1187-48c7-adde-8a6edcfe9969' ||
+                String(selectedProd.bank_name || selectedProd.bank_code || selectedProd.name || '').toUpperCase().includes('TATA CO-BRAND HDFC') ||
+                String(selectedProd.bank_name || selectedProd.bank_code || selectedProd.name || '').toUpperCase().includes('TATA CO BRAND HDFC') ||
+                (String(selectedProd.bank_name || selectedProd.bank_code || selectedProd.name || '').toUpperCase().includes('TATA') &&
+                 String(selectedProd.bank_name || selectedProd.bank_code || selectedProd.name || '').toUpperCase().includes('HDFC'))
+              );
+              const prodNameUpper = String(selectedProd?.name || '').toUpperCase();
+              const isHdfcTataNeu =
+                (prodNameUpper.includes('TATA NEU INFINITY') || prodNameUpper.includes('TATA NEU PLUS')) &&
+                !prodNameUpper.includes('BUSINESS') &&
+                !prodNameUpper.includes('FLOATER');
+
+              if (!isTataCobrandHdfc && !isHdfcTataNeu) return null;
+
+              return (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '10px',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  background: isDark ? 'rgba(30, 41, 59, 0.6)' : '#F8FAFC',
+                  border: `1px solid ${C.border}`,
+                  marginTop: '10px'
+                }}>
+                  <span style={{ fontSize: '12.5px', fontWeight: 700, color: C.textMid }}>
+                    Official Adobe Digital Application Portals:
+                  </span>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {isTataCobrandHdfc ? (
+                      <>
+                        <a
+                          href={adobeSupportLinks.hdfc_tata_neu_adobe_support_link}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Open Adobe Support SWCC Portal"
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            background: 'linear-gradient(135deg, #FF0000 0%, #CC0000 100%)',
+                            color: '#FFFFFF',
+                            fontWeight: 800,
+                            fontSize: '12px',
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            boxShadow: '0 2px 8px rgba(255,0,0,0.3)'
+                          }}
+                        >
+                          📄 Adobe Support (SWCC)
+                        </a>
+                        <a
+                          href={adobeSupportLinks.tata_cobrand_hdfc_adobe_support_link}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Open Adobe Support TDCC Portal"
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            background: 'linear-gradient(135deg, #4F46E5 0%, #3730A3 100%)',
+                            color: '#FFFFFF',
+                            fontWeight: 800,
+                            fontSize: '12px',
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            boxShadow: '0 2px 8px rgba(79,70,229,0.3)'
+                          }}
+                        >
+                          📄 Adobe Support (TDCC)
+                        </a>
+                      </>
+                    ) : (
+                      <a
+                        href={adobeSupportLinks.hdfc_tata_neu_adobe_support_link}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Open Adobe Support SWCC Portal"
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          background: 'linear-gradient(135deg, #FF0000 0%, #CC0000 100%)',
+                          color: '#FFFFFF',
+                          fontWeight: 800,
+                          fontSize: '12px',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          boxShadow: '0 2px 8px rgba(255,0,0,0.3)'
+                        }}
+                      >
+                        📄 Adobe Support (SWCC)
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* DEMOGRAPHICS & CRITICAL FIELDS */}
