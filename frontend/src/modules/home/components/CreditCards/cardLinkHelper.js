@@ -10,8 +10,7 @@ export const isSafeHttpUrl = (rawUrl) => {
   try {
     const parsed = new URL(trimmed);
     const protocol = String(parsed.protocol || '').toLowerCase();
-    const hostname = String(parsed.hostname || '').trim();
-    return (protocol === 'http:' || protocol === 'https:') && Boolean(hostname);
+    return (protocol === 'http:' || protocol === 'https:') && Boolean(parsed.hostname);
   } catch (_) {
     return false;
   }
@@ -82,9 +81,7 @@ export const getBankApplyLink = (cardName, bankId, productObj = null) => {
   return null;
 };
 
-const HDFC_BANK_ID = 'f0b5742d-f04d-4a91-b162-6009ddf6e345';
 const TATA_BANK_ID = '1eacfa67-1187-48c7-adde-8a6edcfe9969';
-const SBI_BANK_ID = 'e7c2c604-139d-4fcf-a87c-695633535a02';
 const TATA_NEU_DIRECT_FALLBACK_LINK = 'https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=YOH5&LCcode=YOH5&LC2=A222&SMcode=S54558';
 
 /**
@@ -148,70 +145,5 @@ export const getDirectProcessLink = (productObj, cardName = '', bankId = '') => 
     return TATA_NEU_DIRECT_FALLBACK_LINK;
   }
 
-  return null;
-};
-
-/**
- * Checks whether a product belongs to HDFC Bank or Tata Co-Brand HDFC Bank,
- * qualifying it for the Adobe Support feature when an Adobe Support URL is configured.
- */
-export const isEligibleHdfcAdobeProduct = (product) => {
-  if (!product || typeof product !== 'object') return false;
-
-  const bankId = String(product.bank_id || '').toLowerCase().trim();
-  const bankName = String(product.bank_name || '').toUpperCase();
-  const bankCode = String(product.bank_code || '').toUpperCase();
-  const bankSlug = String(product.bank_slug || '').toUpperCase();
-  const nameUpper = String(product.name || product.cardName || '').toUpperCase();
-
-  // Explicit bank UUIDs
-  if (bankId === HDFC_BANK_ID || bankId === TATA_BANK_ID) return true;
-
-  // Exclude SBI products (including Tata Co-Brand SBI)
-  if (
-    bankId === SBI_BANK_ID ||
-    bankCode === 'SBI' ||
-    bankSlug === 'SBI' ||
-    (bankName.includes('SBI') && !bankName.includes('HDFC')) ||
-    (nameUpper.includes('SBI') && !nameUpper.includes('HDFC'))
-  ) {
-    return false;
-  }
-
-  // Check HDFC presence in bank name, code, slug, or product name
-  if (
-    bankCode.includes('HDFC') ||
-    bankName.includes('HDFC') ||
-    bankSlug.includes('HDFC') ||
-    nameUpper.includes('HDFC')
-  ) {
-    return true;
-  }
-
-  // Tata Co-brand without explicit other bank name
-  if (
-    (bankName.includes('TATA') || nameUpper.includes('TATA')) &&
-    !bankName.includes('SBI') &&
-    !nameUpper.includes('SBI') &&
-    (nameUpper.includes('NEU') || bankName.includes('CO-BRAND') || bankName.includes('CO BRAND'))
-  ) {
-    return true;
-  }
-
-  return false;
-};
-
-/**
- * Resolves the Adobe Support URL for a product.
- * Returns the valid saved adobe_support_url for eligible HDFC products.
- * Returns null if the product is not eligible, has no adobe_support_url configured,
- * or has an invalid/unsafe protocol. Never silently falls back to a hardcoded URL.
- */
-export const getAdobeSupportLink = (product) => {
-  if (!isEligibleHdfcAdobeProduct(product)) return null;
-  const raw = product?.adobe_support_url;
-  if (raw && isSafeHttpUrl(raw)) {
-    return String(raw).trim();
-  }
   return null;
 };

@@ -8,7 +8,6 @@ const deleteFromS3 = s3Service.deleteFromS3;
 const getCloudFrontUrl = typeof s3Service.getCloudFrontUrl === 'function' ? s3Service.getCloudFrontUrl : ((url) => url);
 const appSettingsService = require('./application-settings.service');
 const { ensureBankDirectProcessLinksTable } = require('../../database/migrations/migrate_bank_direct_process_links');
-const { validateAdobeSupportUrl } = require('./link-management.controller.js');
 const logger = require('../../config/logger');
 
 // GET /products — list with filters
@@ -296,17 +295,12 @@ const createProduct = async (req, res, next) => {
       documents_required, benefits, fees_charges, apply_button_text, seo_title,
       seo_description, seo_keywords, priority, status, is_active,
       card_network, card_variant, best_for, welcome_benefits, is_lifetime_free, badge, is_recommended, is_trending,
-      public_url, partner_url, adobe_support_url, joining_fee, processing_fee, interest_rate
+      public_url, partner_url, joining_fee, processing_fee, interest_rate
     } = body;
     let image_url = body.image_url;
     const safeJoiningFee = joining_fee !== undefined ? joining_fee : (body.joining_fee !== undefined ? body.joining_fee : null);
     const safeProcessingFee = processing_fee !== undefined ? processing_fee : (body.processing_fee !== undefined ? body.processing_fee : null);
     const safeInterestRate = interest_rate !== undefined ? interest_rate : (body.interest_rate !== undefined ? body.interest_rate : null);
-
-    const adobeValidation = validateAdobeSupportUrl(adobe_support_url);
-    if (!adobeValidation.valid) {
-      return error(res, adobeValidation.error, 400);
-    }
 
     // Handle features and eligibility parsing
     let parsedFeatures = body.features;
@@ -366,12 +360,12 @@ const createProduct = async (req, res, next) => {
         fees_charges, apply_button_text, seo_title, seo_description, seo_keywords,
         priority, status, is_active, created_by, slug,
         card_network, card_variant, best_for, welcome_benefits, is_lifetime_free, badge, is_recommended, is_trending,
-        public_url, partner_url, joining_fee, processing_fee, interest_rate, adobe_support_url
+        public_url, partner_url, joining_fee, processing_fee, interest_rate
       )
       VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
         $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,
-        $40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$50,$51,$52,$53
+        $40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$50,$51,$52
       ) RETURNING id
     `, [
       bank_id, name, category, sub_category || null, description, JSON.stringify(parsedFeatures || []),
@@ -384,8 +378,7 @@ const createProduct = async (req, res, next) => {
       fees_charges || null, apply_button_text || 'Apply Now', seo_title || null, seo_description || null, seo_keywords || null,
       priority || 0, status || 'Active', isActive, req.user?.id || null, productSlug,
       card_network || null, card_variant || null, best_for || null, welcome_benefits || null, isLtf, badge || null, isRec, isTrend,
-      public_url || null, partner_url || null, safeJoiningFee || null, safeProcessingFee || null, safeInterestRate || null,
-      adobeValidation.provided ? adobeValidation.value : null
+      public_url || null, partner_url || null, safeJoiningFee || null, safeProcessingFee || null, safeInterestRate || null
     ]);
 
     await logAction(req, 'CREATE_PRODUCT', p.id, { name, category, commission_value });
@@ -408,7 +401,7 @@ const updateProduct = async (req, res, next) => {
       commission_amount, override_percentage, featured, public_visible, partner_visible,
       eligibility_criteria, documents_required, benefits, fees_charges, apply_button_text,
       seo_title, seo_description, seo_keywords, priority, status,
-      public_url, partner_url, adobe_support_url, sub_category,
+      public_url, partner_url, sub_category,
       card_network, card_variant, best_for, welcome_benefits, badge,
       joining_fee, processing_fee, interest_rate
     } = body;
@@ -419,11 +412,6 @@ const updateProduct = async (req, res, next) => {
 
     const { rows: [existing] } = await query(`SELECT * FROM products WHERE id = $1`, [id]);
     if (!existing) return notFound(res, 'Product not found');
-
-    const adobeValidationUpdate = validateAdobeSupportUrl(adobe_support_url);
-    if (!adobeValidationUpdate.valid) {
-      return error(res, adobeValidationUpdate.error, 400);
-    }
 
     let parsedFeatures = body.features;
     if (typeof parsedFeatures === 'string') {
@@ -469,7 +457,7 @@ const updateProduct = async (req, res, next) => {
     const validBankId = (bank_id && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(bank_id)) ? bank_id : null;
     const validOpHeadId = (operation_head_id && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(operation_head_id)) ? operation_head_id : null;
 
-    const { rows: [updatedRow] } = await query(`
+    await query(`
       UPDATE products SET
         name = COALESCE($1, name),
         description = COALESCE($2, description),
@@ -522,10 +510,8 @@ const updateProduct = async (req, res, next) => {
         processing_fee = COALESCE($49, processing_fee),
         interest_rate = COALESCE($50, interest_rate),
         sub_category = COALESCE($51, sub_category),
-        adobe_support_url = CASE WHEN $52::boolean THEN $53 ELSE adobe_support_url END,
         updated_at = NOW()
-      WHERE id = $54
-      RETURNING *
+      WHERE id = $52
     `, [
       name || null,
       description || null,
@@ -578,13 +564,11 @@ const updateProduct = async (req, res, next) => {
       safeProcessingFee || null,
       safeInterestRate || null,
       sub_category || null,
-      adobeValidationUpdate.provided,
-      adobeValidationUpdate.provided ? adobeValidationUpdate.value : null,
       id
     ]);
 
-    await logAction(req, 'UPDATE_PRODUCT', id, { name, bank_id: validBankId, category, commission_value, is_active, adobe_support_url: adobeValidationUpdate.provided ? adobeValidationUpdate.value : existing.adobe_support_url });
-    return success(res, updatedRow || {}, 'Product updated');
+    await logAction(req, 'UPDATE_PRODUCT', id, { name, bank_id: validBankId, category, commission_value, is_active });
+    return success(res, {}, 'Product updated');
   } catch (err) {
     next(err);
   }
