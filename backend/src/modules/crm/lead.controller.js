@@ -5,7 +5,7 @@ const logger = require('../../config/logger');
 const { sendLeadApplicationCreatedEmail } = require('../../services/email/email.service');
 const { calculatePartnerCommission } = require('../partner/commission.service.js');
 const { ensureBankDirectProcessLinksTable } = require('../../database/migrations/migrate_bank_direct_process_links');
-const { resolveDirectProcessLinkForProductRow } = require('../super-admin/bankDirectLinks.controller');
+const { resolveDirectProcessLinkForProductRow, getBankApplyLinkBackend } = require('../../services/bankLink.service');
 
 const {
   logLeadTimeline,
@@ -241,90 +241,8 @@ const get360LeadDetails = async (req, res, next) => {
   }
 };
 
-const FINANCE_PRODUCT_LINKS_BACKEND = {
-  tata: 'https://www.wishfin.com/tata/home?source=FWRey_July&utm_source=FW38&utm_medium=SMS&utm_campaign=promotion&utm_content=check_offer&utm_term=tata',
-  prefr: 'https://www.wishfin.com/prefr/home?source=Rey_june26_FW18',
-  finable: 'https://www.wishfin.com/prefr/home?source=Rey_june26_FW18',
-  ramfincorp: 'https://applyonline.ramfincorp.com/?utm_source=Wishfin49&utm_campaign=default_campaign&utm_medium=default_medium&utm_trackingid=FW_30',
-  kreditbee: 'https://www.wishfin.com/kreditbee/home?source=fin41',
-  unity: 'https://loans.theunitybank.com/unity-pl-ui/page/exclusion/login/logindetails?utm_source=Partner&utm_medium=Wishfin&utm_campaign=finwizz11',
-  poonawalla: 'https://instant-pocket-loan.poonawallafincorp.com/?redirectto=primepl&utm_DSA_Code=PUP00228&UTM_Partner_Name=WISHFIN&UTM_Partner_Medium=SMS&UTM_Partner_AgentCode=PFLWISHFIN&UTM_Partner_ReferenceID=WF_FW_REY_PR_26',
-  punawalla: 'https://instant-pocket-loan.poonawallafincorp.com/?redirectto=primepl&utm_DSA_Code=PUP00228&UTM_Partner_Name=WISHFIN&UTM_Partner_Medium=SMS&UTM_Partner_AgentCode=PFLWISHFIN&UTM_Partner_ReferenceID=WF_FW_REY_PR_26',
-  bajaj: 'https://www.bajajfinserv.in/personal-loan'
-};
+// Note: getBankApplyLinkBackend and FINANCE_PRODUCT_LINKS_BACKEND imported from bankLink.service.js
 
-function getBankApplyLinkBackend(productName, bankName, productObj = null) {
-  const product = productObj || (typeof productName === 'object' ? productName : null);
-  const nameStr = String(productName || productObj?.name || product?.name || '').toLowerCase();
-  const bankStr = String(bankName || productObj?.bank_name || product?.bank_name || '').toLowerCase();
-
-  const url = (
-    productObj?.partner_url ||
-    productObj?.application_url ||
-    productObj?.apply_url ||
-    productObj?.redirect_url ||
-    productObj?.public_url ||
-    productObj?.direct_process_url ||
-    productObj?.bank_direct_process_url ||
-    productObj?.directProcessUrl ||
-    productObj?.bankDirectProcessUrl ||
-    product?.partner_url ||
-    product?.application_url ||
-    product?.apply_url ||
-    product?.redirect_url ||
-    product?.public_url ||
-    product?.direct_process_url ||
-    product?.bank_direct_process_url ||
-    product?.directProcessUrl ||
-    product?.bankDirectProcessUrl ||
-    ""
-  );
-
-  let cleanUrl = String(url || '').trim();
-
-  // If URL is missing, check canonical UTM links for Finance NBFC partners or Tata Adobe floater
-  if (!cleanUrl) {
-    const nameUpper = nameStr.toUpperCase();
-    const prodBankId = String(productObj?.bank_id || product?.bank_id || '').trim();
-    const isTargetTataNeu =
-      (nameUpper.includes('TATA NEU INFINITY') || nameUpper.includes('TATA NEU PLUS')) &&
-      !nameUpper.includes('BUSINESS') &&
-      !nameUpper.includes('FLOATER') &&
-      (!prodBankId || prodBankId === '1eacfa67-1187-48c7-adde-8a6edcfe9969' || bankStr.includes('tata') || bankStr.includes('hdfc'));
-
-    if (isTargetTataNeu) {
-      cleanUrl = 'https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=YOH5&LCcode=YOH5&LC2=A222&SMcode=S54558';
-    } else if (nameStr.includes('floater') || (nameStr.includes('adobe') && (bankStr.includes('tata') || bankStr.includes('hdfc')))) {
-      cleanUrl = 'https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=PTN01&LCcode=PTN01&LC2=A089&SMcode=A31964#nbb';
-    } else if (nameStr.includes('tata') || bankStr.includes('tata')) {
-      cleanUrl = FINANCE_PRODUCT_LINKS_BACKEND.tata;
-    } else if (nameStr.includes('finable') || nameStr.includes('prefr') || bankStr.includes('finable')) {
-      cleanUrl = FINANCE_PRODUCT_LINKS_BACKEND.finable;
-    } else if (nameStr.includes('ram') || bankStr.includes('ram')) {
-      cleanUrl = FINANCE_PRODUCT_LINKS_BACKEND.ramfincorp;
-    } else if (nameStr.includes('kredit') || bankStr.includes('kredit')) {
-      cleanUrl = FINANCE_PRODUCT_LINKS_BACKEND.kreditbee;
-    } else if (nameStr.includes('unity') || bankStr.includes('unity')) {
-      cleanUrl = FINANCE_PRODUCT_LINKS_BACKEND.unity;
-    } else if (nameStr.includes('poonawalla') || nameStr.includes('punawalla') || bankStr.includes('poonawalla') || bankStr.includes('punawalla')) {
-      cleanUrl = FINANCE_PRODUCT_LINKS_BACKEND.poonawalla;
-    } else if (nameStr.includes('bajaj') || bankStr.includes('bajaj')) {
-      cleanUrl = FINANCE_PRODUCT_LINKS_BACKEND.bajaj;
-    }
-  }
-
-  if (!cleanUrl) return "";
-
-  const isSbiUrl = cleanUrl.toLowerCase().includes('sbicard.com') || cleanUrl.toLowerCase().includes('sbi.co.in');
-  const isSbiBankOrProduct = bankStr.includes('sbi') || bankStr.includes('state bank') || nameStr.includes('sbi') || nameStr.includes('state bank');
-  
-  if (isSbiUrl && !isSbiBankOrProduct) {
-    console.warn(`[URL_RESOLVER_GUARD] Rejected cross-bank SBI link on non-SBI product '${productName || productObj?.name}'`);
-    return "";
-  }
-
-  return cleanUrl;
-}
 
 // POST /leads — Create Lead with 30-Day Duplicate Check & OTP Generation
 const createLead = async (req, res, next) => {

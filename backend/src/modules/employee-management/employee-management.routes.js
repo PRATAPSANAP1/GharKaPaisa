@@ -278,23 +278,7 @@ async function syncAndSeedEmployees() {
       WHERE user_id IN (SELECT id FROM users WHERE role = 'EMPLOYEE')
     `).catch(e => logger.warn('Partner profile employee cleanup note:', e.message));
 
-    // 3. Ensure hr_profiles table exists and sync HR users
-    await query(`
-      CREATE TABLE IF NOT EXISTS hr_profiles (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-        employee_id VARCHAR(50) UNIQUE NOT NULL,
-        full_name VARCHAR(150) NOT NULL,
-        email VARCHAR(150) NOT NULL,
-        mobile_number VARCHAR(20) NOT NULL,
-        designation VARCHAR(100) DEFAULT 'HR Manager',
-        department VARCHAR(100) DEFAULT 'Human Resources',
-        status VARCHAR(20) DEFAULT 'active',
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      );
-    `).catch(() => {});
-
+    // 3. Sync HR users into hr_profiles
     await query(`
       INSERT INTO hr_profiles (user_id, employee_id, full_name, email, mobile_number, designation, department, status)
       SELECT 

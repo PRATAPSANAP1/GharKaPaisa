@@ -5139,6 +5139,22 @@ const migrate = async () => {
     logger.error('Lead Orchestration Performance Indexes migration error note:', leadIndexErr.message);
   }
 
+  // Identity Change Challenges Schema Migration
+  try {
+    const { migrateIdentityChangeChallenges } = require('./migrate_identity_change_challenges');
+    await migrateIdentityChangeChallenges();
+  } catch (identityChallengeErr) {
+    logger.error('Identity Change Challenges migration error note:', identityChallengeErr.message);
+  }
+
+  // HR Profiles & Bank Requirements Schema Migration
+  try {
+    const { migrateHrProfilesAndBankRequirements } = require('./migrate_hr_profiles_and_bank_requirements');
+    await migrateHrProfilesAndBankRequirements();
+  } catch (hrBankErr) {
+    logger.error('HR Profiles & Bank Requirements migration error note:', hrBankErr.message);
+  }
+
   if (require.main === module) {
     process.exit(0);
   }

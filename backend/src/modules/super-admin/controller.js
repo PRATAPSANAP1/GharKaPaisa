@@ -292,22 +292,6 @@ const createAdmin = async (req, res, next) => {
       `, [uniqueEmployeeId, dbUser.id, fullName, formattedMobile, email, designation, department]).catch(e => logger.warn('Employees sync note:', e.message));
     } else if (role === 'HR') {
       await query(`
-        CREATE TABLE IF NOT EXISTS hr_profiles (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-          employee_id VARCHAR(50) UNIQUE NOT NULL,
-          full_name VARCHAR(150) NOT NULL,
-          email VARCHAR(150) NOT NULL,
-          mobile_number VARCHAR(20) NOT NULL,
-          designation VARCHAR(100) DEFAULT 'HR Manager',
-          department VARCHAR(100) DEFAULT 'Human Resources',
-          status VARCHAR(20) DEFAULT 'active',
-          created_at TIMESTAMPTZ DEFAULT NOW(),
-          updated_at TIMESTAMPTZ DEFAULT NOW()
-        )
-      `).catch(() => {});
-
-      await query(`
         INSERT INTO hr_profiles (
           user_id, employee_id, full_name, email, mobile_number, designation, department, status
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')
@@ -659,22 +643,6 @@ const updateAdmin = async (req, res, next) => {
         const mobileVal = mobile !== undefined ? mobile.trim() : existing.mobile;
         const designationVal = designation !== undefined ? designation.trim() : (existing.designation || 'HR Manager');
         
-        await query(`
-          CREATE TABLE IF NOT EXISTS hr_profiles (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-            employee_id VARCHAR(50) UNIQUE NOT NULL,
-            full_name VARCHAR(150) NOT NULL,
-            email VARCHAR(150) NOT NULL,
-            mobile_number VARCHAR(20) NOT NULL,
-            designation VARCHAR(100) DEFAULT 'HR Manager',
-            department VARCHAR(100) DEFAULT 'Human Resources',
-            status VARCHAR(20) DEFAULT 'active',
-            created_at TIMESTAMPTZ DEFAULT NOW(),
-            updated_at TIMESTAMPTZ DEFAULT NOW()
-          )
-        `).catch(() => {});
-
         await query(`
           INSERT INTO hr_profiles (
             user_id, employee_id, full_name, email, mobile_number, designation, department, status

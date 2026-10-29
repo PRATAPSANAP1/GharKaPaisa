@@ -3353,8 +3353,29 @@ const updateBankProcessingStatus = async (req, res, next) => {
 
     const isAppFileYes = appFileGenVal && String(appFileGenVal).trim().toLowerCase() === 'yes';
 
-    const validStatuses = ['under_review', 'approved', 'rejected', 'disbursed', 'in_process', 'app_file_generated', 'decline', 'technical_error'];
-    let currentStatus = (status && validStatuses.includes(status)) ? status : 'under_review';
+    const validEnumStatuses = [
+      'under_review', 'approved', 'rejected', 'disbursed', 'in_process', 
+      'submitted', 'confirmed', 'pending', 'initiated', 'lead_created', 
+      'application_started', 'application_submitted', 'application_number_received', 
+      'vkyc_pending', 'vkyc_completed', 'details_submitted', 'operational_verified', 
+      'correction_required', 'super_admin_approved', 'commission_processing', 
+      'commission_released', 'commission_received', 'bank_form_submitted', 
+      'sanctioned', 'cancelled', 'link_sent', 'verification_completed'
+    ];
+
+    let currentStatus = 'under_review';
+    if (status) {
+      const lowerStatus = String(status).trim().toLowerCase();
+      if (lowerStatus === 'decline' || lowerStatus === 'declined') {
+        currentStatus = 'rejected';
+      } else if (lowerStatus === 'technical_error') {
+        currentStatus = 'under_review';
+      } else if (lowerStatus === 'app_file_generated') {
+        currentStatus = isAppFileYes ? 'approved' : 'in_process';
+      } else if (validEnumStatuses.includes(lowerStatus)) {
+        currentStatus = lowerStatus;
+      }
+    }
     if (isAppFileYes) {
       currentStatus = 'approved';
     }
@@ -5877,17 +5898,6 @@ const getBankRequirements = async (req, res, next) => {
   try {
     const { bank_id, product_id } = req.query;
 
-    await query(`
-      CREATE TABLE IF NOT EXISTS bank_requirements (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        bank_id UUID REFERENCES banks(id) ON DELETE CASCADE,
-        product_id UUID REFERENCES products(id) ON DELETE CASCADE,
-        fields JSONB NOT NULL DEFAULT '[]'::jsonb,
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      );
-    `);
-
     let sql = `
       SELECT br.*, b.name as bank_name, p.name as product_name
       FROM bank_requirements br
@@ -5943,17 +5953,6 @@ const saveBankRequirements = async (req, res, next) => {
     if (!bank_id || !Array.isArray(fields)) {
       return error(res, 'Bank ID and array of fields are required', 400);
     }
-
-    await query(`
-      CREATE TABLE IF NOT EXISTS bank_requirements (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        bank_id UUID REFERENCES banks(id) ON DELETE CASCADE,
-        product_id UUID REFERENCES products(id) ON DELETE CASCADE,
-        fields JSONB NOT NULL DEFAULT '[]'::jsonb,
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      );
-    `);
 
     const { rows: [reqRow] } = await query(`
       INSERT INTO bank_requirements (bank_id, product_id, fields, updated_at)
@@ -6683,7 +6682,7 @@ const get360ApplicationTrace = async (req, res, next) => {
       query(`SELECT * FROM application_documents WHERE application_id = $1 ORDER BY COALESCE(uploaded_at, NOW()) DESC`, [id]).catch(() => ({ rows: [] })),
       query(`SELECT * FROM physical_application_details WHERE application_id = $1`, [id]).catch(() => ({ rows: [] })),
       query(`SELECT * FROM wallet_ledger WHERE application_id = $1 ORDER BY created_at DESC`, [id]).catch(() => ({ rows: [] })),
-      query(`SELECT * FROM sms_logs WHERE application_id = $1 ORDER BY created_at DESC`, [id]).catch(() => ({ rows: [] }))
+      Promise.resolve({ rows: [] })
     ]);
 
     if (appTrace) {
