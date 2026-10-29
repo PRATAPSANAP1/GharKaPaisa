@@ -31,10 +31,11 @@ const logLeadActivity = async (clientOrDb, leadId, activityType, performedBy, re
 };
 
 // Initialize default verification checklist & SLA tracker upon lead creation
-const initializeLeadPipeline = async (leadId, userId, source = 'partner', priority = 'medium') => {
-  const client = await getClient();
+const initializeLeadPipeline = async (leadId, userId, source = 'partner', priority = 'medium', passedClient = null) => {
+  const client = passedClient || await getClient();
+  const shouldManageTransaction = !passedClient;
   try {
-    await client.query('BEGIN');
+    if (shouldManageTransaction) await client.query('BEGIN');
 
     // 1. Log Initial Status History
     await client.query(`
@@ -48,7 +49,7 @@ const initializeLeadPipeline = async (leadId, userId, source = 'partner', priori
       await client.query(`
         INSERT INTO lead_checklist (lead_id, item, status)
         VALUES ($1, $2, 'pending')
-        ON CONFLICT DO NOTHING
+        ON CONFLICT (lead_id, item) DO NOTHING
       `, [leadId, item]);
     }
 
@@ -61,12 +62,15 @@ const initializeLeadPipeline = async (leadId, userId, source = 'partner', priori
     // 4. Log initial timeline stream
     await logLeadTimeline(client, leadId, 'Lead Created', `Lead initialized via ${source} source with ${priority} priority`, 'lead', leadId, userId);
 
-    await client.query('COMMIT');
+    if (shouldManageTransaction) await client.query('COMMIT');
   } catch (err) {
-    await client.query('ROLLBACK');
+    if (shouldManageTransaction) await client.query('ROLLBACK');
     logger.error(`Failed to initialize lead pipeline for lead ${leadId}:`, err);
+    if (!shouldManageTransaction) throw err;
   } finally {
-    client.release();
+    if (shouldManageTransaction) {
+      client.release();
+    }
   }
 };
 

@@ -5131,6 +5131,14 @@ const migrate = async () => {
     logger.error('Bank Direct Process Link migration error note:', bankLinkErr.message);
   }
 
+  // Lead Orchestration Performance Indexes & Schema Hardening Migration
+  try {
+    const { migrateLeadOrchestrationPerformanceIndexes } = require('./migrate_lead_orchestration_performance_indexes');
+    await migrateLeadOrchestrationPerformanceIndexes();
+  } catch (leadIndexErr) {
+    logger.error('Lead Orchestration Performance Indexes migration error note:', leadIndexErr.message);
+  }
+
   if (require.main === module) {
     process.exit(0);
   }

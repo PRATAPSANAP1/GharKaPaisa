@@ -1,5 +1,5 @@
 const { query, getClient } = require('../../config/database');
-const { success, created, error, notFound, paginate } = require('../../utils/response/response');
+const { success, created, error, notFound, forbidden, paginate } = require('../../utils/response/response');
 const { getPaginationParams } = require('../../utils/helpers/helpers');
 const logger = require('../../config/logger');
 const { sendLeadApplicationCreatedEmail } = require('../../services/email/email.service');
@@ -51,11 +51,12 @@ const listLeads = async (req, res, next) => {
       idx += 2;
     }
 
-    const isSuperAdminLeads = req.query.is_super_admin_leads === 'true' || req.query.is_super_admin_leads === true || (req.user?.role === 'SUPER_ADMIN' && req.headers.referer?.includes('/super-admin/leads'));
+    const isSuperAdminLeads = ['SUPER_ADMIN', 'ADMIN'].includes(req.user?.role) &&
+      (req.query.is_super_admin_leads === 'true' || req.query.is_super_admin_leads === true || (req.user?.role === 'SUPER_ADMIN' && req.headers.referer?.includes('/super-admin/leads')));
 
     if (isSuperAdminLeads) {
       if (status && status !== 'approved' && status !== 'operational_verified') {
-        whereClause += ` AND l.status = $${idx++}`;
+        whereClause += ` AND (l.status = $${idx++})`;
         values.push(status);
       } else {
         whereClause += ` AND (
@@ -70,24 +71,24 @@ const listLeads = async (req, res, next) => {
         )`;
       }
     } else if (status) {
-      whereClause += ` AND l.status = $${idx++}`;
+      whereClause += ` AND (l.status = $${idx++})`;
       values.push(status);
     }
     if (priority) {
-      whereClause += ` AND l.priority = $${idx++}`;
+      whereClause += ` AND (l.priority = $${idx++})`;
       values.push(priority);
     }
     if (source) {
-      whereClause += ` AND l.source = $${idx++}`;
+      whereClause += ` AND (l.source = $${idx++})`;
       values.push(source);
     }
     if (req.user?.assigned_banks && Array.isArray(req.user.assigned_banks) && req.user.assigned_banks.length > 0) {
-      whereClause += ` AND p.bank_id = ANY($${idx++}::uuid[])`;
+      whereClause += ` AND (p.bank_id = ANY($${idx++}::uuid[]))`;
       values.push(req.user.assigned_banks);
     }
 
     if (bank_id && bank_id !== 'all') {
-      whereClause += ` AND p.bank_id = $${idx++}::uuid`;
+      whereClause += ` AND (p.bank_id = $${idx++}::uuid)`;
       values.push(bank_id);
     }
 
@@ -106,11 +107,11 @@ const listLeads = async (req, res, next) => {
     }
 
     if (from_date) {
-      whereClause += ` AND l.created_at >= $${idx++}`;
+      whereClause += ` AND (l.created_at >= $${idx++})`;
       values.push(from_date);
     }
     if (to_date) {
-      whereClause += ` AND l.created_at <= $${idx++}`;
+      whereClause += ` AND (l.created_at <= $${idx++})`;
       values.push(to_date + ' 23:59:59');
     }
 
@@ -128,14 +129,23 @@ const listLeads = async (req, res, next) => {
                p.name as product_name, p.category as product_category, p.commission_value,
                b.name as bank_name, b.short_code as bank_code,
                pp.partner_code, pp.first_name as partner_first_name, pp.last_name as partner_last_name,
-               (SELECT executive_name FROM bank_assignments WHERE lead_id = l.id ORDER BY assigned_at DESC LIMIT 1) as bank_executive_name,
-               (SELECT COUNT(*)::int FROM lead_documents WHERE lead_id = l.id) as documents_count,
-               (SELECT COUNT(*)::int FROM lead_checklist WHERE lead_id = l.id AND status = 'verified') as checklist_verified_count
+               ba.executive_name as bank_executive_name,
+               COALESCE(ld.documents_count, 0)::int as documents_count,
+               COALESCE(lc.checklist_verified_count, 0)::int as checklist_verified_count
         FROM leads l
         LEFT JOIN products p ON p.id = l.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
         LEFT JOIN partner_profiles pp ON pp.id = l.partner_id
         LEFT JOIN customers c ON c.mobile = l.mobile
+        LEFT JOIN LATERAL (
+          SELECT executive_name FROM bank_assignments WHERE lead_id = l.id ORDER BY assigned_at DESC LIMIT 1
+        ) ba ON true
+        LEFT JOIN LATERAL (
+          SELECT COUNT(*)::int as documents_count FROM lead_documents WHERE lead_id = l.id
+        ) ld ON true
+        LEFT JOIN LATERAL (
+          SELECT COUNT(*)::int as checklist_verified_count FROM lead_checklist WHERE lead_id = l.id AND status = 'verified'
+        ) lc ON true
         ${whereClause}
         ORDER BY l.created_at DESC
         LIMIT $${idx++} OFFSET $${idx++}
@@ -171,7 +181,7 @@ const get360LeadDetails = async (req, res, next) => {
     if (!lead) return notFound(res, 'Lead not found');
 
     // Parallel fetch for 360 details
-    const [docsRes, timelineRes, historyRes, notesRes, assignRes, bankAssignRes, checkRes, slaRes, walletRes, customerCardsRes] = await Promise.all([
+    const [docsRes, timelineRes, historyRes, notesRes, assignRes, bankAssignRes, checkRes, slaRes, walletRes, appCardsRes, leadCardsRes] = await Promise.all([
       query(`SELECT ld.*, u.full_name as uploader_name FROM lead_documents ld LEFT JOIN users u ON u.id = ld.uploaded_by WHERE ld.lead_id = $1 ORDER BY ld.uploaded_at DESC`, [id]),
       query(`SELECT lt.*, u.full_name as author_name FROM lead_timeline lt LEFT JOIN users u ON u.id = lt.created_by WHERE lt.lead_id = $1 ORDER BY lt.created_at DESC`, [id]),
       query(`SELECT sh.*, u.full_name as author_name FROM lead_status_history sh LEFT JOIN users u ON u.id = sh.changed_by WHERE sh.lead_id = $1 ORDER BY sh.created_at DESC`, [id]),
@@ -193,18 +203,23 @@ const get360LeadDetails = async (req, res, next) => {
         FROM applications a
         LEFT JOIN products p ON p.id = a.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
-        WHERE a.customer_id IN (SELECT id FROM customers WHERE mobile = $1)
-           OR a.lead_id IN (SELECT id FROM leads WHERE mobile = $1)
-        UNION
+        WHERE a.customer_id = $1 OR a.lead_id = $2
+        ORDER BY a.created_at DESC
+      `, [lead.customer_id || null, id]).catch(() => ({ rows: [] })),
+      query(`
         SELECT l.id::text, COALESCE(l.lead_number::text, 'LEAD') as app_number, l.status::text, 0 as commission_amount, COALESCE(l.process_type::text, 'lead_punching') as process_type, l.created_at,
                p.name as product_name, p.category as product_category, b.name as bank_name
         FROM leads l
         LEFT JOIN products p ON p.id = l.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
-        WHERE l.mobile = $1
-        ORDER BY created_at DESC
-      `, [lead.mobile]).catch(() => ({ rows: [] }))
+        WHERE l.mobile = $1 AND l.id != $2
+        ORDER BY l.created_at DESC
+      `, [lead.mobile, id]).catch(() => ({ rows: [] }))
     ]);
+
+    const customerCards = [...(appCardsRes?.rows || []), ...(leadCardsRes?.rows || [])].sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+    );
 
     await logLeadActivity(null, id, 'view_360_lead', req.user.id, 'lead', id, req);
 
@@ -219,7 +234,7 @@ const get360LeadDetails = async (req, res, next) => {
       checklist: checkRes.rows,
       sla_tracker: slaRes.rows,
       commission_ledger: walletRes.rows[0] || null,
-      customer_cards: customerCardsRes.rows || []
+      customer_cards: customerCards
     }, 'Lead 360 overview loaded');
   } catch (err) {
     next(err);
@@ -448,27 +463,8 @@ const createLead = async (req, res, next) => {
       });
     }
 
-    // 4. Customer Upsert
+    // 4. Customer Upsert & Transaction Wrapping
     const incomeVal = monthly_salary || monthly_income ? parseFloat(monthly_salary || monthly_income) : null;
-    const { rows: [customer] } = await query(`
-      INSERT INTO customers (
-        full_name, mobile, email, monthly_income, employer, pincode, city, state, pan_number, created_by
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      ON CONFLICT (mobile) DO UPDATE
-      SET full_name = EXCLUDED.full_name,
-          email = COALESCE(EXCLUDED.email, customers.email),
-          monthly_income = COALESCE(EXCLUDED.monthly_income, customers.monthly_income),
-          employer = COALESCE(EXCLUDED.employer, customers.employer),
-          pincode = COALESCE(EXCLUDED.pincode, customers.pincode),
-          city = COALESCE(EXCLUDED.city, customers.city),
-          state = COALESCE(EXCLUDED.state, customers.state),
-          pan_number = COALESCE(EXCLUDED.pan_number, customers.pan_number),
-          updated_at = NOW()
-      RETURNING id
-    `, [targetName.trim(), trimmedMobile, trimmedEmail || null, incomeVal, company_name || null, pincode || null, targetCity || null, state || null, cleanPan, req.user.id]);
-
-    // 5. Handle Process-Specific Workflow
     const leadNum = 'LEAD-' + Date.now().toString(36).toUpperCase();
     const date = new Date();
     const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
@@ -507,115 +503,286 @@ const createLead = async (req, res, next) => {
       }
     };
 
-    if (targetProcess === 'linked_share') {
-      const trackingToken = 'SH_' + Math.random().toString(36).substring(2, 12).toUpperCase();
-      const host = req.get('host') || 'gharkapaisa.in';
-      const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
-      const baseUrl = process.env.FRONTEND_URL || `${protocol}://${host}`;
-      const defaultShareUrl = `${baseUrl.replace(/\/$/, '')}/apply/${trackingToken}`;
-      const directBankUrl = product?.partner_url?.trim() || getBankApplyLinkBackend(product?.name, product?.bank_name || product?.bank_code, product) || defaultShareUrl;
-      const shareUrl = directBankUrl;
+    const client = await getClient();
+    try {
+      await client.query('BEGIN');
 
-      const partnerName = `${partner.first_name || ''} ${partner.last_name || ''}`.trim() || 'Partner';
-      const cleanMobile = trimmedMobile.replace(/\D/g, '');
-      const waText = encodeURIComponent(`Hello ${targetName.trim()},\n\nApply for ${product?.name || 'Financial Product'} directly on official bank portal:\n${shareUrl}`);
-      const whatsappUrl = `https://wa.me/91${cleanMobile}?text=${waText}`;
-
-      const { rows: [lead] } = await query(`
-        INSERT INTO leads (
-          lead_number, partner_id, parent_partner_id, created_by, customer_id,
-          product_id, customer_name, mobile, city, status, process_type, process_by,
-          otp_verified, source, priority, pipeline_stage
+      const { rows: [customer] } = await client.query(`
+        INSERT INTO customers (
+          full_name, mobile, email, monthly_income, employer, pincode, city, state, pan_number, created_by
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'linked_share', 'partner', TRUE, 'share_link', $10, 'created')
-        RETURNING *
-      `, [
-        leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
-        targetProductId, targetName.trim(), trimmedMobile, targetCity, priority || 'medium'
-      ]);
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ON CONFLICT (mobile) DO UPDATE
+        SET full_name = EXCLUDED.full_name,
+            email = COALESCE(EXCLUDED.email, customers.email),
+            monthly_income = COALESCE(EXCLUDED.monthly_income, customers.monthly_income),
+            employer = COALESCE(EXCLUDED.employer, customers.employer),
+            pincode = COALESCE(EXCLUDED.pincode, customers.pincode),
+            city = COALESCE(EXCLUDED.city, customers.city),
+            state = COALESCE(EXCLUDED.state, customers.state),
+            pan_number = COALESCE(EXCLUDED.pan_number, customers.pan_number),
+            updated_at = NOW()
+        RETURNING id
+      `, [targetName.trim(), trimmedMobile, trimmedEmail || null, incomeVal, company_name || null, pincode || null, targetCity || null, state || null, cleanPan, req.user.id]);
 
-      await query(`
-        INSERT INTO partner_share_links (partner_id, product_id, tracking_token, expires_at)
-        VALUES ($1, $2, $3, NOW() + INTERVAL '30 days')
-      `, [partner.id, targetProductId, trackingToken]);
+      // 5. Handle Process-Specific Workflow
+      if (targetProcess === 'linked_share') {
+        const trackingToken = 'SH_' + Math.random().toString(36).substring(2, 12).toUpperCase();
+        const host = req.get('host') || 'gharkapaisa.in';
+        const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+        const baseUrl = process.env.FRONTEND_URL || `${protocol}://${host}`;
+        const defaultShareUrl = `${baseUrl.replace(/\/$/, '')}/apply/${trackingToken}`;
+        const directBankUrl = product?.partner_url?.trim() || getBankApplyLinkBackend(product?.name, product?.bank_name || product?.bank_code, product) || defaultShareUrl;
+        const shareUrl = directBankUrl;
 
-      const { rows: [app] } = await query(`
-        INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, process_by, source, tracking_token, agree_terms, submitted_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'linked_share', 'partner', 'share_link', $9, TRUE, NOW())
-        RETURNING *
-      `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0, trackingToken]);
+        const cleanMobile = trimmedMobile.replace(/\D/g, '');
+        const waText = encodeURIComponent(`Hello ${targetName.trim()},\n\nApply for ${product?.name || 'Financial Product'} directly on official bank portal:\n${shareUrl}`);
+        const whatsappUrl = `https://wa.me/91${cleanMobile}?text=${waText}`;
 
-      await initializeLeadPipeline(lead.id, req.user.id, 'share_link', priority || 'medium');
-      notifyPartnerLeadCreated(app.app_number || appNum, 'linked_share');
+        const { rows: [lead] } = await client.query(`
+          INSERT INTO leads (
+            lead_number, partner_id, parent_partner_id, created_by, customer_id,
+            product_id, customer_name, mobile, city, status, process_type, process_by,
+            otp_verified, source, priority, pipeline_stage
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'linked_share', 'partner', TRUE, 'share_link', $10, 'created')
+          RETURNING *
+        `, [
+          leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
+          targetProductId, targetName.trim(), trimmedMobile, targetCity, priority || 'medium'
+        ]);
 
-      // Automatically send link via SMS to partner and customer (Template: Linked_share 6a8b36fe9b6fc4bd54035592)
-      try {
-        const { sendLinkedShareSms } = require('../../services/sms/sms.service');
-        const { rows: [pUser] } = await query(`
-          SELECT u.mobile, u.mobile as partner_mobile 
-          FROM partner_profiles pp 
-          LEFT JOIN users u ON u.id = pp.user_id 
-          WHERE pp.id = $1
-        `, [partner.id]);
-        const partnerMobile = pUser?.mobile || pUser?.partner_mobile;
+        await client.query(`
+          INSERT INTO partner_share_links (partner_id, product_id, tracking_token, expires_at)
+          VALUES ($1, $2, $3, NOW() + INTERVAL '30 days')
+        `, [partner.id, targetProductId, trackingToken]);
 
-        if (partnerMobile) {
-          sendLinkedShareSms(partnerMobile, targetName.trim(), product?.name || 'Financial Product', shareUrl).catch(err => {
-            console.warn('Auto SMS dispatch to partner failed for linked_share:', err.message);
-          });
+        const { rows: [app] } = await client.query(`
+          INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, process_by, source, tracking_token, agree_terms, submitted_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'linked_share', 'partner', 'share_link', $9, TRUE, NOW())
+          RETURNING *
+        `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0, trackingToken]);
+
+        await initializeLeadPipeline(lead.id, req.user.id, 'share_link', priority || 'medium', client);
+
+        await client.query('COMMIT');
+
+        notifyPartnerLeadCreated(app.app_number || appNum, 'linked_share');
+
+        // Automatically send link via SMS to partner and customer (Template: Linked_share 6a8b36fe9b6fc4bd54035592)
+        try {
+          const { sendLinkedShareSms } = require('../../services/sms/sms.service');
+          const { rows: [pUser] } = await query(`
+            SELECT u.mobile, u.mobile as partner_mobile 
+            FROM partner_profiles pp 
+            LEFT JOIN users u ON u.id = pp.user_id 
+            WHERE pp.id = $1
+          `, [partner.id]);
+          const partnerMobile = pUser?.mobile || pUser?.partner_mobile;
+
+          if (partnerMobile) {
+            sendLinkedShareSms(partnerMobile, targetName.trim(), product?.name || 'Financial Product', shareUrl).catch(err => {
+              console.warn('Auto SMS dispatch to partner failed for linked_share:', err.message);
+            });
+          }
+          if (trimmedMobile && trimmedMobile !== partnerMobile) {
+            sendLinkedShareSms(trimmedMobile, targetName.trim(), product?.name || 'Financial Product', shareUrl).catch(err => {
+              console.warn('Auto SMS dispatch failed for linked_share:', err.message);
+            });
+          }
+        } catch (smsErr) {
+          console.warn('SMS service invocation error:', smsErr.message);
         }
-        if (trimmedMobile && trimmedMobile !== partnerMobile) {
-          sendLinkedShareSms(trimmedMobile, targetName.trim(), product?.name || 'Financial Product', shareUrl).catch(err => {
-            console.warn('Auto SMS dispatch failed for linked_share:', err.message);
-          });
-        }
-      } catch (smsErr) {
-        console.warn('SMS service invocation error:', smsErr.message);
+
+        return created(res, {
+          lead_id: lead.id,
+          app_id: app.id,
+          app_number: app.app_number,
+          customer_id: customer.id,
+          mobile: lead.mobile,
+          process_type: 'linked_share',
+          process_by: 'partner',
+          source: 'share_link',
+          otp_required: false,
+          share_url: shareUrl,
+          whatsapp_url: whatsappUrl
+        }, 'Linked share link generated successfully.');
       }
 
-      return created(res, {
-        lead_id: lead.id,
-        app_id: app.id,
-        app_number: app.app_number,
-        customer_id: customer.id,
-        mobile: lead.mobile,
-        process_type: 'linked_share',
-        process_by: 'partner',
-        source: 'share_link',
-        otp_required: false,
-        share_url: shareUrl,
-        whatsapp_url: whatsappUrl
-      }, 'Linked share link generated successfully.');
-    }
+      if (targetProcess === 'direct_bank') {
+        const resolvedDirect = resolveDirectProcessLinkForProductRow(product, getBankApplyLinkBackend);
+        if (!resolvedDirect.url) {
+          await client.query('ROLLBACK');
+          return error(res, `Direct Process link is not configured for ${product.name}`, 400);
+        }
+        const bankUrl = resolvedDirect.url;
 
-    if (targetProcess === 'direct_bank') {
-      const resolvedDirect = resolveDirectProcessLinkForProductRow(product, getBankApplyLinkBackend);
-      if (!resolvedDirect.url) {
-        return error(res, `Direct Process link is not configured for ${product.name}`, 400);
+        const { rows: [lead] } = await client.query(`
+          INSERT INTO leads (
+            lead_number, partner_id, parent_partner_id, created_by, customer_id,
+            product_id, customer_name, mobile, city, status, process_type, process_by,
+            otp_verified, source, priority, pipeline_stage
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'direct_bank', 'partner_self', TRUE, $10, $11, 'bank_redirected')
+          RETURNING *
+        `, [
+          leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
+          targetProductId, targetName.trim(), trimmedMobile, targetCity, source || 'partner', priority || 'medium'
+        ]);
+
+        const { rows: [app] } = await client.query(`
+          INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, bank_url, agree_terms, submitted_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'direct_bank', $9, TRUE, NOW())
+          RETURNING *
+        `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0, bankUrl]);
+
+        await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium', client);
+
+        await client.query('COMMIT');
+
+        notifyPartnerLeadCreated(app.app_number || appNum, 'direct_bank');
+
+        return created(res, {
+          lead_id: lead.id,
+          app_id: app.id,
+          app_number: app.app_number,
+          customer_id: customer.id,
+          mobile: lead.mobile,
+          process_type: 'direct_bank',
+          process_by: 'partner_self',
+          otp_required: false,
+          bank_url: bankUrl
+        }, 'Direct bank application initialized successfully.');
       }
-      const bankUrl = resolvedDirect.url;
 
-      const { rows: [lead] } = await query(`
+      if (targetProcess === 'physical_process') {
+        const { rows: [lead] } = await client.query(`
+          INSERT INTO leads (
+            lead_number, partner_id, parent_partner_id, created_by, customer_id,
+            product_id, customer_name, mobile, city, status, process_type, process_by,
+            otp_verified, source, priority, pipeline_stage
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'physical_process', 'physical', TRUE, $10, $11, 'physical_details')
+          RETURNING *
+        `, [
+          leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
+          targetProductId, targetName.trim(), trimmedMobile, targetCity, source || 'partner', priority || 'medium'
+        ]);
+
+        const { rows: [app] } = await client.query(`
+          INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, agree_terms, submitted_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'physical_process', TRUE, NOW())
+          RETURNING *
+        `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0]);
+
+        await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium', client);
+
+        const { v4: uuidv4 } = require('uuid');
+        const physToken = `phys_${uuidv4().replace(/-/g, '')}`;
+        await client.query(`
+          INSERT INTO customer_access_tokens (customer_id, application_id, token, token_type, expires_at)
+          VALUES ($1, $2, $3, 'physical_process', NOW() + INTERVAL '72 hours')
+        `, [customer.id, app.id, physToken]).catch(() => {});
+
+        await client.query('COMMIT');
+
+        notifyPartnerLeadCreated(app.app_number || appNum, 'physical_process');
+
+        const host = req.get('host') || 'gharkapaisa.in';
+        const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+        const baseUrl = process.env.FRONTEND_URL || `${protocol}://${host}`;
+        const physicalFormUrl = `${baseUrl.replace(/\/$/, '')}/physical-application/${physToken}`;
+
+        return created(res, {
+          lead_id: lead.id,
+          app_id: app.id,
+          app_number: app.app_number,
+          customer_id: customer.id,
+          mobile: lead.mobile,
+          process_type: 'physical_process',
+          process_by: 'physical',
+          otp_required: false,
+          share_url: physicalFormUrl
+        }, 'Physical process application created successfully.');
+      }
+
+      if (targetProcess === 'co_browsing' || targetProcess === 'card_assist_cobrowsing') {
+        const cobrowsingUrl = 'https://agentapp.ddp.hdfcbank.com/dsa-agent-portal/welcome';
+
+        const { rows: [lead] } = await client.query(`
+          INSERT INTO leads (
+            lead_number, partner_id, parent_partner_id, created_by, customer_id,
+            product_id, customer_name, mobile, city, status, process_type, process_by,
+            otp_verified, source, priority, pipeline_stage
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'co_browsing', 'co_browsing', TRUE, $10, $11, 'co_browsing_initiated')
+          RETURNING *
+        `, [
+          leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
+          targetProductId, targetName.trim(), trimmedMobile, targetCity, source || 'partner', priority || 'medium'
+        ]);
+
+        const { rows: [app] } = await client.query(`
+          INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, process_by, bank_url, agree_terms, submitted_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'co_browsing', 'co_browsing', $9, TRUE, NOW())
+          RETURNING *
+        `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0, cobrowsingUrl]);
+
+        await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium', client);
+
+        await client.query('COMMIT');
+
+        notifyPartnerLeadCreated(app.app_number || appNum, 'co_browsing');
+
+        return created(res, {
+          lead_id: lead.id,
+          app_id: app.id,
+          app_number: app.app_number,
+          customer_id: customer.id,
+          mobile: lead.mobile,
+          process_type: 'co_browsing',
+          process_by: 'co_browsing',
+          otp_required: false,
+          bank_url: cobrowsingUrl,
+          redirect_url: cobrowsingUrl
+        }, 'Card Assist process (Co-Browsing) application logged successfully.');
+      }
+
+      // Default: Lead Punching Process (No OTP requirement for internal punching)
+      const { rows: [lead] } = await client.query(`
         INSERT INTO leads (
           lead_number, partner_id, parent_partner_id, created_by, customer_id,
-          product_id, customer_name, mobile, city, status, process_type, process_by,
+          product_id, customer_name, customer_mobile, mobile, pan_number, city, status, process_type, process_by,
           otp_verified, source, priority, pipeline_stage
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'direct_bank', 'partner_self', TRUE, $10, $11, 'bank_redirected')
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10, 'pending', 'lead_punching', 'punching', TRUE, $11, $12, 'pan_check')
         RETURNING *
       `, [
         leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
-        targetProductId, targetName.trim(), trimmedMobile, targetCity, source || 'partner', priority || 'medium'
+        targetProductId, targetName.trim(), trimmedMobile, cleanPan, targetCity, source || 'partner', priority || 'medium'
       ]);
 
-      const { rows: [app] } = await query(`
-        INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, bank_url, agree_terms, submitted_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'direct_bank', $9, TRUE, NOW())
+      const { rows: [app] } = await client.query(`
+        INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, pan_number, agree_terms, submitted_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'lead_punching', $9, TRUE, NOW())
         RETURNING *
-      `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0, bankUrl]);
+      `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0, cleanPan]);
 
-      await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
-      notifyPartnerLeadCreated(app.app_number || appNum, 'direct_bank');
+      if (app?.id) {
+        await client.query(`
+          INSERT INTO physical_application_details (application_id, full_name, mobile, email, pan_number, created_at, updated_at)
+          VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+          ON CONFLICT (application_id) DO UPDATE SET
+            pan_number = COALESCE(EXCLUDED.pan_number, physical_application_details.pan_number),
+            updated_at = NOW()
+        `, [app.id, targetName.trim(), trimmedMobile, trimmedEmail || null, cleanPan]).catch(() => {});
+      }
+
+      await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium', client);
+
+      await client.query('COMMIT');
+
+      notifyPartnerLeadCreated(app.app_number || appNum, 'lead_punching');
 
       return created(res, {
         lead_id: lead.id,
@@ -623,148 +790,15 @@ const createLead = async (req, res, next) => {
         app_number: app.app_number,
         customer_id: customer.id,
         mobile: lead.mobile,
-        process_type: 'direct_bank',
-        process_by: 'partner_self',
-        otp_required: false,
-        bank_url: bankUrl
-      }, 'Direct bank application initialized successfully.');
+        process_type: 'lead_punching',
+        otp_required: false
+      }, 'Lead Punching application logged successfully.');
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      throw txErr;
+    } finally {
+      client.release();
     }
-
-    if (targetProcess === 'physical_process') {
-      const { rows: [bankRec] } = await query(`SELECT id, name, short_code FROM banks WHERE id = $1`, [product.bank_id]).catch(() => ({ rows: [] }));
-      const bankName = (bankRec?.name || bankRec?.short_code || product.name || '').toLowerCase();
-      const isSbi = product.bank_id === 'e7c2c604-139d-4fcf-a87c-695633535a02' || bankRec?.id === 'e7c2c604-139d-4fcf-a87c-695633535a02' || bankName.includes('sbi');
-
-      const { rows: [lead] } = await query(`
-        INSERT INTO leads (
-          lead_number, partner_id, parent_partner_id, created_by, customer_id,
-          product_id, customer_name, mobile, city, status, process_type, process_by,
-          otp_verified, source, priority, pipeline_stage
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'physical_process', 'physical', TRUE, $10, $11, 'physical_details')
-        RETURNING *
-      `, [
-        leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
-        targetProductId, targetName.trim(), trimmedMobile, targetCity, source || 'partner', priority || 'medium'
-      ]);
-
-      const { rows: [app] } = await query(`
-        INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, agree_terms, submitted_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'physical_process', TRUE, NOW())
-        RETURNING *
-      `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0]);
-
-      await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
-      notifyPartnerLeadCreated(app.app_number || appNum, 'physical_process');
-
-      const host = req.get('host') || 'gharkapaisa.in';
-      const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
-      const baseUrl = process.env.FRONTEND_URL || `${protocol}://${host}`;
-
-      // Access token creation for physical link
-      const { v4: uuidv4 } = require('uuid');
-      const physToken = `phys_${uuidv4().replace(/-/g, '')}`;
-      await query(`
-        INSERT INTO customer_access_tokens (customer_id, application_id, token, token_type, expires_at)
-        VALUES ($1, $2, $3, 'physical_process', NOW() + INTERVAL '72 hours')
-      `, [customer.id, app.id, physToken]).catch(() => {});
-
-      const physicalFormUrl = `${baseUrl.replace(/\/$/, '')}/physical-application/${physToken}`;
-
-      return created(res, {
-        lead_id: lead.id,
-        app_id: app.id,
-        app_number: app.app_number,
-        customer_id: customer.id,
-        mobile: lead.mobile,
-        process_type: 'physical_process',
-        process_by: 'physical',
-        otp_required: false,
-        share_url: physicalFormUrl
-      }, 'Physical process application created successfully.');
-    }
-
-    if (targetProcess === 'co_browsing' || targetProcess === 'card_assist_cobrowsing') {
-      const cobrowsingUrl = 'https://agentapp.ddp.hdfcbank.com/dsa-agent-portal/welcome';
-
-      const { rows: [lead] } = await query(`
-        INSERT INTO leads (
-          lead_number, partner_id, parent_partner_id, created_by, customer_id,
-          product_id, customer_name, mobile, city, status, process_type, process_by,
-          otp_verified, source, priority, pipeline_stage
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'co_browsing', 'co_browsing', TRUE, $10, $11, 'co_browsing_initiated')
-        RETURNING *
-      `, [
-        leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
-        targetProductId, targetName.trim(), trimmedMobile, targetCity, source || 'partner', priority || 'medium'
-      ]);
-
-      const { rows: [app] } = await query(`
-        INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, process_by, bank_url, agree_terms, submitted_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'co_browsing', 'co_browsing', $9, TRUE, NOW())
-        RETURNING *
-      `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0, cobrowsingUrl]);
-
-      await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
-      notifyPartnerLeadCreated(app.app_number || appNum, 'co_browsing');
-
-      return created(res, {
-        lead_id: lead.id,
-        app_id: app.id,
-        app_number: app.app_number,
-        customer_id: customer.id,
-        mobile: lead.mobile,
-        process_type: 'co_browsing',
-        process_by: 'co_browsing',
-        otp_required: false,
-        bank_url: cobrowsingUrl,
-        redirect_url: cobrowsingUrl
-      }, 'Card Assist process (Co-Browsing) application logged successfully.');
-    }
-
-    // Default: Lead Punching Process (No OTP requirement for internal punching)
-    const { rows: [lead] } = await query(`
-      INSERT INTO leads (
-        lead_number, partner_id, parent_partner_id, created_by, customer_id,
-        product_id, customer_name, customer_mobile, mobile, pan_number, city, status, process_type, process_by,
-        otp_verified, source, priority, pipeline_stage
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10, 'pending', 'lead_punching', 'punching', TRUE, $11, $12, 'pan_check')
-      RETURNING *
-    `, [
-      leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
-      targetProductId, targetName.trim(), trimmedMobile, cleanPan, targetCity, source || 'partner', priority || 'medium'
-    ]);
-
-    const { rows: [app] } = await query(`
-      INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, pan_number, agree_terms, submitted_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'lead_punching', $9, TRUE, NOW())
-      RETURNING *
-    `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0, cleanPan]);
-
-    if (app?.id) {
-      await query(`
-        INSERT INTO physical_application_details (application_id, full_name, mobile, email, pan_number, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-        ON CONFLICT (application_id) DO UPDATE SET
-          pan_number = COALESCE(EXCLUDED.pan_number, physical_application_details.pan_number),
-          updated_at = NOW()
-      `, [app.id, targetName.trim(), trimmedMobile, trimmedEmail || null, cleanPan]).catch(() => {});
-    }
-
-    await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
-    notifyPartnerLeadCreated(app.app_number || appNum, 'lead_punching');
-
-    return created(res, {
-      lead_id: lead.id,
-      app_id: app.id,
-      app_number: app.app_number,
-      customer_id: customer.id,
-      mobile: lead.mobile,
-      process_type: 'lead_punching',
-      otp_required: false
-    }, 'Lead Punching application logged successfully.');
   } catch (err) {
     next(err);
   }
@@ -964,6 +998,14 @@ const verifyLeadOtp = async (req, res, next) => {
 
     await logLeadTimeline(null, id, 'Lead Confirmed', `Lead OTP verified and converted to Application ${appNumber}`, 'applications', app.id, req.user.id);
 
+    if (lead.process_type !== 'direct_bank') {
+      try {
+        await triggerAutomaticCommissionPayout(lead.id, null, req.user.id);
+      } catch (commErr) {
+        logger.error(`Automatic commission trigger failed in verifyLeadOtp for lead ${lead.id}:`, commErr);
+      }
+    }
+
     try {
       let partnerEmail = req.user.email;
       if (!partnerEmail && lead.partner_id) {
@@ -1009,6 +1051,10 @@ const updateLeadStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { status, pipeline_stage, remarks, rejection_reason, approved_amount } = req.body;
+
+    if (!['SUPER_ADMIN', 'ADMIN'].includes(req.user?.role)) {
+      return forbidden(res, 'Only administrators can update lead status');
+    }
 
     const { rows: [existing] } = await query(`SELECT * FROM leads WHERE id = $1`, [id]);
     if (!existing) return notFound(res, 'Lead not found');
@@ -1113,6 +1159,20 @@ const assignLead = async (req, res, next) => {
     let { assigned_to, team } = req.body;
     if (!assigned_to) return error(res, 'Target staff user ID is required', 400);
 
+    const { rows: [lead] } = await query(`
+      SELECT l.*, p.bank_id 
+      FROM leads l 
+      LEFT JOIN products p ON p.id = l.product_id 
+      WHERE l.id = $1
+    `, [id]);
+    if (!lead) return notFound(res, 'Lead not found');
+
+    if (req.user?.assigned_banks && Array.isArray(req.user.assigned_banks) && req.user.assigned_banks.length > 0) {
+      if (lead.bank_id && !req.user.assigned_banks.includes(lead.bank_id)) {
+        return forbidden(res, 'You do not have permission to assign leads for this bank');
+      }
+    }
+
     if (assigned_to === 'self' || assigned_to === 'me') {
       assigned_to = req.user.id;
     }
@@ -1133,6 +1193,8 @@ const assignLead = async (req, res, next) => {
     `, [id, assigned_to, team || 'operations', req.user.id]);
 
     await logLeadTimeline(null, id, 'Lead Assigned', `Lead assigned to staff member (${team || 'operations'})`, 'lead_assignments', assign.id, req.user.id);
+    await logLeadActivity(null, id, 'lead_assigned', req.user.id, 'lead_assignments', assign.id, req);
+
     return created(res, assign, 'Lead assigned successfully');
   } catch (err) {
     next(err);
@@ -1146,13 +1208,30 @@ const assignBankExecutive = async (req, res, next) => {
     const { bank_id, executive_name, mobile, email } = req.body;
     if (!executive_name) return error(res, 'Bank Executive Name is required', 400);
 
+    const { rows: [lead] } = await query(`
+      SELECT l.*, p.bank_id 
+      FROM leads l 
+      LEFT JOIN products p ON p.id = l.product_id 
+      WHERE l.id = $1
+    `, [id]);
+    if (!lead) return notFound(res, 'Lead not found');
+
+    const effectiveBankId = bank_id || lead.bank_id;
+    if (req.user?.assigned_banks && Array.isArray(req.user.assigned_banks) && req.user.assigned_banks.length > 0) {
+      if (effectiveBankId && !req.user.assigned_banks.includes(effectiveBankId)) {
+        return forbidden(res, 'You do not have permission to assign bank executives for this bank');
+      }
+    }
+
     const { rows: [bankAss] } = await query(`
       INSERT INTO bank_assignments (lead_id, bank_id, executive_name, mobile, email)
       VALUES ($1, $2, $3, $4, $5)
       RETURNING *
-    `, [id, bank_id || null, executive_name, mobile || null, email || null]);
+    `, [id, effectiveBankId || null, executive_name, mobile || null, email || null]);
 
     await logLeadTimeline(null, id, 'Bank Executive Assigned', `Assigned to ${executive_name} (${mobile || 'No phone'})`, 'bank_assignments', bankAss.id, req.user.id);
+    await logLeadActivity(null, id, 'bank_executive_assigned', req.user.id, 'bank_assignments', bankAss.id, req);
+
     return created(res, bankAss, 'Bank executive assigned successfully');
   } catch (err) {
     next(err);
@@ -1253,7 +1332,7 @@ const listPartnerShareLeads = async (req, res, next) => {
     let idx = 1;
 
     if (search) {
-      where += ` AND (l.customer_name ILIKE $${idx} OR l.customer_mobile ILIKE $${idx} OR l.mobile ILIKE $${idx})`;
+      where += ` AND (l.customer_name ILIKE $${idx} OR l.mobile ILIKE $${idx})`;
       values.push(`%${search}%`); idx++;
     }
     if (partner_code) {
@@ -1267,12 +1346,10 @@ const listPartnerShareLeads = async (req, res, next) => {
     if (from_date) { where += ` AND l.created_at >= $${idx++}`; values.push(from_date); }
     if (to_date) { where += ` AND l.created_at <= $${idx++}`; values.push(to_date + ' 23:59:59'); }
 
-    const mobileCol = `COALESCE(l.customer_mobile, l.mobile)`;
-
     const [countRes, dataRes] = await Promise.all([
       query(`SELECT COUNT(*) FROM leads l LEFT JOIN partner_profiles pp ON pp.id = l.partner_id ${where}`, values),
       query(`
-        SELECT l.id, l.customer_name, ${mobileCol} as customer_mobile,
+        SELECT l.id, l.customer_name, l.mobile as customer_mobile, l.mobile,
                l.status, l.source, l.created_at,
                p.name as product_name, p.category,
                b.name as bank_name, b.short_code as bank_code,
@@ -1301,6 +1378,14 @@ const updateLead = async (req, res, next) => {
 
     const { rows: [existing] } = await query(`SELECT * FROM leads WHERE id = $1`, [id]);
     if (!existing) return notFound(res, 'Lead not found');
+
+    if (['PARTNER', 'TEAM_MEMBER'].includes(req.user?.role)) {
+      const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      const partnerId = partner ? partner.id : null;
+      if (existing.partner_id !== partnerId && existing.created_by !== req.user.id) {
+        return forbidden(res, 'You do not own this lead');
+      }
+    }
 
     const { rows: [updated] } = await query(`
       UPDATE leads SET
