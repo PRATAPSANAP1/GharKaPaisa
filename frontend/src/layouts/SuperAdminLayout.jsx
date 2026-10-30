@@ -280,7 +280,6 @@ const SuperAdminLayout = () => {
         { path: '/super-admin/support', label: 'Support Tickets', icon: <Icons.profile size={16} /> },
         { path: '/super-admin/audit', label: 'Audit Logs', icon: <Icons.clock size={16} /> },
         { path: '/super-admin/reports', label: 'Reports', icon: <Icons.trending size={16} /> },
-        { path: '/super-admin/designation-rules', label: 'Designation Rules & Permissions', icon: <Icons.shield size={16} /> }
       ]
     }
   ];
