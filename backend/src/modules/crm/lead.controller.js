@@ -1,6 +1,6 @@
 const { query, getClient } = require('../../config/database');
 const { success, created, error, notFound, forbidden, paginate } = require('../../utils/response/response');
-const { getPaginationParams } = require('../../utils/helpers/helpers');
+const { getPaginationParams, isEmployeeOrStaffUser } = require('../../utils/helpers/helpers');
 const logger = require('../../config/logger');
 const { sendLeadApplicationCreatedEmail } = require('../../services/email/email.service');
 const { calculatePartnerCommission } = require('../partner/commission.service.js');
@@ -390,7 +390,19 @@ const createLead = async (req, res, next) => {
 
     const notifyPartnerLeadCreated = async (createdAppNum, createdProcessType) => {
       try {
-        let partnerEmail = req.user.email || partner?.email;
+        if (isEmployeeOrStaffUser(req)) {
+          // In employee panel / when employee creates new lead: turn off email to employee
+          return;
+        }
+
+        let partnerEmail = null;
+        const creatorRole = String(req.user?.role || req.user?.user_role || '').toUpperCase().trim();
+        if (['PARTNER', 'TEAM_MEMBER'].includes(creatorRole)) {
+          partnerEmail = req.user?.email || partner?.email;
+        } else if (partner?.email) {
+          partnerEmail = partner.email;
+        }
+
         if (!partnerEmail && partner?.id) {
           const { rows: [pUser] } = await query(
             `SELECT u.email FROM partner_profiles pp JOIN users u ON u.id = pp.user_id WHERE pp.id = $1`,
@@ -947,25 +959,31 @@ const verifyLeadOtp = async (req, res, next) => {
     }
 
     try {
-      let partnerEmail = req.user.email;
-      if (!partnerEmail && lead.partner_id) {
-        const { rows: [pUser] } = await client.query(
-          `SELECT u.email FROM partner_profiles pp JOIN users u ON u.id = pp.user_id WHERE pp.id = $1`,
-          [lead.partner_id]
-        ).catch(() => ({ rows: [] }));
-        partnerEmail = pUser?.email;
-      }
-      if (partnerEmail) {
-        sendLeadApplicationCreatedEmail({
-          to: partnerEmail,
-          customerName: lead.customer_name || 'Customer',
-          appNumber: app.app_number || appNumber,
-          productName: product?.name || 'Financial Product',
-          mobile: lead.mobile,
-          countryCode: '+91',
-          processType: lead.process_type || 'lead_punching',
-          commission: app.commission_amount || 0
-        });
+      if (!isEmployeeOrStaffUser(req)) {
+        let partnerEmail = null;
+        const creatorRole = String(req.user?.role || req.user?.user_role || '').toUpperCase().trim();
+        if (['PARTNER', 'TEAM_MEMBER'].includes(creatorRole)) {
+          partnerEmail = req.user?.email;
+        }
+        if (!partnerEmail && lead.partner_id) {
+          const { rows: [pUser] } = await client.query(
+            `SELECT u.email FROM partner_profiles pp JOIN users u ON u.id = pp.user_id WHERE pp.id = $1`,
+            [lead.partner_id]
+          ).catch(() => ({ rows: [] }));
+          partnerEmail = pUser?.email;
+        }
+        if (partnerEmail) {
+          sendLeadApplicationCreatedEmail({
+            to: partnerEmail,
+            customerName: lead.customer_name || 'Customer',
+            appNumber: app.app_number || appNumber,
+            productName: product?.name || 'Financial Product',
+            mobile: lead.mobile,
+            countryCode: '+91',
+            processType: lead.process_type || 'lead_punching',
+            commission: app.commission_amount || 0
+          });
+        }
       }
     } catch (emailErr) {
       logger.warn('Failed to dispatch partner lead conversion email:', emailErr.message);

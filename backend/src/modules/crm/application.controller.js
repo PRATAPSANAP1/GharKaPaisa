@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { query, getClient } = require('../../config/database');
-const { generateAppNumber, getPaginationParams, normalizeAssignmentCategory } = require('../../utils/helpers/helpers');
+const { generateAppNumber, getPaginationParams, normalizeAssignmentCategory, isEmployeeOrStaffUser } = require('../../utils/helpers/helpers');
 const { creditCommission, releaseHold } = require('../wallet/service.js');
 const { calculatePartnerCommission } = require('../partner/commission.service.js');
 const { notify } = require('../notifications/service.js');
@@ -308,25 +308,31 @@ const submitApplication = async (req, res, next) => {
     await notify.applicationSubmitted(req.user.id, appNumber);
 
     try {
-      let partnerEmail = req.user.email;
-      if (!partnerEmail && PartnerId) {
-        const { rows: [pUser] } = await client.query(
-          `SELECT u.email FROM partner_profiles pp JOIN users u ON u.id = pp.user_id WHERE pp.id = $1`,
-          [PartnerId]
-        ).catch(() => ({ rows: [] }));
-        partnerEmail = pUser?.email;
-      }
-      if (partnerEmail) {
-        sendLeadApplicationCreatedEmail({
-          to: partnerEmail,
-          customerName: customer.full_name || 'Customer',
-          appNumber,
-          productName: product.name || 'Financial Product',
-          mobile: customer.mobile,
-          countryCode: '+91',
-          processType: req.body.process_type || 'lead_punching',
-          commission
-        });
+      if (!isEmployeeOrStaffUser(req)) {
+        let partnerEmail = null;
+        const creatorRole = String(req.user?.role || req.user?.user_role || '').toUpperCase().trim();
+        if (['PARTNER', 'TEAM_MEMBER'].includes(creatorRole)) {
+          partnerEmail = req.user?.email;
+        }
+        if (!partnerEmail && PartnerId) {
+          const { rows: [pUser] } = await client.query(
+            `SELECT u.email FROM partner_profiles pp JOIN users u ON u.id = pp.user_id WHERE pp.id = $1`,
+            [PartnerId]
+          ).catch(() => ({ rows: [] }));
+          partnerEmail = pUser?.email;
+        }
+        if (partnerEmail) {
+          sendLeadApplicationCreatedEmail({
+            to: partnerEmail,
+            customerName: customer.full_name || 'Customer',
+            appNumber,
+            productName: product.name || 'Financial Product',
+            mobile: customer.mobile,
+            countryCode: '+91',
+            processType: req.body.process_type || 'lead_punching',
+            commission
+          });
+        }
       }
     } catch (emailErr) {
       logger.warn('Failed to dispatch partner email in submitApplication:', emailErr.message);
@@ -4118,27 +4124,33 @@ const submitPartnerApplication = async (req, res, next) => {
       }).catch(err => logger.warn('Applicant email trigger failed:', err.message));
     }
 
-    let partnerEmail = req.user.email;
-    if (!partnerEmail && PartnerId) {
-      try {
-        const { rows: [pUser] } = await client.query(
-          `SELECT u.email FROM partner_profiles pp JOIN users u ON u.id = pp.user_id WHERE pp.id = $1`,
-          [PartnerId]
-        ).catch(() => ({ rows: [] }));
-        partnerEmail = pUser?.email;
-      } catch (_) {}
-    }
-    if (partnerEmail) {
-      sendLeadApplicationCreatedEmail({
-        to: partnerEmail,
-        customerName: trimmedName,
-        appNumber,
-        productName: product.name,
-        mobile: trimmedMobile,
-        countryCode: country_code,
-        processType: process_type,
-        commission
-      });
+    if (!isEmployeeOrStaffUser(req)) {
+      let partnerEmail = null;
+      if (['PARTNER', 'TEAM_MEMBER'].includes(rawRole)) {
+        partnerEmail = req.user?.email;
+      }
+      const targetPID = partnerId || PartnerId;
+      if (!partnerEmail && targetPID) {
+        try {
+          const { rows: [pUser] } = await client.query(
+            `SELECT u.email FROM partner_profiles pp JOIN users u ON u.id = pp.user_id WHERE pp.id = $1`,
+            [targetPID]
+          ).catch(() => ({ rows: [] }));
+          partnerEmail = pUser?.email;
+        } catch (_) {}
+      }
+      if (partnerEmail) {
+        sendLeadApplicationCreatedEmail({
+          to: partnerEmail,
+          customerName: trimmedName,
+          appNumber,
+          productName: product.name,
+          mobile: trimmedMobile,
+          countryCode: country_code,
+          processType: process_type,
+          commission
+        });
+      }
     }
 
     return success(res, {

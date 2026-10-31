@@ -23,6 +23,7 @@ export default function EmployeeLoanOnCreditCard() {
   const [selectedBank, setSelectedBank] = useState('ALL');
   const [dbOffers, setDbOffers] = useState([]);
   const [loadingProds, setLoadingProds] = useState(true);
+  const [apiError, setApiError] = useState(null);
   const [showCalculator, setShowCalculator] = useState(false);
   const isMountedRef = React.useRef(true);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
