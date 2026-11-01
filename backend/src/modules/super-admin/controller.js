@@ -191,11 +191,11 @@ const createAdmin = async (req, res, next) => {
     role = role || 'ADMIN';
     department = department || 'Operations';
 
-    console.log("CREATE ADMIN REQUEST:", req.body);
-    console.log("ROLE:", role);
+    logger.info("CREATE ADMIN REQUEST:", req.body);
+    logger.info("ROLE:", role);
 
     if (!fullName || !email || !mobile || !password || !confirmPassword || !designation) {
-      console.log("FAILED: Missing required fields");
+      logger.info("FAILED: Missing required fields");
       return error(res, 'All required fields must be provided', 400);
     }
 
@@ -208,7 +208,7 @@ const createAdmin = async (req, res, next) => {
     }
 
     if (password !== confirmPassword) {
-      console.log("FAILED: Password mismatch");
+      logger.info("FAILED: Password mismatch");
       return error(res, 'Passwords do not match', 400);
     }
 
@@ -794,11 +794,11 @@ const updateAdminBanks = async (req, res, next) => {
   try {
     client = await getClient();
 
-    console.log('[BANK ASSIGNMENT] REQUEST RECEIVED', {
+    logger.info('[BANK ASSIGNMENT] REQUEST RECEIVED', {
       adminId: req.params.id,
       bodyKeys: Object.keys(req.body || {})
     });
-    console.log('[BANK ASSIGNMENT] BODY', req.body);
+    logger.info('[BANK ASSIGNMENT] BODY', req.body);
 
     const { id } = req.params;
 
@@ -810,7 +810,7 @@ const updateAdminBanks = async (req, res, next) => {
     }
 
     let rawPairs = parseAssignmentPairsFromBody(req.body) || [];
-    console.log('[BANK ASSIGNMENT] PARSED PAIRS', rawPairs);
+    logger.info('[BANK ASSIGNMENT] PARSED PAIRS', rawPairs);
 
     const uniqueMap = new Map();
     for (const pair of rawPairs) {
@@ -831,15 +831,15 @@ const updateAdminBanks = async (req, res, next) => {
     }
 
     const assignmentPairs = Array.from(uniqueMap.values());
-    console.log('[BANK ASSIGNMENT] RESOLVED PAIRS', assignmentPairs);
+    logger.info('[BANK ASSIGNMENT] RESOLVED PAIRS', assignmentPairs);
 
     const rawActorId = req.user?.id || req.user?._id || req.user?.userId || null;
     const actorId = isUuid(rawActorId) ? rawActorId : null;
 
-    console.log('[BANK ASSIGNMENT] BEGIN');
+    logger.info('[BANK ASSIGNMENT] BEGIN');
     await client.query('BEGIN');
 
-    console.log('[BANK ASSIGNMENT] DELETE OLD');
+    logger.info('[BANK ASSIGNMENT] DELETE OLD');
     await client.query(`DELETE FROM admin_bank_assignments WHERE admin_id = $1`, [userRec.id]);
 
     const currentDesig = userRec.designation;
@@ -852,7 +852,7 @@ const updateAdminBanks = async (req, res, next) => {
       await safeTxQuery(client, `UPDATE products SET operation_head_id = NULL WHERE operation_head_id = $1`, [userRec.id]);
     }
 
-    console.log('[BANK ASSIGNMENT] INSERT');
+    logger.info('[BANK ASSIGNMENT] INSERT');
     for (const pair of assignmentPairs) {
       await insertBankAssignment(userRec.id, pair.bank_id, pair.category, actorId, client);
       if (isTargetOpHead) {
@@ -864,11 +864,11 @@ const updateAdminBanks = async (req, res, next) => {
       }
     }
 
-    console.log('[BANK ASSIGNMENT] UPDATE LOC/EOC');
+    logger.info('[BANK ASSIGNMENT] UPDATE LOC/EOC');
     const hasLocEoc = assignmentPairs.some(pair => normalizeAssignmentCategory(pair.category) === 'loc_eoc');
     await safeTxQuery(client, `UPDATE users SET has_loc_eoc = $1 WHERE id = $2`, [hasLocEoc, userRec.id]);
 
-    console.log('[BANK ASSIGNMENT] COMMIT');
+    logger.info('[BANK ASSIGNMENT] COMMIT');
     await client.query('COMMIT');
 
     logAction(req, 'UPDATE_ADMIN_BANKS', userRec.id, { assignmentPairs }).catch(() => {});

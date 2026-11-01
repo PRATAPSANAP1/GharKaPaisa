@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { query, getClient } = require('../../config/database');
+// Note: No duplicate database imports - removed redundant require at line 1029
 const { generateAppNumber, getPaginationParams, normalizeAssignmentCategory, isEmployeeOrStaffUser } = require('../../utils/helpers/helpers');
 const { creditCommission, releaseHold } = require('../wallet/service.js');
 const { calculatePartnerCommission } = require('../partner/commission.service.js');
@@ -1026,7 +1027,6 @@ const updateStatus = async (req, res, next) => {
 
         // Referral Bonus & Commission Distribution (Task 27)
         try {
-          const { query: queryDB } = require('../../config/database');
           const { createNotification } = require('../notifications/service.js');
           const teamService = require('../team/team.service.js');
 
@@ -1617,96 +1617,8 @@ const manualCommission = async (req, res, next) => {
 
 const isUuid = (str) => typeof str === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
 
-let stageColumnsEnsured = false;
-let stageColumnsPromise = null;
-
-const ensureApplicationStageColumns = async () => {
-  if (stageColumnsEnsured) return;
-  if (stageColumnsPromise) return stageColumnsPromise;
-
-  stageColumnsPromise = (async () => {
-    try {
-      // 1. Check if critical columns already exist in information_schema to avoid acquiring AccessExclusiveLock
-      const { rows } = await query(`
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_name = 'applications' 
-          AND column_name IN ('sales_operator_code', 'pan_checker_code', 'remark_operator_code', 'backend_remark')
-      `);
-      if (rows && rows.length >= 4) {
-        stageColumnsEnsured = true;
-        return;
-      }
-
-      await query(`
-        ALTER TABLE applications 
-        ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS remark_status VARCHAR(20) DEFAULT 'PENDING',
-        ADD COLUMN IF NOT EXISTS remark_updated BOOLEAN DEFAULT FALSE,
-        ADD COLUMN IF NOT EXISTS remark_updated_by UUID,
-        ADD COLUMN IF NOT EXISTS remark_updated_at TIMESTAMPTZ,
-        ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no',
-        ADD COLUMN IF NOT EXISTS bank_current_lead_status VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS approved_by UUID,
-        ADD COLUMN IF NOT EXISTS sales_operator_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS backend_remark TEXT,
-        ADD COLUMN IF NOT EXISTS cureble_stage VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS primary_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS secondary_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS cureble_type VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS cureble_operator_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS final_card_approval VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS soft_approval_stage VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS salas_operator_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS remark_opretor_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS user_remark TEXT
-      `).catch(() => {});
-      await query(`
-        ALTER TABLE physical_application_details
-        ADD COLUMN IF NOT EXISTS sales_operator_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS backend_remark TEXT,
-        ADD COLUMN IF NOT EXISTS cureble_stage VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS primary_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS secondary_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS cureble_type VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS cureble_operator_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS final_card_approval VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS queryable_remark VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS queryable_sales_remark TEXT,
-        ADD COLUMN IF NOT EXISTS digital_remark VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS decline_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS decline_remark TEXT,
-        ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS soft_approval_stage VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS salas_operator_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS remark_opretor_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS user_remark TEXT,
-        ADD COLUMN IF NOT EXISTS decline_description TEXT,
-        ADD COLUMN IF NOT EXISTS curing_designation VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS primary_decline_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS primary_decline_description TEXT,
-        ADD COLUMN IF NOT EXISTS primary_curing_designation VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS secondary_decline_code VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS secondary_decline_description TEXT,
-        ADD COLUMN IF NOT EXISTS secondary_curing_designation VARCHAR(100)
-      `).catch(() => {});
-      stageColumnsEnsured = true;
-    } catch (err) {
-      // Ignore error if schema alter is locked or non-fatal
-    } finally {
-      stageColumnsPromise = null;
-    }
-  })();
-
-  return stageColumnsPromise;
-};
+// Runtime schema alterations removed - use migrations instead
+// See: backend/src/database/migrations/migrate_consolidated_application_stage_columns.js
 
 const listApplications = async (req, res, next) => {
   const correlationId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -3460,7 +3372,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
         await query(`
           INSERT INTO application_timeline (application_id, event_type, title, description, actor_type, actor_id)
           VALUES ($1, $2, $3, $4, 'admin', $5)
-        `, [id, currentStatus, `Bank Processing Update (${final_status || currentStatus.toUpperCase()})`, `Status & Form details updated. Remark: ${bank_remark || 'N/A'}`, req.user ? req.user.id : null]).catch(() => { });
+        `, [id, currentStatus, `Bank Processing Update (${final_status || currentStatus.toUpperCase()})`, `Status & Form details updated. Remark: ${bank_remark || 'N/A'}`, req.user ? req.user.id : null]).catch(err => logger.warn('Timeline insert warning:', err.message));
 
         return success(res, null, `Application status & Form details updated successfully`);
       }
@@ -3534,7 +3446,6 @@ const updateBankProcessingStatus = async (req, res, next) => {
 
     if (opId) {
       try {
-        await ensureOperatorHistoryTable();
         await query(`
           INSERT INTO application_operator_history (
             application_id, operator_id, operator_name, operator_role, operator_designation, operator_code, action_type, field_changes, notes, created_at
@@ -3911,7 +3822,7 @@ const submitPartnerApplication = async (req, res, next) => {
         syncedLeadId = newLead?.id || null;
         await client.query('RELEASE SAVEPOINT lead_sync_sp');
       } catch (leadErr) {
-        await client.query('ROLLBACK TO SAVEPOINT lead_sync_sp').catch(() => { });
+        await client.query('ROLLBACK TO SAVEPOINT lead_sync_sp').catch(err => logger.warn('Lead sync rollback warning:', err.message));
         logger.warn('Lead table sync warning:', leadErr.message);
       }
     }
@@ -3986,7 +3897,7 @@ const submitPartnerApplication = async (req, res, next) => {
         `, [app.id, trimmedName, trimmedMobile, trimmedEmail, cleanPan]);
         await client.query('RELEASE SAVEPOINT phys_details_sp');
       } catch (physErr) {
-        await client.query('ROLLBACK TO SAVEPOINT phys_details_sp').catch(() => { });
+        await client.query('ROLLBACK TO SAVEPOINT phys_details_sp').catch(err => logger.warn('Physical details rollback warning:', err.message));
       }
     }
 
@@ -4068,7 +3979,7 @@ const submitPartnerApplication = async (req, res, next) => {
         await client.query(`UPDATE applications SET bank_url = $1 WHERE id = $2`, [bankUrl, app.id]);
         await client.query('RELEASE SAVEPOINT direct_bank_url_sp');
       } catch (_) {
-        await client.query('ROLLBACK TO SAVEPOINT direct_bank_url_sp').catch(() => {});
+        await client.query('ROLLBACK TO SAVEPOINT direct_bank_url_sp').catch(err => logger.warn('Silent catch warning:', err.message));
       }
     }
 
@@ -5306,7 +5217,7 @@ const updateApplicationDetails = async (req, res, next) => {
         `, [salesOpCodeToSave, panCheckerOpCodeToSave, remarkOpCodeToSave, backendRemarkToSave, app.id]);
         await client.query('RELEASE SAVEPOINT op_code_sp');
       } catch (opCodeErr) {
-        await client.query('ROLLBACK TO SAVEPOINT op_code_sp').catch(() => {});
+        await client.query('ROLLBACK TO SAVEPOINT op_code_sp').catch(err => logger.warn('Silent catch warning:', err.message));
         logger.warn('Failed to save operator codes:', opCodeErr.message);
       }
     }
@@ -5355,7 +5266,7 @@ const updateApplicationDetails = async (req, res, next) => {
         }
         await client.query('RELEASE SAVEPOINT curing_sp');
       } catch (curingErr) {
-        await client.query('ROLLBACK TO SAVEPOINT curing_sp').catch(() => {});
+        await client.query('ROLLBACK TO SAVEPOINT curing_sp').catch(err => logger.warn('Silent catch warning:', err.message));
         logger.warn(`Failed to update decline_code/curing_designation on applications: ${curingErr.message}`);
       }
     }
@@ -5624,7 +5535,7 @@ const updateApplicationDetails = async (req, res, next) => {
       ]);
       await client.query('RELEASE SAVEPOINT phys_sp');
     } catch (physErr) {
-      await client.query('ROLLBACK TO SAVEPOINT phys_sp').catch(() => {});
+      await client.query('ROLLBACK TO SAVEPOINT phys_sp').catch(err => logger.warn('Silent catch warning:', err.message));
       console.error('Failed to upsert physical_application_details:', physErr.message || physErr);
     }
 
@@ -5669,7 +5580,7 @@ const updateApplicationDetails = async (req, res, next) => {
         `, [codeToSet, descToSet, curingToSet, secCodeToSet, secDescToSet, secCuringToSet, app.id]);
         await client.query('RELEASE SAVEPOINT pad_curing_sp');
       } catch (curingErr) {
-        await client.query('ROLLBACK TO SAVEPOINT pad_curing_sp').catch(() => {});
+        await client.query('ROLLBACK TO SAVEPOINT pad_curing_sp').catch(err => logger.warn('Silent catch warning:', err.message));
         logger.warn('Failed to update decline_code/curing_designation on physical_application_details:', curingErr.message);
       }
     }
@@ -5689,7 +5600,7 @@ const updateApplicationDetails = async (req, res, next) => {
       ]);
       await client.query('RELEASE SAVEPOINT timeline_sp');
     } catch (timeErr) {
-      await client.query('ROLLBACK TO SAVEPOINT timeline_sp').catch(() => {});
+      await client.query('ROLLBACK TO SAVEPOINT timeline_sp').catch(err => logger.warn('Silent catch warning:', err.message));
       console.warn('Failed to insert application_timeline:', timeErr.message || timeErr);
     }
 
@@ -5714,7 +5625,7 @@ const updateApplicationDetails = async (req, res, next) => {
           await client.query(`UPDATE applications SET commission_status = 'approved', approved_at = COALESCE(approved_at, NOW()) WHERE id = $1`, [app.id]);
           await client.query('RELEASE SAVEPOINT comm_sp');
         } catch (commErr) {
-          await client.query('ROLLBACK TO SAVEPOINT comm_sp').catch(() => {});
+          await client.query('ROLLBACK TO SAVEPOINT comm_sp').catch(err => logger.warn('Silent catch warning:', err.message));
           logger.error('Failed to credit commission on status update:', commErr.message || commErr);
         }
       }
@@ -5724,7 +5635,7 @@ const updateApplicationDetails = async (req, res, next) => {
         await client.query(`UPDATE applications SET commission_status = 'cancelled' WHERE id = $1`, [app.id]);
         await client.query('RELEASE SAVEPOINT comm_canc_sp');
       } catch (_) {
-        await client.query('ROLLBACK TO SAVEPOINT comm_canc_sp').catch(() => {});
+        await client.query('ROLLBACK TO SAVEPOINT comm_canc_sp').catch(err => logger.warn('Silent catch warning:', err.message));
       }
     }
 
@@ -5733,7 +5644,7 @@ const updateApplicationDetails = async (req, res, next) => {
       await syncEmployeeIncentiveLifecycle(client, updatedApp, appFileGenVal, finalTargetStatus);
       await client.query('RELEASE SAVEPOINT inc_sp');
     } catch (incErr) {
-      await client.query('ROLLBACK TO SAVEPOINT inc_sp').catch(() => {});
+      await client.query('ROLLBACK TO SAVEPOINT inc_sp').catch(err => logger.warn('Silent catch warning:', err.message));
       logger.error('Failed to sync employee incentive lifecycle:', incErr.message || incErr);
     }
 
@@ -6941,7 +6852,7 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
         `, [remarkDeclineCode || null, remarkDeclineDesc || null, remarkCuringDesig || null, app.id]);
         await client.query('RELEASE SAVEPOINT remark_curing_sp');
       } catch (curingErr) {
-        await client.query('ROLLBACK TO SAVEPOINT remark_curing_sp').catch(() => {});
+        await client.query('ROLLBACK TO SAVEPOINT remark_curing_sp').catch(err => logger.warn('Silent catch warning:', err.message));
         logger.warn('Failed to update decline_code/curing_designation in updateRemarkOperatorApplication:', curingErr.message);
       }
     }
@@ -6978,7 +6889,6 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
 
 const getRemarkOperatorDashboard = async (req, res, next) => {
   try {
-    await ensureApplicationStageColumns();
     const userId = req.user.id;
     const { rows: bankRows } = await query(`SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`, [userId]);
     const assignedBankIds = bankRows.map(b => b.bank_id);
@@ -7019,21 +6929,10 @@ const getRemarkOperatorDashboard = async (req, res, next) => {
 };
 
 let operatorHistoryChecked = false;
-const ensureOperatorHistoryTable = async () => {
-  if (operatorHistoryChecked) return;
-  try {
-    const { migrateOperatorHistory } = require('../../database/migrations/migrate_operator_history');
-    await migrateOperatorHistory();
-    operatorHistoryChecked = true;
-  } catch (err) {
-    logger.warn('Failed ensuring operator history table:', err.message);
-  }
-};
 
 // GET /applications/:id/operator-history — Fetch full operator audit trail
 const getApplicationOperatorHistory = async (req, res, next) => {
   try {
-    await ensureOperatorHistoryTable();
     const { id } = req.params;
     const { rows } = await query(`
       SELECT 
@@ -7062,21 +6961,9 @@ const getApplicationOperatorHistory = async (req, res, next) => {
   }
 };
 
-let salesClaimColumnsEnsured = false;
-const ensureSalesClaimColumns = async () => {
-  if (salesClaimColumnsEnsured) return;
-  try {
-    const { migrateSalesOperatorClaim } = require('../../database/migrations/migrate_sales_operator_claim');
-    await migrateSalesOperatorClaim();
-    salesClaimColumnsEnsured = true;
-  } catch (err) {
-    logger.warn('Defensive ensure sales claim columns note:', err.message);
-  }
-};
 
 // POST /applications/:id/claim-request — Claim application by Administrative Sales Operator
 const claimApplicationRequest = async (req, res, next) => {
-  await ensureSalesClaimColumns();
   const { id } = req.params;
   if (!id || id === 'undefined' || id === 'null' || !String(id).trim()) {
     return error(res, 'A valid Application ID is required', 400);
@@ -7292,7 +7179,7 @@ const claimApplicationRequest = async (req, res, next) => {
         sales_claimed_at = $4,
         updated_at = NOW()
       WHERE application_id = $5
-    `, [userId, userName, userCode, claimedAt, app.id]).catch(() => {});
+    `, [userId, userName, userCode, claimedAt, app.id]).catch(err => logger.warn('Silent catch warning:', err.message));
 
     // Insert timeline record
     await client.query(`
@@ -7315,7 +7202,6 @@ const claimApplicationRequest = async (req, res, next) => {
 
     // Also record in operator history
     try {
-      await ensureOperatorHistoryTable();
       await client.query(`
         INSERT INTO application_operator_history (
           application_id,
@@ -7339,7 +7225,7 @@ const claimApplicationRequest = async (req, res, next) => {
         'CLAIM_REQUEST',
         JSON.stringify({ sales_claimed_by: userId, sales_claimed_by_name: userName }),
         `Claimed by ${userName}`,
-      ]).catch(() => {});
+      ]).catch(err => logger.warn('Silent catch warning:', err.message));
     } catch (e) {}
 
     // Audit log
@@ -7348,7 +7234,7 @@ const claimApplicationRequest = async (req, res, next) => {
       sales_claimed_by: userId,
       sales_claimed_by_name: userName,
       sales_claimed_by_code: userCode
-    }).catch(() => {});
+    }).catch(err => logger.warn('Silent catch warning:', err.message));
 
     await client.query('COMMIT');
     await invalidateApplicationsCache({ action: 'claim_application_request', appId: app.id });
@@ -7465,7 +7351,6 @@ const getAssignableEmployees = async (req, res, next) => {
  * Updates sales_claimed_by and assigned_to fields, logs timeline & operator history.
  */
 const assignApplicationToSalesExecutive = async (req, res, next) => {
-  await ensureSalesClaimColumns();
   const { id } = req.params;
   const targetId = req.body.target_employee_id || req.body.target_user_id || req.body.target_id || req.body.employee_id;
   const notes = (req.body.notes || req.body.remarks || '').trim();
@@ -7720,7 +7605,7 @@ const assignApplicationToSalesExecutive = async (req, res, next) => {
       assignedByCode,
       notes || null,
       app.id
-    ]).catch(() => {});
+    ]).catch(err => logger.warn('Silent catch warning:', err.message));
 
     // 6. Record assignment in application_employee_assignments table
     await client.query(`
@@ -7747,7 +7632,7 @@ const assignApplicationToSalesExecutive = async (req, res, next) => {
       assignedByName,
       assignedByCode,
       notes || null
-    ]).catch(() => {});
+    ]).catch(err => logger.warn('Silent catch warning:', err.message));
 
     // 7. Add entry in application_timeline
     const timelineDesc = `Application assigned to ${targetUserName} (${targetUserCode}) by ${assignedByName}${notes ? ` - Remarks: ${notes}` : ''}`;
@@ -7774,7 +7659,6 @@ const assignApplicationToSalesExecutive = async (req, res, next) => {
 
     // 8. Add entry in application_operator_history
     try {
-      await ensureOperatorHistoryTable();
       await client.query(`
         INSERT INTO application_operator_history (
           application_id,
@@ -7803,7 +7687,7 @@ const assignApplicationToSalesExecutive = async (req, res, next) => {
           assigned_by: assignedByName
         }),
         timelineDesc
-      ]).catch(() => {});
+      ]).catch(err => logger.warn('Silent catch warning:', err.message));
     } catch (e) {}
 
     // 9. Audit log
@@ -7815,7 +7699,7 @@ const assignApplicationToSalesExecutive = async (req, res, next) => {
       assigned_by_name: assignedByName,
       assigned_by_code: assignedByCode,
       notes: notes || null
-    }).catch(() => {});
+    }).catch(err => logger.warn('Silent catch warning:', err.message));
 
     await client.query('COMMIT');
     await invalidateApplicationsCache({ action: 'assign_sales_executive', appId: app.id });
@@ -7826,7 +7710,7 @@ const assignApplicationToSalesExecutive = async (req, res, next) => {
         targetUserId,
         'APPLICATION_ASSIGNED',
         `Application #${app.app_number || app.id} has been assigned to you by ${assignedByName}.`
-      ).catch(() => {});
+      ).catch(err => logger.warn('Silent catch warning:', err.message));
     }
 
     return success(res, {
@@ -7990,7 +7874,7 @@ const assignApplicationToEmployee = async (req, res, next) => {
       assignedByCode,
       assignmentNotes,
       app.id
-    ]).catch(() => {});
+    ]).catch(err => logger.warn('Silent catch warning:', err.message));
 
     // 6. Record assignment in application_employee_assignments table
     await client.query(`
@@ -8017,7 +7901,7 @@ const assignApplicationToEmployee = async (req, res, next) => {
       assignedByName,
       assignedByCode,
       assignmentNotes
-    ]).catch(() => {});
+    ]).catch(err => logger.warn('Silent catch warning:', err.message));
 
     // 7. Add entry in application_timeline
     const timelineDesc = `Application assigned to ${targetEmp.full_name} (${targetEmp.employee_id}) by ${assignedByName}${assignmentNotes ? ` - Remarks: ${assignmentNotes}` : ''}`;
@@ -8039,7 +7923,7 @@ const assignApplicationToEmployee = async (req, res, next) => {
       assignedByUserId,
       assignedByName,
       req.user?.role || 'EMPLOYEE'
-    ]).catch(() => {});
+    ]).catch(err => logger.warn('Silent catch warning:', err.message));
 
     // 8. Audit log
     await logAction(req, 'ASSIGN_APPLICATION_TO_EMPLOYEE', app.id, {
@@ -8050,7 +7934,7 @@ const assignApplicationToEmployee = async (req, res, next) => {
       assigned_by_name: assignedByName,
       assigned_by_code: assignedByCode,
       notes: assignmentNotes
-    }).catch(() => {});
+    }).catch(err => logger.warn('Silent catch warning:', err.message));
 
     await client.query('COMMIT');
     await invalidateApplicationsCache({ action: 'assign_employee', appId: app.id });
@@ -8061,7 +7945,7 @@ const assignApplicationToEmployee = async (req, res, next) => {
         targetEmp.user_id,
         'APPLICATION_ASSIGNED',
         `Application #${app.app_number} has been assigned to you by ${assignedByName}.`
-      ).catch(() => {});
+      ).catch(err => logger.warn('Silent catch warning:', err.message));
     }
 
     return success(res, {
