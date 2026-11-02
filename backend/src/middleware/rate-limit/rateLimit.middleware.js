@@ -210,6 +210,45 @@ const messengerLimiter = rateLimit({
 const authLimiter = loginLimiter;
 const emailActionLimiter = sendOtpLimiter;
 
+// Wallet withdrawal limiter - 10 per 15 min per user (critical for financial ops)
+const walletWithdrawLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  skipSuccessfulRequests: false,
+  skip: skipOptions,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+  validate: { trustProxy: false },
+  message: { success: false, message: 'Too many withdrawal requests. Please wait 15 minutes.' }
+});
+
+// Application submission limiter - 30 per 15 min per user
+const applicationSubmitLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  skipSuccessfulRequests: false,
+  skip: skipOptions,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+  validate: { trustProxy: false },
+  message: { success: false, message: 'Too many application submissions. Please slow down.' }
+});
+
+// Admin action limiter - 100 per 15 min per admin
+const adminActionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  skipSuccessfulRequests: false,
+  skip: skipOptions,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+  validate: { trustProxy: false },
+  message: { success: false, message: 'Too many admin actions. Please wait.' }
+});
+
 module.exports = {
   globalLimiter,
   loginLimiter,
@@ -222,6 +261,9 @@ module.exports = {
   customerTrackingLimiter,
   uploadLimiter,
   messengerLimiter,
+  walletWithdrawLimiter,
+  applicationSubmitLimiter,
+  adminActionLimiter,
   // legacy aliases
   authLimiter,
   emailActionLimiter
