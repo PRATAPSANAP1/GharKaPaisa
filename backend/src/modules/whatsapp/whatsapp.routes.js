@@ -6,9 +6,12 @@ const { globalLimiter } = require('../../middleware/rate-limit/rateLimit.middlew
 const controller = require('./whatsapp.controller');
 const webhookCtrl = require('./whatsapp.webhook.controller');
 
+// Webhook rate limiter - 1000 per minute to prevent abuse while allowing legitimate webhook delivery
+const webhookLimiter = require('../../middleware/rate-limit/rateLimit.middleware').globalLimiter;
+
 // ── Meta Webhook Endpoints (Public — No JWT required) ────────
-router.get('/webhook', webhookCtrl.verifyWebhook);
-router.post('/webhook', webhookCtrl.handleWebhookEvent);
+router.get('/webhook', webhookLimiter, webhookCtrl.verifyWebhook);
+router.post('/webhook', webhookLimiter, webhookCtrl.handleWebhookEvent);
 
 // ── Protected WhatsApp Endpoints (Requires User Authentication) ─
 router.use(jwtAuth);

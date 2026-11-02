@@ -58,6 +58,25 @@ async function handleWebhookEvent(req, res) {
     const body = req.body;
     logger.info('[WhatsApp Webhook] Received Meta payload:', JSON.stringify(body));
 
+    // Verify webhook signature for security
+    const webhookSecret = process.env.WHATSAPP_APP_SECRET || process.env.META_APP_SECRET;
+    const signature = req.headers['x-hub-signature-256'];
+
+    if (webhookSecret && signature) {
+      const crypto = require('crypto');
+      const rawPayload = req.rawBody || (typeof req.body === 'string' ? req.body : JSON.stringify(req.body));
+      const expectedSignature = `sha256=${crypto.createHmac('sha256', webhookSecret).update(rawPayload).digest('hex')}`;
+
+      if (signature !== expectedSignature) {
+        logger.warn('[WhatsApp Webhook] Invalid webhook signature');
+        return res.status(403).json({ success: false, message: 'Invalid webhook signature' });
+      }
+      logger.info('[WhatsApp Webhook] Signature verified successfully');
+    } else if (process.env.NODE_ENV === 'production') {
+      logger.warn('[WhatsApp Webhook] Missing webhook secret or signature in production');
+      return res.status(403).json({ success: false, message: 'Webhook signature verification required in production' });
+    }
+
     try {
       await query(`UPDATE whatsapp_settings SET last_webhook_at = NOW()`);
     } catch (e) {}

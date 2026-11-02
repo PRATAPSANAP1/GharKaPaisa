@@ -185,10 +185,13 @@ app.use(mongoSanitize({ allowDots: true }));
 app.use(xss());
 
 // ── Logging ────────────────────────────────────────────────────
-app.use(morgan('combined', {
-  stream: { write: (msg) => logger.http(msg.trim()) },
-  skip: (req) => req.url === '/health',
-}));
+// Disable detailed request logging in production for security and performance
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan('combined', {
+    stream: { write: (msg) => logger.http(msg.trim()) },
+    skip: (req) => req.url === '/health',
+  }));
+}
 
 // ── Health Check ───────────────────────────────────────────────
 const { getValkeyStatus, closeValkeyClients } = require('./config/redis');
