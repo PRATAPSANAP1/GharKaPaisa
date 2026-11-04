@@ -34,6 +34,12 @@ export function updateSocketToken(newToken) {
 }
 
 export function getMessengerSocket() {
+  if (typeof window !== 'undefined') {
+    const path = window.location.pathname;
+    if (path === '/login' || path === '/admin-login' || path === '/register' || path === '/reset-password') {
+      return null;
+    }
+  }
   const currentToken = localStorage.getItem('token');
   if (!currentToken) {
     return null;
@@ -65,7 +71,7 @@ export function getMessengerSocket() {
       const freshToken = localStorage.getItem('token');
       cb({ token: freshToken });
     },
-    transports: ['polling', 'websocket'],
+    transports: ['websocket', 'polling'],
     withCredentials: true,
     autoConnect: true,
     reconnection: true,

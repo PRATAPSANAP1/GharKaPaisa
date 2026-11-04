@@ -13,10 +13,11 @@ router.use(authenticate, syncUser, authorize('SUPER_ADMIN', 'ADMIN', 'OPERATIONA
 router.get('/today', ctrl.getTodayAttendance);
 
 /**
- * GET /api/v1/attendance/admin/history
+ * GET /api/v1/attendance/admin/history and /reports
  * Retrieve historical attendance records with date range filtering, search, and pagination
  */
-router.get('/history', ctrl.getAttendanceHistory);
+router.get(['/history', '/reports'], ctrl.getAttendanceHistory);
+router.get(['/history/export', '/reports/export'], ctrl.exportAttendanceReports);
 
 /**
  * GET /api/v1/attendance/admin/employee/:employeeId

@@ -36,7 +36,14 @@ const getTodayAttendance = async (req, res, next) => {
  */
 const getAttendanceHistory = async (req, res, next) => {
   try {
-    const { startDate, endDate, search, status, department, employeeId, page, limit } = req.query;
+    const startDate = req.query.startDate || req.query.start_date;
+    const endDate = req.query.endDate || req.query.end_date;
+    const search = req.query.search;
+    const status = req.query.status;
+    const department = req.query.department;
+    const employeeId = req.query.employeeId;
+    const page = req.query.page;
+    const limit = req.query.limit;
 
     const data = await attendanceAdminService.getAdminAttendanceHistory({
       startDate,
@@ -56,6 +63,74 @@ const getAttendanceHistory = async (req, res, next) => {
     });
   } catch (error) {
     logger.error(`[ATTENDANCE-ADMIN] getAttendanceHistory error: ${error.message}`);
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/attendance/admin/reports/export
+ * Exports attendance records as CSV
+ */
+const exportAttendanceReports = async (req, res, next) => {
+  try {
+    const startDate = req.query.startDate || req.query.start_date;
+    const endDate = req.query.endDate || req.query.end_date;
+    const search = req.query.search;
+    const status = req.query.status;
+    const department = req.query.department;
+    const employeeId = req.query.employeeId;
+
+    const data = await attendanceAdminService.getAdminAttendanceHistory({
+      startDate,
+      endDate,
+      search,
+      status,
+      department,
+      employeeId,
+      page: 1,
+      limit: 10000,
+    });
+
+    const records = data?.records || [];
+    const headers = [
+      'Date',
+      'Employee ID',
+      'Name',
+      'Department',
+      'Designation',
+      'Status',
+      'Check In',
+      'Check Out',
+      'Total Hours',
+      'Mode',
+    ];
+
+    const escapeCsv = (val) => {
+      if (val === null || val === undefined) return '';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const rows = records.map((r) => [
+      escapeCsv(r.attendance_date),
+      escapeCsv(r.employee_id),
+      escapeCsv(r.full_name),
+      escapeCsv(r.department),
+      escapeCsv(r.designation),
+      escapeCsv(r.status),
+      escapeCsv(r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : '-'),
+      escapeCsv(r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : '-'),
+      escapeCsv(r.total_hours || '-'),
+      escapeCsv(r.verification_mode || r.source || '-'),
+    ].join(','));
+
+    const csvContent = [headers.join(','), ...rows].join('\r\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="attendance-report-${startDate || 'all'}-to-${endDate || 'today'}.csv"`);
+    res.status(200).send(csvContent);
+  } catch (error) {
+    logger.error(`[ATTENDANCE-ADMIN] exportAttendanceReports error: ${error.message}`);
     next(error);
   }
 };
@@ -254,6 +329,7 @@ const deleteBuilding = async (req, res, next) => {
 module.exports = {
   getTodayAttendance,
   getAttendanceHistory,
+  exportAttendanceReports,
   getEmployeeAttendanceDetails,
   createEnvironmentBypass,
   listEnvironmentBypasses,

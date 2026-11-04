@@ -276,12 +276,15 @@ const apiRouter = require('./routes/index');
 const messengerRoute = require('./modules/messenger/messenger.routes.js');
 const attendanceEnrollmentRoute = require('./modules/attendance-enrollment/attendance-enrollment.routes.js');
 const attendanceVerificationRoute = require('./modules/attendance-verification/attendance-verification.routes.js');
+const attendanceAdminRoute = require('./modules/attendance-admin/attendance-admin.routes.js');
 const attendanceRoute = require('./modules/attendance/attendance.routes.js');
 const bulkSmsRoute = require('./modules/bulk-sms/bulk-sms.routes.js');
 app.use('/api/v1/attendance/enrollment', attendanceEnrollmentRoute);
 app.use('/api/v1/attendance-enrollment', attendanceEnrollmentRoute);
 app.use('/api/v1/attendance/verification', attendanceVerificationRoute);
 app.use('/api/v1/attendance-verification', attendanceVerificationRoute);
+app.use('/api/v1/attendance/admin', attendanceAdminRoute);
+app.use('/attendance/admin', attendanceAdminRoute);
 app.use('/api/v1/attendance', attendanceRoute);
 app.use('/attendance/verification', attendanceVerificationRoute);
 app.use('/attendance-verification', attendanceVerificationRoute);
@@ -309,6 +312,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.ENABLE_TEST_EMAIL_ROUTE
 // ── Socket.IO Engine Route Delegation ──────────────────────────
 const handleSocketIoRequest = (req, res) => {
   if (io && io.engine) {
+    req.url = (req.originalUrl || req.url).replace(/^\/api\/v1\/socket\.io/, '/socket.io');
     io.engine.handleRequest(req, res);
   } else {
     res.status(503).json({ success: false, message: 'Socket server initializing' });

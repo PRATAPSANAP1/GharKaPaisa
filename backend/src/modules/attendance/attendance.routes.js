@@ -15,6 +15,8 @@ router.get('/my-summary', ctrl.getMySummary);
 // Biometric Face Enrollment routes & fallbacks
 const attendanceEnrollmentRoute = require('../attendance-enrollment/attendance-enrollment.routes.js');
 const attendanceVerificationRoute = require('../attendance-verification/attendance-verification.routes.js');
+const attendanceAdminRoute = require('../attendance-admin/attendance-admin.routes.js');
+router.use('/admin', attendanceAdminRoute);
 router.use('/enrollment', attendanceEnrollmentRoute);
 router.use(['/verification', '/attendance-verification'], attendanceVerificationRoute);
 
