@@ -1,4 +1,4 @@
-const { query } = require('../../config/database');
+const { query, getClient } = require('../../config/database');
 const logger = require('../../config/logger');
 
 let migrationRunning = null;
@@ -9,9 +9,11 @@ const migrateApplicationEmployeeAssignment = async () => {
   if (migrationRunning) return migrationRunning;
 
   migrationRunning = (async () => {
+    let client = null;
     let lockAcquired = false;
     try {
-      const { rows: lockRows } = await query('SELECT pg_try_advisory_lock(928172911) as acquired').catch(() => ({ rows: [] }));
+      client = await getClient();
+      const { rows: lockRows } = await client.query('SELECT pg_try_advisory_lock(928172911) as acquired').catch(() => ({ rows: [] }));
       lockAcquired = Boolean(lockRows && lockRows[0] && lockRows[0].acquired);
       if (!lockAcquired) {
         logger.info('Application Employee Assignment migration already running in another process/worker. Skipping.');
@@ -113,8 +115,11 @@ const migrateApplicationEmployeeAssignment = async () => {
       logger.error('Error during Application Employee Assignment Migration:', err.message || err);
       return { success: false, error: err.message };
     } finally {
-      if (lockAcquired) {
-        await query('SELECT pg_advisory_unlock(928172911)').catch(() => {});
+      if (client) {
+        if (lockAcquired) {
+          await client.query('SELECT pg_advisory_unlock(928172911)').catch(() => {});
+        }
+        client.release();
       }
       migrationRunning = null;
     }

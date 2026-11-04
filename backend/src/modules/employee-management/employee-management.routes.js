@@ -278,23 +278,7 @@ async function syncAndSeedEmployees() {
       WHERE user_id IN (SELECT id FROM users WHERE role = 'EMPLOYEE')
     `).catch(e => logger.warn('Partner profile employee cleanup note:', e.message));
 
-    // 3. Ensure hr_profiles table exists and sync HR users
-    await query(`
-      CREATE TABLE IF NOT EXISTS hr_profiles (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-        employee_id VARCHAR(50) UNIQUE NOT NULL,
-        full_name VARCHAR(150) NOT NULL,
-        email VARCHAR(150) NOT NULL,
-        mobile_number VARCHAR(20) NOT NULL,
-        designation VARCHAR(100) DEFAULT 'HR Manager',
-        department VARCHAR(100) DEFAULT 'Human Resources',
-        status VARCHAR(20) DEFAULT 'active',
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      );
-    `).catch(() => {});
-
+    // 3. Sync HR users into hr_profiles
     await query(`
       INSERT INTO hr_profiles (user_id, employee_id, full_name, email, mobile_number, designation, department, status)
       SELECT 
@@ -314,14 +298,14 @@ async function syncAndSeedEmployees() {
 
     // Remove any HR records from employees table so they do not show on super-admin/employees
     const hrEmpSubquery = `SELECT id FROM employees WHERE user_id IN (SELECT id FROM users WHERE role = 'HR') OR designation ILIKE '%HR%' OR designation ILIKE '%Human Resource%'`;
-    await query(`DELETE FROM employee_onboarding_checklist WHERE employee_id IN (${hrEmpSubquery})`).catch(() => {});
-    await query(`DELETE FROM employee_hierarchy WHERE employee_id IN (${hrEmpSubquery}) OR team_leader_id IN (${hrEmpSubquery}) OR manager_id IN (${hrEmpSubquery})`).catch(() => {});
-    await query(`DELETE FROM employee_joining_details WHERE employee_id IN (${hrEmpSubquery})`).catch(() => {});
-    await query(`DELETE FROM employee_kyc WHERE employee_id IN (${hrEmpSubquery})`).catch(() => {});
-    await query(`DELETE FROM employee_documents WHERE employee_id IN (${hrEmpSubquery})`).catch(() => {});
-    await query(`DELETE FROM employee_terms_acceptance WHERE employee_id IN (${hrEmpSubquery})`).catch(() => {});
-    await query(`DELETE FROM employee_product_links WHERE employee_id IN (${hrEmpSubquery})`).catch(() => {});
-    await query(`DELETE FROM employee_incentive_transactions WHERE employee_id IN (${hrEmpSubquery})`).catch(() => {});
+    await query(`DELETE FROM employee_onboarding_checklist WHERE employee_id IN (${hrEmpSubquery})`).catch(err => logger.warn('Silent catch warning:', err.message));
+    await query(`DELETE FROM employee_hierarchy WHERE employee_id IN (${hrEmpSubquery}) OR team_leader_id IN (${hrEmpSubquery}) OR manager_id IN (${hrEmpSubquery})`).catch(err => logger.warn('Silent catch warning:', err.message));
+    await query(`DELETE FROM employee_joining_details WHERE employee_id IN (${hrEmpSubquery})`).catch(err => logger.warn('Silent catch warning:', err.message));
+    await query(`DELETE FROM employee_kyc WHERE employee_id IN (${hrEmpSubquery})`).catch(err => logger.warn('Silent catch warning:', err.message));
+    await query(`DELETE FROM employee_documents WHERE employee_id IN (${hrEmpSubquery})`).catch(err => logger.warn('Silent catch warning:', err.message));
+    await query(`DELETE FROM employee_terms_acceptance WHERE employee_id IN (${hrEmpSubquery})`).catch(err => logger.warn('Silent catch warning:', err.message));
+    await query(`DELETE FROM employee_product_links WHERE employee_id IN (${hrEmpSubquery})`).catch(err => logger.warn('Silent catch warning:', err.message));
+    await query(`DELETE FROM employee_incentive_transactions WHERE employee_id IN (${hrEmpSubquery})`).catch(err => logger.warn('Silent catch warning:', err.message));
     await query(`DELETE FROM employees WHERE id IN (${hrEmpSubquery})`).catch(e => logger.warn('Delete HR employees note:', e.message));
 
     // 4. Sync non-HR users with role EMPLOYEE into employees table (catches directly registered/created users)
@@ -452,7 +436,7 @@ router.get('/', async (req, res, next) => {
           WHEN h.hierarchy_level = 'TC' THEN 'TC'
           ELSE e.designation
         END)
-    `).catch(() => {});
+    `).catch(err => logger.warn('Silent catch warning:', err.message));
 
     let whereStr = `
       FROM employees e
@@ -768,7 +752,7 @@ router.post('/assign-custom-product-links', async (req, res, next) => {
         await query(
           `UPDATE employee_onboarding_checklist SET links_assigned = true, links_assigned_at = NOW() WHERE employee_id = $1`,
           [emp.id]
-        ).catch(() => {});
+        ).catch(err => logger.warn('Silent catch warning:', err.message));
       }
     }
 
@@ -1220,7 +1204,7 @@ router.put('/:id', async (req, res, next) => {
              updated_at = NOW() 
          WHERE id = $4`,
         [emailVal, mobile_number, full_name, rows[0].user_id]
-      ).catch(() => {});
+      ).catch(err => logger.warn('Silent catch warning:', err.message));
     }
 
     // Update employee_joining_details table
@@ -1238,7 +1222,7 @@ router.put('/:id', async (req, res, next) => {
            updated_at = NOW()
        WHERE employee_id = $10`,
       [full_name, mobile_number, emailVal, designation, department, managerVal, work_location, date_of_birth, gender, id]
-    ).catch(() => {});
+    ).catch(err => logger.warn('Silent catch warning:', err.message));
 
     // Update employee_kyc table if identity fields provided
     if (aadhaar_number || pan_number || bank_account || ifsc_code || admin_remarks) {
@@ -1252,7 +1236,7 @@ router.put('/:id', async (req, res, next) => {
              updated_at = NOW()
          WHERE employee_id = $6`,
         [aadhaar_number, pan_number, bank_account, ifsc_code, admin_remarks, id]
-      ).catch(() => {});
+      ).catch(err => logger.warn('Silent catch warning:', err.message));
     }
 
     res.json({ success: true, message: 'Employee details updated successfully', data: rows[0] });
@@ -1412,7 +1396,7 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
         UPDATE employee_documents 
         SET verification_status = $1, rejection_reason = $2, verified_by = $3, verified_at = NOW(), updated_at = NOW()
         WHERE employee_id = $4 AND (LOWER(document_type) = 'terms_video' OR LOWER(document_type) = 'video' OR LOWER(document_type) = 'video_verification')
-      `, [vDocStatus, video_rejection_reason, req.user.id, id]).catch(() => {});
+      `, [vDocStatus, video_rejection_reason, req.user.id, id]).catch(err => logger.warn('Silent catch warning:', err.message));
     }
 
     // Handle generic document actions (photo, address_proof, education_certificate)
@@ -1431,7 +1415,7 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
             UPDATE employee_documents
             SET verification_status = $1, rejection_reason = $2, verified_by = $3, verified_at = NOW(), updated_at = NOW()
             WHERE employee_id = $4 AND LOWER(document_type) = $5
-          `, [docSt, docRej, req.user.id, id, t]).catch(() => {});
+          `, [docSt, docRej, req.user.id, id, t]).catch(err => logger.warn('Silent catch warning:', err.message));
         }
       }
     }
@@ -1488,13 +1472,13 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
         UPDATE employee_documents 
         SET verification_status = 'APPROVED', rejection_reason = NULL, verified_by = $2, verified_at = NOW()
         WHERE employee_id = $1
-      `, [id, req.user.id]).catch(() => {});
+      `, [id, req.user.id]).catch(err => logger.warn('Silent catch warning:', err.message));
     } else if (isBulkReject) {
       await query(`
         UPDATE employee_documents 
         SET verification_status = 'REJECTED', rejection_reason = $2, verified_by = $3, verified_at = NOW()
         WHERE employee_id = $1
-      `, [id, review_notes || 'Bulk KYC Rejected', req.user.id]).catch(() => {});
+      `, [id, review_notes || 'Bulk KYC Rejected', req.user.id]).catch(err => logger.warn('Silent catch warning:', err.message));
     } else {
       await query(`
         UPDATE employee_documents 
@@ -1522,7 +1506,7 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
         aadhaar_rejection_reason,
         bank_rejection_reason,
         req.user.id
-      ]).catch(() => {});
+      ]).catch(err => logger.warn('Silent catch warning:', err.message));
     }
 
     // Update onboarding checklist
@@ -2508,7 +2492,7 @@ router.post('/incentives/:id/update-status', async (req, res, next) => {
       await query(
         `UPDATE employee_bonus_transactions SET status = 'PAID', paid_at = NOW() WHERE employee_id = $1 AND bonus_rule_id = $2`,
         [updatedTxn.employee_id, updatedTxn.bonus_rule_id]
-      ).catch(() => {});
+      ).catch(err => logger.warn('Silent catch warning:', err.message));
     }
 
     res.json({
@@ -2582,7 +2566,7 @@ router.post('/incentives/bulk-update-status', async (req, res, next) => {
           await query(
             `UPDATE employee_bonus_transactions SET status = 'PAID', paid_at = NOW() WHERE employee_id = $1 AND bonus_rule_id = $2`,
             [updatedTxn.employee_id, updatedTxn.bonus_rule_id]
-          ).catch(() => {});
+          ).catch(err => logger.warn('Silent catch warning:', err.message));
         }
       }
     }
@@ -2675,7 +2659,7 @@ router.post('/:id/departments', async (req, res, next) => {
       data: assigned
     });
   } catch (err) {
-    await client.query('ROLLBACK').catch(() => {});
+    await client.query('ROLLBACK').catch(err => logger.warn('Silent catch warning:', err.message));
     next(err);
   } finally {
     client.release();
@@ -2686,10 +2670,10 @@ let isIncentiveSchemaEnsured = false;
 async function ensureIncentiveSchema() {
   if (isIncentiveSchemaEnsured) return;
   try {
-    await query(`ALTER TABLE employee_incentive_transactions ADD COLUMN IF NOT EXISTS bank_id UUID REFERENCES banks(id) ON DELETE SET NULL;`).catch(() => {});
-    await query(`ALTER TABLE employee_incentive_transactions ADD COLUMN IF NOT EXISTS bonus_rule_id UUID REFERENCES employee_bonus_rules(id) ON DELETE SET NULL;`).catch(() => {});
-    await query(`ALTER TABLE employee_incentive_transactions ADD COLUMN IF NOT EXISTS direct_incentive_amount DECIMAL(10,2) DEFAULT 0.00;`).catch(() => {});
-    await query(`ALTER TABLE employee_incentive_transactions ADD COLUMN IF NOT EXISTS bonus_amount DECIMAL(10,2) DEFAULT 0.00;`).catch(() => {});
+    await query(`ALTER TABLE employee_incentive_transactions ADD COLUMN IF NOT EXISTS bank_id UUID REFERENCES banks(id) ON DELETE SET NULL;`).catch(err => logger.warn('Silent catch warning:', err.message));
+    await query(`ALTER TABLE employee_incentive_transactions ADD COLUMN IF NOT EXISTS bonus_rule_id UUID REFERENCES employee_bonus_rules(id) ON DELETE SET NULL;`).catch(err => logger.warn('Silent catch warning:', err.message));
+    await query(`ALTER TABLE employee_incentive_transactions ADD COLUMN IF NOT EXISTS direct_incentive_amount DECIMAL(10,2) DEFAULT 0.00;`).catch(err => logger.warn('Silent catch warning:', err.message));
+    await query(`ALTER TABLE employee_incentive_transactions ADD COLUMN IF NOT EXISTS bonus_amount DECIMAL(10,2) DEFAULT 0.00;`).catch(err => logger.warn('Silent catch warning:', err.message));
     
     // Deduplicate employee_bonus_transactions before creating unique index
     await query(`
@@ -2698,7 +2682,7 @@ async function ensureIncentiveSchema() {
       WHERE T1.id < T2.id 
         AND T1.employee_id = T2.employee_id 
         AND T1.bonus_rule_id = T2.bonus_rule_id;
-    `).catch(() => {});
+    `).catch(err => logger.warn('Silent catch warning:', err.message));
 
     // Deduplicate employee_incentive_transactions before creating unique index
     await query(`
@@ -2710,7 +2694,7 @@ async function ensureIncentiveSchema() {
         AND T1.transaction_type = 'BONUS'
         AND T2.transaction_type = 'BONUS'
         AND T1.bonus_rule_id IS NOT NULL;
-    `).catch(() => {});
+    `).catch(err => logger.warn('Silent catch warning:', err.message));
 
     // Deduplicate employee_incentive_transactions application_id before creating unique index
     await query(`
@@ -2719,11 +2703,11 @@ async function ensureIncentiveSchema() {
       WHERE T1.id < T2.id 
         AND T1.application_id = T2.application_id
         AND T1.application_id IS NOT NULL;
-    `).catch(() => {});
+    `).catch(err => logger.warn('Silent catch warning:', err.message));
 
-    await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_emp_incentive_tx_bonus_rule ON employee_incentive_transactions(employee_id, bonus_rule_id) WHERE transaction_type = 'BONUS' AND bonus_rule_id IS NOT NULL;`).catch(() => {});
-    await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_emp_incentive_tx_app_id ON employee_incentive_transactions(application_id) WHERE application_id IS NOT NULL;`).catch(() => {});
-    await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_emp_bonus_tx_rule_emp ON employee_bonus_transactions(employee_id, bonus_rule_id);`).catch(() => {});
+    await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_emp_incentive_tx_bonus_rule ON employee_incentive_transactions(employee_id, bonus_rule_id) WHERE transaction_type = 'BONUS' AND bonus_rule_id IS NOT NULL;`).catch(err => logger.warn('Silent catch warning:', err.message));
+    await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_emp_incentive_tx_app_id ON employee_incentive_transactions(application_id) WHERE application_id IS NOT NULL;`).catch(err => logger.warn('Silent catch warning:', err.message));
+    await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_emp_bonus_tx_rule_emp ON employee_bonus_transactions(employee_id, bonus_rule_id);`).catch(err => logger.warn('Silent catch warning:', err.message));
     isIncentiveSchemaEnsured = true;
   } catch (err) {
     logger.warn(`Schema check warning: ${err.message}`);
@@ -2851,7 +2835,7 @@ router.post('/bonus-rules', async (req, res, next) => {
       await query(
         `INSERT INTO employee_bank_assignments (employee_id, bank_id, assigned_by) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
         [employee_id, bank_id, req.user.id]
-      ).catch(() => {});
+      ).catch(err => logger.warn('Silent catch warning:', err.message));
     }
 
     const { rows } = await query(
@@ -2953,7 +2937,7 @@ router.get('/sales-reports/super-admin', async (req, res, next) => {
   try {
     // Ensure bank_name column exists in employee_sales_report_banks table (run at most once)
     if (!isSalesReportBanksEnsured) {
-      await query(`ALTER TABLE employee_sales_report_banks ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100)`).catch(() => {});
+      await query(`ALTER TABLE employee_sales_report_banks ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100)`).catch(err => logger.warn('Silent catch warning:', err.message));
       isSalesReportBanksEnsured = true;
     }
 
@@ -3220,14 +3204,14 @@ router.post('/:id/verify-document', async (req, res, next) => {
           UPDATE employee_biometric_templates
           SET admin_review_status = 'APPROVED', admin_reviewed_by = $1, admin_reviewed_at = NOW(), admin_review_notes = $2
           WHERE employee_id = $3 AND status = 'ACTIVE'
-        `, [req.user.id, rejection_reason || 'Biometric template verified and approved by admin', empId]).catch(() => {});
+        `, [req.user.id, rejection_reason || 'Biometric template verified and approved by admin', empId]).catch(err => logger.warn('Silent catch warning:', err.message));
       } else {
         await query(`
           UPDATE employee_biometric_templates
           SET status = 'REVOKED', revoked_at = NOW(), revoked_by = $1, revocation_reason = $2,
               admin_review_status = $3, admin_reviewed_by = $1, admin_reviewed_at = NOW(), admin_review_notes = $2
           WHERE employee_id = $4 AND status = 'ACTIVE'
-        `, [req.user.id, rejection_reason || 'Face biometric snapshot rejected due to image quality', uppercaseStatus, empId]).catch(() => {});
+        `, [req.user.id, rejection_reason || 'Face biometric snapshot rejected due to image quality', uppercaseStatus, empId]).catch(err => logger.warn('Silent catch warning:', err.message));
       }
 
       const updatedState = await calculateEmployeeVerificationState(empId);
@@ -3293,19 +3277,19 @@ router.post('/:id/verify-document', async (req, res, next) => {
         UPDATE employee_kyc 
         SET pan_status = $1, pan_verified = $2, pan_rejection_reason = $3 
         WHERE employee_id = $4
-      `, [finalStatus === 'APPROVED' ? 'VERIFIED' : finalStatus, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? rejection_reason : null, empId]).catch(() => {});
+      `, [finalStatus === 'APPROVED' ? 'VERIFIED' : finalStatus, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? rejection_reason : null, empId]).catch(err => logger.warn('Silent catch warning:', err.message));
     } else if (isAadhaarDoc) {
       await query(`
         UPDATE employee_kyc 
         SET aadhaar_status = $1, aadhaar_verified = $2, aadhaar_rejection_reason = $3 
         WHERE employee_id = $4
-      `, [finalStatus === 'APPROVED' ? 'VERIFIED' : finalStatus, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? rejection_reason : null, empId]).catch(() => {});
+      `, [finalStatus === 'APPROVED' ? 'VERIFIED' : finalStatus, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? rejection_reason : null, empId]).catch(err => logger.warn('Silent catch warning:', err.message));
     } else if (isBankDoc) {
       await query(`
         UPDATE employee_kyc 
         SET bank_status = $1, bank_verified = $2, bank_rejection_reason = $3 
         WHERE employee_id = $4
-      `, [finalStatus === 'APPROVED' ? 'VERIFIED' : finalStatus, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? rejection_reason : null, empId]).catch(() => {});
+      `, [finalStatus === 'APPROVED' ? 'VERIFIED' : finalStatus, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? rejection_reason : null, empId]).catch(err => logger.warn('Silent catch warning:', err.message));
     } else if (isVideoDoc) {
       const vStatus = finalStatus === 'APPROVED' ? 'VERIFIED' : (finalStatus === 'REJECTED' ? 'REJECTED' : 'UNDER_REVIEW');
       await query(`
@@ -3319,13 +3303,13 @@ router.post('/:id/verify-document', async (req, res, next) => {
           verified_by = EXCLUDED.verified_by,
           verified_at = NOW(),
           updated_at = NOW()
-      `, [empId, vStatus, rejection_reason || null, req.user.id]).catch(() => {});
+      `, [empId, vStatus, rejection_reason || null, req.user.id]).catch(err => logger.warn('Silent catch warning:', err.message));
 
       await query(`
         UPDATE employee_kyc 
         SET video_status = $1, video_verified = $2, video_rejection_reason = $3
         WHERE employee_id = $4
-      `, [vStatus, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? rejection_reason : null, empId]).catch(() => {});
+      `, [vStatus, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? rejection_reason : null, empId]).catch(err => logger.warn('Silent catch warning:', err.message));
     }
 
     // Recalculate complete state
@@ -3378,7 +3362,7 @@ router.post('/:id/verify-biometric', async (req, res, next) => {
         title: 'Face Biometric Check Requires Re-Capture',
         message: `Your face biometric verification was flagged by admin: ${notes || 'Image unclear or poor lighting'}. Please re-capture your face snapshot in good lighting.`,
         type: 'KYC_NOTIFICATION'
-      }).catch(() => {});
+      }).catch(err => logger.warn('Silent catch warning:', err.message));
     }
 
     const updatedState = await calculateEmployeeVerificationState(empId);
@@ -3424,14 +3408,14 @@ router.post('/:id/verify-section', async (req, res, next) => {
           verified_by = EXCLUDED.verified_by,
           verified_at = NOW(),
           updated_at = NOW()
-      `, [empId, vStatus, notes || null, req.user.id]).catch(() => {});
+      `, [empId, vStatus, notes || null, req.user.id]).catch(err => logger.warn('Silent catch warning:', err.message));
 
       const vDocStatus = vStatus === 'VERIFIED' ? 'APPROVED' : 'REJECTED';
       await query(`
         UPDATE employee_documents 
         SET verification_status = $1, rejection_reason = $2, verified_by = $3, verified_at = NOW(), updated_at = NOW()
         WHERE employee_id = $4 AND (LOWER(document_type) = 'terms_video' OR LOWER(document_type) = 'video' OR LOWER(document_type) = 'video_verification')
-      `, [vDocStatus, notes || null, req.user.id, empId]).catch(() => {});
+      `, [vDocStatus, notes || null, req.user.id, empId]).catch(err => logger.warn('Silent catch warning:', err.message));
     }
 
     const updatedState = await calculateEmployeeVerificationState(empId);
@@ -3491,12 +3475,12 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
               review_notes = COALESCE($6, review_notes),
               updated_at = NOW()
           WHERE employee_id = $7
-        `, [aadhaar_number || null, pan_number || null, bank_account || null, ifsc_code || null, bank_account_holder_name || null, review_notes || null, empId]).catch(() => {});
+        `, [aadhaar_number || null, pan_number || null, bank_account || null, ifsc_code || null, bank_account_holder_name || null, review_notes || null, empId]).catch(err => logger.warn('Silent catch warning:', err.message));
       } else {
         await query(`
           INSERT INTO employee_kyc (employee_id, aadhaar_number, pan_number, bank_account_number, bank_account_holder_name, ifsc_code, review_notes, kyc_status)
           VALUES ($1, $2, $3, $4, $5, $6, $7, 'SUBMITTED')
-        `, [empId, aadhaar_number || null, pan_number || null, bank_account || null, bank_account_holder_name || null, ifsc_code || null, review_notes || null]).catch(() => {});
+        `, [empId, aadhaar_number || null, pan_number || null, bank_account || null, bank_account_holder_name || null, ifsc_code || null, review_notes || null]).catch(err => logger.warn('Silent catch warning:', err.message));
       }
     }
 
@@ -3516,7 +3500,7 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
             video_status = $1, video_verified = $2, video_rejection_reason = $3,
             updated_at = NOW()
         WHERE employee_id = $4
-      `, [kycVal, isApproved, isApproved ? null : (review_notes || 'KYC rejected'), empId]).catch(() => {});
+      `, [kycVal, isApproved, isApproved ? null : (review_notes || 'KYC rejected'), empId]).catch(err => logger.warn('Silent catch warning:', err.message));
 
       // Update employee_documents table
       const docTypes = ['pan', 'aadhaar', 'bank_proof'];
@@ -3525,20 +3509,20 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
           INSERT INTO employee_documents (employee_id, document_type, verification_status, rejection_reason, verified_by, document_url, document_key, updated_at)
           VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
           ON CONFLICT DO NOTHING
-        `, [empId, dType, statusVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, 'upload document', `${dType}_key`]).catch(() => {});
+        `, [empId, dType, statusVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, 'upload document', `${dType}_key`]).catch(err => logger.warn('Silent catch warning:', err.message));
 
         if (dType === 'bank_proof') {
           await query(`
             UPDATE employee_documents
             SET verification_status = $1, rejection_reason = $2, verified_by = $3, updated_at = NOW()
             WHERE employee_id = $4 AND LOWER(document_type) IN ('bank', 'bank_proof', 'bank_passbook', 'cheque', 'passbook')
-          `, [statusVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, empId]).catch(() => {});
+          `, [statusVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, empId]).catch(err => logger.warn('Silent catch warning:', err.message));
         } else {
           await query(`
             UPDATE employee_documents
             SET verification_status = $1, rejection_reason = $2, verified_by = $3, updated_at = NOW()
             WHERE employee_id = $4 AND LOWER(document_type) = LOWER($5)
-          `, [statusVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, empId, dType]).catch(() => {});
+          `, [statusVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, empId, dType]).catch(err => logger.warn('Silent catch warning:', err.message));
         }
       }
 
@@ -3547,13 +3531,13 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
         UPDATE employee_terms_acceptance
         SET verification_status = $1, verification_notes = $2, verified_by = $3, updated_at = NOW()
         WHERE employee_id = $4
-      `, [kycVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, empId]).catch(() => {});
+      `, [kycVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, empId]).catch(err => logger.warn('Silent catch warning:', err.message));
 
       await query(`
         UPDATE employee_documents
         SET verification_status = $1, rejection_reason = $2, verified_by = $3, updated_at = NOW()
         WHERE employee_id = $4 AND LOWER(document_type) IN ('video', 'terms_video', 'video_verification')
-      `, [statusVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, empId]).catch(() => {});
+      `, [statusVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, empId]).catch(err => logger.warn('Silent catch warning:', err.message));
 
       // Update employee account status
       await query(`
@@ -3584,14 +3568,14 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
               UPDATE employee_biometric_templates
               SET admin_review_status = 'APPROVED', admin_reviewed_by = $1, admin_reviewed_at = NOW(), admin_review_notes = $2
               WHERE employee_id = $3 AND status = 'ACTIVE'
-            `, [req.user.id, item.reason || 'Biometric template approved by admin', empId]).catch(() => {});
+            `, [req.user.id, item.reason || 'Biometric template approved by admin', empId]).catch(err => logger.warn('Silent catch warning:', err.message));
           } else {
             await query(`
               UPDATE employee_biometric_templates
               SET status = 'REVOKED', revoked_at = NOW(), revoked_by = $1, revocation_reason = $2,
                   admin_review_status = 'REJECTED', admin_reviewed_by = $1, admin_reviewed_at = NOW(), admin_review_notes = $2
               WHERE employee_id = $3 AND status = 'ACTIVE'
-            `, [req.user.id, item.reason || 'Biometric template rejected by admin', empId]).catch(() => {});
+            `, [req.user.id, item.reason || 'Biometric template rejected by admin', empId]).catch(err => logger.warn('Silent catch warning:', err.message));
           }
           continue;
         }
@@ -3642,18 +3626,18 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
         // Sync to legacy tables
         if (item.type === 'pan') {
           await query(`UPDATE employee_kyc SET pan_status = $1, pan_verified = $2, pan_rejection_reason = $3 WHERE employee_id = $4`,
-            [kycStatusVal, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? item.reason : null, empId]).catch(() => {});
+            [kycStatusVal, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? item.reason : null, empId]).catch(err => logger.warn('Silent catch warning:', err.message));
         } else if (item.type === 'aadhaar') {
           await query(`UPDATE employee_kyc SET aadhaar_status = $1, aadhaar_verified = $2, aadhaar_rejection_reason = $3 WHERE employee_id = $4`,
-            [kycStatusVal, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? item.reason : null, empId]).catch(() => {});
+            [kycStatusVal, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? item.reason : null, empId]).catch(err => logger.warn('Silent catch warning:', err.message));
         } else if (item.type === 'bank_proof') {
           await query(`UPDATE employee_kyc SET bank_status = $1, bank_verified = $2, bank_rejection_reason = $3 WHERE employee_id = $4`,
-            [kycStatusVal, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? item.reason : null, empId]).catch(() => {});
+            [kycStatusVal, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? item.reason : null, empId]).catch(err => logger.warn('Silent catch warning:', err.message));
         } else if (item.type === 'video') {
           await query(`UPDATE employee_terms_acceptance SET verification_status = $1, verification_notes = $2, verified_by = $3 WHERE employee_id = $4`,
-            [kycStatusVal, item.reason || null, req.user.id, empId]).catch(() => {});
+            [kycStatusVal, item.reason || null, req.user.id, empId]).catch(err => logger.warn('Silent catch warning:', err.message));
           await query(`UPDATE employee_kyc SET video_status = $1, video_verified = $2, video_rejection_reason = $3 WHERE employee_id = $4`,
-            [kycStatusVal, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? item.reason : null, empId]).catch(() => {});
+            [kycStatusVal, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? item.reason : null, empId]).catch(err => logger.warn('Silent catch warning:', err.message));
         }
       }
     }

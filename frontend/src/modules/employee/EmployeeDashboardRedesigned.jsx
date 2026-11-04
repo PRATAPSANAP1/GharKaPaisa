@@ -15,13 +15,13 @@ import LoadingLogo from '../../components/Loader/LoadingLogo';
 import { useLocalStorageCache } from '../../hooks/useLocalStorageCache';
 
 // Static Banner Image Assets
-import offerBanner from '../home/components/banner/offerbanner.png';
-import ltfBanner from '../home/components/banner/lifetimefree card.png';
-import loanBanner from '../home/components/banner/loan.png';
-import emiBanner from '../home/components/banner/smart emi.png';
-import emiNewBanner from '../home/components/banner/emi.jpeg';
-import hdfcBanner from '../home/components/banner/hdfc pixel card.png';
-import insuranceBanner from '../home/components/banner/insurance.png';
+import offerBanner from '../home/components/banner/offerbanner.webp';
+import ltfBanner from '../home/components/banner/lifetimefree card.webp';
+import loanBanner from '../home/components/banner/loan.webp';
+import emiBanner from '../home/components/banner/smart emi.webp';
+import emiNewBanner from '../home/components/banner/emi.webp';
+import hdfcBanner from '../home/components/banner/hdfc pixel card.webp';
+import insuranceBanner from '../home/components/banner/insurance.webp';
 
 const localBannerMap = {
   'lifetimefree card.png': ltfBanner,

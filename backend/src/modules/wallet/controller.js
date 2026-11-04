@@ -545,8 +545,7 @@ const requestWithdrawal = async (req, res, next) => {
     // Send SMS for withdrawal request received
     try {
       const { sendWithdrawalRequestSms } = require('../../services/sms/sms.service');
-      const { query: queryDB } = require('../../config/database');
-      const { rows: [pUser] } = await queryDB(`
+      const { rows: [pUser] } = await query(`
         SELECT u.mobile, ap.first_name 
         FROM partner_profiles ap 
         JOIN users u ON u.id = ap.user_id 
@@ -2244,7 +2243,6 @@ const handleRazorpayWebhook = async (req, res, next) => {
       const utr = payoutEntity.utr || null;
       const failureReason = payoutEntity.status_details?.reason || payoutEntity.failure_reason || 'Payout process failed';
 
-      const { getClient } = require('../../config/database');
       const { syncWalletBalance } = require('./service.js');
       const client = await getClient();
 

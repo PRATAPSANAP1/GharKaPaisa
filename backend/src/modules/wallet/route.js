@@ -4,6 +4,7 @@ const walletCtrl = require('./controller.js');
 const { authenticate, syncUser, authorize, requireApprovedPartner, requireApprovedPartnerOrAdmin, selfOrAdmin } = require('../../middleware/authentication/auth.middleware.js');
 const { withdrawalRules, validate } = require('../../middleware/validation/validation.middleware.js');
 const { withdrawalOtpLimiter, validateBankDetails, validateWithdrawalAmount } = require('./middleware.js');
+const { walletWithdrawLimiter, adminActionLimiter } = require('../../middleware/rate-limit/rateLimit.middleware.js');
 
 router.use(authenticate, syncUser);
 
@@ -65,7 +66,7 @@ router.get('/statement/excel', requireApprovedPartnerOrAdmin, walletCtrl.exportS
 // OTP & Withdrawals (Partner)
 router.post('/withdraw/otp/send', withdrawalOtpLimiter, requireApprovedPartnerOrAdmin, walletCtrl.sendWithdrawalOTP);
 router.post('/withdraw/otp/verify', requireApprovedPartnerOrAdmin, walletCtrl.verifyWithdrawalOTP);
-router.post('/withdraw', requireApprovedPartnerOrAdmin, validateWithdrawalAmount, withdrawalRules, validate, walletCtrl.requestWithdrawal);
+router.post('/withdraw', walletWithdrawLimiter, requireApprovedPartnerOrAdmin, validateWithdrawalAmount, withdrawalRules, validate, walletCtrl.requestWithdrawal);
 
 // Parameterized Partner ID Routes (placed at the end to prevent route conflicts)
 router.get('/:PartnerId', selfOrAdmin('PartnerId'), requireApprovedPartnerOrAdmin, walletCtrl.getWallet);

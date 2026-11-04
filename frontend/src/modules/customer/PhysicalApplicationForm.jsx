@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
-import logo from '../../assets/logos/logo.png';
+import logo from '../../assets/logos/logo.webp';
 import { useTheme, LightDarkToggle } from '../../contexts/ThemeContext';
 import LanguageSwitcher from '../../components/LanguageSwitcher/LanguageSwitcher';
 import { useAuthStore } from '../../app/store/authStore';

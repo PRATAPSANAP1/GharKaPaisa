@@ -3,6 +3,7 @@ const { success, created, error, notFound, forbidden } = require('../../utils/re
 const { logAction } = require('../admin/audit.service');
 const { ensureBankDirectProcessLinksTable } = require('../../database/migrations/migrate_bank_direct_process_links');
 const logger = require('../../config/logger');
+const { validateDirectProcessUrl: serviceValidateUrl, resolveDirectProcessLinkForProductRow: serviceResolveLink, getBankApplyLinkBackend } = require('../../services/bankLink.service');
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SENSITIVE_QUERY_PARAM_REGEX = /^(token|access_token|refresh_token|id_token|secret|client_secret|password|pass|pwd|key|api_key|apikey|auth|authorization|pan|pan_number|mobile|phone|aadhaar|otp|ssn|credential|session| sessionid|jwt|signature|sig)$/i;
@@ -366,7 +367,7 @@ const resolveProductDirectProcessLink = async (req, res, next) => {
       return notFound(res, 'Product not found.');
     }
 
-    const { getBankApplyLinkBackend } = require('../crm/lead.controller');
+    const { getBankApplyLinkBackend } = require('../../services/bankLink.service');
     const resolved = resolveDirectProcessLinkForProductRow(product, getBankApplyLinkBackend);
 
     return success(res, {

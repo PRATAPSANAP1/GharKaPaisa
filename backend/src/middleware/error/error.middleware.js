@@ -6,10 +6,26 @@ const notFoundHandler = (req, res) => {
   return error(res, `Route ${req.method} ${req.originalUrl} not found`, 404);
 };
 
+const isAllowedOrigin = (origin) => {
+  if (!origin) return false;
+  const normalizedOrigin = String(origin).trim().toLowerCase();
+  try {
+    const hostname = new URL(normalizedOrigin).hostname;
+    return (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === 'gharkapaisa.in' ||
+      hostname.endsWith('.gharkapaisa.in')
+    );
+  } catch (e) {
+    return false;
+  }
+};
+
 // Global error handler
 // eslint-disable-next-line no-unused-vars
 const errorHandler = (err, req, res, next) => {
-  if (req.headers && req.headers.origin) {
+  if (req.headers && req.headers.origin && isAllowedOrigin(req.headers.origin)) {
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
   }

@@ -10,13 +10,13 @@ import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { Icons } from "../../../components/Icon/PartnerIcons";
 
 // Local fallback banner images map
-import ltfBanner from "../../home/components/banner/lifetimefree card.png";
-import loanBanner from "../../home/components/banner/loan.png";
-import insuranceBanner from "../../home/components/banner/insurance.png";
-import emiBanner from "../../home/components/banner/smart emi.png";
-import emiNewBanner from "../../home/components/banner/emi.jpeg";
-import hdfcBanner from "../../home/components/banner/hdfc pixel card.png";
-import offerBanner from "../../home/components/banner/offerbanner.png";
+import ltfBanner from '../../home/components/banner/lifetimefree card.webp';
+import loanBanner from '../../home/components/banner/loan.webp';
+import insuranceBanner from '../../home/components/banner/insurance.webp';
+import emiBanner from '../../home/components/banner/smart emi.webp';
+import emiNewBanner from '../../home/components/banner/emi.webp';
+import hdfcBanner from '../../home/components/banner/hdfc pixel card.webp';
+import offerBanner from '../../home/components/banner/offerbanner.webp';
 
 const localBannerMap = {
   'lifetimefree card.png': ltfBanner,

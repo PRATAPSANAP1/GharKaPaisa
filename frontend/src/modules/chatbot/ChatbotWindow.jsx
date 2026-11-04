@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { FaRedo, FaTimes } from 'react-icons/fa';
-import chatbotIcon from '../../assets/logos/chatbot-icon.png';
+import chatbotIcon from '../../assets/logos/chatbot-icon.webp';
 import ChatbotMessage from './ChatbotMessage';
 import ChatbotInput from './ChatbotInput';
 

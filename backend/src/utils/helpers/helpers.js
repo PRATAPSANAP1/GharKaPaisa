@@ -114,6 +114,29 @@ const normalizeAssignmentCategory = (cat) => {
   return c;
 };
 
+// Check if request originates from an employee, HR, operator, or staff user (as opposed to an external partner)
+const isEmployeeOrStaffUser = (req) => {
+  if (!req) return false;
+  const rawRole = String(req.user?.role || req.user?.user_role || '').toUpperCase().trim();
+  const designation = String(req.user?.designation || req.employee?.designation || '').toUpperCase().trim();
+
+  const staffRoles = [
+    'EMPLOYEE', 'HR', 'TELECALLER', 'TEAM_LEADER', 'SALES_EXECUTIVE',
+    'ADMIN', 'SUPER_ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD',
+    'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'BACKEND OPERATOR',
+    'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_OPERATOR', 'ADMINISTRATIVE SALES OPERATOR',
+    'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'FINAL_STATUS_OPERATOR', 'FINAL STATUS OPERATOR',
+    'QUERABLE_OPERATOR', 'QUERABLE OPERATOR', 'QUERYABLE_OPERATOR', 'QUERYABLE OPERATOR',
+    'PHYSICAL_CURABLE', 'PHYSICAL CURABLE', 'DIGITAL_CURABLE', 'DIGITAL CURABLE', 'EMAIL_CURABLE', 'EMAIL CURABLE',
+    'PHYSICAL_CURABLE_OPERATOR', 'PHYSICAL CURABLE OPERATOR', 'DIGITAL_CURABLE_OPERATOR', 'DIGITAL CURABLE OPERATOR', 'EMAIL_CURABLE_OPERATOR', 'EMAIL CURABLE OPERATOR'
+  ];
+
+  if (staffRoles.includes(rawRole)) return true;
+  if (staffRoles.some(r => designation.includes(r))) return true;
+  if (Boolean(req.employee || req.user?.employee_id || req.user?.emp_code)) return true;
+  return false;
+};
+
 module.exports = {
   generateAppNumber,
   generatePartnerCode,
@@ -127,5 +150,6 @@ module.exports = {
   sanitizeMobile,
   maskMobileLast6,
   normalizeAssignmentCategory,
+  isEmployeeOrStaffUser,
 };
 

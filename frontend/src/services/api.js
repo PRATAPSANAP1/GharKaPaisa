@@ -211,4 +211,74 @@ export function clearSession() {
   }
 }
 
+// ── In-Flight Request Deduplication & GET Response Caching ───────────
+const inFlightRequests = new Map();
+const getCache = new Map();
+const DEFAULT_GET_CACHE_TTL = 15000; // 15 seconds
+
+export function clearApiCache() {
+  getCache.clear();
+  inFlightRequests.clear();
+}
+
+const originalRequest = api.request.bind(api);
+
+api.request = function (configOrUrl, maybeConfig) {
+  let config = {};
+  if (typeof configOrUrl === 'string') {
+    config = { ...(maybeConfig || {}), url: configOrUrl };
+  } else {
+    config = { ...(configOrUrl || {}) };
+  }
+
+  const method = (config.method || 'get').toLowerCase();
+
+  // Invalidate read cache on state mutations
+  if (['post', 'put', 'patch', 'delete'].includes(method)) {
+    clearApiCache();
+    return originalRequest(config);
+  }
+
+  // Deduplicate and cache safe GET requests
+  if (method === 'get' && !config.skipCache && !config.headers?.['x-skip-cache']) {
+    let paramsStr = '';
+    if (config.params) {
+      try {
+        paramsStr = new URLSearchParams(config.params).toString();
+      } catch (_) {
+        paramsStr = JSON.stringify(config.params);
+      }
+    }
+    const cacheKey = `${config.url || ''}?${paramsStr}`;
+    const now = Date.now();
+
+    // Check recent cached response
+    const cached = getCache.get(cacheKey);
+    if (cached && (now - cached.timestamp < (config.cacheTtl || DEFAULT_GET_CACHE_TTL))) {
+      return Promise.resolve(cached.response);
+    }
+
+    // Check duplicate in-flight promise
+    if (inFlightRequests.has(cacheKey)) {
+      return inFlightRequests.get(cacheKey);
+    }
+
+    const requestPromise = originalRequest(config)
+      .then((response) => {
+        if (response && response.status >= 200 && response.status < 300) {
+          getCache.set(cacheKey, { timestamp: Date.now(), response });
+        }
+        return response;
+      })
+      .finally(() => {
+        inFlightRequests.delete(cacheKey);
+      });
+
+    inFlightRequests.set(cacheKey, requestPromise);
+    return requestPromise;
+  }
+
+  return originalRequest(config);
+};
+
 export default api;

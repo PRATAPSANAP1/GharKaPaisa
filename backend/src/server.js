@@ -25,7 +25,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const { globalLimiter } = require('./middleware/rate-limit/rateLimit.middleware.js');
+const { globalLimiter, walletWithdrawLimiter, applicationSubmitLimiter, adminActionLimiter } = require('./middleware/rate-limit/rateLimit.middleware.js');
 const fs = require('fs');
 const xss = require('xss-clean');
 const mongoSanitize = require('express-mongo-sanitize');
@@ -108,6 +108,14 @@ const corsOptions = {
   optionsSuccessStatus: 200,
 };
 
+// ── Force HTTPS in Production ─────────────────────────────────
+app.use((req, res, next) => {
+  if (process.env.NODE_ENV === 'production' && req.protocol === 'http' && req.headers['x-forwarded-proto'] !== 'https') {
+    return res.redirect(301, `https://${req.headers.host}${req.originalUrl}`);
+  }
+  next();
+});
+
 // ── CORS & Security Middleware ─────────────────────────────────
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
@@ -119,6 +127,8 @@ app.use(helmet({
       defaultSrc: ["'self'", "https:", "data:"],
       frameAncestors: ["'self'", "https://www.google.com", "https://*.msg91.com"],
       scriptSrc: ["'self'", "'unsafe-inline'", "https://verify.msg91.com", "https://www.google.com"],
+      objectSrc: ["'none'"],
+      imgSrc: ["'self'", "data:", "https:"],
     },
   },
   hsts: {
@@ -126,7 +136,10 @@ app.use(helmet({
     includeSubDomains: true,
     preload: true,
   },
-  referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  noSniff: true,
+  xssFilter: true,
+  ieNoOpen: true
 }));
 
 // Catch malformed URI requests gracefully (e.g., bot/scanner probes with invalid % encoding)
@@ -172,10 +185,13 @@ app.use(mongoSanitize({ allowDots: true }));
 app.use(xss());
 
 // ── Logging ────────────────────────────────────────────────────
-app.use(morgan('combined', {
-  stream: { write: (msg) => logger.http(msg.trim()) },
-  skip: (req) => req.url === '/health',
-}));
+// Disable detailed request logging in production for security and performance
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan('combined', {
+    stream: { write: (msg) => logger.http(msg.trim()) },
+    skip: (req) => req.url === '/health',
+  }));
+}
 
 // ── Health Check ───────────────────────────────────────────────
 const { getValkeyStatus, closeValkeyClients } = require('./config/redis');
@@ -232,8 +248,28 @@ app.post('/api/v1/razorpay/webhook', walletCtrl.handleRazorpayWebhook);
 app.post('/api/v1/webhooks/razorpay', walletCtrl.handleRazorpayWebhook);
 
 // ── Static Files (Generated Reports, Uploads & Documents) ────────────
-app.use('/reports', express.static(path.join(__dirname, '../public/reports')));
-app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+const staticOptions = {
+  maxAge: '7d',
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    } else if (/\.(js|css|webp|avif|png|jpe?g|svg|woff2?|ttf|eot)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+    }
+  }
+};
+app.use('/reports', express.static(path.join(__dirname, '../public/reports'), staticOptions));
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads'), staticOptions));
+
+// Serve frontend production build if present with optimal browser caching
+const frontendBuildPath = path.join(__dirname, '../../frontend/build');
+if (fs.existsSync(frontendBuildPath)) {
+  app.use(express.static(frontendBuildPath, staticOptions));
+}
 
 // ── API Routes ─────────────────────────────────────────────────
 const apiRouter = require('./routes/index');

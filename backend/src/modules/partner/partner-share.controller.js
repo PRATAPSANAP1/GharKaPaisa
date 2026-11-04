@@ -993,7 +993,7 @@ const updateApplyTokenDetails = async (req, res, next) => {
           if (targetLead && targetLead.mobile) {
             const { sendPostApplyStep2Sms } = require('../../services/sms/sms.service');
             await sendPostApplyStep2Sms(targetLead.mobile, targetLead.customer_name, targetLead.product_name, token);
-            console.log(`[QD-FORM-SMS] Automatically dispatched QD Form SMS link after 10 mins to ${targetLead.mobile}`);
+            logger.info(`[QD-FORM-SMS] Automatically dispatched QD Form SMS link after 10 mins to ${targetLead.mobile}`);
           }
         } catch (timerErr) {
           console.warn('[QD-FORM-SMS] Delayed SMS timer error:', timerErr.message);

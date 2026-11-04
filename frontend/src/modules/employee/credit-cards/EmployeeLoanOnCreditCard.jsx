@@ -8,12 +8,12 @@ import {
   FaShareAlt, FaCopy, FaExternalLinkAlt, FaSearch, FaChevronRight,
   FaPercentage, FaCalendarAlt, FaUserCheck, FaInfoCircle, FaBalanceScale
 } from 'react-icons/fa';
-import hdfcLogo from '../../home/components/banks/hdfc_bank.png';
-import sbiLogo from '../../home/components/banks/sbi_card.png';
-import iciciLogo from '../../home/components/banks/icici_bank.png';
-import axisLogo from '../../home/components/banks/axis_bank.png';
-import idfcLogo from '../../home/components/banks/idfc_first_bank.png';
-import kotakLogo from '../../home/components/banks/kotak_bank.png';
+import hdfcLogo from '../../home/components/banks/hdfc_bank.webp';
+import sbiLogo from '../../home/components/banks/sbi_card.webp';
+import iciciLogo from '../../home/components/banks/icici_bank.webp';
+import axisLogo from '../../home/components/banks/axis_bank.webp';
+import idfcLogo from '../../home/components/banks/idfc_first_bank.webp';
+import kotakLogo from '../../home/components/banks/kotak_bank.webp';
 import LoadingLogo from '../../../components/Loader/LoadingLogo';
 
 export default function EmployeeLoanOnCreditCard() {

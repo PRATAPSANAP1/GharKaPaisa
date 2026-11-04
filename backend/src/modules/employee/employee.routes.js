@@ -6,7 +6,25 @@ const roleCheck = require('../../middleware/authorization/role.middleware');
 const logger = require('../../config/logger');
 const { uploadToS3 } = require('../../services/aws/s3.service');
 const multer = require('multer');
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } }); // 100MB limit for video & KYC uploads
+
+// Allowed MIME types for file uploads
+const ALLOWED_VIDEO_MIME_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
+const ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const ALLOWED_DOCUMENT_MIME_TYPES = ['application/pdf'];
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit for video & KYC uploads
+  fileFilter: (req, file, cb) => {
+    const allowedMimeTypes = [...ALLOWED_VIDEO_MIME_TYPES, ...ALLOWED_IMAGE_MIME_TYPES, ...ALLOWED_DOCUMENT_MIME_TYPES];
+    if (allowedMimeTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Invalid file type: ${file.mimetype}. Allowed types: ${allowedMimeTypes.join(', ')}`), false);
+    }
+  }
+});
+
 const { calculateEmployeeVerificationState } = require('../employee-management/verification.service');
 const cache = require('../../services/cache.service');
 const {

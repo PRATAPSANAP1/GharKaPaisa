@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { FaSun, FaMoon } from 'react-icons/fa';
 
 // ── Brand Palette ──────────────────────────────────────────────────────────────
@@ -112,11 +112,12 @@ export function ThemeProvider({ children }) {
     }
   }, [isDark]);
 
-  const toggle = () => setIsDark(d => !d);
-  const C = isDark ? DARK : LIGHT;
+  const toggle = useCallback(() => setIsDark(d => !d), []);
+  const C = useMemo(() => (isDark ? DARK : LIGHT), [isDark]);
+  const value = useMemo(() => ({ isDark, toggle, C }), [isDark, toggle, C]);
 
   return (
-    <ThemeContext.Provider value={{ isDark, toggle, C }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );

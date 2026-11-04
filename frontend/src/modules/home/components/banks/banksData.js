@@ -1,16 +1,16 @@
-import hdfcLogo from "./hdfc_bank.png";
-import sbiLogo from "./sbi_card.png";
-import axisLogo from "./axis_bank.png";
-import iciciLogo from "./icici_bank.png";
-import kotakLogo from "./kotak_bank.png";
-import yesLogo from "./yes_bank.png";
-import bobLogo from "./bank_of_baroda.png";
-import dcbLogo from "./dcb_bank.png";
-import federalLogo from "./federal_bank.png";
-import sbmLogo from "./sbm_bank.png";
-import idfcLogo from "./idfc_first_bank.png";
-import rblLogo from "./rbl_bank.png";
-import equitasLogo from "./equitas.png";
+import hdfcLogo from './hdfc_bank.webp';
+import sbiLogo from './sbi_card.webp';
+import axisLogo from './axis_bank.webp';
+import iciciLogo from './icici_bank.webp';
+import kotakLogo from './kotak_bank.webp';
+import yesLogo from './yes_bank.webp';
+import bobLogo from './bank_of_baroda.webp';
+import dcbLogo from './dcb_bank.webp';
+import federalLogo from './federal_bank.webp';
+import sbmLogo from './sbm_bank.webp';
+import idfcLogo from './idfc_first_bank.webp';
+import rblLogo from './rbl_bank.webp';
+import equitasLogo from './equitas.webp';
 
 export const banksList = [
   { id: "hdfc", label: "HDFC Bank", image: hdfcLogo },

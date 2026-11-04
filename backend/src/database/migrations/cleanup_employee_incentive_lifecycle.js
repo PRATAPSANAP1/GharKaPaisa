@@ -50,8 +50,20 @@ async function runCleanup() {
     console.error('Cleanup migration failed:', err);
   } finally {
     client.release();
-    await pool.end();
   }
 }
 
-runCleanup();
+if (require.main === module) {
+  runCleanup()
+    .then(async () => {
+      await pool.end();
+      process.exit(0);
+    })
+    .catch(async (err) => {
+      console.error(err);
+      await pool.end();
+      process.exit(1);
+    });
+}
+
+module.exports = { runCleanup };

@@ -14,7 +14,7 @@ import {
 } from "../../../services/auth.api.js";
 import LanguageSwitcher from "../../../components/LanguageSwitcher/LanguageSwitcher";
 import Chatbot from "../../../components/Chatbot/Chatbot";
-import logoImg from "../../../assets/logos/logo.png";
+import logoImg from '../../../assets/logos/logo.webp';
 import "./Login.css";
 
 import {

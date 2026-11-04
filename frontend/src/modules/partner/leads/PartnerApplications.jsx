@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../../services/api';
@@ -143,6 +143,12 @@ export default function PartnerApplications() {
   const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter, commFilter, memberFilter, categoryFilter]);
 
   useEffect(() => {
     setMounted(true);
@@ -1127,7 +1133,7 @@ export default function PartnerApplications() {
 
               {isMobile ? (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, padding: 12 }}>
-                  {sortedApps.map((app, i) => {
+                  {paginatedApps.map((app, i) => {
                     const isSelected = selectedAppIds.includes(app.id);
                     const badge = getStatusBadge(app.status);
                     const BadgeIcon = badge.icon;
@@ -1223,7 +1229,7 @@ export default function PartnerApplications() {
                       </tr>
                     </thead>
                     <tbody style={{ color: textPrimary }}>
-                      {sortedApps.map((app) => {
+                      {paginatedApps.map((app) => {
                         const isSelected = selectedAppIds.includes(app.id);
                         const badge = getStatusBadge(app.status);
                         const BadgeIcon = badge.icon;
@@ -1311,6 +1317,77 @@ export default function PartnerApplications() {
                       })}
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              {/* ── Responsive Pagination Bar ── */}
+              {totalPages > 1 && (
+                <div style={{
+                  padding: '12px 20px',
+                  borderTop: `1px solid ${border}`,
+                  background: isDark ? '#141414' : '#f8faff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 12,
+                  fontSize: 12,
+                  color: textMuted
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span>Showing <strong>{startIdx + 1}</strong> - <strong>{Math.min(startIdx + pageSize, totalItems)}</strong> of <strong>{totalItems}</strong></span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                      style={{
+                        padding: '4px 8px', borderRadius: 6,
+                        background: isDark ? '#222' : '#fff',
+                        border: `1px solid ${border}`,
+                        color: textPrimary, fontSize: 11
+                      }}
+                    >
+                      <option value={10}>10 / page</option>
+                      <option value={15}>15 / page</option>
+                      <option value={25}>25 / page</option>
+                      <option value={50}>50 / page</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <button
+                      disabled={currentPage <= 1}
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      style={{
+                        padding: '5px 12px', borderRadius: 6,
+                        border: `1px solid ${border}`,
+                        background: isDark ? '#222' : '#fff',
+                        color: currentPage <= 1 ? (isDark ? '#555' : '#ccc') : textPrimary,
+                        cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+                        fontWeight: 700
+                      }}
+                    >
+                      Prev
+                    </button>
+
+                    <span style={{ fontWeight: 800, color: textPrimary, padding: '0 6px' }}>
+                      Page {currentPage} of {totalPages}
+                    </span>
+
+                    <button
+                      disabled={currentPage >= totalPages}
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      style={{
+                        padding: '5px 12px', borderRadius: 6,
+                        border: `1px solid ${border}`,
+                        background: isDark ? '#222' : '#fff',
+                        color: currentPage >= totalPages ? (isDark ? '#555' : '#ccc') : textPrimary,
+                        cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+                        fontWeight: 700
+                      }}
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

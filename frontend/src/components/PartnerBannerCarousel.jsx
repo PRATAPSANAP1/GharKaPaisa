@@ -5,8 +5,8 @@ import api from '../services/api';
 import { MdChevronLeft, MdChevronRight } from 'react-icons/md';
 
 // Import local fallback partner banner images
-import referenceBanner from '../modules/partner/banner/reference.png';
-import team2Banner from '../modules/partner/banner/team (2).png';
+import referenceBanner from '../modules/partner/banner/reference.webp';
+import team2Banner from '../modules/partner/banner/team (2).webp';
 
 const defaultBanners = [
   {

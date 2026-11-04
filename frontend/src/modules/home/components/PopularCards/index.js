@@ -1,9 +1,9 @@
-import hdfcImg from "../CreditCards/image/HDFC/hdfc.png";
-import sbiImg from "../CreditCards/image/SBI/SBI.png";
-import axisImg from "../CreditCards/image/AXIS/AXIS.png";
-import iciciImg from "../CreditCards/image/icici/ICICI.png";
-import yesImg from "../CreditCards/image/yes/yes bank.png";
-import kotakImg from "../CreditCards/image/kotak/KOTAK.png";
+import hdfcImg from '../CreditCards/image/HDFC/hdfc.webp';
+import sbiImg from '../CreditCards/image/SBI/SBI.webp';
+import axisImg from '../CreditCards/image/AXIS/AXIS.webp';
+import iciciImg from '../CreditCards/image/icici/ICICI.webp';
+import yesImg from '../CreditCards/image/yes/yes bank.webp';
+import kotakImg from '../CreditCards/image/kotak/KOTAK.webp';
 
 export const popularCards = [
   { 

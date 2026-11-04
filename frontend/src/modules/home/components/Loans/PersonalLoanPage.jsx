@@ -8,13 +8,13 @@ import {
 import CardApplyVerificationModal from "../CreditCards/CardApplyVerificationModal";
 
 // Import logos from Loans folder
-import axisLogo from "./axis.png";
-import sbiLogo from "./sbi.png";
-import iciciLogo from "./icici.png";
-import kotakLogo from "./kotak.png";
-import idfcLogo from "./idfc.png";
-import hdfcLogo from "./hdfc.png";
-import loanBanner from "./Loan_banner.png";
+import axisLogo from './axis.webp';
+import sbiLogo from './sbi.webp';
+import iciciLogo from './icici.webp';
+import kotakLogo from './kotak.webp';
+import idfcLogo from './idfc.webp';
+import hdfcLogo from './hdfc.webp';
+import loanBanner from './Loan_banner.webp';
 
 import { useNavigate } from 'react-router-dom';
 
