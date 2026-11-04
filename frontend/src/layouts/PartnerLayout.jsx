@@ -25,6 +25,7 @@ import { getMe } from '../services/auth.api';
 import '../components/Navbar/Navbar.css';
 import PartnerSearchBar from '../modules/partner/dashboard/PartnerSearchBar';
 import AnnouncementBanner from '../components/AnnouncementBanner';
+import SEO from '../components/SEO';
 
 const NAV_ITEMS = [
   { id: 'dashboard', path: '/partner/dashboard', label: 'Dashboard', icon: MdDashboard },
@@ -437,7 +438,9 @@ export default function PartnerLayout() {
   const MAIN_BG = isDark ? C.bg : '#F7F5FC';
 
   return (
-    <div style={{
+    <>
+      <SEO noIndex />
+      <div style={{
       display: 'flex',
       flexDirection: isMobile ? 'column' : 'row',
       height: '100vh',
@@ -844,7 +847,8 @@ export default function PartnerLayout() {
           onClose={() => setShowForcePasswordModal(false)}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

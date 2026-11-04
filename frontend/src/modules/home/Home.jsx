@@ -5,6 +5,7 @@ import { useTheme } from "../../contexts/ThemeContext";
 import { useActiveBanks } from "../../contexts/BanksContext";
 import { useSearchStore } from "../../app/store/searchStore";
 import { getApiV1Url } from "../../config/api";
+import SEO from "../../components/SEO";
 import {
   FaMobileAlt, FaBolt, FaMoneyBillWave, FaChevronRight, FaChevronLeft,
   FaRegCreditCard, FaLaptopHouse, FaUniversity, FaBuilding, FaCar,
@@ -2365,6 +2366,8 @@ export default function Home({ onNavigate }) {
 
 
   return (
+    <>
+      <SEO />
     <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: isMobile ? "60px" : "30px" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: isMobile ? "12px 16px" : "20px 16px" }}>
 
@@ -3069,5 +3072,6 @@ export default function Home({ onNavigate }) {
         </div>
       )}
     </div>
+  </>
   );
 }

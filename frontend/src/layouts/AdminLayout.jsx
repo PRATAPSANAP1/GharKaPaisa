@@ -8,6 +8,7 @@ import { Icons } from '../components/Icon/PartnerIcons';
 import LanguageSwitcher from '../components/LanguageSwitcher/LanguageSwitcher';
 import Chatbot from '../components/Chatbot/Chatbot';
 import AnnouncementBanner from '../components/AnnouncementBanner';
+import SEO from '../components/SEO';
 import api from '../services/api';
 import useNotificationPolling from '../hooks/useNotificationPolling';
 import { MdExpandMore, MdChevronRight, MdAccountBalance, MdShoppingBag, MdSettings, MdMenu, MdClose, MdNotifications } from 'react-icons/md';
@@ -537,7 +538,9 @@ const AdminLayout = () => {
   );
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: C.bg, overflow: 'hidden' }}>
+    <>
+      <SEO noIndex />
+      <div style={{ display: 'flex', height: '100vh', background: C.bg, overflow: 'hidden' }}>
       
       {/* ── Desktop Sidebar ── */}
       <aside style={{
@@ -946,6 +949,7 @@ const AdminLayout = () => {
         )}
       </div>
     </div>
+  </>
   );
 };
 

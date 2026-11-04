@@ -9,6 +9,7 @@ import { getApiV1Url } from '../config/api';
 import logo from '../assets/logos/logo.webp';
 import Chatbot from '../components/Chatbot/Chatbot';
 import AnnouncementBanner from '../components/AnnouncementBanner';
+import SEO from '../components/SEO';
 import { MdNotifications } from 'react-icons/md';
 import { FaWhatsapp, FaComments, FaCommentDots, FaCoins } from 'react-icons/fa';
 import { getMessengerSocket } from '../services/messengerSocket';
@@ -586,7 +587,9 @@ const SuperAdminLayout = () => {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden', background: C.bg }}>
+    <>
+      <SEO noIndex />
+      <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden', background: C.bg }}>
       
       {/* ── DESKTOP SIDEBAR ── */}
       {!isMobile && (
@@ -1003,7 +1006,8 @@ const SuperAdminLayout = () => {
       </div>
 
       <Chatbot />
-    </div>
+      </div>
+    </>
   );
 };
 

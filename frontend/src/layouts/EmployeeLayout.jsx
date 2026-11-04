@@ -18,6 +18,7 @@ import EmployeeForcePasswordModal from '../modules/employee/components/EmployeeF
 import EmployeeMobileBottomNav from '../components/EmployeeMobileBottomNav';
 import AnnouncementBanner from '../components/AnnouncementBanner';
 import LanguageSwitcher from '../components/LanguageSwitcher/LanguageSwitcher';
+import SEO from '../components/SEO';
 
 export default function EmployeeLayout() {
   const user = useAuthStore((state) => state.user);
@@ -154,7 +155,9 @@ export default function EmployeeLayout() {
   ];
 
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden', background: C.bg, fontFamily: "'Inter', sans-serif", color: C.text }}>
+    <>
+      <SEO noIndex />
+      <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden', background: C.bg, fontFamily: "'Inter', sans-serif", color: C.text }}>
       
       {/* Mobile Overlay Backdrop */}
       {isMobile && mobileMenuOpen && (
@@ -934,6 +937,7 @@ export default function EmployeeLayout() {
       <EmployeeForcePasswordModal isOpen={!!user?.must_change_password} onClose={() => {}} />
       <EmployeeMobileBottomNav />
       <Chatbot />
-    </div>
+      </div>
+    </>
   );
 }
