@@ -1,5 +1,5 @@
 import React from 'react';
-import defaultLogo from '../../assets/logos/logo.png';
+import defaultLogo from '../../assets/logos/logo.webp';
 import './LoadingLogo.css';
 
 export default function LoadingLogo({

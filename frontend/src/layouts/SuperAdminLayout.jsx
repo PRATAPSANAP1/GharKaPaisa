@@ -6,7 +6,7 @@ import { useTheme, ThemeToggle } from '../contexts/ThemeContext';
 import { Icons } from '../components/Icon/PartnerIcons';
 import api, { getAccessToken } from '../services/api';
 import { getApiV1Url } from '../config/api';
-import logo from '../assets/logos/logo.png';
+import logo from '../assets/logos/logo.webp';
 import Chatbot from '../components/Chatbot/Chatbot';
 import AnnouncementBanner from '../components/AnnouncementBanner';
 import { MdNotifications } from 'react-icons/md';

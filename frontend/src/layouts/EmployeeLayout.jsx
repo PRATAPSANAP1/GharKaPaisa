@@ -9,7 +9,7 @@ import {
   FaUserPlus, FaHandshake, FaCopy, FaShareAlt, FaTrophy, FaBell, FaComments,
   FaCalendarCheck
 } from 'react-icons/fa';
-import logo from '../assets/logos/logo.png';
+import logo from '../assets/logos/logo.webp';
 import Chatbot from '../components/Chatbot/Chatbot';
 import api from '../services/api';
 import useNotificationPolling from '../hooks/useNotificationPolling';

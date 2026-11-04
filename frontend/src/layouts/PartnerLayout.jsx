@@ -17,7 +17,7 @@ import {
   MdPerson, MdAssignmentInd, MdGroup, MdAnalytics, MdFileDownload, MdPendingActions, MdCheckCircle, MdCancel, MdReceipt
 } from 'react-icons/md';
 import { FaComments } from 'react-icons/fa';
-import logo from '../assets/logos/logo.png';
+import logo from '../assets/logos/logo.webp';
 import ForcePasswordChangeModal from '../modules/partner/profile/ForcePasswordChangeModal';
 import api, { getAccessToken } from '../services/api';
 import { getApiV1Url, getImageUrl } from '../config/api';

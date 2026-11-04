@@ -1,5 +1,5 @@
 import React from 'react';
-import chatbotIcon from '../../assets/logos/chatbot-icon.png';
+import chatbotIcon from '../../assets/logos/chatbot-icon.webp';
 
 export default function ChatbotButton({ onClick, hasNewMessage, onMouseDown, onTouchStart }) {
   return (

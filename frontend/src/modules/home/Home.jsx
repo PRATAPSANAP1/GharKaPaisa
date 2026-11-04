@@ -34,41 +34,41 @@ import PersonalLoanPage from "./components/Loans/PersonalLoanPage";
 import "./Home.css";
 
 // Import banner images
-import ltfBanner from "./components/banner/lifetimefree card.png";
-import loanBanner from "./components/banner/loan.png";
-import insuranceBanner from "./components/banner/insurance.png";
-import emiBanner from "./components/banner/smart emi.png";
-import emiNewBanner from "./components/banner/emi.jpeg";
-import hdfcBanner from "./components/banner/hdfc pixel card.png";
-import offerBanner from "./components/banner/offerbanner.png";
+import ltfBanner from './components/banner/lifetimefree card.webp';
+import loanBanner from './components/banner/loan.webp';
+import insuranceBanner from './components/banner/insurance.webp';
+import emiBanner from './components/banner/smart emi.webp';
+import emiNewBanner from './components/banner/emi.webp';
+import hdfcBanner from './components/banner/hdfc pixel card.webp';
+import offerBanner from './components/banner/offerbanner.webp';
 
 // Import bank card images
-import axisCardImg from "./components/CreditCards/image/AXIS/AXIS.png";
-import sbiCardImg from "./components/CreditCards/image/SBI/SBI.png";
-import iciciCardImg from "./components/CreditCards/image/icici/ICICI.png";
-import kotakCardImg from "./components/CreditCards/image/kotak/KOTAK.png";
-import yesBankCardImg from "./components/CreditCards/image/yes/yes bank.png";
+import axisCardImg from './components/CreditCards/image/AXIS/AXIS.webp';
+import sbiCardImg from './components/CreditCards/image/SBI/SBI.webp';
+import iciciCardImg from './components/CreditCards/image/icici/ICICI.webp';
+import kotakCardImg from './components/CreditCards/image/kotak/KOTAK.webp';
+import yesBankCardImg from './components/CreditCards/image/yes/yes bank.webp';
 
 // Import attractive section card images
-import ltfImg from "./components/AttractiveSections/lifetimefree.png";
-import cibilImg from "./components/AttractiveSections/cibilbased.png";
-import hdfcCcLoanImg from "./components/AttractiveSections/loan on credit card.png";
-import smartEmiImg from "./components/AttractiveSections/smart emi.png";
-import securedImg from "./components/AttractiveSections/fd backed.png";
-import upiImg from "./components/AttractiveSections/upi.png";
+import ltfImg from './components/AttractiveSections/lifetimefree.webp';
+import cibilImg from './components/AttractiveSections/cibilbased.webp';
+import hdfcCcLoanImg from './components/AttractiveSections/loan on credit card.webp';
+import smartEmiImg from './components/AttractiveSections/smart emi.webp';
+import securedImg from './components/AttractiveSections/fd backed.webp';
+import upiImg from './components/AttractiveSections/upi.webp';
 
 // Import money transfer images
-import toMobileImg from "./components/MoneyTransfer/tomobile.png";
-import rechargeImg from "./components/MoneyTransfer/recharge.png";
-import electricityImg from "./components/MoneyTransfer/electricitybill.png";
-import loanRepayImg from "./components/MoneyTransfer/loan.png";
-import fastagImg from "./components/MoneyTransfer/fastag.png";
+import toMobileImg from './components/MoneyTransfer/tomobile.webp';
+import rechargeImg from './components/MoneyTransfer/recharge.webp';
+import electricityImg from './components/MoneyTransfer/electricitybill.webp';
+import loanRepayImg from './components/MoneyTransfer/loan.webp';
+import fastagImg from './components/MoneyTransfer/fastag.webp';
 
 // Import travel transit images
-import flightImg from "./components/TravelTransit/flight.png";
-import trainImg from "./components/TravelTransit/train.png";
-import busImg from "./components/TravelTransit/bus.png";
-import hotelImg from "./components/TravelTransit/hotel.png";
+import flightImg from './components/TravelTransit/flight.webp';
+import trainImg from './components/TravelTransit/train.webp';
+import busImg from './components/TravelTransit/bus.webp';
+import hotelImg from './components/TravelTransit/hotel.webp';
 
 
 // ── Responsive Hook ──────────────────────────────────────────────

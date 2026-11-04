@@ -1,9 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 import RoleRoute from './RoleRoute';
 import { useAuthStore } from '../app/store/authStore';
-import logo from '../assets/logos/logo.png';
+import logo from '../assets/logos/logo.webp';
 import GkpLoader from '../components/Loader/GkpLoader';
 
 // Layouts
@@ -14,133 +14,133 @@ import PublicLayout from '../layouts/PublicLayout';
 import EmployeeLayout from '../layouts/EmployeeLayout';
 
 // Public Pages
-import Home from '../modules/home/Home';
-import Contact from '../modules/home/Contact';
-import Careers from '../modules/home/Careers';
-import InterviewRegistration from '../modules/home/InterviewRegistration';
-import ApplicationStatus from '../modules/home/ApplicationStatus';
-import HRDashboard from '../modules/hr/HRDashboard';
-import EmployeeManagement from '../modules/super-admin/employees/EmployeeManagement';
-import EmployeeLogin from '../modules/employee/EmployeeLogin';
-import EmployeeDashboard from '../modules/employee/EmployeeDashboard';
-import EmployeeAttendance from '../modules/employee/attendance/EmployeeAttendance';
-import JoiningForm from '../modules/employee/profile/JoiningForm';
-import TermsAcceptance from '../modules/employee/profile/TermsAcceptance';
-import KYCSubmission from '../modules/employee/profile/KYCSubmission';
-import EmployeeCreditCards from '../modules/employee/credit-cards/EmployeeCreditCards';
-import EmployeePersonalLoanOptions from '../modules/employee/loans/EmployeePersonalLoanOptions';
-import EmployeeLoanOnCreditCard from '../modules/employee/credit-cards/EmployeeLoanOnCreditCard';
-import EmployeeSmartEmi from '../modules/employee/credit-cards/EmployeeSmartEmi';
-import EmployeeApplications from '../modules/employee/applications/EmployeeApplications';
-import MyTeam from '../modules/employee/team/MyTeam';
-import MyIncentives from '../modules/employee/incentives/MyIncentives';
-import EmployeeProfile from '../modules/employee/profile/EmployeeProfile';
-import EmployeeSettingsPortal from '../modules/employee/settings/EmployeeSettingsPortal';
-import EmployeeSalesReports from '../modules/employee/reports/EmployeeSalesReports';
-import EmployeeVerification from '../modules/employee/profile/EmployeeVerification';
-import EmployeeContests from '../modules/employee/contests/EmployeeContests';
-import ManageContests from '../modules/super-admin/contests/ManageContests';
-import PartnerLogin from '../modules/authentication/login/PartnerLogin';
-import PartnerRegister from '../modules/authentication/register/PartnerRegister';
-import VerifyEmail from '../modules/authentication/register/VerifyEmail';
-import ResetPassword from '../modules/authentication/reset-password/ResetPassword';
-import TermsAndConditions from '../modules/home/TermsAndConditions';
-import PrivacyPolicy from '../modules/home/PrivacyPolicy';
-import ShippingPolicy from '../modules/home/ShippingPolicy';
-import RefundPolicy from '../modules/home/RefundPolicy';
-import CustomerUploadPortal from '../modules/customer/CustomerUploadPortal';
-import PublicCustomerUploadPage from '../modules/public/PublicCustomerUploadPage';
-import PhysicalApplicationForm from '../modules/customer/PhysicalApplicationForm';
-import CustomerShareApplyForm from '../modules/customer/CustomerShareApplyForm';
-import CustomerTrackApplication from '../modules/customer/CustomerTrackApplication';
-import MessengerView from '../modules/messenger/MessengerView';
+const Home = lazy(() => import('../modules/home/Home'));
+const Contact = lazy(() => import('../modules/home/Contact'));
+const Careers = lazy(() => import('../modules/home/Careers'));
+const InterviewRegistration = lazy(() => import('../modules/home/InterviewRegistration'));
+const ApplicationStatus = lazy(() => import('../modules/home/ApplicationStatus'));
+const HRDashboard = lazy(() => import('../modules/hr/HRDashboard'));
+const EmployeeManagement = lazy(() => import('../modules/super-admin/employees/EmployeeManagement'));
+const EmployeeLogin = lazy(() => import('../modules/employee/EmployeeLogin'));
+const EmployeeDashboard = lazy(() => import('../modules/employee/EmployeeDashboard'));
+const EmployeeAttendance = lazy(() => import('../modules/employee/attendance/EmployeeAttendance'));
+const JoiningForm = lazy(() => import('../modules/employee/profile/JoiningForm'));
+const TermsAcceptance = lazy(() => import('../modules/employee/profile/TermsAcceptance'));
+const KYCSubmission = lazy(() => import('../modules/employee/profile/KYCSubmission'));
+const EmployeeCreditCards = lazy(() => import('../modules/employee/credit-cards/EmployeeCreditCards'));
+const EmployeePersonalLoanOptions = lazy(() => import('../modules/employee/loans/EmployeePersonalLoanOptions'));
+const EmployeeLoanOnCreditCard = lazy(() => import('../modules/employee/credit-cards/EmployeeLoanOnCreditCard'));
+const EmployeeSmartEmi = lazy(() => import('../modules/employee/credit-cards/EmployeeSmartEmi'));
+const EmployeeApplications = lazy(() => import('../modules/employee/applications/EmployeeApplications'));
+const MyTeam = lazy(() => import('../modules/employee/team/MyTeam'));
+const MyIncentives = lazy(() => import('../modules/employee/incentives/MyIncentives'));
+const EmployeeProfile = lazy(() => import('../modules/employee/profile/EmployeeProfile'));
+const EmployeeSettingsPortal = lazy(() => import('../modules/employee/settings/EmployeeSettingsPortal'));
+const EmployeeSalesReports = lazy(() => import('../modules/employee/reports/EmployeeSalesReports'));
+const EmployeeVerification = lazy(() => import('../modules/employee/profile/EmployeeVerification'));
+const EmployeeContests = lazy(() => import('../modules/employee/contests/EmployeeContests'));
+const ManageContests = lazy(() => import('../modules/super-admin/contests/ManageContests'));
+const PartnerLogin = lazy(() => import('../modules/authentication/login/PartnerLogin'));
+const PartnerRegister = lazy(() => import('../modules/authentication/register/PartnerRegister'));
+const VerifyEmail = lazy(() => import('../modules/authentication/register/VerifyEmail'));
+const ResetPassword = lazy(() => import('../modules/authentication/reset-password/ResetPassword'));
+const TermsAndConditions = lazy(() => import('../modules/home/TermsAndConditions'));
+const PrivacyPolicy = lazy(() => import('../modules/home/PrivacyPolicy'));
+const ShippingPolicy = lazy(() => import('../modules/home/ShippingPolicy'));
+const RefundPolicy = lazy(() => import('../modules/home/RefundPolicy'));
+const CustomerUploadPortal = lazy(() => import('../modules/customer/CustomerUploadPortal'));
+const PublicCustomerUploadPage = lazy(() => import('../modules/public/PublicCustomerUploadPage'));
+const PhysicalApplicationForm = lazy(() => import('../modules/customer/PhysicalApplicationForm'));
+const CustomerShareApplyForm = lazy(() => import('../modules/customer/CustomerShareApplyForm'));
+const CustomerTrackApplication = lazy(() => import('../modules/customer/CustomerTrackApplication'));
+const MessengerView = lazy(() => import('../modules/messenger/MessengerView'));
 
 // Services Pages
-import MoneyTransfer from '../modules/cms/MoneyTransfer';
-import Recharge from '../modules/cms/Recharge';
-import Electricity from '../modules/cms/Electricity';
-import LoanRepay from '../modules/cms/LoanRepay';
-import Fastag from '../modules/cms/Fastag';
-import ComingSoon from '../modules/cms/ComingSoon';
+const MoneyTransfer = lazy(() => import('../modules/cms/MoneyTransfer'));
+const Recharge = lazy(() => import('../modules/cms/Recharge'));
+const Electricity = lazy(() => import('../modules/cms/Electricity'));
+const LoanRepay = lazy(() => import('../modules/cms/LoanRepay'));
+const Fastag = lazy(() => import('../modules/cms/Fastag'));
+const ComingSoon = lazy(() => import('../modules/cms/ComingSoon'));
 
 // Product Lead Gen
-import ProductDetails from '../modules/products/ProductDetails';
-import ApplyForm from '../modules/products/ApplyForm';
-import CardBenefitsPage from '../modules/products/CardBenefitsPage';
-import ProductApplyLanding from '../modules/products/ProductApplyLanding';
-import PartnerShareLanding from '../modules/products/PartnerShareLanding';
-import CustomerApplyStep1 from '../modules/products/CustomerApplyStep1';
-import CustomerPostApplyStep2 from '../modules/products/CustomerPostApplyStep2';
-import DynamicCreditCardsPage from '../modules/home/components/CreditCards/DynamicCreditCardsPage';
+const ProductDetails = lazy(() => import('../modules/products/ProductDetails'));
+const ApplyForm = lazy(() => import('../modules/products/ApplyForm'));
+const CardBenefitsPage = lazy(() => import('../modules/products/CardBenefitsPage'));
+const ProductApplyLanding = lazy(() => import('../modules/products/ProductApplyLanding'));
+const PartnerShareLanding = lazy(() => import('../modules/products/PartnerShareLanding'));
+const CustomerApplyStep1 = lazy(() => import('../modules/products/CustomerApplyStep1'));
+const CustomerPostApplyStep2 = lazy(() => import('../modules/products/CustomerPostApplyStep2'));
+const DynamicCreditCardsPage = lazy(() => import('../modules/home/components/CreditCards/DynamicCreditCardsPage'));
 
 // Admin Pages
-import AdminDashboard from '../modules/admin/dashboard/AdminDashboard';
-import AdminLogin from '../modules/authentication/login/AdminLogin';
-import ManageApplications from '../modules/admin/reports/ManageApplications';
-import ManagePartners from '../modules/admin/users/ManagePartners';
-import ManageWithdrawals from '../modules/admin/users/ManageWithdrawals';
-import ManageLeads from '../modules/admin/users/ManageLeads';
-import KycOperatorDashboard from '../modules/admin/kyc-operator/KycOperatorDashboard';
-import DesignationRulesAudit from '../modules/admin/rules/DesignationRulesAudit';
+const AdminDashboard = lazy(() => import('../modules/admin/dashboard/AdminDashboard'));
+const AdminLogin = lazy(() => import('../modules/authentication/login/AdminLogin'));
+const ManageApplications = lazy(() => import('../modules/admin/reports/ManageApplications'));
+const ManagePartners = lazy(() => import('../modules/admin/users/ManagePartners'));
+const ManageWithdrawals = lazy(() => import('../modules/admin/users/ManageWithdrawals'));
+const ManageLeads = lazy(() => import('../modules/admin/users/ManageLeads'));
+const KycOperatorDashboard = lazy(() => import('../modules/admin/kyc-operator/KycOperatorDashboard'));
+const DesignationRulesAudit = lazy(() => import('../modules/admin/rules/DesignationRulesAudit'));
 
 // Super Admin Pages
-import SuperAdminOverview from '../modules/super-admin/dashboard/SuperAdminOverview';
-import SuperAdminDashboard from '../modules/super-admin/dashboard/SuperAdminDashboard';
-import SuperAdminReports from '../modules/super-admin/reports/SuperAdminReports';
-import ReferralAnalyticsView from '../modules/super-admin/reports/ReferralAnalyticsView';
-import AuditLogs from '../modules/super-admin/audit/AuditLogs';
-import ManageBanners from '../modules/super-admin/banners/ManageBanners';
-import ManageProducts from '../modules/super-admin/cms/ManageProducts';
-import ManageProductLinks from '../modules/super-admin/cms/ManageProductLinks';
-import ManageBanks from '../modules/super-admin/cms/ManageBanks';
-import ManageSections from '../modules/super-admin/cms/ManageSections';
-import ManageLinks from '../modules/super-admin/cms/ManageLinks';
-import ManageServices from '../modules/super-admin/system/ManageServices';
-import ManageDirectLeads from '../modules/super-admin/crm/ManageDirectLeads';
-import ManageLoanApplications from '../modules/super-admin/crm/ManageLoanApplications';
-import ManageCommissions from '../modules/super-admin/settings/ManageCommissions';
-import SuperAdminCommission from '../modules/admin/dashboard/SuperAdminCommission';
-import ManageEmployeeIncentives from '../modules/super-admin/incentives/ManageEmployeeIncentives';
-import ManageCommissionRules from '../modules/super-admin/settings/ManageCommissionRules';
-import ManageWallet from '../modules/super-admin/wallet/ManageWallet';
-import SuperAdminManageApplications from '../modules/super-admin/crm/ManageApplications';
-import NotificationCenter from '../modules/notifications/NotificationCenter';
-import ManageAnnouncements from '../modules/super-admin/notifications/ManageAnnouncements';
-import AdminProfilePage from '../modules/super-admin/profile/AdminProfilePage';
-import AdminWorkingHours from '../modules/super-admin/working-hours/AdminWorkingHours';
-import SuperAdminViewMessages from '../modules/super-admin/messenger/SuperAdminViewMessages';
-import SuperAdminWhatsApp from '../modules/super-admin/whatsapp/SuperAdminWhatsApp';
-import SuperAdminAttendanceDashboard from '../modules/super-admin/attendance/SuperAdminAttendanceDashboard';
+const SuperAdminOverview = lazy(() => import('../modules/super-admin/dashboard/SuperAdminOverview'));
+const SuperAdminDashboard = lazy(() => import('../modules/super-admin/dashboard/SuperAdminDashboard'));
+const SuperAdminReports = lazy(() => import('../modules/super-admin/reports/SuperAdminReports'));
+const ReferralAnalyticsView = lazy(() => import('../modules/super-admin/reports/ReferralAnalyticsView'));
+const AuditLogs = lazy(() => import('../modules/super-admin/audit/AuditLogs'));
+const ManageBanners = lazy(() => import('../modules/super-admin/banners/ManageBanners'));
+const ManageProducts = lazy(() => import('../modules/super-admin/cms/ManageProducts'));
+const ManageProductLinks = lazy(() => import('../modules/super-admin/cms/ManageProductLinks'));
+const ManageBanks = lazy(() => import('../modules/super-admin/cms/ManageBanks'));
+const ManageSections = lazy(() => import('../modules/super-admin/cms/ManageSections'));
+const ManageLinks = lazy(() => import('../modules/super-admin/cms/ManageLinks'));
+const ManageServices = lazy(() => import('../modules/super-admin/system/ManageServices'));
+const ManageDirectLeads = lazy(() => import('../modules/super-admin/crm/ManageDirectLeads'));
+const ManageLoanApplications = lazy(() => import('../modules/super-admin/crm/ManageLoanApplications'));
+const ManageCommissions = lazy(() => import('../modules/super-admin/settings/ManageCommissions'));
+const SuperAdminCommission = lazy(() => import('../modules/admin/dashboard/SuperAdminCommission'));
+const ManageEmployeeIncentives = lazy(() => import('../modules/super-admin/incentives/ManageEmployeeIncentives'));
+const ManageCommissionRules = lazy(() => import('../modules/super-admin/settings/ManageCommissionRules'));
+const ManageWallet = lazy(() => import('../modules/super-admin/wallet/ManageWallet'));
+const SuperAdminManageApplications = lazy(() => import('../modules/super-admin/crm/ManageApplications'));
+const NotificationCenter = lazy(() => import('../modules/notifications/NotificationCenter'));
+const ManageAnnouncements = lazy(() => import('../modules/super-admin/notifications/ManageAnnouncements'));
+const AdminProfilePage = lazy(() => import('../modules/super-admin/profile/AdminProfilePage'));
+const AdminWorkingHours = lazy(() => import('../modules/super-admin/working-hours/AdminWorkingHours'));
+const SuperAdminViewMessages = lazy(() => import('../modules/super-admin/messenger/SuperAdminViewMessages'));
+const SuperAdminWhatsApp = lazy(() => import('../modules/super-admin/whatsapp/SuperAdminWhatsApp'));
+const SuperAdminAttendanceDashboard = lazy(() => import('../modules/super-admin/attendance/SuperAdminAttendanceDashboard'));
 
 
 // Partner Pages
-import PartnerDashboard from '../modules/partner/dashboard/PartnerDashboard';
-import PartnerCategoryOverview from '../modules/partner/dashboard/PartnerCategoryOverview';
-import PartnerEntityDetail from '../modules/partner/dashboard/PartnerEntityDetail';
-import PartnerAddLead from '../modules/partner/leads/PartnerAddLead';
-import PartnerApplications from '../modules/partner/leads/PartnerApplications';
-import PartnerWallet from '../modules/partner/wallet/PartnerWallet';
-import PartnerProfile from '../modules/partner/profile/PartnerProfile';
-import PartnerProducts from '../modules/partner/products/PartnerProducts';
-import SettingsPage from '../modules/partner/dashboard/SettingsPage';
-import TravelUtilitiesPage from '../modules/partner/products/TravelUtilitiesPage';
-import PartnerTeam from '../modules/partner/dashboard/PartnerTeam';
-import PartnerKyc from '../modules/partner/kyc/PartnerKyc';
-import PartnerCrm from '../modules/partner/leads/PartnerCrm';
-import PartnerSupport from '../modules/partner/dashboard/PartnerSupport';
-import PartnerVault from '../modules/partner/profile/PartnerVault';
-import PartnerMarketing from '../modules/partner/dashboard/PartnerMarketing';
-import PartnerTraining from '../modules/partner/dashboard/PartnerTraining';
-import PartnerReports from '../modules/partner/dashboard/PartnerReports';
-import PartnerRefers from '../modules/partner/dashboard/PartnerRefers';
-import PartnerNotifications from '../modules/partner/dashboard/PartnerNotifications';
-import PartnerShareTracking from '../modules/partner/leads/PartnerShareTracking';
-import ManageAdminLoans from '../modules/admin/loans/ManageAdminLoans';
-import ManageAdminInsurance from '../modules/admin/insurance/ManageAdminInsurance';
-import ManageBankCardApplications from '../modules/admin/credit-cards/ManageBankCardApplications';
-import ManageAdminProducts from '../modules/super-admin/cms/ManageAdminProducts';
-import ManageSupportTickets from '../modules/super-admin/support/ManageSupportTickets';
-import BulkSmsDashboard from '../modules/super-admin/bulk-sms/BulkSmsDashboard';
+const PartnerDashboard = lazy(() => import('../modules/partner/dashboard/PartnerDashboard'));
+const PartnerCategoryOverview = lazy(() => import('../modules/partner/dashboard/PartnerCategoryOverview'));
+const PartnerEntityDetail = lazy(() => import('../modules/partner/dashboard/PartnerEntityDetail'));
+const PartnerAddLead = lazy(() => import('../modules/partner/leads/PartnerAddLead'));
+const PartnerApplications = lazy(() => import('../modules/partner/leads/PartnerApplications'));
+const PartnerWallet = lazy(() => import('../modules/partner/wallet/PartnerWallet'));
+const PartnerProfile = lazy(() => import('../modules/partner/profile/PartnerProfile'));
+const PartnerProducts = lazy(() => import('../modules/partner/products/PartnerProducts'));
+const SettingsPage = lazy(() => import('../modules/partner/dashboard/SettingsPage'));
+const TravelUtilitiesPage = lazy(() => import('../modules/partner/products/TravelUtilitiesPage'));
+const PartnerTeam = lazy(() => import('../modules/partner/dashboard/PartnerTeam'));
+const PartnerKyc = lazy(() => import('../modules/partner/kyc/PartnerKyc'));
+const PartnerCrm = lazy(() => import('../modules/partner/leads/PartnerCrm'));
+const PartnerSupport = lazy(() => import('../modules/partner/dashboard/PartnerSupport'));
+const PartnerVault = lazy(() => import('../modules/partner/profile/PartnerVault'));
+const PartnerMarketing = lazy(() => import('../modules/partner/dashboard/PartnerMarketing'));
+const PartnerTraining = lazy(() => import('../modules/partner/dashboard/PartnerTraining'));
+const PartnerReports = lazy(() => import('../modules/partner/dashboard/PartnerReports'));
+const PartnerRefers = lazy(() => import('../modules/partner/dashboard/PartnerRefers'));
+const PartnerNotifications = lazy(() => import('../modules/partner/dashboard/PartnerNotifications'));
+const PartnerShareTracking = lazy(() => import('../modules/partner/leads/PartnerShareTracking'));
+const ManageAdminLoans = lazy(() => import('../modules/admin/loans/ManageAdminLoans'));
+const ManageAdminInsurance = lazy(() => import('../modules/admin/insurance/ManageAdminInsurance'));
+const ManageBankCardApplications = lazy(() => import('../modules/admin/credit-cards/ManageBankCardApplications'));
+const ManageAdminProducts = lazy(() => import('../modules/super-admin/cms/ManageAdminProducts'));
+const ManageSupportTickets = lazy(() => import('../modules/super-admin/support/ManageSupportTickets'));
+const BulkSmsDashboard = lazy(() => import('../modules/super-admin/bulk-sms/BulkSmsDashboard'));
 
 const SmartMessengerRedirect = () => {
   const user = useAuthStore((state) => state.user);
@@ -163,7 +163,8 @@ const AppRoutes = () => {
   }
 
   return (
-    <Routes>
+    <Suspense fallback={<GkpLoader />}>
+      <Routes>
       {/* Public Routes */}
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Home />} />
@@ -484,7 +485,8 @@ const AppRoutes = () => {
 
       {/* Catch-all Redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 };
 

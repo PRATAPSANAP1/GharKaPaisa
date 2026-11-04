@@ -8,8 +8,8 @@ import { registerPartner, lookupUser, sendRegistrationOtp, verifyRegistrationOtp
 import api from "../../../services/api";
 import LanguageSwitcher from "../../../components/LanguageSwitcher/LanguageSwitcher";
 
-import logoImg from "../../../assets/logos/logo.png";
-import welcomeBgImg from "./welcome pg-bg.png";
+import logoImg from '../../../assets/logos/logo.webp';
+import welcomeBgImg from './welcome pg-bg.webp';
 
 const STEPS = ["Personal", "Business", "Bank", "KYC"];
 

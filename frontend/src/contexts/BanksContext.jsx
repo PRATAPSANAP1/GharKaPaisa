@@ -1,29 +1,45 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../services/api';
 import { banksList } from '../modules/home/components/banks/banksData';
 
 const BanksContext = createContext(null);
+const CACHE_KEY = 'gkp_active_banks';
+const CACHE_TIME_KEY = 'gkp_active_banks_time';
+const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 
 export function BanksProvider({ children }) {
-  const [activeBanks, setActiveBanks] = useState([]);
+  const [activeBanks, setActiveBanks] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem(CACHE_KEY);
+        const cachedTime = sessionStorage.getItem(CACHE_TIME_KEY);
+        if (cached && cachedTime && (Date.now() - Number(cachedTime) < CACHE_DURATION_MS)) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        }
+      } catch (_) {}
+    }
+    return [];
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchActiveBanks = async (forceRefresh = false) => {
-    // if (!forceRefresh) {
-    //   const cached = sessionStorage.getItem('gkp_active_banks');
-    //   if (cached) {
-    //     try {
-    //       const parsed = JSON.parse(cached);
-    //       if (parsed && parsed.length > 0) {
-    //         setActiveBanks(parsed);
-    //         return parsed;
-    //       }
-    //     } catch (e) {
-    //       // ignore parsing error
-    //     }
-    //   }
-    // }
+  const fetchActiveBanks = useCallback(async (forceRefresh = false) => {
+    if (!forceRefresh && typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem(CACHE_KEY);
+        const cachedTime = sessionStorage.getItem(CACHE_TIME_KEY);
+        if (cached && cachedTime && (Date.now() - Number(cachedTime) < CACHE_DURATION_MS)) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setActiveBanks(parsed);
+            return parsed;
+          }
+        }
+      } catch (_) {}
+    }
 
     setLoading(true);
     setError(null);
@@ -61,7 +77,10 @@ export function BanksProvider({ children }) {
           };
         });
         setActiveBanks(mapped);
-        sessionStorage.setItem('gkp_active_banks', JSON.stringify(mapped));
+        try {
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify(mapped));
+          sessionStorage.setItem(CACHE_TIME_KEY, String(Date.now()));
+        } catch (_) {}
         return mapped;
       }
     } catch (err) {
@@ -70,14 +89,25 @@ export function BanksProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchActiveBanks();
   }, []);
 
+  const refreshActiveBanks = useCallback(() => fetchActiveBanks(true), [fetchActiveBanks]);
+
+  useEffect(() => {
+    if (activeBanks.length === 0) {
+      fetchActiveBanks();
+    }
+  }, [fetchActiveBanks, activeBanks.length]);
+
+  const value = useMemo(() => ({
+    activeBanks,
+    loading,
+    error,
+    refreshActiveBanks
+  }), [activeBanks, loading, error, refreshActiveBanks]);
+
   return (
-    <BanksContext.Provider value={{ activeBanks, loading, error, refreshActiveBanks: () => fetchActiveBanks(true) }}>
+    <BanksContext.Provider value={value}>
       {children}
     </BanksContext.Provider>
   );

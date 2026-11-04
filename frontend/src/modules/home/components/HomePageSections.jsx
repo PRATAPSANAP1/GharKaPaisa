@@ -20,13 +20,13 @@ import { travelTransitData } from "./TravelTransit/index";
 import CategoryCardItem from "./CategoryCardItem";
 
 // Import banner images
-import ltfBanner from "./banner/lifetimefree card.png";
-import loanBanner from "./banner/loan.png";
-import insuranceBanner from "./banner/insurance.png";
-import emiBanner from "./banner/smart emi.png";
-import emiNewBanner from "./banner/emi.jpeg";
-import hdfcBanner from "./banner/hdfc pixel card.png";
-import offerBanner from "./banner/offerbanner.png";
+import ltfBanner from './banner/lifetimefree card.webp';
+import loanBanner from './banner/loan.webp';
+import insuranceBanner from './banner/insurance.webp';
+import emiBanner from './banner/smart emi.webp';
+import emiNewBanner from './banner/emi.webp';
+import hdfcBanner from './banner/hdfc pixel card.webp';
+import offerBanner from './banner/offerbanner.webp';
 
 // Responsive Hook
 function useIsMobile() {

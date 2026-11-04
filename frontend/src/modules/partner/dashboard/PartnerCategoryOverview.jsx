@@ -22,20 +22,20 @@ import PartnerWallet from '../wallet/PartnerWallet';
 import PartnerSupport from './PartnerSupport';
 
 // Bank Logo Imports
-import hdfcLogo from '../../home/components/banks/hdfc_bank.png';
-import sbiLogo from '../../home/components/banks/sbi_card.png';
-import iciciLogo from '../../home/components/banks/icici_bank.png';
-import axisLogo from '../../home/components/banks/axis_bank.png';
-import indusindLogo from '../../home/components/banks/inducind.png';
-import idfcLogo from '../../home/components/banks/idfc_first_bank.png';
-import federalLogo from '../../home/components/banks/federal_bank.png';
-import bobLogo from '../../home/components/banks/bank_of_baroda.png';
-import yesLogo from '../../home/components/banks/yes_bank.png';
-import kotakLogo from '../../home/components/banks/kotak_bank.png';
-import dcbLogo from '../../home/components/banks/dcb_bank.png';
-import rblLogo from '../../home/components/banks/rbl_bank.png';
-import equitasLogo from '../../home/components/banks/equitas.png';
-import sbmLogo from '../../home/components/banks/sbm_bank.png';
+import hdfcLogo from '../../home/components/banks/hdfc_bank.webp';
+import sbiLogo from '../../home/components/banks/sbi_card.webp';
+import iciciLogo from '../../home/components/banks/icici_bank.webp';
+import axisLogo from '../../home/components/banks/axis_bank.webp';
+import indusindLogo from '../../home/components/banks/inducind.webp';
+import idfcLogo from '../../home/components/banks/idfc_first_bank.webp';
+import federalLogo from '../../home/components/banks/federal_bank.webp';
+import bobLogo from '../../home/components/banks/bank_of_baroda.webp';
+import yesLogo from '../../home/components/banks/yes_bank.webp';
+import kotakLogo from '../../home/components/banks/kotak_bank.webp';
+import dcbLogo from '../../home/components/banks/dcb_bank.webp';
+import rblLogo from '../../home/components/banks/rbl_bank.webp';
+import equitasLogo from '../../home/components/banks/equitas.webp';
+import sbmLogo from '../../home/components/banks/sbm_bank.webp';
 
 const toSlug = (text) => text ? text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : '';
 
