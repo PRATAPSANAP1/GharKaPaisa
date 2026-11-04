@@ -1,0 +1,30 @@
+# GharKaPaisa - Financial Services Platform
+# Domain: gharkapaisa.in
+
+User-agent: *
+Allow: /
+
+# Disallow authenticated/private areas
+Disallow: /login
+Disallow: /register
+Disallow: /admin-login
+Disallow: /partner/
+Disallow: /employee/
+Disallow: /hr/
+Disallow: /admin/
+Disallow: /super-admin/
+Disallow: /superadmin/
+Disallow: /messenger
+Disallow: /verify-email
+Disallow: /reset-password
+Disallow: /physical-application/
+Disallow: /apply/:token
+Disallow: /customer/upload/
+Disallow: /customer-upload/
+Disallow: /customer/application/
+
+# Disallow temporary redirects
+Disallow: /a/
+
+# Sitemap
+Sitemap: https://gharkapaisa.in/sitemap.xml
