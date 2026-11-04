@@ -22,6 +22,42 @@ const BANK_NAMES = {
 };
 
 const SEO_CONFIG = {
+  "/guides": {
+    title: "Financial Guides & Articles | GharKaPaisa",
+    description:
+      "Read expert guides and articles on credit cards, personal loans, CIBIL scores, and financial planning in India.",
+    index: true,
+  },
+  "/guides/best-lifetime-free-credit-cards-india": {
+    title: "Lifetime Free Credit Cards in India | GharKaPaisa",
+    description:
+      "Discover lifetime-free credit card options, compare benefits and understand eligibility requirements.",
+    index: true,
+  },
+  "/guides/how-to-choose-first-credit-card": {
+    title: "How to Choose Your First Credit Card in India | GharKaPaisa",
+    description:
+      "Learn how to choose your first credit card in India. Step-by-step guide on fees, reward types, CIBIL score requirements, and smart application tips.",
+    index: true,
+  },
+  "/guides/credit-card-eligibility-criteria-india": {
+    title: "Credit Card Eligibility Criteria in India | GharKaPaisa",
+    description:
+      "Understand credit card eligibility requirements in India, including minimum salary, CIBIL score thresholds, age limits, and mandatory KYC documents.",
+    index: true,
+  },
+  "/guides/what-is-credit-score-how-it-works": {
+    title: "What Is a Credit Score and How Does It Work? | GharKaPaisa",
+    description:
+      "Learn what a credit score is, how CIBIL scores are calculated in India, what factors impact your score, and proven ways to improve it.",
+    index: true,
+  },
+  "/guides/personal-loan-eligibility-documents-required": {
+    title: "Personal Loans in India – Explore Loan Offers | GharKaPaisa",
+    description:
+      "Explore personal loan options, eligibility criteria, interest rates and application information.",
+    index: true,
+  },
   "/": {
     title: "GharKaPaisa – Apply for Best Credit Cards, Personal Loans & Insurance in India",
     description:
@@ -29,15 +65,15 @@ const SEO_CONFIG = {
     index: true,
   },
   "/credit-cards": {
-    title: "Best Credit Cards in India 2026 – Compare & Apply Online | GharKaPaisa",
+    title: "Best Credit Cards in India – Compare Offers | GharKaPaisa",
     description:
-      "Compare leading credit cards in India from HDFC, SBI, ICICI, Axis, Kotak & more. Discover lifetime-free, cashback, rewards, fuel, and travel cards at GharKaPaisa.",
+      "Compare credit cards, annual fees, rewards, benefits and eligibility. Explore available credit card offers with GharKaPaisa.",
     index: true,
   },
   "/credit-cards/lifetime-free-credit-cards-ltf": {
-    title: "Lifetime Free Credit Cards in India (Zero Annual Fee) | GharKaPaisa",
+    title: "Lifetime Free Credit Cards in India | GharKaPaisa",
     description:
-      "Discover the best lifetime free credit cards in India with zero joining fee and zero annual charges. Instant online application and high approval chances at GharKaPaisa.",
+      "Discover lifetime-free credit card options, compare benefits and understand eligibility requirements.",
     index: true,
   },
   "/attractive-cards-loans": {
@@ -47,21 +83,21 @@ const SEO_CONFIG = {
     index: true,
   },
   "/loans": {
-    title: "Instant Personal Loans, Home & Business Loans in India | GharKaPaisa",
+    title: "Personal Loans in India – Explore Loan Offers | GharKaPaisa",
     description:
-      "Apply for instant personal loans, low interest home loans, and business financing online at GharKaPaisa. Minimal documentation, flexible tenure, and rapid disbursal.",
+      "Explore personal loan options, eligibility criteria, interest rates and application information.",
     index: true,
   },
   "/insurance": {
-    title: "Compare & Buy Health, Life & General Insurance Online | GharKaPaisa",
+    title: "Compare Insurance Plans in India | GharKaPaisa",
     description:
-      "Explore comprehensive health, life, and vehicle insurance plans from trusted Indian insurers. Affordable premiums and high claim settlement at GharKaPaisa.",
+      "Explore health, life and general insurance plans in India. Compare coverage, premiums and benefits with GharKaPaisa.",
     index: true,
   },
   "/services": {
-    title: "Financial Services, Bill Payments & Business Solutions | GharKaPaisa",
+    title: "Financial Services in India | GharKaPaisa",
     description:
-      "All-in-one financial hub for mobile recharge, electricity bill payment, FASTag, loan repayment, GST, ITR, and company registration with GharKaPaisa.",
+      "Explore digital financial services, utility bill payments, recharge, and business compliance solutions with GharKaPaisa.",
     index: true,
   },
   "/money-transfer": {

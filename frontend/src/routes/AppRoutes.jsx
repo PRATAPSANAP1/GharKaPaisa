@@ -16,6 +16,8 @@ import EmployeeLayout from '../layouts/EmployeeLayout';
 // Public Pages
 const Home = lazy(() => import('../modules/home/Home'));
 const Contact = lazy(() => import('../modules/home/Contact'));
+const GuidesPage = lazy(() => import('../modules/guides/GuidesPage'));
+const GuideDetail = lazy(() => import('../modules/guides/GuideDetail'));
 const Careers = lazy(() => import('../modules/home/Careers'));
 const InterviewRegistration = lazy(() => import('../modules/home/InterviewRegistration'));
 const ApplicationStatus = lazy(() => import('../modules/home/ApplicationStatus'));
@@ -183,6 +185,8 @@ const AppRoutes = () => {
         <Route path="/services" element={<Home />} />
         <Route path="/category/:categoryKey" element={<Home />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/guides" element={<GuidesPage />} />
+        <Route path="/guides/:slug" element={<GuideDetail />} />
         <Route path="/login" element={<PartnerLogin />} />
         <Route path="/register" element={<PartnerRegister />} />
         <Route path="/admin-login" element={<AdminLogin />} />

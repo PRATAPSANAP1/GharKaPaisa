@@ -187,4 +187,41 @@
   <!-- Note: Dynamic product pages (credit-cards/:bankSlug, products/:slug, etc.) are not included -->
   <!-- because they are generated dynamically. Consider creating a dynamic sitemap -->
   <!-- or using Google Search Console API to submit individual product URLs -->
+  <!-- Financial Knowledge Hub & Guides -->
+  <url>
+    <loc>https://gharkapaisa.in/guides</loc>
+    <lastmod>2026-11-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://gharkapaisa.in/guides/best-lifetime-free-credit-cards-india</loc>
+    <lastmod>2026-11-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://gharkapaisa.in/guides/how-to-choose-first-credit-card</loc>
+    <lastmod>2026-11-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://gharkapaisa.in/guides/credit-card-eligibility-criteria-india</loc>
+    <lastmod>2026-11-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://gharkapaisa.in/guides/what-is-credit-score-how-it-works</loc>
+    <lastmod>2026-11-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://gharkapaisa.in/guides/personal-loan-eligibility-documents-required</loc>
+    <lastmod>2026-11-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
 </urlset>
