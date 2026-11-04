@@ -6,25 +6,29 @@
   <link rel="icon" type="image/png" href="/favicon.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <!-- SEO Meta Tags -->
-  <title>GharKaPaisa - Loans, Credit Cards, Insurance & Financial Services in India</title>
-  <meta name="description" content="Apply for personal loans, credit cards, and insurance in India with GharKaPaisa. Get instant approval, low interest rates, and expert financial guidance." />
-  <meta name="keywords" content="personal loans, credit cards, insurance, financial services, India, loan application, credit card application" />
+  <!-- Primary SEO Meta Tags -->
+  <title>GharKaPaisa - Best Credit Cards, Personal Loans & Insurance in India</title>
+  <meta name="title" content="GharKaPaisa - Best Credit Cards, Personal Loans & Insurance in India" />
+  <meta name="description" content="Apply for top credit cards, lifetime-free credit cards, instant personal loans, low interest home loans, and insurance online at GharKaPaisa (gharkapaisa.in). Compare offers and get fast approval." />
+  <meta name="keywords" content="GharKaPaisa, Ghar Ka Paisa, gharkapaisa.in, credit cards India, apply credit card online, best credit cards India, lifetime free credit card, instant personal loan, low interest loan, home loan, business loan, health insurance, life insurance, smart EMI, financial services India" />
   <meta name="author" content="GharKaPaisa" />
-  <meta name="robots" content="index, follow" />
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+  <meta name="googlebot" content="index, follow" />
+  <meta name="theme-color" content="#0F766E" />
   
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="GharKaPaisa" />
   <meta property="og:url" content="https://gharkapaisa.in/" />
-  <meta property="og:title" content="GharKaPaisa - Loans, Credit Cards, Insurance & Financial Services" />
-  <meta property="og:description" content="Apply for personal loans, credit cards, and insurance in India with GharKaPaisa. Get instant approval, low interest rates, and expert financial guidance." />
+  <meta property="og:title" content="GharKaPaisa - Best Credit Cards, Personal Loans & Insurance in India" />
+  <meta property="og:description" content="Apply for top credit cards, lifetime-free credit cards, instant personal loans, low interest home loans, and insurance online at GharKaPaisa. Compare offers and get fast approval." />
   <meta property="og:image" content="https://gharkapaisa.in/logo.png" />
   
   <!-- Twitter -->
   <meta property="twitter:card" content="summary_large_image" />
   <meta property="twitter:url" content="https://gharkapaisa.in/" />
-  <meta property="twitter:title" content="GharKaPaisa - Loans, Credit Cards, Insurance & Financial Services" />
-  <meta property="twitter:description" content="Apply for personal loans, credit cards, and insurance in India with GharKaPaisa. Get instant approval, low interest rates, and expert financial guidance." />
+  <meta property="twitter:title" content="GharKaPaisa - Best Credit Cards, Personal Loans & Insurance in India" />
+  <meta property="twitter:description" content="Apply for top credit cards, lifetime-free credit cards, instant personal loans, low interest home loans, and insurance online at GharKaPaisa. Compare offers and get fast approval." />
   <meta property="twitter:image" content="https://gharkapaisa.in/logo.png" />
   
   <!-- Canonical URL -->
@@ -32,6 +36,71 @@
   
   <!-- Sitemap -->
   <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+
+  <!-- Structured Data: Organization & FinancialService Schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://gharkapaisa.in/#organization",
+        "name": "GharKaPaisa",
+        "alternateName": ["Ghar Ka Paisa", "GKP", "gharkapaisa.in"],
+        "url": "https://gharkapaisa.in/",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://gharkapaisa.in/logo.png"
+        },
+        "sameAs": [
+          "https://www.facebook.com/gharkapaisa",
+          "https://www.instagram.com/gharkapaisa",
+          "https://twitter.com/gharkapaisa",
+          "https://www.linkedin.com/company/gharkapaisa"
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://gharkapaisa.in/#website",
+        "url": "https://gharkapaisa.in/",
+        "name": "GharKaPaisa",
+        "publisher": {
+          "@id": "https://gharkapaisa.in/#organization"
+        },
+        "inLanguage": "en-US",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://gharkapaisa.in/credit-cards?search={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "FinancialService",
+        "@id": "https://gharkapaisa.in/#financialservice",
+        "name": "GharKaPaisa Financial Services",
+        "image": "https://gharkapaisa.in/logo.png",
+        "url": "https://gharkapaisa.in/",
+        "description": "Compare and apply for top credit cards, lifetime-free cards, instant personal loans, home loans, business loans, and insurance plans across leading Indian banks.",
+        "areaServed": {
+          "@type": "Country",
+          "name": "India"
+        },
+        "currenciesAccepted": "INR",
+        "paymentAccepted": "Credit Card, Debit Card, Net Banking, UPI",
+        "serviceType": [
+          "Credit Cards",
+          "Lifetime Free Credit Cards",
+          "Personal Loans",
+          "Home Loans",
+          "Business Loans",
+          "Health Insurance",
+          "Life Insurance",
+          "Digital Payments"
+        ]
+      }
+    ]
+  }
+  </script>
   
   <script>
     const origWarn = console.warn;
@@ -47,7 +116,24 @@
 
 <body>
  
-  <div id="root"></div>
+  <div id="root">
+    <!-- Crawlable semantic fallback for search engines before React hydration -->
+    <noscript>
+      <div style="padding: 24px; font-family: sans-serif; max-width: 900px; margin: 0 auto; line-height: 1.6;">
+        <h1>GharKaPaisa – Credit Cards, Loans & Insurance in India</h1>
+        <p>GharKaPaisa (gharkapaisa.in) is India's leading financial product discovery platform. Compare top bank credit cards, lifetime-free credit cards, instant personal loans, low-interest home loans, and insurance policies with fast approval.</p>
+        <h2>Explore Financial Products:</h2>
+        <ul>
+          <li><a href="/credit-cards">Compare & Apply for Credit Cards in India</a></li>
+          <li><a href="/credit-cards/lifetime-free-credit-cards-ltf">Lifetime Free Credit Cards (Zero Annual Fee)</a></li>
+          <li><a href="/loans">Instant Personal Loans, Home & Business Loans</a></li>
+          <li><a href="/insurance">Health, Life & General Insurance Plans</a></li>
+          <li><a href="/services">Financial Services, Utility & Bill Payments</a></li>
+          <li><a href="/contact">Contact GharKaPaisa Customer Care</a></li>
+        </ul>
+      </div>
+    </noscript>
+  </div>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 
