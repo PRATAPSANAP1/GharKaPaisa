@@ -1116,6 +1116,12 @@ export default function PartnerApplications() {
             return timeB - timeA;
           });
 
+          const totalItems = sortedApps.length;
+          const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+          const validCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+          const startIdx = (validCurrentPage - 1) * pageSize;
+          const paginatedApps = sortedApps.slice(startIdx, startIdx + pageSize);
+
           return (
             <div style={{
               borderRadius: 18, background: cardBg, border: `1px solid ${border}`,
@@ -1355,14 +1361,14 @@ export default function PartnerApplications() {
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <button
-                      disabled={currentPage <= 1}
+                      disabled={validCurrentPage <= 1}
                       onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                       style={{
                         padding: '5px 12px', borderRadius: 6,
                         border: `1px solid ${border}`,
                         background: isDark ? '#222' : '#fff',
-                        color: currentPage <= 1 ? (isDark ? '#555' : '#ccc') : textPrimary,
-                        cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+                        color: validCurrentPage <= 1 ? (isDark ? '#555' : '#ccc') : textPrimary,
+                        cursor: validCurrentPage <= 1 ? 'not-allowed' : 'pointer',
                         fontWeight: 700
                       }}
                     >
@@ -1370,18 +1376,18 @@ export default function PartnerApplications() {
                     </button>
 
                     <span style={{ fontWeight: 800, color: textPrimary, padding: '0 6px' }}>
-                      Page {currentPage} of {totalPages}
+                      Page {validCurrentPage} of {totalPages}
                     </span>
 
                     <button
-                      disabled={currentPage >= totalPages}
+                      disabled={validCurrentPage >= totalPages}
                       onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                       style={{
                         padding: '5px 12px', borderRadius: 6,
                         border: `1px solid ${border}`,
                         background: isDark ? '#222' : '#fff',
-                        color: currentPage >= totalPages ? (isDark ? '#555' : '#ccc') : textPrimary,
-                        cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+                        color: validCurrentPage >= totalPages ? (isDark ? '#555' : '#ccc') : textPrimary,
+                        cursor: validCurrentPage >= totalPages ? 'not-allowed' : 'pointer',
                         fontWeight: 700
                       }}
                     >
