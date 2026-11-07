@@ -91,7 +91,7 @@ export default function EmployeeDashboardScreen({ navigation }) {
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.metricCard, { backgroundColor: '#F0F9FF', borderColor: '#0284C7' }]}
+            style={[styles.metricCard, { backgroundColor: '#131F38', borderColor: '#2563EB' }]}
             onPress={() => navigation.navigate('EmployeeAttendance')}
           >
             <Text style={{ fontSize: 24, marginBottom: 4 }}>📸</Text>
@@ -131,34 +131,34 @@ export default function EmployeeDashboardScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F8FAFC' },
+  safe: { flex: 1, backgroundColor: '#0B1120' },
   scroll: { padding: 20 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   backBtn: { paddingVertical: 6 },
-  backText: { fontSize: 14, fontWeight: '700', color: '#0284C7' },
+  backText: { fontSize: 14, fontWeight: '700', color: '#2563EB' },
   employeeBadge: { backgroundColor: '#E0F2FE', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   employeeBadgeText: { fontSize: 11, fontWeight: '800', color: '#0369A1' },
-  title: { fontSize: 24, fontWeight: '800', color: '#0F172A' },
-  subtitle: { fontSize: 13, color: '#64748B', marginBottom: 16 },
-  designationCard: { backgroundColor: '#0284C7', padding: 18, borderRadius: 16, marginBottom: 16 },
+  title: { fontSize: 24, fontWeight: '800', color: '#F1F5F9' },
+  subtitle: { fontSize: 13, color: '#94A3B8', marginBottom: 16 },
+  designationCard: { backgroundColor: '#2563EB', padding: 18, borderRadius: 16, marginBottom: 16 },
   designationLabel: { color: '#E0F2FE', fontSize: 12, fontWeight: '600' },
   designationValue: { color: '#FFFFFF', fontSize: 18, fontWeight: '800', marginTop: 4 },
   processType: { color: '#BAE6FD', fontSize: 12, marginTop: 6, fontWeight: '600' },
   metricsGrid: { flexDirection: 'row', gap: 12, marginBottom: 16 },
-  metricCard: { flex: 1, backgroundColor: '#FFFFFF', padding: 16, borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center' },
-  metricVal: { fontSize: 24, fontWeight: '800', color: '#0F172A' },
-  metricTitle: { fontSize: 12, color: '#64748B', marginTop: 4, fontWeight: '600' },
-  incentiveCard: { backgroundColor: '#FFFFFF', padding: 18, borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 16 },
-  cardHeader: { fontSize: 16, fontWeight: '700', color: '#0F172A', marginBottom: 12 },
+  metricCard: { flex: 1, backgroundColor: '#131F38', padding: 16, borderRadius: 14, borderWidth: 1, borderColor: '#243352', alignItems: 'center' },
+  metricVal: { fontSize: 24, fontWeight: '800', color: '#F1F5F9' },
+  metricTitle: { fontSize: 12, color: '#94A3B8', marginTop: 4, fontWeight: '600' },
+  incentiveCard: { backgroundColor: '#131F38', padding: 18, borderRadius: 16, borderWidth: 1, borderColor: '#243352', marginBottom: 16 },
+  cardHeader: { fontSize: 16, fontWeight: '700', color: '#F1F5F9', marginBottom: 12 },
   targetRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   targetText: { fontSize: 13, color: '#475569', fontWeight: '600' },
   achievedText: { fontSize: 13, color: '#16A34A', fontWeight: '800' },
-  progressTrack: { height: 10, backgroundColor: '#E2E8F0', borderRadius: 5, overflow: 'hidden', marginBottom: 6 },
+  progressTrack: { height: 10, backgroundColor: '#1E2B4A', borderRadius: 5, overflow: 'hidden', marginBottom: 6 },
   progressFill: { height: '100%', backgroundColor: '#16A34A', borderRadius: 5 },
   progressSubtext: { fontSize: 11, color: '#94A3B8' },
-  historyCard: { backgroundColor: '#FFFFFF', padding: 18, borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0' },
+  historyCard: { backgroundColor: '#131F38', padding: 18, borderRadius: 16, borderWidth: 1, borderColor: '#243352' },
   ledgerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  ledgerMonth: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
-  ledgerSub: { fontSize: 12, color: '#64748B' },
-  ledgerAmount: { fontSize: 15, fontWeight: '800', color: '#0284C7' }
+  ledgerMonth: { fontSize: 14, fontWeight: '700', color: '#F1F5F9' },
+  ledgerSub: { fontSize: 12, color: '#94A3B8' },
+  ledgerAmount: { fontSize: 15, fontWeight: '800', color: '#2563EB' }
 });

@@ -42,8 +42,8 @@ function MainNavigator() {
     <>
       <NavigationContainer>
         <StatusBar
-          barStyle="dark-content"
-          backgroundColor="#ffffff"
+          barStyle="light-content"
+          backgroundColor="#080E1A"
           translucent={false}
         />
         <Stack.Navigator
@@ -51,7 +51,7 @@ function MainNavigator() {
           screenOptions={{
             headerShown: false,
             animation: Platform.OS === 'ios' ? 'default' : 'slide_from_right',
-            contentStyle: { backgroundColor: '#F8FAFC' }
+            contentStyle: { backgroundColor: '#080E1A' }
           }}
         >
           <Stack.Screen name="Home" component={HomeScreen} />

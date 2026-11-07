@@ -289,7 +289,7 @@ export default function LoginScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
+      <StatusBar backgroundColor="#0B1120" barStyle="light-content" />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
@@ -445,7 +445,7 @@ export default function LoginScreen({ route, navigation }) {
             onPress={() => navigation.navigate('Register')}
           >
             <Text style={styles.registerLinkText}>
-              New to platform? <Text style={{ color: '#0d47a1', fontWeight: 'bold' }}>Create Account</Text>
+              New to platform? <Text style={{ color: '#60A5FA', fontWeight: 'bold' }}>Create Account</Text>
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -478,10 +478,10 @@ export default function LoginScreen({ route, navigation }) {
                 style={[styles.modalBtn, { backgroundColor: '#E2E8F0' }]}
                 onPress={() => setForgotModalVisible(false)}
               >
-                <Text style={{ color: '#334155', fontWeight: '700' }}>Cancel</Text>
+                <Text style={{ color: '#CBD5E1', fontWeight: '700' }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: '#0d47a1', flex: 1 }]}
+                style={[styles.modalBtn, { backgroundColor: '#2563EB', flex: 1 }]}
                 onPress={handleForgotPasswordSubmit}
                 disabled={forgotLoading}
               >
@@ -500,35 +500,35 @@ export default function LoginScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#ffffff', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
-  container: { flex: 1, backgroundColor: '#fff' },
+  safe: { flex: 1, backgroundColor: '#0B1120', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
+  container: { flex: 1, backgroundColor: '#0B1120' },
   scroll: { padding: 24, justifyContent: 'center', flexGrow: 1 },
   backBtn: { alignSelf: 'flex-start', marginBottom: 20 },
-  backText: { color: '#0d47a1', fontSize: 14, fontWeight: '700' },
-  title: { fontSize: 26, fontWeight: '800', color: '#0F172A', marginBottom: 4 },
-  subtitle: { fontSize: 13, color: '#64748B', marginBottom: 20 },
+  backText: { color: '#60A5FA', fontSize: 14, fontWeight: '700' },
+  title: { fontSize: 28, fontWeight: '900', color: '#F1F5F9', marginBottom: 4, letterSpacing: -0.5 },
+  subtitle: { fontSize: 13, color: '#94A3B8', marginBottom: 24 },
   roleContainer: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  rolePill: { flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: '#F1F5F9', alignItems: 'center' },
-  rolePillActive: { backgroundColor: '#0d47a1' },
-  rolePillText: { fontSize: 13, fontWeight: '700', color: '#64748B' },
+  rolePill: { flex: 1, paddingVertical: 10, borderRadius: 12, backgroundColor: '#131F38', borderWidth: 1, borderColor: '#243352', alignItems: 'center' },
+  rolePillActive: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
+  rolePillText: { fontSize: 13, fontWeight: '700', color: '#94A3B8' },
   rolePillTextActive: { color: '#FFFFFF' },
-  tabContainer: { flexDirection: 'row', backgroundColor: '#F1F5F9', borderRadius: 10, padding: 4, marginBottom: 20 },
-  tabBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
-  tabBtnActive: { backgroundColor: '#ffffff', elevation: 2, boxShadow: '0 2px 4px rgba(0,0,0,0.05)' },
-  tabBtnText: { fontSize: 13, fontWeight: '600', color: '#64748B' },
-  tabBtnTextActive: { color: '#0d47a1', fontWeight: '800' },
+  tabContainer: { flexDirection: 'row', backgroundColor: '#131F38', borderRadius: 12, padding: 4, marginBottom: 20, borderWidth: 1, borderColor: '#243352' },
+  tabBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center' },
+  tabBtnActive: { backgroundColor: '#1A2745' },
+  tabBtnText: { fontSize: 13, fontWeight: '600', color: '#94A3B8' },
+  tabBtnTextActive: { color: '#60A5FA', fontWeight: '800' },
   inputContainer: { width: '100%', marginBottom: 18 },
-  label: { fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 },
-  forgotText: { fontSize: 12, fontWeight: '700', color: '#0d47a1' },
+  label: { fontSize: 12, fontWeight: '700', color: '#CBD5E1', marginBottom: 6, letterSpacing: 0.3 },
+  forgotText: { fontSize: 12, fontWeight: '700', color: '#60A5FA' },
   input: {
     width: '100%',
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    padding: 13,
+    borderColor: '#243352',
+    borderRadius: 12,
+    padding: 14,
     fontSize: 14,
-    color: '#0F172A',
-    backgroundColor: '#F8FAFC',
+    color: '#F1F5F9',
+    backgroundColor: '#1E2B4A',
   },
   passwordWrapper: { flexDirection: 'row', alignItems: 'center' },
   eyeBtn: { position: 'absolute', right: 12, padding: 4 },
@@ -542,8 +542,8 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
   },
   sendBtn: {
-    backgroundColor: '#0d47a1',
-    borderRadius: 10,
+    backgroundColor: '#2563EB',
+    borderRadius: 12,
     paddingVertical: 13,
     width: 100,
     alignItems: 'center',
@@ -551,23 +551,27 @@ const styles = StyleSheet.create({
   },
   sendBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   loginBtn: {
-    backgroundColor: '#0d47a1',
+    backgroundColor: '#2563EB',
     width: '100%',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: 'center',
     marginTop: 10,
-    elevation: 3,
+    elevation: 4,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
   },
-  loginBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
-  disabledBtn: { backgroundColor: '#94A3B8' },
-  infoText: { fontSize: 12, color: '#059669', marginTop: 8, fontWeight: '600' },
-  devOtpText: { fontSize: 12, color: '#D97706', marginTop: 8, fontWeight: '600' },
-  registerLink: { marginTop: 20, alignItems: 'center' },
-  registerLinkText: { fontSize: 13, color: '#64748B' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
-  modalContent: { backgroundColor: '#fff', borderRadius: 16, padding: 24 },
-  modalTitle: { fontSize: 20, fontWeight: '800', color: '#0F172A', marginBottom: 6 },
-  modalSubtitle: { fontSize: 13, color: '#64748B', marginBottom: 16 },
-  modalBtn: { paddingVertical: 12, paddingHorizontal: 16, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }
+  loginBtnText: { color: '#fff', fontSize: 16, fontWeight: '800', letterSpacing: 0.3 },
+  disabledBtn: { backgroundColor: '#33456E' },
+  infoText: { fontSize: 12, color: '#10B981', marginTop: 8, fontWeight: '600' },
+  devOtpText: { fontSize: 12, color: '#F59E0B', marginTop: 8, fontWeight: '600' },
+  registerLink: { marginTop: 24, alignItems: 'center' },
+  registerLinkText: { fontSize: 13, color: '#94A3B8' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', padding: 24 },
+  modalContent: { backgroundColor: '#1A2745', borderRadius: 18, padding: 24, borderWidth: 1, borderColor: '#33456E' },
+  modalTitle: { fontSize: 20, fontWeight: '800', color: '#F1F5F9', marginBottom: 6 },
+  modalSubtitle: { fontSize: 13, color: '#94A3B8', marginBottom: 16 },
+  modalBtn: { paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }
 });

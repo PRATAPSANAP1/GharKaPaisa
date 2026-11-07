@@ -1,19 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   Image, SafeAreaView, StatusBar, ScrollView,
   Dimensions, Modal, FlatList, Linking, Platform,
-  TextInput, Alert
+  TextInput, Alert, Animated, Easing
 } from 'react-native';
+import { colors } from '../theme/colors';
+import { spacing } from '../theme/spacing';
+import { shadows } from '../theme/shadows';
+import { Gradient } from '../components/Gradient';
 
 const { width } = Dimensions.get('window');
 
 // Data Lists matching Web & Mobile Platform
 const banners = [
-  { id: '1', title: "Lifetime Free Credit Cards", desc: "No joining fee. No annual charges.", color: "#1a237e", badge: "POPULAR" },
-  { id: '2', title: "Personal & Business Loans", desc: "Low interest rates starting from 10.5% p.a.", color: "#004d40", badge: "INSTANT DISBURSAL" },
-  { id: '3', title: "Comprehensive Insurance", desc: "Protect your health, life, and motor assets.", color: "#3e2723", badge: "TAX SAVER" },
-  { id: '4', title: "Smart EMI Offers", desc: "Convert big purchases to low-cost EMIs.", color: "#4a148c", badge: "ZERO DOWN PAYMENT" }
+  { id: '1', title: "Lifetime Free Credit Cards", desc: "No joining fee. No annual charges.", color: colors.gradientPrimary, badge: "POPULAR", icon: "💳" },
+  { id: '2', title: "Personal & Business Loans", desc: "Low interest rates starting from 10.5% p.a.", color: colors.gradientSuccess, badge: "INSTANT DISBURSAL", icon: "🪙" },
+  { id: '3', title: "Comprehensive Insurance", desc: "Protect your health, life, and motor assets.", color: colors.gradientGold, badge: "TAX SAVER", icon: "🛡️" },
+  { id: '4', title: "Smart EMI Offers", desc: "Convert big purchases to low-cost EMIs.", color: [colors.purple, '#6D28D9'], badge: "ZERO DOWN PAYMENT", icon: "⚡" }
 ];
 
 const moneyTransferData = [
@@ -75,241 +79,240 @@ const servicesData = [
 ];
 
 const ltfCards = [
-  { 
-    id: '1',
-    name: "HDFC Pixel Go Credit Card", 
-    desc: "Digital-first customizable credit card with instant app approval",
-    link: "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb"
-  },
-  { 
-    id: '2',
-    name: "HDFC Pixel Play Credit Card", 
-    desc: "Custom rewards on shopping, dining & entertainment apps",
-    link: "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb"
-  },
-  { 
-    id: '3',
-    name: "Axis Bank Neo Credit Card", 
-    desc: "Zomato 40% off, BookMyShow and utility discounts",
-    link: "https://axisbank.com"
-  },
-  { 
-    id: '4',
-    name: "Axis Bank MY Zone Credit Card", 
-    desc: "Buy 1 Get 1 Free on movie tickets & complimentary airport lounges",
-    link: "https://axisbank.com"
-  },
-  {
-    id: '5',
-    name: "SBI Cashback Credit Card",
-    desc: "5% cashback on online shopping without merchant restrictions",
-    link: "https://sbicard.com"
-  },
-  {
-    id: '6',
-    name: "ICICI Platinum Chip Credit Card",
-    desc: "Zero annual fee, contactless payment and dining privileges",
-    link: "https://icicibank.com"
-  }
+  { id: '1', name: "HDFC Pixel Go Credit Card", desc: "Digital-first customizable credit card with instant app approval", link: "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb" },
+  { id: '2', name: "HDFC Pixel Play Credit Card", desc: "Custom rewards on shopping, dining & entertainment apps", link: "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb" },
+  { id: '3', name: "Axis Bank Neo Credit Card", desc: "Zomato 40% off, BookMyShow and utility discounts", link: "https://axisbank.com" },
+  { id: '4', name: "Axis Bank MY Zone Credit Card", desc: "Buy 1 Get 1 Free on movie tickets & complimentary airport lounges", link: "https://axisbank.com" },
+  { id: '5', name: "SBI Cashback Credit Card", desc: "5% cashback on online shopping without merchant restrictions", link: "https://sbicard.com" },
+  { id: '6', name: "ICICI Platinum Chip Credit Card", desc: "Zero annual fee, contactless payment and dining privileges", link: "https://icicibank.com" }
 ];
+
+// Premium section header with accent bar
+const SectionHeader = ({ title, action, onAction }) => (
+  <View style={styles.sectionHeaderRow}>
+    <View style={styles.sectionTitleWrap}>
+      <View style={styles.sectionAccent} />
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+    {action ? (
+      <TouchableOpacity onPress={onAction} activeOpacity={0.7}>
+        <Text style={styles.viewAllText}>{action} →</Text>
+      </TouchableOpacity>
+    ) : null}
+  </View>
+);
+
+// Animated circle service tile
+const ServiceTile = ({ item, onPress }) => {
+  const scale = useRef(new Animated.Value(1)).current;
+  const onPressIn = () => Animated.spring(scale, { toValue: 0.92, useNativeDriver: true, speed: 50, bounciness: 4 }).start();
+  const onPressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 50, bounciness: 4 }).start();
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <TouchableOpacity style={styles.circleCard} onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut} activeOpacity={1}>
+        <View style={[styles.circleIconWrap, { borderColor: item.color ? `${item.color}55` : colors.border }]}>
+          <Text style={styles.circleIcon}>{item.icon}</Text>
+        </View>
+        <Text style={styles.circleLabel} numberOfLines={1}>{item.label}</Text>
+        {item.desc ? <Text style={styles.circleDesc} numberOfLines={1}>{item.desc}</Text> : null}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
 
 export default function HomeScreen({ navigation }) {
   const [loansModalVisible, setLoansModalVisible] = useState(false);
   const [loanSearch, setLoanSearch] = useState('');
+  const bannerIndex = useRef(0);
+  const bannerScrollRef = useRef(null);
 
   const visibleLoans = allLoansData.slice(0, 7);
   const filteredLoans = allLoansData.filter((l) =>
     l.label.toLowerCase().includes(loanSearch.toLowerCase())
   );
 
+  // Auto-advance banner carousel
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const next = (bannerIndex.current + 1) % banners.length;
+      bannerIndex.current = next;
+      bannerScrollRef.current?.scrollTo({ x: next * (width - 32), animated: true });
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
+
   const openExternalLink = (url) => {
     if (!url) return;
     Linking.canOpenURL(url)
       .then((supported) => {
-        if (supported) {
-          Linking.openURL(url);
-        } else {
-          Alert.alert("Notice", "Cannot open link on this device.");
-        }
+        if (supported) Linking.openURL(url);
+        else Alert.alert("Notice", "Cannot open link on this device.");
       })
       .catch((err) => console.warn("Failed to open link:", err));
   };
 
+  const onBannerScroll = (e) => {
+    const idx = Math.round(e.nativeEvent.contentOffset.x / (width - 32));
+    bannerIndex.current = idx;
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
+      <StatusBar backgroundColor={colors.bg} barStyle="light-content" />
 
-      {/* Cross-Platform Header */}
-      <View style={styles.navbar}>
-        <View style={styles.navLeft}>
-          <Image source={require('../assets/icon.png')} style={styles.logo} />
-          <View style={{ marginLeft: 8 }}>
-            <Text style={styles.navTitle}>GharKaPaisa</Text>
-            <Text style={styles.navSub}>Financial Services Platform</Text>
+      {/* Premium Header */}
+      <Gradient colors={colors.gradientHero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0.6 }} style={styles.headerGrad}>
+        <View style={styles.navbar}>
+          <View style={styles.navLeft}>
+            <Image source={require('../assets/icon.png')} style={styles.logo} />
+            <View>
+              <Text style={styles.navTitle}>GharKaPaisa</Text>
+              <Text style={styles.navSub}>Financial Services Platform</Text>
+            </View>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity style={styles.registerBtn} onPress={() => navigation.navigate('Register')} activeOpacity={0.8}>
+              <Text style={styles.registerBtnText}>Register</Text>
+            </TouchableOpacity>
+            <Gradient colors={colors.gradientPrimary} borderRadius={spacing.radius.full} style={styles.loginBtnGrad}>
+              <TouchableOpacity style={styles.loginBtnInner} onPress={() => navigation.navigate('Login', { role: 'Partner' })} activeOpacity={0.85}>
+                <Text style={styles.loginBtnText}>Log In</Text>
+              </TouchableOpacity>
+            </Gradient>
           </View>
         </View>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TouchableOpacity 
-            style={[styles.loginBtn, { backgroundColor: '#F1F5F9' }]} 
-            onPress={() => navigation.navigate('Register')}
-          >
-            <Text style={[styles.loginBtnText, { color: '#0d47a1' }]}>Register</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.loginBtn} 
-            onPress={() => navigation.navigate('Login', { role: 'Partner' })}
-          >
-            <Text style={styles.loginBtnText}>Log In</Text>
-          </TouchableOpacity>
+
+        {/* Hero strip */}
+        <View style={styles.heroRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.heroTitle}>Your Financial{`\n`}Super App</Text>
+            <Text style={styles.heroSub}>Cards • Loans • Insurance • Payments</Text>
+          </View>
+          <View style={styles.heroBadge}>
+            <Text style={styles.heroBadgeText}>₹0{`\n`}Joining</Text>
+          </View>
         </View>
-      </View>
+      </Gradient>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        
+
         {/* Banner Carousel */}
         <ScrollView
+          ref={bannerScrollRef}
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={onBannerScroll}
+          decelerationRate="fast"
+          snapToInterval={width - 32}
+          snapToAlignment="start"
           style={styles.bannerScroll}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
         >
           {banners.map((b) => (
-            <View key={b.id} style={[styles.bannerCard, { backgroundColor: b.color }]}>
+            <Gradient
+              key={b.id}
+              colors={b.color}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              borderRadius={spacing.radius.xl}
+              style={styles.bannerCard}
+            >
               <View style={styles.bannerBadge}><Text style={styles.bannerBadgeText}>{b.badge}</Text></View>
+              <Text style={styles.bannerIcon}>{b.icon}</Text>
               <Text style={styles.bannerTitle}>{b.title}</Text>
               <Text style={styles.bannerDesc}>{b.desc}</Text>
-            </View>
+            </Gradient>
           ))}
         </ScrollView>
 
         {/* Money Transfer & Payments */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Money Transfer & Payments</Text>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalScroll}
-          >
+          <SectionHeader title="Money Transfer & Payments" />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
             {moneyTransferData.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.circleCard}
-                onPress={() => Alert.alert(item.label, `${item.desc} - Feature active in production portal.`)}
-              >
-                <Text style={styles.circleIcon}>{item.icon}</Text>
-                <Text style={styles.circleLabel}>{item.label}</Text>
-              </TouchableOpacity>
+              <ServiceTile key={item.id} item={item} onPress={() => Alert.alert(item.label, `${item.desc} - Feature active in production portal.`)} />
             ))}
           </ScrollView>
         </View>
 
         {/* Travel & Transit */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Travel & Transit</Text>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalScroll}
-          >
+          <SectionHeader title="Travel & Transit" />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
             {travelTransitData.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.circleCard}
-                onPress={() => Alert.alert(item.label, `Book ${item.label} tickets with extra partner cashbacks.`)}
-              >
-                <Text style={styles.circleIcon}>{item.icon}</Text>
-                <Text style={styles.circleLabel}>{item.label}</Text>
-              </TouchableOpacity>
+              <ServiceTile key={item.id} item={item} onPress={() => Alert.alert(item.label, `Book ${item.label} tickets with extra partner cashbacks.`)} />
             ))}
           </ScrollView>
         </View>
 
         {/* Insurance & Protection */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Insurance & Protection</Text>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalScroll}
-          >
+          <SectionHeader title="Insurance & Protection" onAction="View All" onActionPress={() => navigation.navigate('CategoryProducts', { category: 'insurance' })} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
             {insuranceData.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.circleCard}
-                onPress={() => navigation.navigate('CategoryProducts', { category: 'insurance' })}
-              >
-                <Text style={styles.circleIcon}>{item.icon}</Text>
-                <Text style={styles.circleLabel}>{item.label}</Text>
-              </TouchableOpacity>
+              <ServiceTile key={item.id} item={item} onPress={() => navigation.navigate('CategoryProducts', { category: 'insurance' })} />
             ))}
           </ScrollView>
         </View>
 
         {/* Business & Financial Services */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Business & Financial Services</Text>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalScroll}
-          >
+          <SectionHeader title="Business & Financial Services" onAction="View All" onActionPress={() => navigation.navigate('CategoryProducts', { category: 'services' })} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
             {servicesData.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.circleCard}
-                onPress={() => navigation.navigate('CategoryProducts', { category: 'services' })}
-              >
-                <Text style={styles.circleIcon}>{item.icon}</Text>
-                <Text style={styles.circleLabel}>{item.label}</Text>
-              </TouchableOpacity>
+              <ServiceTile key={item.id} item={item} onPress={() => navigation.navigate('CategoryProducts', { category: 'services' })} />
             ))}
           </ScrollView>
         </View>
 
-        {/* Loans - Grid Layout (Max 8 buttons) */}
+        {/* Loans - Grid Layout */}
         <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Loans & Credit</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('CategoryProducts', { category: 'loans' })}>
-              <Text style={styles.viewAllText}>View All (12) →</Text>
-            </TouchableOpacity>
-          </View>
+          <SectionHeader title="Loans & Credit" action={`View All (${allLoansData.length})`} onAction={() => navigation.navigate('CategoryProducts', { category: 'loans' })} />
           <View style={styles.grid}>
             {visibleLoans.map((item) => (
               <TouchableOpacity
                 key={item.id}
                 style={styles.gridCard}
                 onPress={() => navigation.navigate('CategoryProducts', { category: 'loans' })}
+                activeOpacity={0.8}
               >
-                <Text style={styles.gridIcon}>{item.icon}</Text>
-                <Text style={styles.gridLabel}>{item.label}</Text>
-                <Text style={styles.gridRate}>From {item.rate}</Text>
+                <View style={styles.gridIconWrap}>
+                  <Text style={styles.gridIcon}>{item.icon}</Text>
+                </View>
+                <Text style={styles.gridLabel} numberOfLines={1}>{item.label}</Text>
+                <View style={styles.gridRateBadge}>
+                  <Text style={styles.gridRate}>from {item.rate}</Text>
+                </View>
               </TouchableOpacity>
             ))}
-            
-            {/* 8th Button: See More */}
-            <TouchableOpacity 
-              style={[styles.gridCard, styles.seeMoreCard]}
-              onPress={() => setLoansModalVisible(true)}
-            >
-              <Text style={[styles.gridIcon, { color: '#0d47a1' }]}>➔</Text>
-              <Text style={[styles.gridLabel, { color: '#0d47a1', fontWeight: 'bold' }]}>See More</Text>
+
+            <TouchableOpacity style={[styles.gridCard, styles.seeMoreCard]} onPress={() => setLoansModalVisible(true)} activeOpacity={0.8}>
+              <View style={[styles.gridIconWrap, styles.seeMoreIconWrap]}>
+                <Text style={[styles.gridIcon, { color: colors.primaryLight }]}>➔</Text>
+              </View>
+              <Text style={[styles.gridLabel, { color: colors.primaryLight }]}>See More</Text>
+              <View style={styles.gridRateBadge}>
+                <Text style={[styles.gridRate, { color: colors.primaryLight }]}>+5 more</Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Partner Banks */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Select Partner Bank</Text>
+          <SectionHeader title="Select Partner Bank" action="All Banks" onAction={() => navigation.navigate('CategoryProducts', { category: 'credit_cards' })} />
           <View style={styles.bankGrid}>
             {partnerBanks.map((bank) => (
               <TouchableOpacity
                 key={bank.id}
                 style={styles.bankCard}
                 onPress={() => navigation.navigate('CategoryProducts', { category: 'credit_cards', bankSlug: bank.code })}
+                activeOpacity={0.8}
               >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={styles.bankName}>{bank.name}</Text>
+                  <Text style={styles.bankName} numberOfLines={1}>{bank.name}</Text>
                   <View style={[styles.bankLogoBadge, { backgroundColor: bank.color }]}>
                     <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>{bank.code}</Text>
                   </View>
@@ -322,31 +325,43 @@ export default function HomeScreen({ navigation }) {
 
         {/* Lifetime Free Credit Cards */}
         <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Featured Lifetime Free Credit Cards</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('CategoryProducts', { category: 'ltf' })}>
-              <Text style={styles.viewAllText}>View All →</Text>
-            </TouchableOpacity>
-          </View>
+          <SectionHeader title="Featured Lifetime Free Cards" action="View All" onAction={() => navigation.navigate('CategoryProducts', { category: 'ltf' })} />
           {ltfCards.map((card) => (
-            <TouchableOpacity 
-              key={card.id} 
+            <TouchableOpacity
+              key={card.id}
               style={styles.cardItem}
               onPress={() => openExternalLink(card.link)}
+              activeOpacity={0.85}
             >
               <View style={styles.cardMarker} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardItemTitle}>{card.name}</Text>
                 <Text style={styles.cardItemDesc}>{card.desc}</Text>
               </View>
-              <Text style={styles.applyArrow}>Apply ➔</Text>
+              <View style={styles.applyBtn}>
+                <Text style={styles.applyBtnText}>Apply</Text>
+              </View>
             </TouchableOpacity>
           ))}
         </View>
 
+        {/* CTA Banner */}
+        <Gradient colors={colors.gradientPrimary} borderRadius={spacing.radius.xl} style={styles.ctaBanner}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.ctaTitle}>Become a Partner</Text>
+            <Text style={styles.ctaSub}>Earn up to ₹25,000 per approved application</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.ctaBtn}
+            onPress={() => navigation.navigate('Register')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.ctaBtnText}>Join Now</Text>
+          </TouchableOpacity>
+        </Gradient>
+
         {/* Comprehensive App Footer */}
         <View style={styles.footerContainer}>
-          {/* Brand Header */}
           <View style={styles.footerBrandRow}>
             <Image source={require('../assets/icon.png')} style={styles.footerLogo} />
             <View style={{ flex: 1 }}>
@@ -358,7 +373,6 @@ export default function HomeScreen({ navigation }) {
             Empowering partners & customers with instant personal loans, lifetime free credit cards, comprehensive insurance coverage, and zero-fee payouts.
           </Text>
 
-          {/* Directory Links */}
           <View style={styles.footerGrid}>
             <View style={styles.footerCol}>
               <Text style={styles.footerColTitle}>Financial Products</Text>
@@ -399,15 +413,11 @@ export default function HomeScreen({ navigation }) {
             </View>
           </View>
 
-          {/* Contact Strip */}
           <View style={styles.footerContactBox}>
             <Text style={styles.footerContactText}>📞 Helpline: +91 1800 123 4567  •  ✉️ support@gharkapaisa.in</Text>
           </View>
 
-          {/* Copyright */}
-          <Text style={styles.copyrightText}>
-            © 2026 GharKaPaisa. All rights reserved.
-          </Text>
+          <Text style={styles.copyrightText}>© 2026 GharKaPaisa. All rights reserved.</Text>
         </View>
 
       </ScrollView>
@@ -423,21 +433,21 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>All Loan Options</Text>
-              <TouchableOpacity 
-                style={styles.closeBtn} 
-                onPress={() => setLoansModalVisible(false)}
-              >
-                <Text style={styles.closeText}>Close ✕</Text>
+              <TouchableOpacity style={styles.closeBtn} onPress={() => setLoansModalVisible(false)}>
+                <Text style={styles.closeText}>✕</Text>
               </TouchableOpacity>
             </View>
 
-            <TextInput
-              style={styles.modalSearchInput}
-              placeholder="Search loan category..."
-              placeholderTextColor="#94A3B8"
-              value={loanSearch}
-              onChangeText={setLoanSearch}
-            />
+            <View style={styles.modalSearchWrap}>
+              <Text style={styles.modalSearchIcon}>🔍</Text>
+              <TextInput
+                style={styles.modalSearchInput}
+                placeholder="Search loan category..."
+                placeholderTextColor={colors.textLight}
+                value={loanSearch}
+                onChangeText={setLoanSearch}
+              />
+            </View>
 
             <FlatList
               data={filteredLoans}
@@ -450,6 +460,7 @@ export default function HomeScreen({ navigation }) {
                     setLoansModalVisible(false);
                     navigation.navigate('Login', { role: 'Partner' });
                   }}
+                  activeOpacity={0.8}
                 >
                   <Text style={styles.modalGridIcon}>{item.icon}</Text>
                   <Text style={styles.modalGridLabel} numberOfLines={2}>{item.label}</Text>
@@ -464,27 +475,27 @@ export default function HomeScreen({ navigation }) {
 
       {/* Bottom Quick Action Navigation Bar */}
       <View style={styles.bottomQuickBar}>
-        <TouchableOpacity style={styles.quickBarBtn} onPress={() => navigation.navigate('Home')}>
+        <TouchableOpacity style={styles.quickBarBtn} onPress={() => navigation.navigate('Home')} activeOpacity={0.7}>
           <Text style={styles.quickBarIcon}>🏠</Text>
           <Text style={[styles.quickBarText, styles.quickBarTextActive]}>Home</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.quickBarBtn} onPress={() => setLoansModalVisible(true)}>
+        <TouchableOpacity style={styles.quickBarBtn} onPress={() => setLoansModalVisible(true)} activeOpacity={0.7}>
           <Text style={styles.quickBarIcon}>🪙</Text>
           <Text style={styles.quickBarText}>Loans</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.quickBarBtn} onPress={() => navigation.navigate('CategoryProducts', { category: 'credit_cards' })}>
+        <TouchableOpacity style={styles.quickBarBtn} onPress={() => navigation.navigate('CategoryProducts', { category: 'credit_cards' })} activeOpacity={0.7}>
           <Text style={styles.quickBarIcon}>💳</Text>
           <Text style={styles.quickBarText}>Cards</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.quickBarBtn} onPress={() => navigation.navigate('CategoryProducts', { category: 'insurance' })}>
+        <TouchableOpacity style={styles.quickBarBtn} onPress={() => navigation.navigate('CategoryProducts', { category: 'insurance' })} activeOpacity={0.7}>
           <Text style={styles.quickBarIcon}>🩺</Text>
           <Text style={styles.quickBarText}>Insurance</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.quickBarBtn} onPress={() => navigation.navigate('Login', { role: 'Partner' })}>
+        <TouchableOpacity style={styles.quickBarBtn} onPress={() => navigation.navigate('Login', { role: 'Partner' })} activeOpacity={0.7}>
           <Text style={styles.quickBarIcon}>👤</Text>
           <Text style={styles.quickBarText}>Account</Text>
         </TouchableOpacity>
@@ -496,23 +507,18 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: colors.bg,
+  },
+  headerGrad: {
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 8 : 10,
+    paddingBottom: spacing.lg,
   },
   navbar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    backgroundColor: '#fff',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
   navLeft: {
     flexDirection: 'row',
@@ -521,52 +527,111 @@ const styles = StyleSheet.create({
   logo: {
     width: 38,
     height: 38,
-    borderRadius: 8,
-    resizeMode: 'contain',
+    borderRadius: 12,
+    ...shadows.sm,
   },
   navTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '800',
-    color: '#0d47a1',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
   },
   navSub: {
     fontSize: 10,
-    color: '#64748B',
+    color: 'rgba(255,255,255,0.65)',
     fontWeight: '600',
   },
-  loginBtn: {
-    backgroundColor: '#0d47a1',
+  registerBtn: {
+    paddingHorizontal: spacing.md,
     paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 18,
+    borderRadius: spacing.radius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
-  loginBtnText: {
-    color: '#fff',
-    fontSize: 13,
+  registerBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
     fontWeight: '700',
   },
+  loginBtnGrad: {
+    borderRadius: spacing.radius.full,
+    ...shadows.glow,
+  },
+  loginBtnInner: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loginBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  heroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.md,
+  },
+  heroTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -0.8,
+    lineHeight: 30,
+  },
+  heroSub: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '600',
+    marginTop: 4,
+    letterSpacing: 0.3,
+  },
+  heroBadge: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    borderRadius: spacing.radius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  heroBadgeText: {
+    color: '#FDE68A',
+    fontSize: 13,
+    fontWeight: '900',
+    textAlign: 'center',
+    letterSpacing: -0.3,
+  },
   scroll: {
-    paddingBottom: 40,
+    paddingTop: spacing.md,
+    paddingBottom: 90,
   },
   bannerScroll: {
-    marginVertical: 14,
+    marginBottom: spacing.lg,
   },
   bannerCard: {
     width: width - 32,
-    height: 125,
-    borderRadius: 16,
-    padding: 16,
-    justifyContent: 'center',
-    marginLeft: 16,
+    height: 150,
     marginRight: 16,
+    borderRadius: spacing.radius.xl,
+    padding: spacing.lg,
+    justifyContent: 'flex-end',
+    ...shadows.md,
   },
   bannerBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    position: 'absolute',
+    top: spacing.md,
+    left: spacing.md,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+    paddingHorizontal: spacing.sm + 4,
     paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    marginBottom: 6,
+    borderRadius: spacing.radius.full,
   },
   bannerBadgeText: {
     color: '#FFFFFF',
@@ -574,352 +639,415 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 0.8,
   },
+  bannerIcon: {
+    fontSize: 30,
+    marginBottom: spacing.xs,
+  },
   bannerTitle: {
-    color: '#fff',
-    fontSize: 18,
+    color: '#FFFFFF',
+    fontSize: 19,
     fontWeight: '800',
-    marginBottom: 4,
+    letterSpacing: -0.4,
   },
   bannerDesc: {
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontSize: 12.5,
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 12,
+    marginTop: 3,
+    fontWeight: '500',
   },
   section: {
-    marginTop: 18,
-    paddingHorizontal: 16,
+    marginBottom: spacing.xl,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  sectionTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  sectionAccent: {
+    width: 4,
+    height: 18,
+    borderRadius: 2,
+    backgroundColor: colors.primary,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '800',
-    color: '#1E293B',
-    marginBottom: 10,
+    color: colors.text,
+    letterSpacing: -0.3,
   },
   viewAllText: {
     fontSize: 12,
-    fontWeight: '800',
-    color: '#0d47a1',
+    fontWeight: '700',
+    color: colors.primaryLight,
   },
   horizontalScroll: {
-    paddingRight: 16,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
   },
   circleCard: {
     alignItems: 'center',
+    width: 76,
+  },
+  circleIconWrap: {
+    width: 58,
+    height: 58,
+    borderRadius: 20,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    alignItems: 'center',
     justifyContent: 'center',
-    width: 72,
-    marginRight: 14,
+    ...shadows.sm,
   },
   circleIcon: {
-    fontSize: 24,
-    backgroundColor: '#e3f2fd',
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    textAlign: 'center',
-    lineHeight: 52,
-    marginBottom: 6,
+    fontSize: 26,
   },
   circleLabel: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#475569',
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: spacing.sm,
+    textAlign: 'center',
+  },
+  circleDesc: {
+    fontSize: 9,
+    color: colors.textLight,
+    marginTop: 2,
     textAlign: 'center',
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
   },
   gridCard: {
-    width: (width - 48) / 4,
-    backgroundColor: '#fff',
-    borderWidth: 1.5,
-    borderColor: '#eef1f6',
-    borderRadius: 12,
-    paddingVertical: 10,
+    width: '31.5%',
+    backgroundColor: colors.card,
+    borderRadius: spacing.radius.lg,
+    padding: spacing.sm + 4,
     alignItems: 'center',
-    marginBottom: 10,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
   },
-  seeMoreCard: {
-    backgroundColor: '#e3f2fd',
-    borderColor: '#0d47a1',
-    borderStyle: 'dashed',
+  gridIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.bgSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
   },
   gridIcon: {
-    fontSize: 22,
-    marginBottom: 4,
+    fontSize: 20,
   },
   gridLabel: {
-    fontSize: 9.5,
+    fontSize: 10,
     fontWeight: '700',
-    color: '#333',
+    color: colors.text,
     textAlign: 'center',
-    paddingHorizontal: 2,
   },
-  gridRate: {
-    fontSize: 8.5,
-    color: '#059669',
-    fontWeight: '800',
-    marginTop: 2,
-  },
-  bankGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  bankCard: {
-    width: (width - 40) / 2,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-  },
-  bankName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  bankLogoBadge: {
+  gridRateBadge: {
+    marginTop: spacing.xs,
+    backgroundColor: colors.primarySoft,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: spacing.radius.full,
+  },
+  gridRate: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  seeMoreCard: {
+    borderStyle: 'dashed',
+    borderColor: colors.primary,
+    backgroundColor: 'rgba(37, 99, 235, 0.06)',
+  },
+  seeMoreIconWrap: {
+    backgroundColor: 'rgba(37, 99, 235, 0.15)',
+  },
+  bankGrid: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+  },
+  bankCard: {
+    backgroundColor: colors.card,
+    borderRadius: spacing.radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
+  },
+  bankName: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.text,
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  bankLogoBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: spacing.radius.sm,
   },
   bankRating: {
-    color: '#f57c00',
-    fontSize: 12,
-    marginTop: 6,
+    fontSize: 11,
+    color: colors.gold,
+    marginTop: spacing.xs,
+    letterSpacing: 1,
   },
   cardItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
+    backgroundColor: colors.card,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    padding: spacing.md,
+    borderRadius: spacing.radius.lg,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.border,
+    ...shadows.sm,
   },
   cardMarker: {
-    width: 5,
-    height: 34,
-    borderRadius: 3,
-    backgroundColor: '#0d47a1',
-    marginRight: 12,
+    width: 4,
+    height: 40,
+    borderRadius: 2,
+    backgroundColor: colors.gold,
+    marginRight: spacing.md,
   },
   cardItemTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
-    color: '#0F172A',
+    color: colors.text,
   },
   cardItemDesc: {
-    fontSize: 11.5,
-    color: '#64748B',
+    fontSize: 11,
+    color: colors.textMid,
     marginTop: 2,
   },
-  applyArrow: {
-    color: '#0d47a1',
+  applyBtn: {
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: spacing.radius.full,
+  },
+  applyBtnText: {
+    color: colors.primary,
+    fontSize: 11,
     fontWeight: '800',
-    fontSize: 12,
-    marginLeft: 8,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '82%',
-    paddingBottom: 40,
-  },
-  modalHeader: {
+  ctaBanner: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xl,
+    padding: spacing.lg,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    gap: spacing.md,
+    ...shadows.glow,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#0F172A',
+  ctaTitle: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '900',
+    letterSpacing: -0.3,
   },
-  closeBtn: {
-    padding: 6,
+  ctaSub: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 3,
   },
-  closeText: {
-    color: '#0d47a1',
-    fontWeight: '700',
-    fontSize: 14,
+  ctaBtn: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 10,
+    borderRadius: spacing.radius.full,
   },
-  modalSearchInput: {
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 4,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 10,
-    padding: 10,
-    fontSize: 13,
-    color: '#0F172A',
+  ctaBtnText: {
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: '900',
   },
-  modalList: {
-    padding: 12,
-  },
-  modalGridCard: {
-    width: (width - 48) / 3,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    margin: 4,
-    height: 95,
-    justifyContent: 'center',
-  },
-  modalGridIcon: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  modalGridLabel: {
-    fontSize: 10.5,
-    fontWeight: '700',
-    color: '#0F172A',
-    textAlign: 'center',
-  },
-  modalGridRate: {
-    fontSize: 9,
-    color: '#059669',
-    fontWeight: '800',
-    marginTop: 2,
-  },
-
-  // Footer Styles
   footerContainer: {
-    marginTop: 28,
-    backgroundColor: '#0F172A',
-    padding: 20,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingBottom: 24,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
   footerBrandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    gap: spacing.md,
+    marginBottom: spacing.md,
   },
   footerLogo: {
-    width: 38,
-    height: 38,
-    borderRadius: 8,
-    marginRight: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
   },
   footerBrandTitle: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.text,
   },
   footerBrandTagline: {
-    fontSize: 11,
-    color: '#38BDF8',
-    fontWeight: '700',
+    fontSize: 10,
+    color: colors.textLight,
+    fontWeight: '600',
   },
   footerDesc: {
-    fontSize: 12,
-    color: '#94A3B8',
-    lineHeight: 18,
-    marginBottom: 20,
+    fontSize: 11,
+    color: colors.textMid,
+    lineHeight: 17,
+    marginBottom: spacing.md,
   },
   footerGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-    gap: 12,
+    gap: spacing.lg,
+    marginBottom: spacing.md,
   },
   footerCol: {
     flex: 1,
   },
   footerColTitle: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '800',
-    color: '#F8FAFC',
-    marginBottom: 10,
+    color: colors.text,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
+    marginBottom: spacing.sm,
   },
   footerLink: {
-    fontSize: 12,
-    color: '#CBD5E1',
-    fontWeight: '600',
-    marginBottom: 8,
+    fontSize: 11,
+    color: colors.textMid,
+    paddingVertical: 3,
   },
   footerContactBox: {
-    backgroundColor: '#1E293B',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    marginBottom: 16,
+    backgroundColor: colors.card,
+    borderRadius: spacing.radius.md,
+    padding: spacing.md,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.border,
+    marginBottom: spacing.md,
   },
   footerContactText: {
-    fontSize: 11.5,
-    color: '#38BDF8',
-    fontWeight: '700',
+    fontSize: 11,
+    color: colors.textMid,
     textAlign: 'center',
   },
   copyrightText: {
-    fontSize: 11,
-    color: '#64748B',
+    fontSize: 10,
+    color: colors.textLight,
     textAlign: 'center',
-    fontWeight: '600',
+    paddingBottom: spacing.lg,
   },
-
-  // Sticky Bottom Quick Navigation Bar Styles
-  bottomQuickBar: {
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' },
+  modalContent: {
+    backgroundColor: colors.cardElevated,
+    borderTopLeftRadius: spacing.radius.xl,
+    borderTopRightRadius: spacing.radius.xl,
+    maxHeight: '85%',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalHeader: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 10,
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalTitle: { fontSize: 16, fontWeight: '800', color: colors.text },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.bgSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeText: { color: colors.textMid, fontWeight: '800', fontSize: 14 },
+  modalSearchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.inputBg,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    borderRadius: spacing.radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+  },
+  modalSearchIcon: { fontSize: 14, marginRight: spacing.sm },
+  modalSearchInput: {
+    flex: 1,
+    color: colors.text,
+    paddingVertical: 12,
+    fontSize: 14,
+  },
+  modalList: {
+    padding: spacing.lg,
+  },
+  modalGridCard: {
+    width: '31.5%',
+    backgroundColor: colors.card,
+    borderRadius: spacing.radius.lg,
+    padding: spacing.md,
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalGridIcon: { fontSize: 26, marginBottom: spacing.xs },
+  modalGridLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.text,
+    textAlign: 'center',
+  },
+  modalGridRate: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: colors.primary,
+    marginTop: spacing.xs,
+  },
+  bottomQuickBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    backgroundColor: colors.bgSecondary,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+    paddingBottom: Platform.OS === 'ios' ? 24 : spacing.sm,
+    paddingHorizontal: spacing.sm,
+    ...shadows.lg,
   },
   quickBarBtn: {
     flex: 1,
     alignItems: 'center',
-    justify: 'center',
-    paddingVertical: 2,
+    paddingVertical: spacing.xs,
   },
-  quickBarIcon: {
-    fontSize: 19,
-    marginBottom: 2,
-  },
+  quickBarIcon: { fontSize: 20, marginBottom: 2 },
   quickBarText: {
-    fontSize: 10.5,
+    fontSize: 9,
     fontWeight: '700',
-    color: '#64748B',
+    color: colors.textLight,
   },
   quickBarTextActive: {
-    color: '#0d47a1',
-    fontWeight: '800',
+    color: colors.primaryLight,
   },
 });

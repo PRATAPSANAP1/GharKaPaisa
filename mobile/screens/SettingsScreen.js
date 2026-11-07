@@ -9,7 +9,8 @@ import {
   ScrollView,
   Alert,
   Linking,
-  Platform
+  Platform,
+  Share
 } from 'react-native';
 
 const LANGUAGES = [
@@ -21,7 +22,7 @@ const LANGUAGES = [
 ];
 
 export default function SettingsScreen({ route, navigation }) {
-  const { user } = route.params || {};
+  const { user, token } = route.params || {};
   const [selectedLang, setSelectedLang] = useState('en');
 
   const handleLogout = () => {
@@ -33,121 +34,309 @@ export default function SettingsScreen({ route, navigation }) {
 
   const handleOpenLink = (url, fallbackTitle) => {
     if (url) {
-      Linking.openURL(url).catch(() => Alert.alert(fallbackTitle, 'Link opened in portal.'));
+      Linking.openURL(url).catch(() => Alert.alert(fallbackTitle, 'Available on the production portal.'));
     } else {
       Alert.alert(fallbackTitle, 'Available on the production portal.');
     }
   };
 
+  const partnerCode = user?.partner_code || 'GKP-9021';
+
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar backgroundColor="#0d47a1" barStyle="light-content" />
+      <StatusBar backgroundColor="#080E1A" barStyle="light-content" />
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backBtnText}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Account & Settings</Text>
-        <View style={{ width: 40 }} />
+        <View style={{ width: 45 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-
         {/* User Profile Card */}
         <View style={styles.userCard}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{user?.first_name?.[0] || 'P'}</Text>
           </View>
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, marginLeft: 14 }}>
             <Text style={styles.userName}>{user?.first_name || 'Partner'} {user?.last_name || ''}</Text>
             <Text style={styles.userSub}>{user?.email || 'partner@gharkapaisa.in'}</Text>
             {user?.mobile && (
-              <Text style={styles.userMobile}>+91 {user.mobile}</Text>
+              <Text style={styles.userMobile}>📱 +91 {user.mobile}</Text>
             )}
-            <Text style={styles.userCode}>Partner Code: {user?.partner_code || 'GKP10024'}</Text>
+            <View style={styles.codeBadge}>
+              <Text style={styles.codeBadgeText}>PARTNER CODE: {partnerCode}</Text>
+            </View>
           </View>
+        </View>
+
+        {/* Quick Navigation Rows */}
+        <Text style={styles.sectionTitle}>Partner Management</Text>
+        <View style={styles.menuCard}>
+          <TouchableOpacity
+            style={styles.menuRow}
+            onPress={() => navigation.navigate('PartnerKyc', { token, user })}
+            activeOpacity={0.8}
+          >
+            <View style={styles.menuRowLeft}>
+              <Text style={styles.menuIcon}>🛡️</Text>
+              <Text style={styles.menuText}>KYC & Bank Verification</Text>
+            </View>
+            <Text style={styles.menuArrow}>→</Text>
+          </TouchableOpacity>
+
+          <View style={styles.menuDivider} />
+
+          <TouchableOpacity
+            style={styles.menuRow}
+            onPress={() => navigation.navigate('Wallet', { token, user })}
+            activeOpacity={0.8}
+          >
+            <View style={styles.menuRowLeft}>
+              <Text style={styles.menuIcon}>💰</Text>
+              <Text style={styles.menuText}>Payout Bank Account</Text>
+            </View>
+            <Text style={styles.menuArrow}>→</Text>
+          </TouchableOpacity>
+
+          <View style={styles.menuDivider} />
+
+          <TouchableOpacity
+            style={styles.menuRow}
+            onPress={() => navigation.navigate('TeamManagement', { token, user })}
+            activeOpacity={0.8}
+          >
+            <View style={styles.menuRowLeft}>
+              <Text style={styles.menuIcon}>👥</Text>
+              <Text style={styles.menuText}>Downline Team Network</Text>
+            </View>
+            <Text style={styles.menuArrow}>→</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Language Selection */}
         <Text style={styles.sectionTitle}>App Language / भाषा</Text>
-        <View style={styles.card}>
-          {LANGUAGES.map((lang) => (
-            <TouchableOpacity
-              key={lang.id}
-              style={styles.langRow}
-              onPress={() => setSelectedLang(lang.id)}
-            >
-              <Text style={styles.langLabel}>{lang.label}</Text>
-              <Text style={{ fontSize: 16 }}>{selectedLang === lang.id ? '🔘' : '⚪'}</Text>
-            </TouchableOpacity>
+        <View style={styles.menuCard}>
+          {LANGUAGES.map((lang, index) => (
+            <React.Fragment key={lang.id}>
+              <TouchableOpacity
+                style={styles.menuRow}
+                onPress={() => setSelectedLang(lang.id)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.menuText}>{lang.label}</Text>
+                <Text style={{ fontSize: 16, color: selectedLang === lang.id ? '#38BDF8' : '#64748B' }}>
+                  {selectedLang === lang.id ? '●' : '○'}
+                </Text>
+              </TouchableOpacity>
+              {index < LANGUAGES.length - 1 && <View style={styles.menuDivider} />}
+            </React.Fragment>
           ))}
         </View>
 
-        {/* Help & Support */}
-        <Text style={styles.sectionTitle}>Help & Legal</Text>
-        <View style={styles.card}>
+        {/* Support & Legal */}
+        <Text style={styles.sectionTitle}>Help & Support</Text>
+        <View style={styles.menuCard}>
           <TouchableOpacity
-            style={styles.settingRow}
-            onPress={() => Linking.openURL('tel:18001234567').catch(() => Alert.alert('Support', 'Call 1800-123-4567'))}
+            style={styles.menuRow}
+            onPress={() => Linking.openURL('tel:18001234567').catch(() => Alert.alert('Support', 'Dial 1800-123-4567'))}
+            activeOpacity={0.8}
           >
-            <Text style={styles.settingText}>📞 Contact Partner Support</Text>
-            <Text style={styles.arrow}>➔</Text>
+            <View style={styles.menuRowLeft}>
+              <Text style={styles.menuIcon}>📞</Text>
+              <Text style={styles.menuText}>Toll-Free Partner Support</Text>
+            </View>
+            <Text style={styles.menuArrow}>→</Text>
           </TouchableOpacity>
+
+          <View style={styles.menuDivider} />
+
           <TouchableOpacity
-            style={styles.settingRow}
-            onPress={() => handleOpenLink('https://gharkapaisa.in/terms', 'Terms of Service')}
+            style={styles.menuRow}
+            onPress={() => handleOpenLink('https://gharkapaisa.in/terms', 'Terms')}
+            activeOpacity={0.8}
           >
-            <Text style={styles.settingText}>📜 Terms of Service</Text>
-            <Text style={styles.arrow}>➔</Text>
+            <View style={styles.menuRowLeft}>
+              <Text style={styles.menuIcon}>📜</Text>
+              <Text style={styles.menuText}>Terms of Service</Text>
+            </View>
+            <Text style={styles.menuArrow}>→</Text>
           </TouchableOpacity>
+
+          <View style={styles.menuDivider} />
+
           <TouchableOpacity
-            style={styles.settingRow}
-            onPress={() => handleOpenLink('https://gharkapaisa.in/privacy', 'Privacy Policy')}
+            style={styles.menuRow}
+            onPress={() => handleOpenLink('https://gharkapaisa.in/privacy', 'Privacy')}
+            activeOpacity={0.8}
           >
-            <Text style={styles.settingText}>🔒 Privacy Policy</Text>
-            <Text style={styles.arrow}>➔</Text>
+            <View style={styles.menuRowLeft}>
+              <Text style={styles.menuIcon}>🔒</Text>
+              <Text style={styles.menuText}>Privacy Policy</Text>
+            </View>
+            <Text style={styles.menuArrow}>→</Text>
           </TouchableOpacity>
         </View>
 
         {/* Sign Out Button */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Text style={styles.logoutBtnText}>Sign Out of App</Text>
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.85}>
+          <Text style={styles.logoutBtnText}>Sign Out of Partner Portal</Text>
         </TouchableOpacity>
-
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
+  safe: {
+    flex: 1,
+    backgroundColor: '#080E1A',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0
+  },
   header: {
-    backgroundColor: '#0d47a1',
+    backgroundColor: '#0F172A',
     paddingHorizontal: 16,
-    paddingTop: 40,
-    paddingBottom: 16,
+    paddingTop: 12,
+    paddingBottom: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B'
+  },
+  backBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 8
+  },
+  backBtnText: {
+    color: '#38BDF8',
+    fontSize: 14,
+    fontWeight: '800'
+  },
+  headerTitle: {
+    color: '#F8FAFC',
+    fontSize: 17,
+    fontWeight: '900'
+  },
+  scroll: {
+    padding: 16,
+    paddingBottom: 40
+  },
+  userCard: {
+    backgroundColor: '#0F172A',
+    borderRadius: 20,
+    padding: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    marginBottom: 20
+  },
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#60A5FA'
+  },
+  avatarText: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '900'
+  },
+  userName: {
+    color: '#F8FAFC',
+    fontSize: 16,
+    fontWeight: '800'
+  },
+  userSub: {
+    color: '#94A3B8',
+    fontSize: 12,
+    marginTop: 2
+  },
+  userMobile: {
+    color: '#64748B',
+    fontSize: 11.5,
+    marginTop: 2
+  },
+  codeBadge: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    marginTop: 6
+  },
+  codeBadgeText: {
+    color: '#FCD34D',
+    fontSize: 9.5,
+    fontWeight: '900'
+  },
+  sectionTitle: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 8,
+    marginTop: 8
+  },
+  menuCard: {
+    backgroundColor: '#0F172A',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    marginBottom: 16,
+    overflow: 'hidden'
+  },
+  menuRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16
   },
-  backBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  headerTitle: { color: '#FFFFFF', fontSize: 17, fontWeight: '800' },
-  scroll: { padding: 16, paddingBottom: 40 },
-  userCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', padding: 16, borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 20, gap: 14 },
-  avatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#0d47a1', alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#FFFFFF', fontSize: 20, fontWeight: '900' },
-  userName: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
-  userSub: { fontSize: 12, color: '#64748B', marginTop: 2 },
-  userMobile: { fontSize: 12, color: '#475569', marginTop: 2 },
-  userCode: { fontSize: 11, fontWeight: '700', color: '#0d47a1', marginTop: 4 },
-  sectionTitle: { fontSize: 15, fontWeight: '800', color: '#0F172A', marginBottom: 10 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 20, overflow: 'hidden' },
-  langRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  langLabel: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
-  settingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  settingText: { fontSize: 14, fontWeight: '600', color: '#334155' },
-  arrow: { color: '#94A3B8', fontWeight: '800' },
-  logoutBtn: { backgroundColor: '#FEF2F2', borderBottomWidth: 1, borderColor: '#EF4444', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 10 },
-  logoutBtnText: { color: '#DC2626', fontSize: 15, fontWeight: '800' },
+  menuRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  menuIcon: {
+    fontSize: 16,
+    marginRight: 12
+  },
+  menuText: {
+    color: '#F8FAFC',
+    fontSize: 13.5,
+    fontWeight: '700'
+  },
+  menuArrow: {
+    color: '#64748B',
+    fontSize: 15,
+    fontWeight: '800'
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#1E293B'
+  },
+  logoutBtn: {
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    marginTop: 10,
+    marginBottom: 20
+  },
+  logoutBtnText: {
+    color: '#F87171',
+    fontSize: 13.5,
+    fontWeight: '900'
+  }
 });

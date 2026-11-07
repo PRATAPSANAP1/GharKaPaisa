@@ -66,7 +66,7 @@ export default function EmployeeToolsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar backgroundColor="#0d47a1" barStyle="light-content" />
+      <StatusBar backgroundColor="#0B1120" barStyle="light-content" />
 
       {/* Header */}
       <View style={styles.header}>
@@ -273,9 +273,9 @@ export default function EmployeeToolsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
+  safe: { flex: 1, backgroundColor: '#0B1120', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
   header: {
-    backgroundColor: '#0d47a1',
+    backgroundColor: '#2563EB',
     paddingHorizontal: 16,
     paddingTop: 40,
     paddingBottom: 16,
@@ -285,25 +285,25 @@ const styles = StyleSheet.create({
   },
   backBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   headerTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
-  tabsRow: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', paddingHorizontal: 12 },
+  tabsRow: { flexDirection: 'row', backgroundColor: '#131F38', borderBottomWidth: 1, borderBottomColor: '#243352', paddingHorizontal: 12 },
   tabBtn: { flex: 1, paddingVertical: 12, alignItems: 'center' },
-  tabBtnActive: { borderBottomWidth: 3, borderBottomColor: '#0d47a1' },
-  tabBtnText: { fontSize: 12.5, fontWeight: '700', color: '#64748B' },
-  tabBtnTextActive: { color: '#0d47a1', fontWeight: '800' },
+  tabBtnActive: { borderBottomWidth: 3, borderBottomColor: '#2563EB' },
+  tabBtnText: { fontSize: 12.5, fontWeight: '700', color: '#94A3B8' },
+  tabBtnTextActive: { color: '#60A5FA', fontWeight: '800' },
   scroll: { padding: 16, paddingBottom: 40 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 18, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 16 },
-  cardHeaderTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A', marginBottom: 2 },
-  cardHeaderSub: { fontSize: 12, color: '#64748B', marginBottom: 14 },
-  label: { fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 },
-  input: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontSize: 13, color: '#0F172A', marginBottom: 12 },
+  card: { backgroundColor: '#131F38', borderRadius: 16, padding: 18, borderWidth: 1, borderColor: '#243352', marginBottom: 16 },
+  cardHeaderTitle: { fontSize: 16, fontWeight: '800', color: '#F1F5F9', marginBottom: 2 },
+  cardHeaderSub: { fontSize: 12, color: '#94A3B8', marginBottom: 14 },
+  label: { fontSize: 12, fontWeight: '700', color: '#CBD5E1', marginBottom: 6 },
+  input: { backgroundColor: '#0B1120', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontSize: 13, color: '#F1F5F9', marginBottom: 12 },
   emiResultBox: { backgroundColor: '#EFF6FF', borderRadius: 12, padding: 16, borderColor: '#3B82F6', borderWidth: 1, alignItems: 'center', marginTop: 10 },
   emiResultLabel: { fontSize: 10, fontWeight: '900', color: '#1D4ED8' },
-  emiResultVal: { fontSize: 22, fontWeight: '900', color: '#0d47a1', marginTop: 4 },
+  emiResultVal: { fontSize: 22, fontWeight: '900', color: '#60A5FA', marginTop: 4 },
   emiResultTotal: { fontSize: 12, color: '#2563EB', fontWeight: '700', marginTop: 4 },
-  chip: { flex: 1, backgroundColor: '#F1F5F9', paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
-  chipActive: { backgroundColor: '#0d47a1' },
-  chipText: { fontSize: 12, fontWeight: '700', color: '#64748B' },
+  chip: { flex: 1, backgroundColor: '#131F38', paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
+  chipActive: { backgroundColor: '#2563EB' },
+  chipText: { fontSize: 12, fontWeight: '700', color: '#94A3B8' },
   chipTextActive: { color: '#FFFFFF' },
-  submitBtn: { backgroundColor: '#0d47a1', borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginTop: 6 },
+  submitBtn: { backgroundColor: '#2563EB', borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginTop: 6 },
   submitBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
 });

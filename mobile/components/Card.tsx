@@ -2,22 +2,34 @@ import React from 'react';
 import { View, StyleSheet, StyleProp, ViewStyle, TouchableOpacity } from 'react-native';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
+import { shadows } from '../theme/shadows';
 
 interface CardProps {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   onPress?: () => void;
+  elevated?: boolean;
+  glow?: boolean;
+  padding?: number;
 }
 
-export const Card: React.FC<CardProps> = ({ children, style, onPress }) => {
+export const Card: React.FC<CardProps> = ({ children, style, onPress, elevated = false, glow = false, padding }) => {
+  const cardStyle = [
+    styles.card,
+    elevated && styles.elevated,
+    glow && shadows.glow,
+    padding !== undefined && { padding },
+    style,
+  ];
+
   if (onPress) {
     return (
-      <TouchableOpacity style={[styles.card, style]} onPress={onPress} activeOpacity={0.8}>
+      <TouchableOpacity style={cardStyle} onPress={onPress} activeOpacity={0.85}>
         {children}
       </TouchableOpacity>
     );
   }
-  return <View style={[styles.card, style]}>{children}</View>;
+  return <View style={cardStyle}>{children}</View>;
 };
 
 const styles = StyleSheet.create({
@@ -28,5 +40,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     marginBottom: spacing.md,
+    ...shadows.sm,
+  },
+  elevated: {
+    backgroundColor: colors.cardElevated,
+    borderColor: colors.borderLight,
+    ...shadows.md,
   },
 });

@@ -174,7 +174,7 @@ export default function EmployeeAttendanceScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar backgroundColor="#0284C7" barStyle="light-content" />
+      <StatusBar backgroundColor="#0B1120" barStyle="light-content" />
 
       {/* Header */}
       <View style={styles.header}>
@@ -189,7 +189,7 @@ export default function EmployeeAttendanceScreen({ navigation }) {
 
       <ScrollView
         contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0284C7']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} />}
       >
         {/* TODAY'S ATTENDANCE CARD */}
         <View style={styles.card}>
@@ -291,7 +291,7 @@ export default function EmployeeAttendanceScreen({ navigation }) {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Attendance History</Text>
           {loading ? (
-            <ActivityIndicator style={{ marginVertical: 20 }} color="#0284C7" />
+            <ActivityIndicator style={{ marginVertical: 20 }} color="#2563EB" />
           ) : historyData.length === 0 ? (
             <Text style={styles.emptyText}>No attendance records found.</Text>
           ) : (
@@ -334,11 +334,11 @@ export default function EmployeeAttendanceScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#0B1120',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0
   },
   header: {
-    backgroundColor: '#0284C7',
+    backgroundColor: '#2563EB',
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 16,
@@ -361,11 +361,11 @@ const styles = StyleSheet.create({
     paddingBottom: 40
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#131F38',
     borderRadius: 16,
     padding: 18,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#243352',
     marginBottom: 16
   },
   cardHeaderRow: {
@@ -377,10 +377,10 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0F172A'
+    color: '#F1F5F9'
   },
   statusBadge: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#131F38',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#64748B'
+    color: '#94A3B8'
   },
   statusBadgeWorking: {
     backgroundColor: '#FEF3C7'
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
   },
   metricItem: {
     width: '47%',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#0B1120',
     borderRadius: 10,
     padding: 12,
     borderWidth: 1,
@@ -419,21 +419,21 @@ const styles = StyleSheet.create({
   metricLabel: {
     fontSize: 9.5,
     fontWeight: '800',
-    color: '#64748B',
+    color: '#94A3B8',
     marginBottom: 4
   },
   metricVal: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0F172A'
+    color: '#F1F5F9'
   },
   metricValSub: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0284C7'
+    color: '#2563EB'
   },
   actionBtn: {
-    backgroundColor: '#0284C7',
+    backgroundColor: '#2563EB',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center'
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
   summaryLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#64748B',
+    color: '#94A3B8',
     marginTop: 2
   },
   historyTable: {
@@ -484,14 +484,14 @@ const styles = StyleSheet.create({
   tableHeader: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#243352',
     paddingBottom: 8,
     marginBottom: 8
   },
   th: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#64748B'
+    color: '#94A3B8'
   },
   tableRow: {
     flexDirection: 'row',
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
   tdBold: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#0F172A'
+    color: '#F1F5F9'
   },
   tdStatus: {
     fontSize: 11,
@@ -512,12 +512,12 @@ const styles = StyleSheet.create({
   },
   td: {
     fontSize: 11,
-    color: '#334155'
+    color: '#CBD5E1'
   },
   tdBadge: {
     fontSize: 9.5,
     fontWeight: '800',
-    color: '#0284C7'
+    color: '#2563EB'
   },
   emptyText: {
     fontSize: 13,

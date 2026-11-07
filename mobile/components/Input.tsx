@@ -7,21 +7,21 @@ import { spacing } from '../theme/spacing';
 interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
+  icon?: string;
 }
 
-export const Input: React.FC<InputProps> = ({ label, error, style, ...props }) => {
+export const Input: React.FC<InputProps> = ({ label, error, icon, style, ...props }) => {
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <TextInput
-        style={[
-          styles.input,
-          error ? styles.inputError : null,
-          style,
-        ]}
-        placeholderTextColor={colors.textLight}
-        {...props}
-      />
+      <View style={[styles.inputWrapper, error ? styles.inputError : null]}>
+        {icon ? <Text style={styles.icon}>{icon}</Text> : null}
+        <TextInput
+          style={[styles.input, icon ? { paddingLeft: 4 } : null, style]}
+          placeholderTextColor={colors.textLight}
+          {...props}
+        />
+      </View>
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
@@ -34,21 +34,31 @@ const styles = StyleSheet.create({
   label: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
-    color: colors.text,
+    color: colors.textMid,
     marginBottom: spacing.xs,
+    letterSpacing: 0.3,
   },
-  input: {
+  inputWrapper: {
     backgroundColor: colors.inputBg,
-    color: colors.text,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 4,
     borderRadius: spacing.radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    fontSize: typography.sizes.md,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   inputError: {
     borderColor: colors.error,
+  },
+  icon: {
+    paddingLeft: spacing.md,
+    fontSize: typography.sizes.md,
+  },
+  input: {
+    flex: 1,
+    color: colors.text,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 4,
+    fontSize: typography.sizes.md,
   },
   errorText: {
     fontSize: typography.sizes.xs,

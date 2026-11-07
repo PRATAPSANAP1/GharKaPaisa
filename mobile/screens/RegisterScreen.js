@@ -223,7 +223,7 @@ export default function RegisterScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
+      <StatusBar backgroundColor="#0B1120" barStyle="light-content" />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
@@ -451,7 +451,7 @@ export default function RegisterScreen({ navigation }) {
                   value={form.bank_name}
                   onChangeText={(v) => handleChange('bank_name', v)}
                 />
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginTop: 8, marginBottom: 6 }}>Popular Banks (Tap to select):</Text>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', marginTop: 8, marginBottom: 6 }}>Popular Banks (Tap to select):</Text>
                 <View style={styles.pickerRow}>
                   {POPULAR_BANKS.map((b) => (
                     <TouchableOpacity
@@ -557,7 +557,7 @@ export default function RegisterScreen({ navigation }) {
                   {form.termsAgreed && <Text style={styles.checkmark}>✓</Text>}
                 </View>
                 <Text style={styles.termsText}>
-                  I agree to the <Text style={{ color: '#0d47a1', fontWeight: 'bold' }}>Terms & Conditions</Text> and <Text style={{ color: '#0d47a1', fontWeight: 'bold' }}>Privacy Policy</Text>.
+                  I agree to the <Text style={{ color: '#60A5FA', fontWeight: 'bold' }}>Terms & Conditions</Text> and <Text style={{ color: '#60A5FA', fontWeight: 'bold' }}>Privacy Policy</Text>.
                 </Text>
               </TouchableOpacity>
             </View>
@@ -591,7 +591,7 @@ export default function RegisterScreen({ navigation }) {
             onPress={() => navigation.navigate('Login', { role: 'Partner' })}
           >
             <Text style={styles.loginLinkText}>
-              Already registered? <Text style={{ color: '#0d47a1', fontWeight: 'bold' }}>Log In</Text>
+              Already registered? <Text style={{ color: '#60A5FA', fontWeight: 'bold' }}>Log In</Text>
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -601,53 +601,53 @@ export default function RegisterScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
+  container: { flex: 1, backgroundColor: '#0B1120', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
   scroll: { padding: 24, paddingBottom: 40 },
   backBtn: { marginBottom: 16 },
-  backText: { color: '#0d47a1', fontSize: 14, fontWeight: '700' },
-  title: { fontSize: 26, fontWeight: '800', color: '#0F172A', marginBottom: 4 },
-  subtitle: { fontSize: 13, color: '#64748B', marginBottom: 20 },
-  stepperContainer: { flexDirection: 'row', backgroundColor: '#F8FAFC', borderRadius: 12, padding: 6, marginBottom: 20, borderWidth: 1, borderColor: '#E2E8F0' },
-  stepTab: { flex: 1, alignItems: 'center', paddingVertical: 6 },
-  stepTabActive: { backgroundColor: '#ffffff', borderRadius: 8, elevation: 1 },
-  stepBadge: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  stepBadgeActive: { backgroundColor: '#0d47a1' },
-  stepBadgeText: { fontSize: 11, fontWeight: '800', color: '#64748B' },
+  backText: { color: '#60A5FA', fontSize: 14, fontWeight: '700' },
+  title: { fontSize: 28, fontWeight: '900', color: '#F1F5F9', marginBottom: 4, letterSpacing: -0.5 },
+  subtitle: { fontSize: 13, color: '#94A3B8', marginBottom: 24 },
+  stepperContainer: { flexDirection: 'row', backgroundColor: '#131F38', borderRadius: 14, padding: 6, marginBottom: 24, borderWidth: 1, borderColor: '#243352' },
+  stepTab: { flex: 1, alignItems: 'center', paddingVertical: 8 },
+  stepTabActive: { backgroundColor: '#1A2745', borderRadius: 10 },
+  stepBadge: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#243352', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  stepBadgeActive: { backgroundColor: '#2563EB' },
+  stepBadgeText: { fontSize: 11, fontWeight: '800', color: '#94A3B8' },
   stepBadgeTextActive: { color: '#ffffff' },
-  stepLabel: { fontSize: 10, fontWeight: '600', color: '#64748B' },
-  stepLabelActive: { color: '#0d47a1', fontWeight: '800' },
-  sectionHeader: { fontSize: 16, fontWeight: '800', color: '#0F172A', marginBottom: 16 },
+  stepLabel: { fontSize: 10, fontWeight: '600', color: '#94A3B8' },
+  stepLabelActive: { color: '#60A5FA', fontWeight: '800' },
+  sectionHeader: { fontSize: 16, fontWeight: '800', color: '#F1F5F9', marginBottom: 16, letterSpacing: -0.3 },
   row: { flexDirection: 'row' },
   inputContainer: { marginBottom: 16 },
-  label: { fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 },
+  label: { fontSize: 12, fontWeight: '700', color: '#CBD5E1', marginBottom: 6, letterSpacing: 0.3 },
   input: {
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    padding: 12,
+    borderColor: '#243352',
+    borderRadius: 12,
+    padding: 14,
     fontSize: 14,
-    color: '#0F172A',
-    backgroundColor: '#F8FAFC',
+    color: '#F1F5F9',
+    backgroundColor: '#1E2B4A',
   },
   passwordWrapper: { flexDirection: 'row', alignItems: 'center' },
   eyeBtn: { position: 'absolute', right: 12, padding: 4 },
   eyeText: { fontSize: 16 },
   pickerRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pickerPill: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' },
-  pickerPillActive: { backgroundColor: '#EEF4FB', borderColor: '#0d47a1' },
-  pickerPillText: { fontSize: 12, fontWeight: '600', color: '#64748B' },
-  pickerPillTextActive: { color: '#0d47a1', fontWeight: '800' },
+  pickerPill: { paddingVertical: 9, paddingHorizontal: 14, borderRadius: 10, backgroundColor: '#131F38', borderWidth: 1, borderColor: '#243352' },
+  pickerPillActive: { backgroundColor: 'rgba(37, 99, 235, 0.15)', borderColor: '#2563EB' },
+  pickerPillText: { fontSize: 12, fontWeight: '600', color: '#94A3B8' },
+  pickerPillTextActive: { color: '#60A5FA', fontWeight: '800' },
   checkboxRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10, marginBottom: 16 },
-  checkbox: { width: 20, height: 20, borderWidth: 1.5, borderColor: '#94A3B8', borderRadius: 4, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
-  checkboxActive: { backgroundColor: '#0d47a1', borderColor: '#0d47a1' },
+  checkbox: { width: 22, height: 22, borderWidth: 1.5, borderColor: '#475569', borderRadius: 6, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  checkboxActive: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
   checkmark: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
-  termsText: { flex: 1, fontSize: 12, color: '#475569', lineHeight: 16 },
+  termsText: { flex: 1, fontSize: 12, color: '#94A3B8', lineHeight: 17 },
   btnRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
-  prevBtn: { paddingVertical: 14, paddingHorizontal: 20, borderRadius: 12, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' },
-  prevBtnText: { color: '#334155', fontSize: 14, fontWeight: '700' },
-  nextBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#0d47a1', alignItems: 'center', justifyContent: 'center', elevation: 2 },
-  nextBtnText: { color: '#ffffff', fontSize: 15, fontWeight: '800' },
-  disabledBtn: { backgroundColor: '#94A3B8' },
-  loginLink: { marginTop: 20, alignItems: 'center' },
-  loginLinkText: { fontSize: 13, color: '#64748B' },
+  prevBtn: { paddingVertical: 14, paddingHorizontal: 20, borderRadius: 14, backgroundColor: '#1E2B4A', borderWidth: 1, borderColor: '#243352', alignItems: 'center', justifyContent: 'center' },
+  prevBtnText: { color: '#CBD5E1', fontSize: 14, fontWeight: '700' },
+  nextBtn: { flex: 1, paddingVertical: 15, borderRadius: 14, backgroundColor: '#2563EB', alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#2563EB', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 12 },
+  nextBtnText: { color: '#ffffff', fontSize: 15, fontWeight: '800', letterSpacing: 0.3 },
+  disabledBtn: { backgroundColor: '#33456E' },
+  loginLink: { marginTop: 24, alignItems: 'center' },
+  loginLinkText: { fontSize: 13, color: '#94A3B8' },
 });

@@ -16,7 +16,7 @@ import apiClient from '../config/api';
 
 export default function CustomerTrackingScreen({ route, navigation }) {
   const token = route?.params?.token;
-  const initialMode = route?.params?.mode || (token ? 'upload' : 'track'); // 'track' | 'physical' | 'post_apply' | 'upload'
+  const initialMode = route?.params?.mode || (token ? 'upload' : 'track');
   const [activeTab, setActiveTab] = useState(initialMode);
 
   // Tracking state
@@ -131,15 +131,15 @@ export default function CustomerTrackingScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar backgroundColor="#0d47a1" barStyle="light-content" />
+      <StatusBar backgroundColor="#080E1A" barStyle="light-content" />
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backBtnText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Customer Portal</Text>
-        <View style={{ width: 40 }} />
+        <Text style={styles.headerTitle}>Application Tracker</Text>
+        <View style={{ width: 45 }} />
       </View>
 
       {/* Tabs */}
@@ -147,6 +147,7 @@ export default function CustomerTrackingScreen({ route, navigation }) {
         <TouchableOpacity
           style={[styles.tabBtn, activeTab === 'track' && styles.tabBtnActive]}
           onPress={() => setActiveTab('track')}
+          activeOpacity={0.8}
         >
           <Text style={[styles.tabBtnText, activeTab === 'track' && styles.tabBtnTextActive]}>🔍 Track Status</Text>
         </TouchableOpacity>
@@ -154,6 +155,7 @@ export default function CustomerTrackingScreen({ route, navigation }) {
         <TouchableOpacity
           style={[styles.tabBtn, activeTab === 'physical' && styles.tabBtnActive]}
           onPress={() => setActiveTab('physical')}
+          activeOpacity={0.8}
         >
           <Text style={[styles.tabBtnText, activeTab === 'physical' && styles.tabBtnTextActive]}>📋 Physical Form</Text>
         </TouchableOpacity>
@@ -161,43 +163,43 @@ export default function CustomerTrackingScreen({ route, navigation }) {
         <TouchableOpacity
           style={[styles.tabBtn, activeTab === 'upload' && styles.tabBtnActive]}
           onPress={() => setActiveTab('upload')}
+          activeOpacity={0.8}
         >
           <Text style={[styles.tabBtnText, activeTab === 'upload' && styles.tabBtnTextActive]}>📄 Upload KYC</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        
         {/* Tab 1: Track Status */}
         {activeTab === 'track' && (
           <View>
             <View style={styles.card}>
-              <Text style={styles.cardHeaderTitle}>Track Application</Text>
-              <Text style={styles.cardHeaderSub}>Check real-time status and partner updates.</Text>
+              <Text style={styles.cardHeaderTitle}>Live Status Lookup</Text>
+              <Text style={styles.cardHeaderSub}>Check real-time application processing updates and approval stages.</Text>
 
-              <Text style={styles.label}>Application Number *</Text>
+              <Text style={styles.label}>APPLICATION REFERENCE NUMBER *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="e.g. APP-2026-00125"
-                placeholderTextColor="#94A3B8"
+                placeholder="e.g. APP-884931"
+                placeholderTextColor="#64748B"
                 value={appNumber}
                 onChangeText={setAppNumber}
                 autoCapitalize="characters"
               />
 
-              <Text style={styles.label}>Registered Mobile Number *</Text>
+              <Text style={styles.label}>REGISTERED MOBILE NUMBER *</Text>
               <TextInput
                 style={styles.input}
                 placeholder="10-digit mobile number"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor="#64748B"
                 keyboardType="number-pad"
                 maxLength={10}
                 value={mobile}
                 onChangeText={setMobile}
               />
 
-              <TouchableOpacity style={styles.submitBtn} onPress={handleTrack} disabled={loading}>
-                {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.submitBtnText}>Track Application Status ➔</Text>}
+              <TouchableOpacity style={styles.submitBtn} onPress={handleTrack} disabled={loading} activeOpacity={0.85}>
+                {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.submitBtnText}>Check Live Status ➔</Text>}
               </TouchableOpacity>
             </View>
 
@@ -211,7 +213,7 @@ export default function CustomerTrackingScreen({ route, navigation }) {
                 <Text style={styles.resultBank}>Product: {trackingResult.bank_name || 'Financial Product'}</Text>
                 <Text style={styles.resultDate}>Submitted: {trackingResult.created_at || 'Recent'}</Text>
 
-                <TouchableOpacity style={styles.uploadLinkBtn} onPress={() => setActiveTab('upload')}>
+                <TouchableOpacity style={styles.uploadLinkBtn} onPress={() => setActiveTab('upload')} activeOpacity={0.85}>
                   <Text style={styles.uploadLinkText}>📄 Upload Missing KYC Documents ➔</Text>
                 </TouchableOpacity>
               </View>
@@ -223,58 +225,58 @@ export default function CustomerTrackingScreen({ route, navigation }) {
         {activeTab === 'physical' && (
           <View style={styles.card}>
             <Text style={styles.cardHeaderTitle}>Physical Application Form</Text>
-            <Text style={styles.cardHeaderSub}>Complete physical application details for bank verification.</Text>
+            <Text style={styles.cardHeaderSub}>Record customer declaration and offline physical verification details.</Text>
 
-            <Text style={styles.label}>Customer Full Name (As per PAN) *</Text>
+            <Text style={styles.label}>CUSTOMER FULL NAME (AS PER PAN) *</Text>
             <TextInput
               style={styles.input}
               placeholder="e.g. Ramesh Kumar"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor="#64748B"
               value={physicalForm.customer_name}
               onChangeText={(v) => setPhysicalForm({ ...physicalForm, customer_name: v })}
             />
 
-            <Text style={styles.label}>Father's Name</Text>
+            <Text style={styles.label}>FATHER'S NAME</Text>
             <TextInput
               style={styles.input}
               placeholder="e.g. Suresh Kumar"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor="#64748B"
               value={physicalForm.father_name}
               onChangeText={(v) => setPhysicalForm({ ...physicalForm, father_name: v })}
             />
 
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.label}>PAN Number *</Text>
+                <Text style={styles.label}>PAN NUMBER *</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="ABCDE1234F"
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor="#64748B"
                   autoCapitalize="characters"
                   maxLength={10}
                   value={physicalForm.pan_number}
-                  onChangeText={(v) => setPhysicalForm({ ...physicalForm, pan_number: v })}
+                  onChangeText={(v) => setPhysicalForm({ ...physicalForm, pan_number: v.toUpperCase() })}
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.label}>Aadhaar Number</Text>
+                <Text style={styles.label}>AADHAAR NUMBER</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="12-digit Aadhaar"
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor="#64748B"
                   keyboardType="numeric"
                   maxLength={12}
                   value={physicalForm.aadhaar_number}
-                  onChangeText={(v) => setPhysicalForm({ ...physicalForm, aadhaar_number: v })}
+                  onChangeText={(v) => setPhysicalForm({ ...physicalForm, aadhaar_number: v.replace(/\D/g, '') })}
                 />
               </View>
             </View>
 
-            <Text style={styles.label}>Current Residential Address</Text>
+            <Text style={styles.label}>CURRENT RESIDENTIAL ADDRESS</Text>
             <TextInput
               style={styles.input}
               placeholder="Full house number, street, city and pincode"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor="#64748B"
               value={physicalForm.current_address}
               onChangeText={(v) => setPhysicalForm({ ...physicalForm, current_address: v })}
             />
@@ -283,6 +285,7 @@ export default function CustomerTrackingScreen({ route, navigation }) {
               style={[styles.submitBtn, submittingPhysical && { opacity: 0.6 }]}
               onPress={handlePhysicalSubmit}
               disabled={submittingPhysical}
+              activeOpacity={0.85}
             >
               {submittingPhysical ? <ActivityIndicator color="#FFF" /> : <Text style={styles.submitBtnText}>Submit Physical Application ➔</Text>}
             </TouchableOpacity>
@@ -293,7 +296,7 @@ export default function CustomerTrackingScreen({ route, navigation }) {
         {activeTab === 'upload' && (
           <View style={styles.card}>
             <Text style={styles.cardHeaderTitle}>KYC Document Upload Portal</Text>
-            <Text style={styles.cardHeaderSub}>Upload clear photos or PDFs for instant bank approval.</Text>
+            <Text style={styles.cardHeaderSub}>Upload clear photos or PDFs for bank approval.</Text>
 
             {['PAN Card Photo', 'Aadhaar Card (Front & Back)', 'Bank Statement / Salary Slip'].map((docName, idx) => (
               <View key={idx} style={styles.docUploadRow}>
@@ -305,6 +308,7 @@ export default function CustomerTrackingScreen({ route, navigation }) {
                   style={styles.uploadBtn}
                   onPress={() => handleSimulatedUpload(docName)}
                   disabled={uploadingDoc}
+                  activeOpacity={0.85}
                 >
                   <Text style={styles.uploadBtnText}>Upload ⬆</Text>
                 </TouchableOpacity>
@@ -312,50 +316,207 @@ export default function CustomerTrackingScreen({ route, navigation }) {
             ))}
           </View>
         )}
-
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
+  safe: {
+    flex: 1,
+    backgroundColor: '#080E1A',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0
+  },
   header: {
-    backgroundColor: '#0d47a1',
+    backgroundColor: '#0F172A',
     paddingHorizontal: 16,
-    paddingTop: 40,
-    paddingBottom: 16,
+    paddingTop: 12,
+    paddingBottom: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B'
   },
-  backBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  headerTitle: { color: '#FFFFFF', fontSize: 17, fontWeight: '800' },
-  tabsRow: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', paddingHorizontal: 12 },
-  tabBtn: { flex: 1, paddingVertical: 12, alignItems: 'center' },
-  tabBtnActive: { borderBottomWidth: 3, borderBottomColor: '#0d47a1' },
-  tabBtnText: { fontSize: 12.5, fontWeight: '700', color: '#64748B' },
-  tabBtnTextActive: { color: '#0d47a1', fontWeight: '800' },
-  scroll: { padding: 16, paddingBottom: 40 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 18, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 16 },
-  cardHeaderTitle: { fontSize: 17, fontWeight: '800', color: '#0F172A', marginBottom: 2 },
-  cardHeaderSub: { fontSize: 12, color: '#64748B', marginBottom: 14 },
-  label: { fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 },
-  input: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontSize: 13, color: '#0F172A', marginBottom: 12 },
-  submitBtn: { backgroundColor: '#0d47a1', borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginTop: 6 },
-  submitBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
-  resultCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 18, borderWidth: 1, borderColor: '#10B981' },
-  statusBadge: { backgroundColor: '#D1FAE5', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, alignSelf: 'flex-start', marginBottom: 10 },
-  statusBadgeText: { fontSize: 11, fontWeight: '900', color: '#047857' },
-  resultAppNum: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
-  resultCustomer: { fontSize: 13, color: '#475569', marginTop: 4 },
-  resultBank: { fontSize: 12, color: '#64748B', marginTop: 2 },
-  resultDate: { fontSize: 11, color: '#94A3B8', marginTop: 4 },
-  uploadLinkBtn: { backgroundColor: '#F0FDF4', borderWidth: 1, borderColor: '#86EFAC', padding: 12, borderRadius: 10, alignItems: 'center', marginTop: 14 },
-  uploadLinkText: { color: '#16A34A', fontWeight: '800', fontSize: 13 },
-  docUploadRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 10 },
-  docTitle: { fontSize: 13, fontWeight: '800', color: '#0F172A' },
-  docSub: { fontSize: 10.5, color: '#64748B', marginTop: 2 },
-  uploadBtn: { backgroundColor: '#0d47a1', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8 },
-  uploadBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
+  backBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 8
+  },
+  backBtnText: {
+    color: '#38BDF8',
+    fontSize: 14,
+    fontWeight: '800'
+  },
+  headerTitle: {
+    color: '#F8FAFC',
+    fontSize: 17,
+    fontWeight: '900'
+  },
+  tabsRow: {
+    flexDirection: 'row',
+    backgroundColor: '#0F172A',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B'
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent'
+  },
+  tabBtnActive: {
+    borderBottomColor: '#38BDF8'
+  },
+  tabBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748B'
+  },
+  tabBtnTextActive: {
+    color: '#38BDF8',
+    fontWeight: '800'
+  },
+  scroll: {
+    padding: 16,
+    paddingBottom: 40
+  },
+  card: {
+    backgroundColor: '#0F172A',
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    marginBottom: 16
+  },
+  cardHeaderTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#F8FAFC',
+    marginBottom: 2
+  },
+  cardHeaderSub: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginBottom: 14
+  },
+  label: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#94A3B8',
+    letterSpacing: 0.8,
+    marginBottom: 6,
+    marginTop: 6
+  },
+  input: {
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 13,
+    color: '#F8FAFC',
+    marginBottom: 12
+  },
+  submitBtn: {
+    backgroundColor: '#2563EB',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+    marginTop: 8
+  },
+  submitBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13.5,
+    fontWeight: '800'
+  },
+  resultCard: {
+    backgroundColor: '#0F172A',
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#10B981'
+  },
+  statusBadge: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#10B981'
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#34D399'
+  },
+  resultAppNum: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#F8FAFC'
+  },
+  resultCustomer: {
+    fontSize: 13,
+    color: '#CBD5E1',
+    marginTop: 4
+  },
+  resultBank: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 2
+  },
+  resultDate: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 4
+  },
+  uploadLinkBtn: {
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    borderWidth: 1,
+    borderColor: '#38BDF8',
+    padding: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 14
+  },
+  uploadLinkText: {
+    color: '#38BDF8',
+    fontWeight: '800',
+    fontSize: 12.5
+  },
+  docUploadRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#1E293B',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 10
+  },
+  docTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#F8FAFC'
+  },
+  docSub: {
+    fontSize: 10.5,
+    color: '#64748B',
+    marginTop: 2
+  },
+  uploadBtn: {
+    backgroundColor: '#2563EB',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8
+  },
+  uploadBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800'
+  }
 });

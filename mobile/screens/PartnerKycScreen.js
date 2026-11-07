@@ -90,16 +90,13 @@ export default function PartnerKycScreen({ route, navigation }) {
     return 100;
   };
 
-  const getDoc = (type) => kycData.documents?.find((d) => d.doc_type === type);
-  const isDocApproved = (type) => getDoc(type)?.verification_status === 'approved';
-
-  const status = kycData.kyc_status || 'draft';
-  const isApproved = status === 'approved';
+  const status = kycData.kyc_status || user?.kyc_status || 'draft';
+  const isApproved = status === 'approved' || status === 'verified';
   const isUnderReview = status === 'under_review' || status === 'pending';
 
   const handleSavePan = async () => {
     if (!panNumber.trim() || panNumber.trim().length !== 10) {
-      return Alert.alert('PAN Required', 'Please enter a valid 10-character PAN Card number.');
+      return Alert.alert('Invalid PAN', 'Please enter a valid 10-character PAN number (e.g. ABCDE1234F).');
     }
     setActionLoading(true);
     setErrorMsg('');
@@ -110,7 +107,7 @@ export default function PartnerKycScreen({ route, navigation }) {
       }).catch(() => ({ data: { success: true } }));
 
       if (res?.data?.success) {
-        setMessage('PAN Card details saved successfully!');
+        setMessage('PAN Card saved successfully!');
         loadKycDetails();
       }
     } catch (err) {
@@ -144,8 +141,8 @@ export default function PartnerKycScreen({ route, navigation }) {
   };
 
   const handleSubmitKyc = async () => {
-    if (getProgress() < 100) {
-      return Alert.alert('Incomplete KYC', 'Please save all mandatory items (PAN, Bank Details, Video confirmation) first.');
+    if (getProgress() < 66) {
+      return Alert.alert('Incomplete Details', 'Please complete PAN Card and Bank Account information first.');
     }
 
     setActionLoading(true);
@@ -158,7 +155,7 @@ export default function PartnerKycScreen({ route, navigation }) {
       }).catch(() => ({ data: { success: true } }));
 
       if (res?.data?.success) {
-        Alert.alert('KYC Submitted! 🎉', 'Your documentation has been submitted for compliance verification.');
+        Alert.alert('KYC Submitted! 🎉', 'Your documentation has been queued for compliance verification. You will be notified once verified.');
         setKycData((prev) => ({ ...prev, kyc_status: 'pending' }));
         loadKycDetails();
       }
@@ -169,235 +166,466 @@ export default function PartnerKycScreen({ route, navigation }) {
     }
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <ActivityIndicator size="large" color="#0d47a1" style={{ marginTop: 50 }} />
-      </SafeAreaView>
-    );
-  }
+  const progress = getProgress();
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar backgroundColor="#0d47a1" barStyle="light-content" />
+      <StatusBar backgroundColor="#080E1A" barStyle="light-content" />
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backBtnText}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>KYC Verification</Text>
-        <View style={{ width: 40 }} />
+        <View style={{ width: 45 }} />
       </View>
 
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0d47a1']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3B82F6']} tintColor="#94A3B8" />}
       >
-        {/* Status Banner */}
+        {/* Compliance Status Banner */}
         <View style={[
           styles.statusBanner,
-          isApproved ? styles.bannerApproved : isUnderReview ? styles.bannerReview : styles.bannerDraft
+          isApproved ? styles.statusBannerApproved : isUnderReview ? styles.statusBannerReview : styles.statusBannerPending
         ]}>
-          <Text style={styles.bannerIcon}>
-            {isApproved ? '✅' : isUnderReview ? '⏳' : '📋'}
+          <Text style={{ fontSize: 24 }}>
+            {isApproved ? '🛡️' : isUnderReview ? '⏳' : '⚠️'}
           </Text>
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={styles.statusTitle}>
-              {isApproved ? 'KYC Approved' : isUnderReview ? 'KYC Under Review' : 'KYC Pending'}
+              {isApproved ? 'KYC Compliance Verified' : isUnderReview ? 'Documents Under Review' : 'KYC Verification Incomplete'}
             </Text>
-            <Text style={styles.statusDesc}>
-              {isApproved && 'Your account is verified! Full features & payouts unlocked.'}
-              {isUnderReview && 'Documents submitted and pending compliance approval.'}
-              {status === 'draft' && 'Fill in PAN, Bank details, and Video confirmation below, then click Submit.'}
+            <Text style={styles.statusSub}>
+              {isApproved
+                ? 'Your account is fully verified. Automated instant bank withdrawals are enabled.'
+                : isUnderReview
+                ? 'Our compliance team is verifying your PAN & Bank account details.'
+                : 'Complete all steps below to unlock instant wallet withdrawals.'}
             </Text>
           </View>
         </View>
 
-        {/* Progress Tracker */}
+        {/* Progress Bar */}
         <View style={styles.progressCard}>
           <View style={styles.progressHeader}>
-            <Text style={styles.progressLabel}>Verification Progress</Text>
-            <Text style={styles.progressVal}>{getProgress()}%</Text>
+            <Text style={styles.progressLabel}>VERIFICATION PROGRESS</Text>
+            <Text style={styles.progressPercent}>{progress}% COMPLETE</Text>
           </View>
-          <View style={styles.progressBarBg}>
-            <View style={[styles.progressBarFill, { width: `${getProgress()}%` }]} />
+          <View style={styles.progressBarTrack}>
+            <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
           </View>
         </View>
 
         {message ? (
-          <View style={styles.successMsg}><Text style={styles.successText}>{message}</Text></View>
+          <View style={styles.successBanner}>
+            <Text style={styles.successBannerText}>✓ {message}</Text>
+          </View>
         ) : null}
 
         {errorMsg ? (
-          <View style={styles.errorMsg}><Text style={styles.errorText}>{errorMsg}</Text></View>
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerText}>⚠️ {errorMsg}</Text>
+          </View>
         ) : null}
 
-        {/* Item 1: PAN Card */}
-        <View style={styles.docCard}>
-          <View style={styles.docHeader}>
-            <Text style={styles.docTitle}>1. PAN Card</Text>
-            <Text style={[styles.docBadge, panNumber.length === 10 ? styles.badgeGreen : styles.badgeYellow]}>
-              {panNumber.length === 10 ? 'Provided' : 'Pending'}
-            </Text>
+        {/* Step 1: PAN Card */}
+        <View style={styles.stepCard}>
+          <View style={styles.stepHeader}>
+            <View style={styles.stepNumCircle}>
+              <Text style={styles.stepNumText}>1</Text>
+            </View>
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={styles.stepTitle}>PAN Card Details</Text>
+              <Text style={styles.stepSub}>Permanent Account Number for TDS compliance</Text>
+            </View>
+            {panNumber.trim().length === 10 ? (
+              <View style={styles.stepDoneBadge}>
+                <Text style={styles.stepDoneBadgeText}>DONE ✓</Text>
+              </View>
+            ) : null}
           </View>
-          <Text style={styles.docSub}>Provide 10-character Permanent Account Number</Text>
 
+          <Text style={styles.fieldLabel}>PAN NUMBER (10 CHARACTERS) *</Text>
           <TextInput
-            style={styles.input}
-            placeholder="ENTER 10-DIGIT PAN (e.g. ABCDE1234F)"
-            placeholderTextColor="#94A3B8"
-            maxLength={10}
+            style={styles.fieldInput}
+            placeholder="e.g. ABCDE1234F"
+            placeholderTextColor="#64748B"
             autoCapitalize="characters"
+            maxLength={10}
             value={panNumber}
-            onChangeText={(v) => setPanNumber(v.toUpperCase())}
-            editable={!isApproved && !isUnderReview}
+            onChangeText={(text) => setPanNumber(text.toUpperCase())}
+            editable={!isApproved}
           />
 
-          {!isApproved && !isUnderReview && (
-            <TouchableOpacity style={styles.uploadBtn} onPress={handleSavePan} disabled={actionLoading}>
-              <Text style={styles.uploadBtnText}>Save PAN Details</Text>
+          {!isApproved && (
+            <TouchableOpacity
+              style={styles.stepActionBtn}
+              onPress={handleSavePan}
+              disabled={actionLoading}
+            >
+              <Text style={styles.stepActionBtnText}>Save PAN Details</Text>
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Item 2: Bank Account Details */}
-        <View style={styles.docCard}>
-          <View style={styles.docHeader}>
-            <Text style={styles.docTitle}>2. Bank Account Details</Text>
-            <Text style={[styles.docBadge, bankForm.account_number ? styles.badgeGreen : styles.badgeYellow]}>
-              {bankForm.account_number ? 'Provided' : 'Pending'}
-            </Text>
+        {/* Step 2: Bank Account Details */}
+        <View style={styles.stepCard}>
+          <View style={styles.stepHeader}>
+            <View style={styles.stepNumCircle}>
+              <Text style={styles.stepNumText}>2</Text>
+            </View>
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={styles.stepTitle}>Bank Account for Payouts</Text>
+              <Text style={styles.stepSub}>Where your commission earnings will be credited</Text>
+            </View>
+            {bankForm.account_number && bankForm.ifsc_code ? (
+              <View style={styles.stepDoneBadge}>
+                <Text style={styles.stepDoneBadgeText}>DONE ✓</Text>
+              </View>
+            ) : null}
           </View>
-          <Text style={styles.docSub}>Bank account for direct commission payouts</Text>
 
+          <Text style={styles.fieldLabel}>ACCOUNT HOLDER NAME *</Text>
           <TextInput
-            style={[styles.input, { marginBottom: 8 }]}
-            placeholder="Account Holder Name"
-            placeholderTextColor="#94A3B8"
+            style={styles.fieldInput}
+            placeholder="As written on your bank passbook"
+            placeholderTextColor="#64748B"
             value={bankForm.account_holder_name}
-            onChangeText={(v) => setBankForm({ ...bankForm, account_holder_name: v })}
-            editable={!isApproved && !isUnderReview}
+            onChangeText={(text) => setBankForm({ ...bankForm, account_holder_name: text })}
+            editable={!isApproved}
           />
+
+          <Text style={styles.fieldLabel}>BANK ACCOUNT NUMBER *</Text>
           <TextInput
-            style={[styles.input, { marginBottom: 8 }]}
-            placeholder="Account Number"
-            placeholderTextColor="#94A3B8"
-            keyboardType="number-pad"
+            style={styles.fieldInput}
+            placeholder="e.g. 50100234567890"
+            placeholderTextColor="#64748B"
+            keyboardType="numeric"
             value={bankForm.account_number}
-            onChangeText={(v) => setBankForm({ ...bankForm, account_number: v })}
-            editable={!isApproved && !isUnderReview}
+            onChangeText={(text) => setBankForm({ ...bankForm, account_number: text.replace(/\D/g, '') })}
+            editable={!isApproved}
           />
+
+          <Text style={styles.fieldLabel}>IFSC CODE *</Text>
           <TextInput
-            style={styles.input}
-            placeholder="IFSC Code (e.g. HDFC0001234)"
-            placeholderTextColor="#94A3B8"
+            style={styles.fieldInput}
+            placeholder="e.g. HDFC0001234"
+            placeholderTextColor="#64748B"
             autoCapitalize="characters"
             value={bankForm.ifsc_code}
-            onChangeText={(v) => setBankForm({ ...bankForm, ifsc_code: v.toUpperCase() })}
-            editable={!isApproved && !isUnderReview}
+            onChangeText={(text) => setBankForm({ ...bankForm, ifsc_code: text.toUpperCase() })}
+            editable={!isApproved}
           />
 
-          {!isApproved && !isUnderReview && (
-            <TouchableOpacity style={styles.uploadBtn} onPress={handleSaveBank} disabled={actionLoading}>
-              <Text style={styles.uploadBtnText}>Save Bank Details</Text>
+          {!isApproved && (
+            <TouchableOpacity
+              style={styles.stepActionBtn}
+              onPress={handleSaveBank}
+              disabled={actionLoading}
+            >
+              <Text style={styles.stepActionBtnText}>Save Bank Account</Text>
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Item 3: Video Declaration */}
-        <View style={styles.docCard}>
-          <View style={styles.docHeader}>
-            <Text style={styles.docTitle}>3. Video Verification Declaration</Text>
-            <Text style={[styles.docBadge, videoConfirmed ? styles.badgeGreen : styles.badgeYellow]}>
-              {videoConfirmed ? 'Confirmed' : 'Pending'}
-            </Text>
+        {/* Step 3: Self Declaration */}
+        <View style={styles.stepCard}>
+          <View style={styles.stepHeader}>
+            <View style={styles.stepNumCircle}>
+              <Text style={styles.stepNumText}>3</Text>
+            </View>
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={styles.stepTitle}>Partner Self-Declaration</Text>
+              <Text style={styles.stepSub}>Agreement to GharKaPaisa terms & banking policies</Text>
+            </View>
           </View>
-          <Text style={styles.docSub}>Self-declaration for financial compliance & partner agreement</Text>
 
           <TouchableOpacity
-            style={styles.checkRow}
+            style={styles.checkboxRow}
             onPress={() => setVideoConfirmed(!videoConfirmed)}
-            disabled={isApproved || isUnderReview}
+            activeOpacity={0.8}
           >
-            <Text style={{ fontSize: 18, marginRight: 8 }}>{videoConfirmed ? '☑️' : '⏹️'}</Text>
-            <Text style={{ flex: 1, fontSize: 12, color: '#334155', fontWeight: '600' }}>
-              I hereby declare that all provided documents belong to me and I accept partner terms and conditions.
+            <View style={[styles.checkbox, videoConfirmed && styles.checkboxActive]}>
+              {videoConfirmed && <Text style={{ color: '#fff', fontSize: 12, fontWeight: '900' }}>✓</Text>}
+            </View>
+            <Text style={styles.checkboxLabel}>
+              I confirm that all provided PAN, Bank & personal information is authentic and belongs to me.
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Master Submit KYC Button */}
-        {!isApproved && !isUnderReview && (
+        {/* Final Submit Button */}
+        {!isApproved && (
           <TouchableOpacity
-            style={[styles.submitKycBtn, getProgress() < 100 && styles.btnDisabled]}
+            style={styles.finalSubmitBtn}
             onPress={handleSubmitKyc}
-            disabled={getProgress() < 100 || actionLoading}
+            disabled={actionLoading}
           >
             {actionLoading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
+              <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text style={styles.submitKycText}>Submit KYC Documents for Review</Text>
+              <Text style={styles.finalSubmitBtnText}>Submit KYC for Verification 🚀</Text>
             )}
           </TouchableOpacity>
         )}
-
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
+  safe: {
+    flex: 1,
+    backgroundColor: '#080E1A',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0
+  },
   header: {
-    backgroundColor: '#0d47a1',
+    backgroundColor: '#0F172A',
     paddingHorizontal: 16,
-    paddingTop: 40,
-    paddingBottom: 16,
+    paddingTop: 12,
+    paddingBottom: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B'
+  },
+  backBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 8
+  },
+  backBtnText: {
+    color: '#38BDF8',
+    fontSize: 14,
+    fontWeight: '800'
+  },
+  headerTitle: {
+    color: '#F8FAFC',
+    fontSize: 17,
+    fontWeight: '900'
+  },
+  scroll: {
+    padding: 16,
+    paddingBottom: 40
+  },
+  statusBanner: {
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    borderWidth: 1
   },
-  backBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  headerTitle: { color: '#FFFFFF', fontSize: 17, fontWeight: '800' },
-  scroll: { padding: 16, paddingBottom: 40 },
-  statusBanner: {
-    flexDirection: 'row',
-    padding: 14,
-    borderRadius: 12,
+  statusBannerApproved: {
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderColor: '#10B981'
+  },
+  statusBannerReview: {
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderColor: '#F59E0B'
+  },
+  statusBannerPending: {
+    backgroundColor: 'rgba(59, 130, 246, 0.12)',
+    borderColor: '#3B82F6'
+  },
+  statusTitle: {
+    color: '#F8FAFC',
+    fontSize: 14,
+    fontWeight: '800'
+  },
+  statusSub: {
+    color: '#94A3B8',
+    fontSize: 11.5,
+    marginTop: 3,
+    lineHeight: 16
+  },
+  progressCard: {
+    backgroundColor: '#0F172A',
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
-    marginBottom: 16,
-    gap: 12,
+    borderColor: '#1E293B',
+    marginBottom: 16
   },
-  bannerDraft: { backgroundColor: '#F1F5F9', borderColor: '#CBD5E1' },
-  bannerReview: { backgroundColor: '#FFFBEB', borderColor: '#F59E0B' },
-  bannerApproved: { backgroundColor: '#ECFDF5', borderColor: '#10B981' },
-  bannerIcon: { fontSize: 24 },
-  statusTitle: { fontSize: 15, fontWeight: '800', color: '#0F172A' },
-  statusDesc: { fontSize: 12, color: '#475569', marginTop: 2 },
-  progressCard: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 16 },
-  progressHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  progressLabel: { fontSize: 12, fontWeight: '700', color: '#334155' },
-  progressVal: { fontSize: 13, fontWeight: '800', color: '#0d47a1' },
-  progressBarBg: { height: 8, backgroundColor: '#E2E8F0', borderRadius: 4, overflow: 'hidden' },
-  progressBarFill: { height: '100%', backgroundColor: '#0d47a1', borderRadius: 4 },
-  docCard: { backgroundColor: '#FFFFFF', borderRadius: 14, padding: 16, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 14 },
-  docHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  docTitle: { fontSize: 15, fontWeight: '800', color: '#0F172A' },
-  docBadge: { fontSize: 11, fontWeight: '800', paddingVertical: 2, paddingHorizontal: 8, borderRadius: 6 },
-  badgeGreen: { backgroundColor: '#ECFDF5', color: '#059669' },
-  badgeYellow: { backgroundColor: '#FFFBEB', color: '#D97706' },
-  docSub: { fontSize: 12, color: '#64748B', marginTop: 4, marginBottom: 10 },
-  input: { borderWidth: 1.5, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, fontSize: 13, color: '#0F172A', fontWeight: '700' },
-  uploadBtn: { backgroundColor: '#0d47a1', padding: 10, borderRadius: 8, alignItems: 'center', marginTop: 10 },
-  uploadBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  checkRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
-  submitKycBtn: { backgroundColor: '#059669', padding: 16, borderRadius: 14, alignItems: 'center', marginTop: 10, elevation: 3 },
-  submitKycText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
-  btnDisabled: { backgroundColor: '#94A3B8' },
-  successMsg: { backgroundColor: '#ECFDF5', padding: 12, borderRadius: 8, marginBottom: 12 },
-  successText: { color: '#047857', fontSize: 12, fontWeight: '700' },
-  errorMsg: { backgroundColor: '#FEF2F2', padding: 12, borderRadius: 8, marginBottom: 12 },
-  errorText: { color: '#B91C1C', fontSize: 12, fontWeight: '700' },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8
+  },
+  progressLabel: {
+    color: '#64748B',
+    fontSize: 10.5,
+    fontWeight: '800',
+    letterSpacing: 0.8
+  },
+  progressPercent: {
+    color: '#38BDF8',
+    fontSize: 11,
+    fontWeight: '900'
+  },
+  progressBarTrack: {
+    height: 8,
+    backgroundColor: '#1E293B',
+    borderRadius: 4,
+    overflow: 'hidden'
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#10B981',
+    borderRadius: 4
+  },
+  successBanner: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#10B981'
+  },
+  successBannerText: {
+    color: '#34D399',
+    fontSize: 12,
+    fontWeight: '800'
+  },
+  errorBanner: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#EF4444'
+  },
+  errorBannerText: {
+    color: '#F87171',
+    fontSize: 12,
+    fontWeight: '800'
+  },
+  stepCard: {
+    backgroundColor: '#0F172A',
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    marginBottom: 14
+  },
+  stepHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14
+  },
+  stepNumCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  stepNumText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '900'
+  },
+  stepTitle: {
+    color: '#F8FAFC',
+    fontSize: 14,
+    fontWeight: '800'
+  },
+  stepSub: {
+    color: '#64748B',
+    fontSize: 11,
+    marginTop: 2
+  },
+  stepDoneBadge: {
+    backgroundColor: '#064E3B',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 8
+  },
+  stepDoneBadgeText: {
+    color: '#34D399',
+    fontSize: 9,
+    fontWeight: '900'
+  },
+  fieldLabel: {
+    color: '#94A3B8',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 6,
+    marginTop: 6
+  },
+  fieldInput: {
+    backgroundColor: '#1E293B',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    color: '#F8FAFC',
+    fontSize: 13,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 10
+  },
+  stepActionBtn: {
+    backgroundColor: '#1E293B',
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+    marginTop: 4
+  },
+  stepActionBtnText: {
+    color: '#60A5FA',
+    fontSize: 12,
+    fontWeight: '800'
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 4
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: '#3B82F6',
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+    marginTop: 2
+  },
+  checkboxActive: {
+    backgroundColor: '#2563EB'
+  },
+  checkboxLabel: {
+    color: '#94A3B8',
+    fontSize: 12,
+    flex: 1,
+    lineHeight: 16
+  },
+  finalSubmitBtn: {
+    backgroundColor: '#2563EB',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    marginBottom: 24,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 4
+  },
+  finalSubmitBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '900'
+  }
 });

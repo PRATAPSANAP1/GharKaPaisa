@@ -136,7 +136,7 @@ export default function AdminOperatorVerificationScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar backgroundColor="#0F172A" barStyle="light-content" />
+      <StatusBar backgroundColor="#0B1120" barStyle="light-content" />
 
       {/* Header */}
       <View style={styles.header}>
@@ -294,7 +294,7 @@ export default function AdminOperatorVerificationScreen({ route, navigation }) {
             </View>
 
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: '#0284C7' }]}
+              style={[styles.actionBtn, { backgroundColor: '#2563EB' }]}
               onPress={() => handleSaveVerification('REMARK_STAGE')}
               disabled={saving}
             >
@@ -450,7 +450,7 @@ export default function AdminOperatorVerificationScreen({ route, navigation }) {
 
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 6 }}>
               <TouchableOpacity
-                style={[styles.actionBtn, { flex: 1, backgroundColor: '#0284C7' }]}
+                style={[styles.actionBtn, { flex: 1, backgroundColor: '#2563EB' }]}
                 onPress={() => handleSaveVerification('SUBMIT_REMARK')}
                 disabled={saving}
               >
@@ -475,9 +475,9 @@ export default function AdminOperatorVerificationScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
+  safe: { flex: 1, backgroundColor: '#0B1120', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
   header: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#111C33',
     paddingHorizontal: 16,
     paddingTop: 40,
     paddingBottom: 16,
@@ -488,35 +488,35 @@ const styles = StyleSheet.create({
   backBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   badgeText: { color: '#38BDF8', fontSize: 9, fontWeight: '900', letterSpacing: 1 },
   headerTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', marginTop: 1 },
-  tabRow: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0', paddingHorizontal: 8 },
+  tabRow: { flexDirection: 'row', backgroundColor: '#131F38', borderBottomWidth: 1, borderBottomColor: '#243352', paddingHorizontal: 8 },
   tabBtn: { flex: 1, paddingVertical: 12, alignItems: 'center' },
   tabBtnActive: { borderBottomWidth: 3, borderBottomColor: '#0F172A' },
-  tabText: { fontSize: 11.5, fontWeight: '700', color: '#64748B' },
-  tabTextActive: { color: '#0F172A', fontWeight: '800' },
+  tabText: { fontSize: 11.5, fontWeight: '700', color: '#94A3B8' },
+  tabTextActive: { color: '#F1F5F9', fontWeight: '800' },
   scroll: { padding: 16, paddingBottom: 40 },
   customerHeaderCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#131F38',
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#243352',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16
   },
-  customerName: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
-  customerSub: { fontSize: 11.5, color: '#64748B', marginTop: 2 },
+  customerName: { fontSize: 16, fontWeight: '800', color: '#F1F5F9' },
+  customerSub: { fontSize: 11.5, color: '#94A3B8', marginTop: 2 },
   statusPill: { backgroundColor: '#E0F2FE', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   statusPillText: { fontSize: 10, fontWeight: '900', color: '#0369A1' },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 18, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 16 },
-  cardTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
-  cardSub: { fontSize: 12, color: '#64748B', marginBottom: 14, marginTop: 2 },
-  label: { fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6, marginTop: 4 },
-  input: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontSize: 13, color: '#0F172A', marginBottom: 12 },
+  card: { backgroundColor: '#131F38', borderRadius: 16, padding: 18, borderWidth: 1, borderColor: '#243352', marginBottom: 16 },
+  cardTitle: { fontSize: 16, fontWeight: '800', color: '#F1F5F9' },
+  cardSub: { fontSize: 12, color: '#94A3B8', marginBottom: 14, marginTop: 2 },
+  label: { fontSize: 12, fontWeight: '700', color: '#CBD5E1', marginBottom: 6, marginTop: 4 },
+  input: { backgroundColor: '#0B1120', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontSize: 13, color: '#F1F5F9', marginBottom: 12 },
   optionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
-  chip: { flex: 1, minWidth: '45%', backgroundColor: '#F1F5F9', paddingVertical: 10, paddingHorizontal: 8, borderRadius: 8, alignItems: 'center' },
-  chipActive: { backgroundColor: '#0F172A' },
+  chip: { flex: 1, minWidth: '45%', backgroundColor: '#131F38', paddingVertical: 10, paddingHorizontal: 8, borderRadius: 8, alignItems: 'center' },
+  chipActive: { backgroundColor: '#111C33' },
   chipText: { fontSize: 11, fontWeight: '700', color: '#475569' },
   chipTextActive: { color: '#FFFFFF' },
   infoBox: { backgroundColor: '#EFF6FF', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#93C5FD', marginBottom: 16 },
@@ -525,6 +525,6 @@ const styles = StyleSheet.create({
   panRevealCard: { padding: 14, borderRadius: 12, borderWidth: 1, marginBottom: 14, alignItems: 'center' },
   panRevealLabel: { fontSize: 11, fontWeight: '800' },
   panRevealValue: { fontSize: 18, fontWeight: '900', marginTop: 2, letterSpacing: 1 },
-  actionBtn: { backgroundColor: '#0F172A', borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginTop: 6 },
+  actionBtn: { backgroundColor: '#111C33', borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginTop: 6 },
   actionBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' }
 });
