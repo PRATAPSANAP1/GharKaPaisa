@@ -64,6 +64,8 @@ const allowedOrigins = [
   "https://www.gharkapaisa.in",
   "https://admin.gharkapaisa.in",
   "https://api.gharkapaisa.in",
+  "https://gharkapaisa.pages.dev",
+  "https://main.gharkapaisa.pages.dev",
   ...envOrigins
 ];
 
@@ -79,7 +81,10 @@ const corsOptions = {
         hostname === 'localhost' ||
         hostname === '127.0.0.1' ||
         hostname === 'gharkapaisa.in' ||
-        hostname.endsWith('.gharkapaisa.in')
+        hostname.endsWith('.gharkapaisa.in') ||
+        hostname === 'gharkapaisa.pages.dev' ||
+        hostname.endsWith('.gharkapaisa.pages.dev') ||
+        hostname.endsWith('.pages.dev')
       ) {
         return callback(null, true);
       }
@@ -553,6 +558,8 @@ const startServer = async () => {
           'https://www.gharkapaisa.in',
           'https://admin.gharkapaisa.in',
           'https://api.gharkapaisa.in',
+          'https://gharkapaisa.pages.dev',
+          'https://main.gharkapaisa.pages.dev',
           'http://localhost:5173',
           'http://localhost:5174',
           'http://localhost:3000',
