@@ -1,21 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { apiClient } from '../../services/api';
+import apiClient from '../../services/api';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
 interface Partner {
   id: string;
-  name: string;
-  email: string;
-  phone: string;
+  partner_code?: string;
+  first_name?: string;
+  last_name?: string;
+  company_name?: string;
+  email?: string;
+  mobile?: string;
   status: string;
-  kyc_status: string;
-  total_leads: number;
-  total_applications: number;
-  wallet_balance: number;
-  created_at: string;
+  kyc_status?: string;
+  parent_code?: string;
+  created_at?: string;
 }
 
 export default function AdminPartnersScreen() {
@@ -32,9 +33,10 @@ export default function AdminPartnersScreen() {
   const fetchPartners = async () => {
     try {
       setLoading(true);
-      const params = statusFilter !== 'all' ? { status: statusFilter } : {};
+      const params: Record<string, string> = { limit: '100' };
+      if (statusFilter !== 'all') params.status = statusFilter;
       const response = await apiClient.get('/admin/partners', { params });
-      setPartners(response.data || []);
+      setPartners(response.data?.data || []);
     } catch (error) {
       console.error('Failed to fetch partners:', error);
       Alert.alert('Error', 'Failed to load partners');
@@ -43,15 +45,32 @@ export default function AdminPartnersScreen() {
     }
   };
 
-  const handleToggleStatus = async (partnerId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-    try {
-      await apiClient.patch(`/admin/partners/${partnerId}`, { status: newStatus });
-      fetchPartners();
-    } catch (error) {
-      console.error('Failed to update partner status:', error);
-      Alert.alert('Error', 'Failed to update partner status');
-    }
+  const handleKycDecision = async (partnerId: string, approved: boolean) => {
+    Alert.alert(
+      approved ? 'Approve KYC' : 'Reject KYC',
+      `Are you sure you want to ${approved ? 'approve' : 'reject'} this partner's KYC?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: approved ? 'Approve' : 'Reject',
+          style: approved ? 'default' : 'destructive',
+          onPress: async () => {
+            try {
+              await apiClient.post('/admin/approve-kyc', {
+                partnerId,
+                approved,
+                ...(approved ? {} : { rejection_reason: 'Rejected by admin' }),
+              });
+              fetchPartners();
+              Alert.alert('Success', `KYC ${approved ? 'approved' : 'rejected'} successfully`);
+            } catch (error) {
+              console.error('Failed to update KYC:', error);
+              Alert.alert('Error', 'Failed to update KYC status');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleViewDetails = (partnerId: string) => {
@@ -61,11 +80,19 @@ export default function AdminPartnersScreen() {
     });
   };
 
-  const filteredPartners = partners.filter(p =>
-    p.name.toLowerCase().includes(searchText.toLowerCase()) ||
-    p.email.toLowerCase().includes(searchText.toLowerCase()) ||
-    p.phone.includes(searchText)
-  );
+  const filteredPartners = partners.filter(p => {
+    const haystack = [
+      p.first_name,
+      p.last_name,
+      p.email,
+      p.mobile,
+      p.partner_code,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    return haystack.includes(searchText.toLowerCase());
+  });
 
   const statusOptions = ['all', 'active', 'inactive', 'pending', 'suspended'];
 
@@ -124,39 +151,42 @@ export default function AdminPartnersScreen() {
             <Text style={styles.emptyText}>No partners found</Text>
           </View>
         ) : (
-          filteredPartners.map((partner) => (
+          filteredPartners.map((partner) => {
+            const kycDecided = partner.kyc_status === 'approved' || partner.kyc_status === 'rejected';
+            return (
             <View key={partner.id} style={styles.partnerCard}>
               <View style={styles.partnerHeader}>
                 <View style={styles.partnerInfo}>
-                  <Text style={styles.partnerName}>{partner.name}</Text>
-                  <Text style={styles.partnerEmail}>{partner.email}</Text>
-                  <Text style={styles.partnerPhone}>{partner.phone}</Text>
+                  <Text style={styles.partnerName}>
+                    {`${partner.first_name || 'Partner'} ${partner.last_name || ''}`.trim()}
+                  </Text>
+                  <Text style={styles.partnerEmail}>{partner.email || '—'}</Text>
+                  <Text style={styles.partnerPhone}>{partner.mobile || ''}</Text>
                 </View>
-                <TouchableOpacity
+                <View
                   style={[
                     styles.statusBadge,
                     { backgroundColor: getStatusColor(partner.status) }
                   ]}
-                  onPress={() => handleToggleStatus(partner.id, partner.status)}
                 >
                   <Text style={styles.statusText}>
-                    {partner.status.charAt(0).toUpperCase() + partner.status.slice(1)}
+                    {(partner.status || 'unknown').charAt(0).toUpperCase() + (partner.status || 'unknown').slice(1)}
                   </Text>
-                </TouchableOpacity>
+                </View>
               </View>
 
               <View style={styles.partnerStats}>
                 <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{partner.total_leads}</Text>
-                  <Text style={styles.statLabel}>Leads</Text>
+                  <Text style={styles.statValue}>{partner.partner_code || '—'}</Text>
+                  <Text style={styles.statLabel}>Partner Code</Text>
                 </View>
                 <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{partner.total_applications}</Text>
-                  <Text style={styles.statLabel}>Applications</Text>
+                  <Text style={styles.statValue} numberOfLines={1}>{partner.company_name || '—'}</Text>
+                  <Text style={styles.statLabel}>Company</Text>
                 </View>
                 <View style={styles.statItem}>
-                  <Text style={styles.statValue}>₹{partner.wallet_balance.toLocaleString()}</Text>
-                  <Text style={styles.statLabel}>Balance</Text>
+                  <Text style={styles.statValue}>{partner.parent_code || '—'}</Text>
+                  <Text style={styles.statLabel}>Parent</Text>
                 </View>
               </View>
 
@@ -165,12 +195,29 @@ export default function AdminPartnersScreen() {
                 <Text
                   style={[
                     styles.kycStatus,
-                    { color: partner.kyc_status === 'verified' ? '#10B981' : '#F59E0B' }
+                    { color: partner.kyc_status === 'approved' ? '#10B981' : partner.kyc_status === 'rejected' ? '#EF4444' : '#F59E0B' }
                   ]}
                 >
-                  {partner.kyc_status.charAt(0).toUpperCase() + partner.kyc_status.slice(1)}
+                  {(partner.kyc_status || 'pending').charAt(0).toUpperCase() + (partner.kyc_status || 'pending').slice(1)}
                 </Text>
               </View>
+
+              {!kycDecided && (
+                <View style={styles.kycActions}>
+                  <TouchableOpacity
+                    style={[styles.kycButton, styles.kycApproveButton]}
+                    onPress={() => handleKycDecision(partner.id, true)}
+                  >
+                    <Text style={styles.kycButtonText}>Approve KYC</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.kycButton, styles.kycRejectButton]}
+                    onPress={() => handleKycDecision(partner.id, false)}
+                  >
+                    <Text style={styles.kycButtonText}>Reject KYC</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
 
               <TouchableOpacity
                 style={styles.viewButton}
@@ -179,7 +226,8 @@ export default function AdminPartnersScreen() {
                 <Text style={styles.viewButtonText}>View Details</Text>
               </TouchableOpacity>
             </View>
-          ))
+            );
+          })
         )}
       </View>
     </ScrollView>
@@ -199,13 +247,13 @@ const getStatusColor = (status: string) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
   },
   loadingText: {
     marginTop: 12,
@@ -228,7 +276,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   searchInput: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
     borderRadius: 8,
     padding: 12,
     fontSize: typography.sizes.sm,
@@ -245,7 +293,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
     marginRight: 8,
     borderWidth: 1,
     borderColor: colors.border,
@@ -352,6 +400,28 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   kycStatus: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold,
+  },
+  kycActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  kycButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  kycApproveButton: {
+    backgroundColor: '#10B981',
+  },
+  kycRejectButton: {
+    backgroundColor: '#EF4444',
+  },
+  kycButtonText: {
+    color: '#FFFFFF',
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.bold,
   },

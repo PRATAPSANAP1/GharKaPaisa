@@ -69,12 +69,21 @@ apiClient.interceptors.response.use(
   }
 );
 
-let onWorkingHoursCallback = null;
-export const registerWorkingHoursListener = (callback) => {
+export interface WorkingHoursPayload {
+  isRestricted: boolean;
+  message: string;
+  details?: any;
+}
+
+type WorkingHoursListener = (payload: WorkingHoursPayload) => void;
+
+let onWorkingHoursCallback: WorkingHoursListener | null = null;
+
+export const registerWorkingHoursListener = (callback: WorkingHoursListener) => {
   onWorkingHoursCallback = callback;
 };
 
-export const setAuthToken = (token) => {
+export const setAuthToken = (token: string | null) => {
   if (token) {
     apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
   } else {

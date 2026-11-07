@@ -282,3 +282,4 @@ api.request = function (configOrUrl, maybeConfig) {
 };
 
 export default api;
+

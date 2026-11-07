@@ -199,14 +199,16 @@ const saveSettings = async (req, res, next) => {
   try {
     const { 
       email_enabled, sms_enabled, app_enabled, marketing_enabled, 
-      commission_enabled, kyc_enabled, application_enabled, language, frequency 
+      commission_enabled, kyc_enabled, application_enabled, language, frequency,
+      messenger_enabled, sound_enabled
     } = req.body;
 
     const { rows: [updated] } = await query(`
       INSERT INTO notification_preferences (
         user_id, email_enabled, sms_enabled, app_enabled, marketing_enabled, 
-        commission_enabled, kyc_enabled, application_enabled, language, frequency
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        commission_enabled, kyc_enabled, application_enabled, language, frequency,
+        messenger_enabled, sound_enabled
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       ON CONFLICT (user_id) DO UPDATE SET
         email_enabled = EXCLUDED.email_enabled,
         sms_enabled = EXCLUDED.sms_enabled,
@@ -216,7 +218,9 @@ const saveSettings = async (req, res, next) => {
         kyc_enabled = EXCLUDED.kyc_enabled,
         application_enabled = EXCLUDED.application_enabled,
         language = EXCLUDED.language,
-        frequency = EXCLUDED.frequency
+        frequency = EXCLUDED.frequency,
+        messenger_enabled = EXCLUDED.messenger_enabled,
+        sound_enabled = EXCLUDED.sound_enabled
       RETURNING *
     `, [
       req.user.id, 
@@ -228,7 +232,9 @@ const saveSettings = async (req, res, next) => {
       kyc_enabled !== undefined ? kyc_enabled : true,
       application_enabled !== undefined ? application_enabled : true,
       language || 'en',
-      frequency || 'instant'
+      frequency || 'instant',
+      messenger_enabled !== undefined ? messenger_enabled : true,
+      sound_enabled !== undefined ? sound_enabled : true
     ]);
 
     return success(res, updated, 'Preferences updated successfully');
@@ -276,6 +282,58 @@ const toggleMute = async (req, res, next) => {
     ]);
 
     return success(res, updated, 'Mute preferences updated');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /notifications/device-token — Register or refresh a device push token
+const registerDeviceToken = async (req, res, next) => {
+  try {
+    const token = String(req.body.token || req.body.device_token || '').trim();
+    const deviceType = String(req.body.deviceType || req.body.device_type || 'mobile').trim();
+    const platform = req.body.platform ? String(req.body.platform).trim() : null;
+
+    if (!token) {
+      return error(res, 'A device token is required', 400);
+    }
+
+    const { rows: [record] } = await query(`
+      INSERT INTO device_tokens (user_id, token, device_type, platform, is_active, last_seen_at, updated_at)
+      VALUES ($1, $2, $3, $4, TRUE, NOW(), NOW())
+      ON CONFLICT (token)
+      DO UPDATE SET
+        user_id = EXCLUDED.user_id,
+        device_type = EXCLUDED.device_type,
+        platform = EXCLUDED.platform,
+        is_active = TRUE,
+        last_seen_at = NOW(),
+        updated_at = NOW()
+      RETURNING id, token, device_type, platform, is_active, last_seen_at
+    `, [req.user.id, token, deviceType, platform]);
+
+    return success(res, record, 'Device token registered successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// DELETE /notifications/device-token — Unregister a device push token
+const unregisterDeviceToken = async (req, res, next) => {
+  try {
+    const token = String(req.body.token || req.query.token || '').trim();
+
+    if (!token) {
+      return error(res, 'A device token is required', 400);
+    }
+
+    await query(`
+      UPDATE device_tokens
+      SET is_active = FALSE, updated_at = NOW()
+      WHERE token = $1 AND user_id = $2
+    `, [token, req.user.id]);
+
+    return success(res, { token }, 'Device token unregistered');
   } catch (err) {
     next(err);
   }
@@ -1257,6 +1315,8 @@ module.exports = {
   getSettings,
   saveSettings,
   toggleMute,
+  registerDeviceToken,
+  unregisterDeviceToken,
   getAnnouncements,
   getAnnouncementStats,
   getAnnouncementAnalytics,

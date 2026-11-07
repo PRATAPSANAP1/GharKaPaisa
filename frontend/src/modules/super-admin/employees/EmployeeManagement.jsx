@@ -22,12 +22,14 @@ import {
 export default function EmployeeManagement() {
   const { C } = useTheme();
 
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+  const isMobile = windowWidth < 768;
+  const isTablet = windowWidth >= 768 && windowWidth < 1024;
 
   const [activeTab, setActiveTab] = useState('employees'); // 'employees', 'hierarchy', 'bonus'
   const [drawerEmp, setDrawerEmp] = useState(null); // Right-side drawer / mobile modal selected employee
@@ -46,19 +48,38 @@ export default function EmployeeManagement() {
   const [attendanceYear, setAttendanceYear] = useState(new Date().getFullYear());
   const [selectedDayAttendance, setSelectedDayAttendance] = useState(null);
 
-  // Drawer Employee Editing State
+  // Drawer Employee Editing State - Comprehensive Fields
   const [isEditingEmpInfo, setIsEditingEmpInfo] = useState(false);
   const [editEmpForm, setEditEmpForm] = useState({
-    full_name: '', mobile_number: '', email_id: '', designation: '', department: '', manager_name: ''
+    full_name: '',
+    mobile_number: '',
+    whatsapp_number: '',
+    email_id: '',
+    designation: '',
+    department: '',
+    work_location: '',
+    employment_type: 'Full-time',
+    offered_salary: '',
+    manager_name: '',
+    date_of_birth: '',
+    gender: 'Male',
+    emergency_contact_name: '',
+    emergency_contact_number: '',
+    current_address: '',
+    permanent_address: ''
   });
 
   // Inline 360 Document Inspection & Verification State
   const [docStatuses, setDocStatuses] = useState({
-    aadhaar: { status: 'Submitted', reason: '' },
-    pan: { status: 'Submitted', reason: '' },
-    bank: { status: 'Submitted', reason: '' },
-    photo: { status: 'Submitted', reason: '' },
-    offer_letter: { status: 'Submitted', reason: '' }
+    aadhaar: { status: 'Submitted', reason: '', url: null },
+    pan: { status: 'Submitted', reason: '', url: null },
+    bank: { status: 'Submitted', reason: '', url: null },
+    photo: { status: 'Submitted', reason: '', url: null },
+    offer_letter: { status: 'Submitted', reason: '', url: null },
+    resume: { status: 'Submitted', reason: '', url: null },
+    education_certificate: { status: 'Submitted', reason: '', url: null },
+    experience_letter: { status: 'Submitted', reason: '', url: null },
+    terms_video: { status: 'Submitted', reason: '', url: null }
   });
   const [rejectingDocKey, setRejectingDocKey] = useState(null);
   const [docRejectReasonInput, setDocRejectReasonInput] = useState('');
@@ -89,6 +110,7 @@ export default function EmployeeManagement() {
         setDrawer360Data(data);
         const kyc = data.kyc || {};
         const emp = data.employee || {};
+        const jDetails = data.joining_details || {};
         const docs = data.documents || [];
 
         const findDoc = (types) => docs.find(d => types.includes(String(d.document_type || '').toLowerCase().trim()));
@@ -99,6 +121,10 @@ export default function EmployeeManagement() {
         const photoDoc = findDoc(['photo', 'photograph', 'profile_photo', 'passport_photo', 'avatar']);
         const faceDoc = findDoc(['face', 'face_biometric', 'biometric', 'face_verification', 'face_reference', 'selfie', 'teleprompter_face']);
         const offerDoc = findDoc(['offer_letter', 'joining_form', 'terms_video', 'resume']);
+        const resumeDoc = findDoc(['resume', 'cv']);
+        const eduDoc = findDoc(['education_certificate', 'qualification_certificate', 'education', 'highest_qualification']);
+        const expDoc = findDoc(['experience_letter', 'experience', 'relieving_letter']);
+        const videoDoc = findDoc(['terms_video', 'video', 'video_verification']) || (data.terms?.video_url ? { document_url: data.terms.video_url, verification_status: data.terms.verification_status || 'SUBMITTED' } : null);
 
         const faceUrl = data.biometrics?.active_template?.image_url || data.verification_state?.biometric_template?.image_url || emp.face_reference_url || emp.face_verification_url || faceDoc?.document_url || null;
         const photoUrl = emp.profile_photo_url || data.verification_state?.profile_photo_url || photoDoc?.document_url || faceUrl || null;
@@ -146,6 +172,10 @@ export default function EmployeeManagement() {
         const panUrl = kyc.pan_document_url || panDoc?.document_url || null;
         const bankUrl = kyc.bank_document_url || bankDoc?.document_url || null;
         const offerUrl = offerDoc?.document_url || emp.resume_url || null;
+        const resumeUrl = resumeDoc?.document_url || emp.resume_url || null;
+        const eduUrl = eduDoc?.document_url || null;
+        const expUrl = expDoc?.document_url || null;
+        const videoUrl = videoDoc?.document_url || data.terms?.video_url || null;
 
         setDocStatuses({
           aadhaar: {
@@ -172,6 +202,26 @@ export default function EmployeeManagement() {
             status: parseStatus(offerDoc?.verification_status || (offerUrl ? 'SUBMITTED' : 'NOT_UPLOADED'), false, offerUrl),
             reason: offerDoc?.rejection_reason || '',
             url: offerUrl
+          },
+          resume: {
+            status: parseStatus(resumeDoc?.verification_status || (resumeUrl ? 'SUBMITTED' : 'NOT_UPLOADED'), false, resumeUrl),
+            reason: resumeDoc?.rejection_reason || '',
+            url: resumeUrl
+          },
+          education_certificate: {
+            status: parseStatus(eduDoc?.verification_status || (eduUrl ? 'SUBMITTED' : 'NOT_UPLOADED'), false, eduUrl),
+            reason: eduDoc?.rejection_reason || '',
+            url: eduUrl
+          },
+          experience_letter: {
+            status: parseStatus(expDoc?.verification_status || (expUrl ? 'SUBMITTED' : 'NOT_UPLOADED'), false, expUrl),
+            reason: expDoc?.rejection_reason || '',
+            url: expUrl
+          },
+          terms_video: {
+            status: parseStatus(data.terms?.verification_status || videoDoc?.verification_status || (videoUrl ? 'SUBMITTED' : 'NOT_UPLOADED'), data.terms?.accepted, videoUrl),
+            reason: data.terms?.verification_notes || videoDoc?.rejection_reason || '',
+            url: videoUrl
           }
         });
       }
@@ -236,8 +286,20 @@ export default function EmployeeManagement() {
       payload.photo_action = action;
       if (!isApprove) payload.photo_reason = reasonText;
     } else if (docKey === 'offer_letter') {
+      payload.offer_letter_action = action;
+      if (!isApprove) payload.offer_letter_reason = reasonText;
+    } else if (docKey === 'resume') {
+      payload.resume_action = action;
+      if (!isApprove) payload.resume_reason = reasonText;
+    } else if (docKey === 'education_certificate') {
       payload.education_certificate_action = action;
       if (!isApprove) payload.education_certificate_reason = reasonText;
+    } else if (docKey === 'experience_letter') {
+      payload.experience_letter_action = action;
+      if (!isApprove) payload.experience_letter_reason = reasonText;
+    } else if (docKey === 'terms_video' || docKey === 'video') {
+      payload.video_action = action;
+      if (!isApprove) payload.video_reason = reasonText;
     }
 
     try {
@@ -257,24 +319,39 @@ export default function EmployeeManagement() {
       setEditEmpForm({
         full_name: drawerEmp.full_name || '',
         mobile_number: drawerEmp.mobile_number || '',
+        whatsapp_number: drawerEmp.whatsapp_number || '',
         email_id: drawerEmp.email_id || drawerEmp.email || '',
         designation: drawerEmp.designation || '',
         department: drawerEmp.department || '',
-        manager_name: drawerEmp.manager_name || drawerEmp.reporting_manager || drawerEmp.team_leader_name || ''
+        work_location: drawerEmp.work_location || '',
+        employment_type: drawerEmp.employment_type || 'Full-time',
+        offered_salary: drawerEmp.offered_salary || '',
+        manager_name: drawerEmp.manager_name || drawerEmp.reporting_manager || drawerEmp.team_leader_name || '',
+        date_of_birth: drawerEmp.date_of_birth ? String(drawerEmp.date_of_birth).split('T')[0] : '',
+        gender: drawerEmp.gender || 'Male',
+        emergency_contact_name: drawerEmp.emergency_contact_name || '',
+        emergency_contact_number: drawerEmp.emergency_contact_number || '',
+        current_address: drawerEmp.current_address || '',
+        permanent_address: drawerEmp.permanent_address || ''
       });
       setDocIdentityFields({
-        aadhaar_number: drawerEmp.aadhaar_number || 'N/A',
-        pan_number: drawerEmp.pan_number || 'N/A',
-        bank_account: drawerEmp.bank_account || 'N/A',
-        ifsc_code: drawerEmp.ifsc_code || 'N/A',
-        admin_remarks: drawerEmp.admin_remarks || 'KYC Profile Loaded.'
+        aadhaar_number: drawerEmp.aadhaar_number || '',
+        pan_number: drawerEmp.pan_number || '',
+        bank_account: drawerEmp.bank_account || drawerEmp.bank_account_number || '',
+        bank_account_holder_name: drawerEmp.bank_account_holder_name || drawerEmp.full_name || '',
+        ifsc_code: drawerEmp.ifsc_code || '',
+        admin_remarks: drawerEmp.admin_remarks || ''
       });
       setDocStatuses({
         aadhaar: { status: 'Submitted', reason: '', url: null },
         pan: { status: 'Submitted', reason: '', url: null },
         bank: { status: 'Submitted', reason: '', url: null },
         photo: { status: 'Submitted', reason: '', url: null },
-        offer_letter: { status: 'Submitted', reason: '', url: null }
+        offer_letter: { status: 'Submitted', reason: '', url: null },
+        resume: { status: 'Submitted', reason: '', url: null },
+        education_certificate: { status: 'Submitted', reason: '', url: null },
+        experience_letter: { status: 'Submitted', reason: '', url: null },
+        terms_video: { status: 'Submitted', reason: '', url: null }
       });
       setRejectingDocKey(null);
       fetchDrawerEmp360(drawerEmp.id);
@@ -436,7 +513,17 @@ Generated On        : ${new Date().toLocaleString()}
         email: editEmpForm.email_id,
         designation: editEmpForm.designation,
         department: editEmpForm.department,
-        manager_name: editEmpForm.manager_name
+        manager_name: editEmpForm.manager_name,
+        whatsapp_number: editEmpForm.whatsapp_number,
+        work_location: editEmpForm.work_location,
+        employment_type: editEmpForm.employment_type,
+        offered_salary: editEmpForm.offered_salary,
+        date_of_birth: editEmpForm.date_of_birth,
+        gender: editEmpForm.gender,
+        emergency_contact_name: editEmpForm.emergency_contact_name,
+        emergency_contact_number: editEmpForm.emergency_contact_number,
+        current_address: editEmpForm.current_address,
+        permanent_address: editEmpForm.permanent_address
       };
       setDrawerEmp(updatedEmp);
       setEmployees(prev => prev.map(e => e.id === updatedEmp.id ? updatedEmp : e));
@@ -453,7 +540,17 @@ Generated On        : ${new Date().toLocaleString()}
         email: editEmpForm.email_id,
         designation: editEmpForm.designation,
         department: editEmpForm.department,
-        manager_name: editEmpForm.manager_name
+        manager_name: editEmpForm.manager_name,
+        whatsapp_number: editEmpForm.whatsapp_number,
+        work_location: editEmpForm.work_location,
+        employment_type: editEmpForm.employment_type,
+        offered_salary: editEmpForm.offered_salary,
+        date_of_birth: editEmpForm.date_of_birth,
+        gender: editEmpForm.gender,
+        emergency_contact_name: editEmpForm.emergency_contact_name,
+        emergency_contact_number: editEmpForm.emergency_contact_number,
+        current_address: editEmpForm.current_address,
+        permanent_address: editEmpForm.permanent_address
       };
       setDrawerEmp(updatedEmp);
       setEmployees(prev => prev.map(e => e.id === updatedEmp.id ? updatedEmp : e));
@@ -1676,7 +1773,7 @@ Generated On        : ${new Date().toLocaleString()}
         </div>
 
         {/* Operational Top Summary Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: isMobile ? '8px' : '12px', marginBottom: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : isTablet ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)', gap: isMobile ? '8px' : '12px', marginBottom: '20px' }}>
           {[
             { label: 'Total Employees', count: stats.total_employees || targetEmployeeList.length, icon: <FaUsers />, color: C.teal, bg: `${C.teal}10` },
             { label: 'KYC Pending', count: kycPendingCount, icon: <FaClock />, color: '#D97706', bg: '#FEF3C7' },
@@ -1967,71 +2064,6 @@ Generated On        : ${new Date().toLocaleString()}
                     );
                   })
                 )}
-              </div>
-            ) : isMobile ? (
-              /* Mobile View: Responsive Employee Cards */
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '12px' }}>
-                {loading ? (
-                  <div style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>Loading records...</div>
-                ) : displayedEmployees.length === 0 ? (
-                  <div style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>No employees found matching criteria.</div>
-                ) : displayedEmployees.map(emp => {
-                  const isSelected = drawerEmp && drawerEmp.id === emp.id;
-                  const empCode = emp.employee_code || emp.employee_id || emp.emp_code || emp.code || (emp.id ? String(emp.id).slice(0, 8) : 'N/A');
-
-                  return (
-                    <div 
-                      key={emp.id}
-                      onClick={() => setDrawerEmp(emp)}
-                      style={{
-                        background: isSelected ? `${C.teal}0F` : C.card,
-                        border: `1px solid ${isSelected ? C.teal : C.border}`,
-                        borderRadius: '14px',
-                        padding: '14px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '12px',
-                        cursor: 'pointer',
-                        boxShadow: '0 1px 4px rgba(0,0,0,0.03)',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                        <div style={{
-                          width: '44px', height: '44px', borderRadius: '50%', background: `${C.teal}20`, color: C.teal,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '15px', flexShrink: 0,
-                          overflow: 'hidden', border: `1px solid ${C.teal}40`
-                        }}>
-                          {emp.profile_photo_url || emp.avatar_url || emp.photo ? (
-                            <img src={emp.profile_photo_url || emp.avatar_url || emp.photo} alt={emp.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : (
-                            emp.full_name ? emp.full_name[0].toUpperCase() : 'E'
-                          )}
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontWeight: 900, color: C.text, fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{emp.full_name}</div>
-                          <div style={{ fontSize: '11.5px', color: C.teal, fontWeight: 800, marginTop: '2px' }}>{empCode}</div>
-                          <div style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 600, marginTop: '1px' }}>{emp.designation || 'Telecaller'}</div>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
-                        <span 
-                          style={{ 
-                            padding: '3px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 800,
-                            background: emp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7',
-                            color: emp.activation_status === 'APPROVED' ? '#065F46' : '#92400E',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          {emp.activation_status === 'APPROVED' ? '● Active' : '● Pending'}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
               </div>
             ) : (
               <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
@@ -3088,8 +3120,8 @@ Generated On        : ${new Date().toLocaleString()}
 
         {/* ── MODAL: 360° Employee View Inspector ── */}
         {selectedEmp && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-            <div style={{ background: C.card, borderRadius: '24px', padding: '28px', width: '100%', maxWidth: '850px', maxHeight: '90vh', overflowY: 'auto', border: `1px solid ${C.border}` }}>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: isMobile ? '10px' : '20px' }}>
+            <div style={{ background: C.card, borderRadius: isMobile ? '16px' : '24px', padding: isMobile ? '16px' : '28px', width: '100%', maxWidth: isMobile ? '96vw' : '850px', maxHeight: '92vh', overflowY: 'auto', border: `1px solid ${C.border}`, boxShadow: '0 20px 50px rgba(0,0,0,0.35)' }}>
               
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -3683,7 +3715,7 @@ Generated On        : ${new Date().toLocaleString()}
                     </div>
 
                     {/* Overall KYC Quick Action Buttons */}
-                    <div style={{ display: 'flex', gap: '10px', marginTop: '16px', borderTop: `1px dashed ${C.border}`, paddingTop: '14px' }}>
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '16px', borderTop: `1px dashed ${C.border}`, paddingTop: '14px', flexWrap: 'wrap' }}>
                       <button onClick={() => handleKycVerify(selectedEmp.id, 'VERIFIED')} style={{ background: '#10B981', color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
                         <FaCheck /> Approve All KYC & Activate Account
                       </button>
@@ -3818,8 +3850,8 @@ Generated On        : ${new Date().toLocaleString()}
 
         {/* ── MODAL: Super Admin Create New Employee ── */}
         {createEmpModalOpen && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
-            <div style={{ background: C.card, borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '580px', maxHeight: '90vh', overflowY: 'auto', border: `1px solid ${C.border}`, boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: isMobile ? '10px' : '16px' }}>
+            <div style={{ background: C.card, borderRadius: isMobile ? '16px' : '24px', padding: isMobile ? '16px' : '32px', width: '100%', maxWidth: isMobile ? '96vw' : '580px', maxHeight: '92vh', overflowY: 'auto', border: `1px solid ${C.border}`, boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}>
               
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px' }}>
                 <div>
@@ -3935,8 +3967,8 @@ Generated On        : ${new Date().toLocaleString()}
 
         {/* ── MODAL: Assign Hierarchy / Team (5-Level) ── */}
         {hierarchyModalEmp && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
-            <div style={{ background: C.card, borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '540px', maxHeight: '90vh', overflowY: 'auto', border: `1px solid ${C.border}` }}>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: isMobile ? '10px' : '16px' }}>
+            <div style={{ background: C.card, borderRadius: isMobile ? '16px' : '24px', padding: isMobile ? '16px' : '32px', width: '100%', maxWidth: isMobile ? '96vw' : '540px', maxHeight: '92vh', overflowY: 'auto', border: `1px solid ${C.border}`, boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}>
               <h2 style={{ fontSize: '20px', fontWeight: 900, color: C.text, margin: '0 0 4px 0' }}>Assign Team & Employee Hierarchy</h2>
               <p style={{ fontSize: '13.5px', color: C.textMid, marginBottom: '20px' }}>
                 Employee: <strong>{hierarchyModalEmp.full_name} ({hierarchyModalEmp.employee_id})</strong>
@@ -4478,8 +4510,8 @@ Generated On        : ${new Date().toLocaleString()}
 
         {/* ── MODAL: Manage Departments / Banks Assignment ── */}
         {deptModalEmp && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', width: '100%', maxWidth: '520px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.25)' }}>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '10px' : '16px' }}>
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: isMobile ? '16px' : '24px', width: '100%', maxWidth: isMobile ? '96vw' : '520px', padding: isMobile ? '16px' : '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.25)' }}>
               
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -4775,17 +4807,17 @@ Generated On        : ${new Date().toLocaleString()}
                 top: '50%',
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
-                width: 'calc(100% - 24px)',
-                maxWidth: '92vw',
-                maxHeight: '90vh',
-                borderRadius: '20px',
+                width: 'calc(100% - 20px)',
+                maxWidth: '94vw',
+                maxHeight: '92vh',
+                borderRadius: '16px',
                 border: `1px solid ${C.border}`,
                 boxShadow: '0 20px 50px rgba(0,0,0,0.35)'
               } : {
                 top: 0,
                 right: 0,
                 bottom: 0,
-                width: '500px',
+                width: isTablet ? '460px' : '520px',
                 maxWidth: '100vw',
                 borderLeft: `1px solid ${C.border}`
               })
@@ -5043,9 +5075,11 @@ Generated On        : ${new Date().toLocaleString()}
                     
                     {/* Employee Information Card (View vs Edit Mode) */}
                     {!isEditingEmpInfo ? (
-                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: isMobile ? '14px' : '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: isMobile ? '14px' : '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                          <h4 style={{ fontSize: isMobile ? '14px' : '15px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Information</h4>
+                          <h4 style={{ fontSize: isMobile ? '14px' : '15px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <FaUserCircle style={{ color: C.teal }} /> Employee Information
+                          </h4>
                           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                             <button 
                               onClick={() => setDrawerActionsOpen(!drawerActionsOpen)}
@@ -5063,63 +5097,152 @@ Generated On        : ${new Date().toLocaleString()}
                           </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '10px' : '14px', fontSize: '12.5px' }}>
+                        {/* Primary Work & Contact Details */}
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? '1fr 1fr' : 'repeat(2, 1fr)', gap: isMobile ? '10px' : '14px', fontSize: '12.5px' }}>
                           <div>
-                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Full Name</span>
+                            <span style={{ color: C.textMid, fontSize: '11px', display: 'block', marginBottom: '2px' }}>Full Name</span>
                             <strong style={{ color: C.text }}>{drawerEmp.full_name || 'N/A'}</strong>
                           </div>
                           <div>
-                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Date of Joining</span>
+                            <span style={{ color: C.textMid, fontSize: '11px', display: 'block', marginBottom: '2px' }}>Employee Code / ID</span>
+                            <strong style={{ color: C.text }}>{drawerEmp.employee_code || drawerEmp.employee_id || drawerEmp.emp_code || (drawerEmp.id ? String(drawerEmp.id).slice(0, 8) : 'N/A')}</strong>
+                          </div>
+
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11px', display: 'block', marginBottom: '2px' }}>Account Status</span>
+                            <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, background: drawerEmp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7', color: drawerEmp.activation_status === 'APPROVED' ? '#065F46' : '#92400E', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              {drawerEmp.activation_status === 'APPROVED' ? '✓ Active & Verified' : '● Pending Activation'}
+                            </span>
+                          </div>
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11px', display: 'block', marginBottom: '2px' }}>Date of Joining</span>
                             <strong style={{ color: C.text }}>{drawerEmp.joining_date || drawerEmp.date_of_joining || (drawerEmp.created_at ? new Date(drawerEmp.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A')}</strong>
                           </div>
 
                           <div>
-                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Employee Code</span>
-                            <strong style={{ color: C.text }}>{drawerEmp.employee_code || drawerEmp.employee_id || drawerEmp.emp_code || drawerEmp.code || (drawerEmp.id ? String(drawerEmp.id).slice(0, 8) : 'N/A')}</strong>
-                          </div>
-                          <div>
-                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Account Status</span>
-                            <span style={{ padding: '2px 8px', borderRadius: '0px', fontSize: '11px', fontWeight: 800, background: drawerEmp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7', color: drawerEmp.activation_status === 'APPROVED' ? '#065F46' : '#92400E', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                              {drawerEmp.activation_status === 'APPROVED' ? '✓ Active' : '● Pending'}
-                            </span>
-                          </div>
-
-                          <div>
-                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Mobile Number</span>
-                            <strong style={{ color: C.text }}>{drawerEmp.mobile_number || 'N/A'}</strong>
-                          </div>
-                          <div>
-                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Reporting Manager</span>
-                            <strong style={{ color: C.text }}>{drawerEmp.manager_name || drawerEmp.reporting_manager || drawerEmp.team_leader_name || 'N/A'}</strong>
-                          </div>
-
-                          <div>
-                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Email Address</span>
-                            <strong style={{ color: C.text }}>{drawerEmp.email_id || drawerEmp.email || 'N/A'}</strong>
-                          </div>
-                          <div>
-                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Team</span>
-                            <strong style={{ color: C.text }}>{drawerEmp.team_name || drawerEmp.team || (drawerEmp.team_leader_name ? `${drawerEmp.team_leader_name}'s Team` : 'N/A')}</strong>
-                          </div>
-
-                          <div>
-                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Designation</span>
+                            <span style={{ color: C.textMid, fontSize: '11px', display: 'block', marginBottom: '2px' }}>Designation</span>
                             <strong style={{ color: C.text }}>{drawerEmp.designation || drawerEmp.role || 'N/A'}</strong>
                           </div>
                           <div>
-                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Attendance Access</span>
-                            <span style={{ padding: '2px 8px', borderRadius: '0px', fontSize: '11px', fontWeight: 800, background: (drawerEmp.attendance_access === false || drawerEmp.attendance_enabled === false) ? '#FEE2E2' : '#D1FAE5', color: (drawerEmp.attendance_access === false || drawerEmp.attendance_enabled === false) ? '#991B1B' : '#065F46', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                              {(drawerEmp.attendance_access === false || drawerEmp.attendance_enabled === false) ? '✕ Disabled' : '✓ Enabled'}
-                            </span>
+                            <span style={{ color: C.textMid, fontSize: '11px', display: 'block', marginBottom: '2px' }}>Department</span>
+                            <strong style={{ color: C.text }}>{drawerEmp.department || 'N/A'}</strong>
                           </div>
 
                           <div>
-                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Department</span>
-                            <strong style={{ color: C.text }}>{drawerEmp.department || 'N/A'}</strong>
+                            <span style={{ color: C.textMid, fontSize: '11px', display: 'block', marginBottom: '2px' }}>Work Location</span>
+                            <strong style={{ color: C.text }}>{drawerEmp.work_location || 'Not Specified'}</strong>
                           </div>
                           <div>
-                            <span style={{ color: C.textMid, fontSize: '11.5px', display: 'block', marginBottom: '2px' }}>Bank Access</span>
-                            <strong style={{ color: C.text }}>{drawerEmp.active_links_count !== undefined ? `${drawerEmp.active_links_count} Products Assigned` : (drawerEmp.bank_count !== undefined ? `${drawerEmp.bank_count} Banks Assigned` : 'N/A')}</strong>
+                            <span style={{ color: C.textMid, fontSize: '11px', display: 'block', marginBottom: '2px' }}>Employment Type</span>
+                            <strong style={{ color: C.text }}>{drawerEmp.employment_type || 'Full-time'}</strong>
+                          </div>
+
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11px', display: 'block', marginBottom: '2px' }}>Offered Monthly Salary</span>
+                            <strong style={{ color: C.teal }}>{drawerEmp.offered_salary ? `₹${Number(drawerEmp.offered_salary).toLocaleString('en-IN')}` : 'Not Specified'}</strong>
+                          </div>
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11px', display: 'block', marginBottom: '2px' }}>Mobile Number</span>
+                            <strong style={{ color: C.text }}>{drawerEmp.mobile_number || 'N/A'}</strong>
+                          </div>
+
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11px', display: 'block', marginBottom: '2px' }}>WhatsApp Number</span>
+                            <strong style={{ color: C.text }}>{drawerEmp.whatsapp_number || drawerEmp.mobile_number || 'N/A'}</strong>
+                          </div>
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11px', display: 'block', marginBottom: '2px' }}>Official Email</span>
+                            <strong style={{ color: C.text }}>{drawerEmp.email_id || drawerEmp.email || 'N/A'}</strong>
+                          </div>
+
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11px', display: 'block', marginBottom: '2px' }}>Date of Birth</span>
+                            <strong style={{ color: C.text }}>{drawerEmp.date_of_birth ? new Date(drawerEmp.date_of_birth).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</strong>
+                          </div>
+                          <div>
+                            <span style={{ color: C.textMid, fontSize: '11px', display: 'block', marginBottom: '2px' }}>Gender</span>
+                            <strong style={{ color: C.text }}>{drawerEmp.gender || 'N/A'}</strong>
+                          </div>
+
+                          <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
+                            <span style={{ color: C.textMid, fontSize: '11px', display: 'block', marginBottom: '2px' }}>Emergency Contact</span>
+                            <strong style={{ color: C.text }}>
+                              {drawerEmp.emergency_contact_name ? `${drawerEmp.emergency_contact_name} (${drawerEmp.emergency_contact_number || 'No Phone'})` : 'Not Provided'}
+                            </strong>
+                          </div>
+
+                          <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
+                            <span style={{ color: C.textMid, fontSize: '11px', display: 'block', marginBottom: '2px' }}>Current Address</span>
+                            <span style={{ color: C.text, fontSize: '12px', lineHeight: 1.4 }}>{drawerEmp.current_address || 'Not Provided'}</span>
+                          </div>
+
+                          <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
+                            <span style={{ color: C.textMid, fontSize: '11px', display: 'block', marginBottom: '2px' }}>Permanent Address</span>
+                            <span style={{ color: C.text, fontSize: '12px', lineHeight: 1.4 }}>{drawerEmp.permanent_address || 'Not Provided'}</span>
+                          </div>
+                        </div>
+
+                        {/* Organizational Reporting Chain Divider */}
+                        <div style={{ borderTop: `1px solid ${C.border}`, marginTop: '14px', paddingTop: '12px' }}>
+                          <span style={{ fontSize: '11.5px', fontWeight: 900, color: C.teal, display: 'block', marginBottom: '8px' }}>
+                            👥 Organizational Hierarchy Chain
+                          </span>
+                          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '8px', fontSize: '12px' }}>
+                            <div>
+                              <span style={{ color: C.textMid, fontSize: '11px' }}>Branch Head: </span>
+                              <strong style={{ color: C.text }}>{drawerEmp.branch_head_name || 'Direct / None'}</strong>
+                            </div>
+                            <div>
+                              <span style={{ color: C.textMid, fontSize: '11px' }}>Senior Manager: </span>
+                              <strong style={{ color: C.text }}>{drawerEmp.senior_manager_name || 'Direct / None'}</strong>
+                            </div>
+                            <div>
+                              <span style={{ color: C.textMid, fontSize: '11px' }}>Reporting Manager: </span>
+                              <strong style={{ color: C.text }}>{drawerEmp.manager_name || drawerEmp.reporting_manager || 'Direct / None'}</strong>
+                            </div>
+                            <div>
+                              <span style={{ color: C.textMid, fontSize: '11px' }}>Team Leader: </span>
+                              <strong style={{ color: C.text }}>{drawerEmp.team_leader_name || 'Direct / None'}</strong>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Qualifications & Experience Divider */}
+                        <div style={{ borderTop: `1px solid ${C.border}`, marginTop: '12px', paddingTop: '12px' }}>
+                          <span style={{ fontSize: '11.5px', fontWeight: 900, color: C.teal, display: 'block', marginBottom: '8px' }}>
+                            🎓 Academic & Experience Background
+                          </span>
+                          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '8px', fontSize: '12px' }}>
+                            <div>
+                              <span style={{ color: C.textMid, fontSize: '11px' }}>Highest Qualification: </span>
+                              <strong style={{ color: C.text }}>{drawer360Data?.joining?.highest_qualification || drawerEmp.highest_qualification || 'N/A'}</strong>
+                            </div>
+                            <div>
+                              <span style={{ color: C.textMid, fontSize: '11px' }}>Year of Passing: </span>
+                              <strong style={{ color: C.text }}>{drawer360Data?.joining?.passing_year || drawerEmp.passing_year || 'N/A'}</strong>
+                            </div>
+                            <div>
+                              <span style={{ color: C.textMid, fontSize: '11px' }}>Experience Type: </span>
+                              <strong style={{ color: C.text }}>{drawer360Data?.joining?.experience_type || drawerEmp.experience_type || (drawerEmp.experience_years ? `${drawerEmp.experience_years} Years` : 'Fresher')}</strong>
+                            </div>
+                            <div>
+                              <span style={{ color: C.textMid, fontSize: '11px' }}>Total Experience: </span>
+                              <strong style={{ color: C.text }}>{drawer360Data?.joining?.experience_years ? `${drawer360Data?.joining?.experience_years} Years` : drawerEmp.experience_years ? `${drawerEmp.experience_years} Years` : '0 Years'}</strong>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* System Access Flags */}
+                        <div style={{ borderTop: `1px solid ${C.border}`, marginTop: '12px', paddingTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '14px', alignItems: 'center' }}>
+                          <div style={{ fontSize: '12px' }}>
+                            <span style={{ color: C.textMid, fontSize: '11px', display: 'block', marginBottom: '2px' }}>Attendance Access</span>
+                            <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, background: (drawerEmp.attendance_access === false || drawerEmp.attendance_enabled === false) ? '#FEE2E2' : '#D1FAE5', color: (drawerEmp.attendance_access === false || drawerEmp.attendance_enabled === false) ? '#991B1B' : '#065F46', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              {(drawerEmp.attendance_access === false || drawerEmp.attendance_enabled === false) ? '✕ Restricted' : '✓ Permitted'}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '12px' }}>
+                            <span style={{ color: C.textMid, fontSize: '11px', display: 'block', marginBottom: '2px' }}>Bank Portals Access</span>
+                            <strong style={{ color: C.text }}>{drawerEmp.active_links_count !== undefined ? `${drawerEmp.active_links_count} Products Assigned` : (drawerEmp.bank_count !== undefined ? `${drawerEmp.bank_count} Banks Assigned` : 'None Assigned')}</strong>
                           </div>
 
                           <div>
@@ -5170,7 +5293,7 @@ Generated On        : ${new Date().toLocaleString()}
                         </div>
                       </div>
                     ) : (
-                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: isMobile ? '14px' : '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                           <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.teal, margin: 0 }}>✏ Edit Employee Information</h4>
                           <span style={{ fontSize: '11.5px', fontWeight: 800, color: C.textMid }}>ID: {drawerEmp.employee_code || drawerEmp.employee_id || drawerEmp.emp_code}</span>
@@ -5183,7 +5306,7 @@ Generated On        : ${new Date().toLocaleString()}
                               type="text" 
                               value={editEmpForm.full_name || ''} 
                               onChange={(e) => setEditEmpForm({ ...editEmpForm, full_name: e.target.value })}
-                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
                             />
                           </div>
                           <div>
@@ -5192,7 +5315,17 @@ Generated On        : ${new Date().toLocaleString()}
                               type="text" 
                               value={editEmpForm.mobile_number || ''} 
                               onChange={(e) => setEditEmpForm({ ...editEmpForm, mobile_number: e.target.value })}
-                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>WhatsApp Number</label>
+                            <input 
+                              type="text" 
+                              value={editEmpForm.whatsapp_number || ''} 
+                              onChange={(e) => setEditEmpForm({ ...editEmpForm, whatsapp_number: e.target.value })}
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
                             />
                           </div>
 
@@ -5202,7 +5335,7 @@ Generated On        : ${new Date().toLocaleString()}
                               type="email" 
                               value={editEmpForm.email_id || ''} 
                               onChange={(e) => setEditEmpForm({ ...editEmpForm, email_id: e.target.value })}
-                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
                             />
                           </div>
 
@@ -5211,7 +5344,7 @@ Generated On        : ${new Date().toLocaleString()}
                             <select 
                               value={editEmpForm.designation || ''} 
                               onChange={(e) => setEditEmpForm({ ...editEmpForm, designation: e.target.value })}
-                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12.5px', fontWeight: 700 }}
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12.5px', fontWeight: 700 }}
                             >
                               <option value="TC">TC (Telecaller)</option>
                               <option value="TL">TL (Team Leader)</option>
@@ -5237,7 +5370,44 @@ Generated On        : ${new Date().toLocaleString()}
                               type="text" 
                               value={editEmpForm.department || ''} 
                               onChange={(e) => setEditEmpForm({ ...editEmpForm, department: e.target.value })}
-                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>Work Location</label>
+                            <input 
+                              type="text" 
+                              placeholder="e.g. Pune Head Office, Mumbai Branch"
+                              value={editEmpForm.work_location || ''} 
+                              onChange={(e) => setEditEmpForm({ ...editEmpForm, work_location: e.target.value })}
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>Employment Type</label>
+                            <select 
+                              value={editEmpForm.employment_type || 'Full-time'} 
+                              onChange={(e) => setEditEmpForm({ ...editEmpForm, employment_type: e.target.value })}
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12.5px', fontWeight: 700 }}
+                            >
+                              <option value="Full-time">Full-time</option>
+                              <option value="Part-time">Part-time</option>
+                              <option value="Contract">Contract</option>
+                              <option value="Probation">Probation</option>
+                              <option value="Internship">Internship</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>Offered Monthly Salary (₹)</label>
+                            <input 
+                              type="number" 
+                              placeholder="e.g. 25000"
+                              value={editEmpForm.offered_salary || ''} 
+                              onChange={(e) => setEditEmpForm({ ...editEmpForm, offered_salary: e.target.value })}
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
                             />
                           </div>
 
@@ -5247,7 +5417,74 @@ Generated On        : ${new Date().toLocaleString()}
                               type="text" 
                               value={editEmpForm.manager_name || ''} 
                               onChange={(e) => setEditEmpForm({ ...editEmpForm, manager_name: e.target.value })}
-                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>Date of Birth</label>
+                            <input 
+                              type="date" 
+                              value={editEmpForm.date_of_birth ? editEmpForm.date_of_birth.slice(0, 10) : ''} 
+                              onChange={(e) => setEditEmpForm({ ...editEmpForm, date_of_birth: e.target.value })}
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>Gender</label>
+                            <select 
+                              value={editEmpForm.gender || 'Male'} 
+                              onChange={(e) => setEditEmpForm({ ...editEmpForm, gender: e.target.value })}
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12.5px', fontWeight: 700 }}
+                            >
+                              <option value="Male">Male</option>
+                              <option value="Female">Female</option>
+                              <option value="Other">Other</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>Emergency Contact Name</label>
+                            <input 
+                              type="text" 
+                              placeholder="Contact person name"
+                              value={editEmpForm.emergency_contact_name || ''} 
+                              onChange={(e) => setEditEmpForm({ ...editEmpForm, emergency_contact_name: e.target.value })}
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>Emergency Contact Phone</label>
+                            <input 
+                              type="text" 
+                              placeholder="Emergency phone number"
+                              value={editEmpForm.emergency_contact_number || ''} 
+                              onChange={(e) => setEditEmpForm({ ...editEmpForm, emergency_contact_number: e.target.value })}
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
+                            />
+                          </div>
+
+                          <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
+                            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>Current Address</label>
+                            <input 
+                              type="text" 
+                              placeholder="Current residential address"
+                              value={editEmpForm.current_address || ''} 
+                              onChange={(e) => setEditEmpForm({ ...editEmpForm, current_address: e.target.value })}
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
+                            />
+                          </div>
+
+                          <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
+                            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>Permanent Address</label>
+                            <input 
+                              type="text" 
+                              placeholder="Permanent hometown address"
+                              value={editEmpForm.permanent_address || ''} 
+                              onChange={(e) => setEditEmpForm({ ...editEmpForm, permanent_address: e.target.value })}
+                              style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12.5px', fontWeight: 700 }} 
                             />
                           </div>
                         </div>
@@ -5256,7 +5493,7 @@ Generated On        : ${new Date().toLocaleString()}
                           <button 
                             type="button" 
                             onClick={() => setIsEditingEmpInfo(false)}
-                            style={{ padding: '6px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', fontSize: '12px', fontWeight: 700, color: C.text, cursor: 'pointer' }}
+                            style={{ padding: '6px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', fontSize: '12px', fontWeight: 700, color: C.text, cursor: 'pointer' }}
                           >
                             Cancel
                           </button>
@@ -5264,7 +5501,7 @@ Generated On        : ${new Date().toLocaleString()}
                             type="button" 
                             disabled={savingEmpDetails}
                             onClick={handleSaveEmployeeDetails}
-                            style={{ padding: '6px 16px', background: C.teal, color: '#fff', border: 'none', borderRadius: '0px', fontSize: '12px', fontWeight: 900, cursor: 'pointer', opacity: savingEmpDetails ? 0.7 : 1 }}
+                            style={{ padding: '6px 16px', background: C.teal, color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 900, cursor: 'pointer', opacity: savingEmpDetails ? 0.7 : 1 }}
                           >
                             {savingEmpDetails ? 'Saving...' : 'Save Changes'}
                           </button>
@@ -5436,7 +5673,7 @@ Generated On        : ${new Date().toLocaleString()}
                     </div>
 
                     {/* 360° Identity Form Fields */}
-                    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: '16px' }}>
+                    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
                       <div style={{ fontSize: '14px', fontWeight: 900, color: C.text, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <FaIdCard style={{ color: C.teal }} /> 360° Profile & Identity Details
                       </div>
@@ -5446,9 +5683,10 @@ Generated On        : ${new Date().toLocaleString()}
                           <label style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, display: 'block', marginBottom: '3px' }}>Aadhaar Number</label>
                           <input 
                             type="text" 
+                            placeholder="12-digit Aadhaar number"
                             value={docIdentityFields.aadhaar_number} 
                             onChange={(e) => setDocIdentityFields({ ...docIdentityFields, aadhaar_number: e.target.value })}
-                            style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12px', fontWeight: 700 }}
+                            style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12px', fontWeight: 700 }}
                           />
                         </div>
 
@@ -5456,9 +5694,21 @@ Generated On        : ${new Date().toLocaleString()}
                           <label style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, display: 'block', marginBottom: '3px' }}>PAN Number</label>
                           <input 
                             type="text" 
+                            placeholder="10-digit PAN (e.g. ABCDE1234F)"
                             value={docIdentityFields.pan_number} 
                             onChange={(e) => setDocIdentityFields({ ...docIdentityFields, pan_number: e.target.value })}
-                            style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12px', fontWeight: 700 }}
+                            style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12px', fontWeight: 700 }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, display: 'block', marginBottom: '3px' }}>Bank Account Holder Name</label>
+                          <input 
+                            type="text" 
+                            placeholder="Name as printed in passbook"
+                            value={docIdentityFields.bank_account_holder_name} 
+                            onChange={(e) => setDocIdentityFields({ ...docIdentityFields, bank_account_holder_name: e.target.value })}
+                            style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12px', fontWeight: 700 }}
                           />
                         </div>
 
@@ -5488,19 +5738,21 @@ Generated On        : ${new Date().toLocaleString()}
                           <label style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, display: 'block', marginBottom: '3px' }}>Bank Account No.</label>
                           <input 
                             type="text" 
+                            placeholder="Account number"
                             value={docIdentityFields.bank_account} 
                             onChange={(e) => setDocIdentityFields({ ...docIdentityFields, bank_account: e.target.value })}
-                            style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12px', fontWeight: 700 }}
+                            style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12px', fontWeight: 700 }}
                           />
                         </div>
 
-                        <div>
-                          <label style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, display: 'block', marginBottom: '3px' }}>IFSC Code</label>
+                        <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
+                          <label style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, display: 'block', marginBottom: '3px' }}>Bank IFSC Code</label>
                           <input 
                             type="text" 
+                            placeholder="e.g. HDFC0001234"
                             value={docIdentityFields.ifsc_code} 
                             onChange={(e) => setDocIdentityFields({ ...docIdentityFields, ifsc_code: e.target.value })}
-                            style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12px', fontWeight: 700 }}
+                            style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12px', fontWeight: 700 }}
                           />
                         </div>
 
@@ -5531,7 +5783,7 @@ Generated On        : ${new Date().toLocaleString()}
                           rows="2"
                           value={docIdentityFields.admin_remarks}
                           onChange={(e) => setDocIdentityFields({ ...docIdentityFields, admin_remarks: e.target.value })}
-                          style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '0px', color: C.text, fontSize: '12px', fontWeight: 600, outline: 'none' }}
+                          style={{ width: '100%', padding: '7px 10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '6px', color: C.text, fontSize: '12px', fontWeight: 600, outline: 'none' }}
                           placeholder="Add KYC notes or verification remarks..."
                         />
                       </div>
@@ -5571,7 +5823,7 @@ Generated On        : ${new Date().toLocaleString()}
                           <FaFileAlt style={{ color: C.teal }} /> Required Documents Inspection
                         </span>
                         <span style={{ fontSize: '11.5px', color: C.teal, fontWeight: 900, background: `${C.teal}15`, padding: '3px 10px', borderRadius: '12px' }}>
-                          5 Required Files
+                          9 Tracked Documents
                         </span>
                       </div>
 
@@ -5581,7 +5833,11 @@ Generated On        : ${new Date().toLocaleString()}
                           { key: 'pan', name: 'PAN Card' },
                           { key: 'bank', name: 'Bank Passbook / Cheque' },
                           { key: 'photo', name: 'Profile Photograph' },
-                          { key: 'offer_letter', name: 'Signed Offer Letter' }
+                          { key: 'offer_letter', name: 'Signed Offer Letter' },
+                          { key: 'resume', name: 'Resume / Curriculum Vitae' },
+                          { key: 'education_certificate', name: 'Highest Education Certificate' },
+                          { key: 'experience_letter', name: 'Experience / Relieving Letter' },
+                          { key: 'terms_video', name: 'Terms Agreement Video Declaration' }
                         ].map((docItem) => {
                           const docInfo = docStatuses[docItem.key] || { status: 'Not Uploaded', reason: '', url: null };
                           const isRejectingThis = rejectingDocKey === docItem.key;
@@ -6425,6 +6681,12 @@ Generated On        : ${new Date().toLocaleString()}
                       src={viewingDocModal.url} 
                       alt={viewingDocModal.name} 
                       style={{ maxWidth: '100%', maxHeight: '420px', objectFit: 'contain', borderRadius: '8px', border: `1px solid ${C.border}`, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} 
+                    />
+                  ) : viewingDocModal.url.match(/\.(mp4|webm|mov|ogg)/i) || viewingDocModal.key === 'terms_video' ? (
+                    <video 
+                      controls 
+                      src={viewingDocModal.url} 
+                      style={{ maxWidth: '100%', maxHeight: '420px', borderRadius: '8px', border: `1px solid ${C.border}`, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} 
                     />
                   ) : (
                     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', textAlign: 'center', padding: '30px' }}>

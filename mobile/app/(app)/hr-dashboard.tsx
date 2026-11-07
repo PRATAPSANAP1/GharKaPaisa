@@ -29,6 +29,10 @@ export default function HRDashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [candidates, setCandidates] = useState<any[]>([]);
   const [filterStage, setFilterStage] = useState('ALL');
+  const [activeTab, setActiveTab] = useState<'RECRUITMENT' | 'ACCOUNTS'>('RECRUITMENT');
+  const [kycList, setKycList] = useState<any[]>([]);
+  const [kycLoading, setKycLoading] = useState(false);
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
 
   // Interview Schedule Modal
   const [interviewModalVisible, setInterviewModalVisible] = useState(false);
@@ -54,6 +58,55 @@ export default function HRDashboardScreen() {
   useEffect(() => {
     loadCandidates();
   }, [loadCandidates]);
+
+  const loadKycQueue = useCallback(async () => {
+    try {
+      setKycLoading(true);
+      const res = await apiClient.get('/hr/kyc/pending');
+      const list = Array.isArray(res?.data?.data) ? res.data.data : Array.isArray(res?.data) ? res.data : [];
+      setKycList(list);
+    } catch (err: any) {
+      console.warn('Failed to load employee KYC queue:', err);
+    } finally {
+      setKycLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'ACCOUNTS') loadKycQueue();
+  }, [activeTab, loadKycQueue]);
+
+  const handleVerifyKyc = (record: any, approve: boolean) => {
+    const label = approve ? 'Verify' : 'Reject';
+    Alert.alert(
+      `${label} KYC`,
+      `${label} KYC documents for ${record.full_name || 'this employee'}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: label,
+          style: approve ? 'default' : 'destructive',
+          onPress: async () => {
+            try {
+              setVerifyingId(record.id);
+              await apiClient.post(`/hr/kyc/${record.id}/verify`, {
+                kyc_status: approve ? 'VERIFIED' : 'REJECTED',
+                pan_verified: approve,
+                aadhaar_verified: approve,
+                bank_verified: approve,
+              });
+              Alert.alert('Updated', `KYC ${approve ? 'verified' : 'rejected'} successfully.`);
+              loadKycQueue();
+            } catch (err: any) {
+              Alert.alert('Failed', err.response?.data?.message || 'Could not update KYC status');
+            } finally {
+              setVerifyingId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -121,6 +174,28 @@ export default function HRDashboardScreen() {
         </View>
       </View>
 
+      {/* Module Tabs */}
+      <View style={styles.moduleTabRow}>
+        {(['RECRUITMENT', 'ACCOUNTS'] as const).map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[styles.moduleTab, activeTab === tab && styles.moduleTabActive]}
+            onPress={() => setActiveTab(tab)}
+          >
+            <Icon
+              name={tab === 'RECRUITMENT' ? 'user-plus' : 'shield'}
+              size={14}
+              color={activeTab === tab ? '#fff' : colors.textLight}
+            />
+            <Text style={[styles.moduleTabText, activeTab === tab && styles.moduleTabTextActive]}>
+              {tab === 'RECRUITMENT' ? 'Recruitment' : 'Employee Accounts'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {activeTab === 'RECRUITMENT' ? (
+        <>
       {/* KPI Counters */}
       <View style={styles.kpiRow}>
         <View style={styles.kpiCard}>
@@ -226,6 +301,74 @@ export default function HRDashboardScreen() {
           )}
         </ScrollView>
       )}
+        </>
+      ) : (
+        <ScrollView
+          style={styles.contentList}
+          refreshControl={<RefreshControl refreshing={kycLoading} onRefresh={loadKycQueue} />}
+          contentContainerStyle={{ paddingBottom: 40 }}
+        >
+          {kycLoading && kycList.length === 0 ? (
+            <View style={styles.centered}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.loadingText}>Fetching KYC queue...</Text>
+            </View>
+          ) : kycList.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Icon name="shield" size={48} color={colors.textLight} />
+              <Text style={styles.emptyTitle}>No Pending KYC</Text>
+              <Text style={styles.emptyDesc}>Employee KYC submissions awaiting review will appear here.</Text>
+            </View>
+          ) : (
+            kycList.map((rec) => (
+              <Card key={rec.id} style={styles.candCard}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>
+                      {(rec.full_name || 'E').charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1, marginLeft: spacing.sm }}>
+                    <Text style={styles.candName}>{rec.full_name || 'Employee'}</Text>
+                    <Text style={styles.candRole}>
+                      {rec.emp_code || rec.employee_id} • {rec.designation || 'Employee'}
+                    </Text>
+                  </View>
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{(rec.kyc_status || 'PENDING').toUpperCase()}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.actionBtnRow}>
+                  <TouchableOpacity
+                    style={[styles.actionBtn, { backgroundColor: '#10B981' }]}
+                    onPress={() => handleVerifyKyc(rec, true)}
+                    disabled={verifyingId === rec.id}
+                  >
+                    {verifyingId === rec.id ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <>
+                        <Icon name="check" size={14} color="#fff" />
+                        <Text style={styles.actionBtnText}>Verify KYC</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.actionBtn, { backgroundColor: '#EF4444' }]}
+                    onPress={() => handleVerifyKyc(rec, false)}
+                    disabled={verifyingId === rec.id}
+                  >
+                    <Icon name="x" size={14} color="#fff" />
+                    <Text style={styles.actionBtnText}>Reject</Text>
+                  </TouchableOpacity>
+                </View>
+              </Card>
+            ))
+          )}
+        </ScrollView>
+      )}
 
       {/* Schedule Interview Modal */}
       <Modal visible={interviewModalVisible} transparent animationType="fade">
@@ -309,6 +452,37 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '800',
+    color: '#fff',
+  },
+  moduleTabRow: {
+    flexDirection: 'row',
+    backgroundColor: '#0F172A',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    gap: spacing.xs,
+  },
+  moduleTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 8,
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  moduleTabActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  moduleTabText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textLight,
+  },
+  moduleTabTextActive: {
     color: '#fff',
   },
   kpiRow: {

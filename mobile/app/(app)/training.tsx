@@ -17,52 +17,22 @@ import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 import { fetchPartnerTraining, completeTrainingModule } from '../../services/partner.service';
 
-const DEFAULT_MODULES = [
-  {
-    id: 'm1',
-    title: 'Module 1: Pitching Credit Cards with 0% Rejection',
-    duration: '8 mins',
-    level: 'Beginner',
-    category: 'Sales Pitch',
-    description: 'Learn CIBIL score matching, pre-qualification criteria, and which bank suits each income bracket.',
-    is_completed: true,
-  },
-  {
-    id: 'm2',
-    title: 'Module 2: Complete KYC & Document Upload Walkthrough',
-    duration: '12 mins',
-    level: 'Essential',
-    category: 'Compliance',
-    description: 'Step-by-step guidance on capturing clear PAN and Bank Passbooks to achieve 100% first-time approval.',
-    is_completed: false,
-  },
-  {
-    id: 'm3',
-    title: 'Module 3: Fast-Track Personal Loan Lead Punching',
-    duration: '10 mins',
-    level: 'Intermediate',
-    category: 'Loans',
-    description: 'How to qualify salary slips, check FOIR calculations, and get instant digital approvals for loans > ₹5L.',
-    is_completed: false,
-  },
-  {
-    id: 'm4',
-    title: 'Module 4: Managing Downline Team & Overrides',
-    duration: '15 mins',
-    level: 'Advanced',
-    category: 'Network Growth',
-    description: 'Recruit, train, and earn lifetime overriding commissions from your sub-agent network.',
-    is_completed: false,
-  },
-];
+const normalizeModule = (m: any) => ({
+  id: m.id,
+  title: m.title,
+  description: m.description || '',
+  duration: m.duration || '—',
+  level: m.level || m.type || 'General',
+  category: m.category || 'General',
+  is_completed: m.is_completed ?? m.status === 'completed',
+});
 
 export default function TrainingScreen() {
   const router = useRouter();
 
-  const [modules, setModules] = useState<any[]>(DEFAULT_MODULES);
+  const [modules, setModules] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [activeModule, setActiveModule] = useState<any | null>(null);
 
   const loadTraining = useCallback(async (isRefresh = false) => {
     try {
@@ -70,12 +40,10 @@ export default function TrainingScreen() {
       else setLoading(true);
 
       const res = await fetchPartnerTraining();
-      const list = Array.isArray(res.data) ? res.data : res.modules || [];
-      if (list.length > 0) {
-        setModules(list);
-      }
+      const list = Array.isArray(res?.data) ? res.data : res?.modules || [];
+      setModules(list.map(normalizeModule));
     } catch (e) {
-      // Keep defaults
+      setModules([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -94,10 +62,7 @@ export default function TrainingScreen() {
       );
       Alert.alert('Module Completed! 🎓', `You have finished "${mod.title}". Keep learning to level up your earnings.`);
     } catch (err: any) {
-      setModules(prev =>
-        prev.map(m => (m.id === mod.id ? { ...m, is_completed: true } : m))
-      );
-      Alert.alert('Module Completed! 🎓', `You have marked "${mod.title}" as finished.`);
+      Alert.alert('Update Failed', err?.message || 'Could not mark this module as completed. Please try again.');
     }
   };
 
@@ -139,7 +104,21 @@ export default function TrainingScreen() {
 
         {/* Module List */}
         <Text style={styles.sectionTitle}>Course Modules</Text>
-        {modules.map((item, index) => {
+        {loading && modules.length === 0 ? (
+          <View style={styles.emptyState}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.emptyText}>Loading training modules...</Text>
+          </View>
+        ) : modules.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Icon name="book-open" size={40} color={colors.textLight} />
+            <Text style={styles.emptyTitle}>No Modules Available</Text>
+            <Text style={styles.emptyText}>
+              Training modules published for your partner level will appear here.
+            </Text>
+          </View>
+        ) : (
+          modules.map((item, index) => {
           const isDone = item.is_completed;
           return (
             <View key={item.id} style={styles.moduleCard}>
@@ -176,7 +155,8 @@ export default function TrainingScreen() {
               </View>
             </View>
           );
-        })}
+        })
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -356,5 +336,27 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '700',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xl,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  emptyTitle: {
+    fontSize: typography.sizes.sm,
+    fontWeight: '800',
+    color: colors.text,
+    marginTop: spacing.sm,
+  },
+  emptyText: {
+    fontSize: 12,
+    color: colors.textLight,
+    marginTop: 4,
+    textAlign: 'center',
+    paddingHorizontal: spacing.lg,
   },
 });

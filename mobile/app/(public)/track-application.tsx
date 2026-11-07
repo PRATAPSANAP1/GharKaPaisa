@@ -18,14 +18,19 @@ import { Button } from '../../components/Button';
 import apiClient from '../../services/api';
 
 export default function TrackApplicationScreen() {
-  const [identifier, setIdentifier] = useState('');
+  const [appNumber, setAppNumber] = useState('');
+  const [mobile, setMobile] = useState('');
   const [loading, setLoading] = useState(false);
   const [applicationData, setApplicationData] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleTrack = async () => {
-    if (!identifier.trim()) {
-      setErrorMsg('Please enter Application ID or Mobile Number');
+    if (!appNumber.trim() || !mobile.trim()) {
+      setErrorMsg('Please enter both Application Number and registered Mobile Number');
+      return;
+    }
+    if (mobile.replace(/\D/g, '').length !== 10) {
+      setErrorMsg('Please enter a valid 10-digit mobile number');
       return;
     }
 
@@ -34,24 +39,17 @@ export default function TrackApplicationScreen() {
     setApplicationData(null);
 
     try {
-      // Try fetching by application reference or phone search
-      const res = await apiClient.get('/applications/track', {
-        params: { identifier: identifier.trim() },
-      }).catch(async () => {
-        return await apiClient.get(`/applications/search?query=${identifier.trim()}`);
+      const res = await apiClient.get('/customer-portal/public/track-application', {
+        params: { app_number: appNumber.trim(), mobile: mobile.trim() },
       });
 
       if (res?.data?.success && res?.data?.data) {
         setApplicationData(res.data.data);
-      } else if (res?.data?.application) {
-        setApplicationData(res.data.application);
-      } else if (Array.isArray(res?.data) && res.data.length > 0) {
-        setApplicationData(res.data[0]);
       } else {
         setErrorMsg('No application found with the provided details. Please verify and try again.');
       }
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Application not found. Please verify your reference ID.');
+      setErrorMsg(err.response?.data?.message || 'Application not found. Please verify your details.');
     } finally {
       setLoading(false);
     }
@@ -82,22 +80,39 @@ export default function TrackApplicationScreen() {
       <Card style={styles.card}>
         <Text style={styles.cardTitle}>Application Status Tracker</Text>
         <Text style={styles.cardSubtitle}>
-          Enter your Application Reference Number or 10-digit registered mobile number to check real-time approval status.
+          Enter your Application Reference Number and 10-digit registered mobile number to check real-time approval status.
         </Text>
 
-        <Text style={styles.inputLabel}>Application ID or Mobile Number</Text>
+        <Text style={styles.inputLabel}>Application Number</Text>
         <View style={styles.searchBox}>
           <Icon name="search" size={18} color={colors.textLight} />
           <TextInput
             style={styles.searchInput}
-            placeholder="e.g. APP100234 or 9876543210"
+            placeholder="e.g. APP100234"
             placeholderTextColor={colors.textLight}
-            value={identifier}
+            value={appNumber}
             onChangeText={(t) => {
-              setIdentifier(t);
+              setAppNumber(t);
               setErrorMsg(null);
             }}
             autoCapitalize="characters"
+          />
+        </View>
+
+        <Text style={[styles.inputLabel, { marginTop: spacing.sm }]}>Registered Mobile Number</Text>
+        <View style={styles.searchBox}>
+          <Icon name="device" size={18} color={colors.textLight} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="e.g. 9876543210"
+            placeholderTextColor={colors.textLight}
+            value={mobile}
+            onChangeText={(t) => {
+              setMobile(t.replace(/\D/g, '').slice(0, 10));
+              setErrorMsg(null);
+            }}
+            keyboardType="phone-pad"
+            maxLength={10}
           />
         </View>
 
@@ -150,13 +165,13 @@ export default function TrackApplicationScreen() {
             <View style={styles.detailItem}>
               <Text style={styles.detailLabel}>Applicant Name</Text>
               <Text style={styles.detailValue}>
-                {applicationData.customer_name || applicationData.full_name || 'Customer'}
+                {applicationData.customer_name_masked || applicationData.customer_name || applicationData.full_name || 'Customer'}
               </Text>
             </View>
             <View style={styles.detailItem}>
               <Text style={styles.detailLabel}>Applied Date</Text>
               <Text style={styles.detailValue}>
-                {new Date(applicationData.created_at || Date.now()).toLocaleDateString('en-IN', {
+                {new Date(applicationData.applied_at || applicationData.created_at || Date.now()).toLocaleDateString('en-IN', {
                   day: 'numeric',
                   month: 'short',
                   year: 'numeric',
@@ -165,10 +180,10 @@ export default function TrackApplicationScreen() {
             </View>
           </View>
 
-          {applicationData.remark && (
+          {!!(applicationData.rejection_reason || applicationData.remark) && (
             <View style={styles.remarkBox}>
               <Text style={styles.remarkLabel}>Latest Bank Update</Text>
-              <Text style={styles.remarkText}>{applicationData.remark}</Text>
+              <Text style={styles.remarkText}>{applicationData.rejection_reason || applicationData.remark}</Text>
             </View>
           )}
 
@@ -177,14 +192,24 @@ export default function TrackApplicationScreen() {
             <Text style={styles.progressTitle}>Application Lifecycle</Text>
             <View style={styles.stagesRow}>
               {['Submitted', 'Document Verification', 'Bank Review', 'Final Decision'].map(
-                (st, i) => (
-                  <View key={st} style={styles.stageStep}>
-                    <View style={[styles.stageDot, i === 0 && styles.activeDot]}>
-                      <Text style={styles.stageDotText}>{i + 1}</Text>
+                (st, i) => {
+                  const reached = (applicationData.current_stage || 1) >= i + 1;
+                  const isRejected = applicationData.stage_status === 'rejected';
+                  return (
+                    <View key={st} style={styles.stageStep}>
+                      <View
+                        style={[
+                          styles.stageDot,
+                          reached && styles.activeDot,
+                          reached && isRejected && i + 1 === applicationData.current_stage && styles.rejectedDot,
+                        ]}
+                      >
+                        <Text style={styles.stageDotText}>{i + 1}</Text>
+                      </View>
+                      <Text style={styles.stageStepName}>{st}</Text>
                     </View>
-                    <Text style={styles.stageStepName}>{st}</Text>
-                  </View>
-                )
+                  );
+                }
               )}
             </View>
           </View>
@@ -378,6 +403,9 @@ const styles = StyleSheet.create({
   },
   activeDot: {
     backgroundColor: colors.primary,
+  },
+  rejectedDot: {
+    backgroundColor: '#EF4444',
   },
   stageDotText: {
     fontSize: 10,

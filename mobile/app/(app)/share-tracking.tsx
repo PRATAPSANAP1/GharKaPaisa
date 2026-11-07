@@ -18,18 +18,29 @@ import { spacing } from '../../theme/spacing';
 import { fetchPartnerShareTracking } from '../../services/partner.service';
 import { useAuth } from '../../contexts/AuthContext';
 
+interface ShareTrackingStats {
+  total_leads: number;
+  submitted_leads: number;
+  conversion_rate: string;
+  recent_leads: any[];
+}
+
+const EMPTY_STATS: ShareTrackingStats = {
+  total_leads: 0,
+  submitted_leads: 0,
+  conversion_rate: '0%',
+  recent_leads: [],
+};
+
+const CONVERTED_STATUSES = ['SUBMITTED', 'APPROVED'];
+
 export default function ShareTrackingScreen() {
   const router = useRouter();
   const { user } = useAuth();
 
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [stats, setStats] = useState<any>({
-    total_clicks: 0,
-    leads_generated: 0,
-    conversion_rate: '0%',
-    recent_clicks: [],
-  });
+  const [stats, setStats] = useState<ShareTrackingStats>(EMPTY_STATS);
 
   const partnerCode = (user as any)?.partner_code || (user as any)?.employee_code || 'GKP';
 
@@ -38,24 +49,33 @@ export default function ShareTrackingScreen() {
       if (isRefresh) setRefreshing(true);
       else setLoading(true);
 
-      const res = await fetchPartnerShareTracking();
-      if (res?.success && res.data) {
-        setStats(res.data);
-      } else {
-        setStats({
-          total_clicks: 142,
-          leads_generated: 28,
-          conversion_rate: '19.7%',
-          recent_clicks: [
-            { id: '1', product: 'HDFC Pixel Card', date: '10 mins ago', ip_city: 'Pune', status: 'LEAD CREATED' },
-            { id: '2', product: 'SBI SimplyClick', date: '45 mins ago', ip_city: 'Mumbai', status: 'CLICKED' },
-            { id: '3', product: 'Instant Personal Loan', date: '2 hours ago', ip_city: 'Bangalore', status: 'LEAD CREATED' },
-            { id: '4', product: 'ICICI Coral Card', date: '5 hours ago', ip_city: 'Delhi', status: 'CLICKED' },
-          ],
-        });
-      }
+      const res = await fetchPartnerShareTracking({ limit: 100 });
+
+      // GET /partner/share-tracking returns a paginated list of leads, not an
+      // aggregate: { success, message, data: rows[], pagination, timestamp }.
+      const rows: any[] = Array.isArray(res?.data) ? res.data : [];
+      const total = res?.pagination?.total ?? rows.length;
+      const submitted = rows.filter(
+        (r: any) =>
+          CONVERTED_STATUSES.includes(String(r.status || '').toUpperCase()) ||
+          String(r.pipeline_stage || '').toLowerCase() === 'submitted'
+      ).length;
+
+      setStats({
+        total_leads: total,
+        submitted_leads: submitted,
+        conversion_rate: total > 0 ? `${((submitted / total) * 100).toFixed(1)}%` : '0%',
+        recent_leads: rows.map((r: any) => ({
+          id: r.id,
+          product: r.product_name || 'Product',
+          customer: r.customer_name || 'Customer',
+          city: r.city || null,
+          status: String(r.status || 'pending').toUpperCase(),
+          date: r.created_at ? new Date(r.created_at).toLocaleString() : '',
+        })),
+      });
     } catch (e) {
-      // Fallback
+      setStats(EMPTY_STATS);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -114,39 +134,60 @@ export default function ShareTrackingScreen() {
         <Text style={styles.sectionTitle}>Link Performance</Text>
         <View style={styles.kpiRow}>
           <View style={styles.kpiBox}>
-            <Text style={styles.kpiLabel}>Total Link Clicks</Text>
-            <Text style={styles.kpiValue}>{stats.total_clicks || 0}</Text>
+            <Text style={styles.kpiLabel}>Shared Leads</Text>
+            <Text style={styles.kpiValue}>{stats.total_leads}</Text>
           </View>
           <View style={styles.kpiBox}>
-            <Text style={styles.kpiLabel}>Leads Generated</Text>
-            <Text style={[styles.kpiValue, { color: '#059669' }]}>{stats.leads_generated || 0}</Text>
+            <Text style={styles.kpiLabel}>Submitted</Text>
+            <Text style={[styles.kpiValue, { color: '#059669' }]}>{stats.submitted_leads}</Text>
           </View>
           <View style={styles.kpiBox}>
             <Text style={styles.kpiLabel}>Conversion</Text>
-            <Text style={[styles.kpiValue, { color: colors.primary }]}>{stats.conversion_rate || '0%'}</Text>
+            <Text style={[styles.kpiValue, { color: colors.primary }]}>{stats.conversion_rate}</Text>
           </View>
         </View>
 
-        {/* Recent Click Logs */}
-        <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>Live Traffic & Clicks</Text>
-        {(stats.recent_clicks || []).map((click: any) => (
-          <View key={click.id} style={styles.clickCard}>
-            <View style={styles.clickLeft}>
-              <View style={styles.clickIconBg}>
-                <Icon name="link" size={14} color={colors.primary} />
-              </View>
-              <View>
-                <Text style={styles.clickProduct}>{click.product}</Text>
-                <Text style={styles.clickMeta}>{click.ip_city || 'India'} • {click.date}</Text>
-              </View>
-            </View>
-            <View style={[styles.statusTag, click.status === 'LEAD CREATED' ? styles.statusTagLead : styles.statusTagClick]}>
-              <Text style={[styles.statusTagText, click.status === 'LEAD CREATED' ? styles.statusTagLeadText : styles.statusTagClickText]}>
-                {click.status}
-              </Text>
-            </View>
+        {/* Recent Share Activity */}
+        <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>Live Share Activity</Text>
+        {stats.recent_leads.length === 0 ? (
+          <View style={styles.emptyBox}>
+            <Icon name="link" size={28} color={colors.textLight} />
+            <Text style={styles.emptyText}>
+              No share activity yet. Generate a product link from the Products screen and share it with a customer.
+            </Text>
           </View>
-        ))}
+        ) : (
+          stats.recent_leads.map((lead: any) => (
+            <View key={lead.id} style={styles.clickCard}>
+              <View style={styles.clickLeft}>
+                <View style={styles.clickIconBg}>
+                  <Icon name="link" size={14} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.clickProduct}>{lead.product}</Text>
+                  <Text style={styles.clickMeta}>
+                    {lead.customer}{lead.city ? ` • ${lead.city}` : ''}{lead.date ? ` • ${lead.date}` : ''}
+                  </Text>
+                </View>
+              </View>
+              <View
+                style={[
+                  styles.statusTag,
+                  CONVERTED_STATUSES.includes(lead.status) ? styles.statusTagLead : styles.statusTagClick,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statusTagText,
+                    CONVERTED_STATUSES.includes(lead.status) ? styles.statusTagLeadText : styles.statusTagClickText,
+                  ]}
+                >
+                  {lead.status}
+                </Text>
+              </View>
+            </View>
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -306,6 +347,21 @@ const styles = StyleSheet.create({
   statusTagText: {
     fontSize: 10,
     fontWeight: '800',
+  },
+  emptyBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: spacing.lg,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 12,
+    color: colors.textLight,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+    lineHeight: 18,
   },
   statusTagLeadText: {
     color: '#059669',

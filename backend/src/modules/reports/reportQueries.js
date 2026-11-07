@@ -607,6 +607,43 @@ async function getCompleteSystemSummaryMetrics() {
   };
 }
 
+/**
+ * 8. SUPER ADMIN DASHBOARD STATS
+ */
+async function getDashboardStats() {
+  const partnersRes = await query(`SELECT COUNT(*) FROM partner_profiles`);
+  const pendingKycRes = await query(
+    `SELECT COUNT(*) FROM partner_profiles WHERE kyc_status::text IN ('pending', 'under_review', 'draft')`
+  );
+  const applicationsRes = await query(`SELECT COUNT(*) FROM applications`);
+  const approvedRes = await query(
+    `SELECT COUNT(*) FROM applications WHERE status::text IN ('approved', 'disbursed', 'commission_received')`
+  );
+  const rejectedRes = await query(
+    `SELECT COUNT(*) FROM applications WHERE status::text IN ('rejected', 'declined', 'decline')`
+  );
+  const leadsRes = await query(`SELECT COUNT(*) FROM leads`);
+  const payoutsRes = await query(
+    `SELECT COUNT(*) FROM wallet_withdrawals WHERE status = 'pending'`
+  );
+  const revenueRes = await query(
+    `SELECT COALESCE(SUM(COALESCE(NULLIF(a.commission_amount::text, '')::numeric, 0)), 0) AS total
+       FROM applications a
+      WHERE a.status::text IN ('approved', 'disbursed', 'commission_received')`
+  );
+
+  return {
+    totalPartners: parseInt(partnersRes.rows[0]?.count || 0),
+    pendingKYC: parseInt(pendingKycRes.rows[0]?.count || 0),
+    totalApplications: parseInt(applicationsRes.rows[0]?.count || 0),
+    approvedApplications: parseInt(approvedRes.rows[0]?.count || 0),
+    rejectedApplications: parseInt(rejectedRes.rows[0]?.count || 0),
+    totalLeads: parseInt(leadsRes.rows[0]?.count || 0),
+    pendingPayouts: parseInt(payoutsRes.rows[0]?.count || 0),
+    totalRevenue: parseFloat(revenueRes.rows[0]?.total || 0)
+  };
+}
+
 module.exports = {
   getEmployeeReportData,
   getEmployeeCustomerDetailedReportData,
@@ -614,5 +651,6 @@ module.exports = {
   getAdminReportData,
   getPartnerReportData,
   getApplicationReportData,
-  getCompleteSystemSummaryMetrics
+  getCompleteSystemSummaryMetrics,
+  getDashboardStats
 };

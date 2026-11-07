@@ -21,7 +21,7 @@ export interface SupportTicket {
 
 export const getTickets = async (): Promise<SupportTicket[]> => {
   try {
-    const res = await apiClient.get('/support');
+    const res = await apiClient.get('/support/tickets');
     return res.data?.data || res.data?.tickets || [];
   } catch (err) {
     return [];
@@ -34,16 +34,16 @@ export const createTicket = async (data: {
   priority?: string;
   category?: string;
 }): Promise<SupportTicket | null> => {
-  const res = await apiClient.post('/support', data);
+  const res = await apiClient.post('/support/tickets', data);
   return res.data?.data || null;
 };
 
 export const getTicketDetail = async (ticketId: string): Promise<SupportTicket | null> => {
-  const res = await apiClient.get(`/support/${ticketId}`);
+  const res = await apiClient.get(`/support/tickets/${ticketId}`);
   return res.data?.data || null;
 };
 
 export const addReply = async (ticketId: string, message: string): Promise<boolean> => {
-  const res = await apiClient.post(`/support/${ticketId}/reply`, { message });
+  const res = await apiClient.post(`/support/tickets/${ticketId}/reply`, { message });
   return res.data?.success || false;
 };
