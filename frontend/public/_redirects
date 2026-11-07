@@ -1,0 +1,7 @@
+# Cloudflare Pages SPA Routing
+# 1. API proxy fallback (200 rewrite to backend API)
+/api/*  https://api.gharkapaisa.in/api/:splat  200
+
+# 2. SPA client-side fallback: serve index.html for all routes with 200 OK status
+/*      /index.html                            200
+
