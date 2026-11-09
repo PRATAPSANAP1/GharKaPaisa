@@ -122,12 +122,15 @@
     (function() {
       const savedTheme = localStorage.getItem('gkp_theme');
       const isDark = savedTheme === 'dark';
+      const bgColor = isDark ? '#101A2B' : '#F5F8FC';
       if (isDark) {
         document.documentElement.classList.add('dark');
-        document.body.style.backgroundColor = '#101A2B';
       } else {
         document.documentElement.classList.remove('dark');
-        document.body.style.backgroundColor = '#F5F8FC';
+      }
+      document.documentElement.style.backgroundColor = bgColor;
+      if (document.body) {
+        document.body.style.backgroundColor = bgColor;
       }
     })();
   </script>

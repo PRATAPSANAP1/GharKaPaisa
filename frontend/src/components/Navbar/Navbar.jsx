@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { FaSearch, FaSignInAlt, FaUserPlus } from 'react-icons/fa';
 import './Navbar.css';
 import logo from '../../assets/logos/logo.webp';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme, ThemeToggle } from '../../contexts/ThemeContext';
 import { useSearchStore } from '../../app/store/searchStore';
 import LanguageSwitcher from '../LanguageSwitcher/LanguageSwitcher';
 import { getApiV1Url } from '../../config/api';
