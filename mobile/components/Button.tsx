@@ -1,9 +1,8 @@
 import React from 'react';
 import { TouchableOpacity, Text, ActivityIndicator, StyleSheet, ViewStyle, TextStyle } from 'react-native';
-import { colors } from '../theme/colors';
+import { useTheme } from '../contexts/ThemeContext';
 import { typography } from '../theme/typography';
 import { spacing } from '../theme/spacing';
-import { shadows } from '../theme/shadows';
 import { Gradient } from './Gradient';
 
 interface ButtonProps {
@@ -29,6 +28,7 @@ export const Button: React.FC<ButtonProps> = ({
   icon,
   size = 'md',
 }) => {
+  const { colors, isDark } = useTheme();
   const isGradient = variant === 'primary' || variant === 'gold';
 
   const getBackgroundColor = () => {
@@ -47,6 +47,7 @@ export const Button: React.FC<ButtonProps> = ({
   const getTextColor = () => {
     if (disabled) return colors.textLight;
     if (variant === 'outline' || variant === 'ghost') return colors.primary;
+    if (variant === 'secondary') return colors.text;
     if (variant === 'gold') return '#1A1207';
     return '#FFFFFF';
   };
@@ -75,7 +76,18 @@ export const Button: React.FC<ButtonProps> = ({
       <Gradient
         colors={getGradientColors()}
         borderRadius={spacing.radius.md}
-        style={[styles.button, { paddingVertical: paddingY }, shadows.glow, style]}
+        style={[
+          styles.button,
+          {
+            paddingVertical: paddingY,
+            shadowColor: variant === 'gold' ? colors.gold : colors.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: isDark ? 0.35 : 0.2,
+            shadowRadius: 8,
+            elevation: 4,
+          },
+          style,
+        ]}
       >
         <TouchableOpacity
           onPress={onPress}
@@ -96,11 +108,12 @@ export const Button: React.FC<ButtonProps> = ({
       activeOpacity={0.8}
       style={[
         styles.button,
-        { backgroundColor: getBackgroundColor(), paddingVertical: paddingY },
-        variant === 'outline' && styles.outlineBorder,
-        variant === 'secondary' && styles.secondaryBorder,
-        variant === 'ghost' && styles.ghostStyle,
-        !disabled && variant !== 'outline' && variant !== 'ghost' && shadows.sm,
+        {
+          backgroundColor: getBackgroundColor(),
+          paddingVertical: paddingY,
+          borderWidth: variant === 'outline' ? 1.5 : variant === 'secondary' ? 1 : 0,
+          borderColor: variant === 'outline' ? colors.primary : variant === 'secondary' ? colors.border : 'transparent',
+        },
         style,
       ]}
     >
@@ -124,19 +137,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 20,
   },
-  outlineBorder: {
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-  },
-  secondaryBorder: {
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  ghostStyle: {
-    backgroundColor: 'transparent',
-  },
   text: {
     fontWeight: typography.weights.bold,
     letterSpacing: 0.3,
   },
 });
+
+export default Button;

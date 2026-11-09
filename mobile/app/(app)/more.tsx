@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { ThemeToggle } from '../../components/ThemeToggle';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
@@ -25,6 +27,7 @@ interface MenuItem {
 
 export default function MoreScreen() {
   const { userRole, userDesignation, logout } = useAuth();
+  const { colors, isDark } = useTheme();
 
   const coreOperations: MenuItem[] = [
     {
@@ -205,22 +208,26 @@ export default function MoreScreen() {
 
   const renderSection = (title: string, items: MenuItem[]) => (
     <View style={styles.sectionContainer} key={title}>
-      <Text style={styles.sectionHeader}>{title}</Text>
-      <View style={styles.cardGroup}>
+      <Text style={[styles.sectionHeader, { color: colors.textLight }]}>{title}</Text>
+      <View style={[styles.cardGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
         {items.map((item, idx) => (
           <TouchableOpacity
             key={item.id}
-            style={[styles.menuRow, idx === items.length - 1 && styles.noBorder]}
+            style={[
+              styles.menuRow,
+              { borderBottomColor: colors.border },
+              idx === items.length - 1 && styles.noBorder,
+            ]}
             onPress={() => router.push(item.route as any)}
           >
-            <View style={styles.iconCircle}>
+            <View style={[styles.iconCircle, { backgroundColor: colors.bg, borderColor: colors.border }]}>
               <Text style={styles.iconText}>{item.icon}</Text>
             </View>
             <View style={styles.menuInfo}>
-              <Text style={styles.menuTitle}>{item.title}</Text>
-              <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>{item.title}</Text>
+              <Text style={[styles.menuSubtitle, { color: colors.textLight }]}>{item.subtitle}</Text>
             </View>
-            <Text style={styles.chevron}>›</Text>
+            <Text style={[styles.chevron, { color: colors.textLight }]}>›</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -228,14 +235,19 @@ export default function MoreScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]}>
+      <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} contentContainerStyle={styles.content}>
         {/* Screen Title Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Workspace Features</Text>
-          <Text style={styles.headerSubtitle}>
-            Priority-ordered menu ({userRole || 'User'} {userDesignation ? `• ${userDesignation}` : ''})
-          </Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <Text style={[styles.headerTitle, { color: colors.text }]}>Workspace Features</Text>
+              <Text style={[styles.headerSubtitle, { color: colors.textLight }]}>
+                Priority-ordered menu ({userRole || 'User'} {userDesignation ? `• ${userDesignation}` : ''})
+              </Text>
+            </View>
+            <ThemeToggle size="sm" />
+          </View>
         </View>
 
         {/* Priority 1: Core Operations */}

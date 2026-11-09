@@ -48,6 +48,13 @@ export default function SuperAdminMenuScreen() {
       path: '/super-admin/attendance',
     },
     {
+      title: 'Working Hours',
+      description: 'Business hours, shifts, overtime & holidays',
+      icon: 'clock',
+      color: '#8B5CF6',
+      path: '/super-admin/working-hours',
+    },
+    {
       title: 'Broadcasts',
       description: 'Push notifications & announcements',
       icon: 'bell',

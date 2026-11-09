@@ -20,6 +20,7 @@ import { spacing } from '../../../theme/spacing';
 import { Card } from '../../../components/Card';
 import { Button } from '../../../components/Button';
 import { Icon } from '../../../components/Icon';
+import { BiometricManagementModal } from '../../../components/BiometricManagementModal';
 import apiClient from '../../../services/api';
 
 interface AttendanceSummary {
@@ -268,7 +269,13 @@ export default function SuperAdminAttendanceScreen() {
           <Icon name="arrow-left" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Attendance Dashboard</Text>
-        <View style={{ width: 24 }} />
+        <TouchableOpacity
+          onPress={() => router.push('/super-admin/working-hours' as any)}
+          style={{ padding: 4 }}
+          accessibilityLabel="Working Hours Settings"
+        >
+          <Icon name="clock" size={20} color="#38BDF8" />
+        </TouchableOpacity>
       </View>
 
       {/* Tabs */}
@@ -434,59 +441,13 @@ export default function SuperAdminAttendanceScreen() {
       </View>
       )}
 
-      {/* Biometric Enrollment Modal */}
-      <Modal visible={biometricModalVisible} transparent animationType="fade">
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Biometric Face Enrollment</Text>
-            <Text style={styles.modalSub}>
-              Capture a live photograph for {selectedEmployee?.full_name || 'the employee'} to update the
-              face verification reference.
-            </Text>
-
-            <TouchableOpacity style={styles.captureBox} onPress={captureFace} disabled={enrollBusy}>
-              {faceImage ? (
-                <Image source={{ uri: faceImage.uri }} style={styles.capturePreview} />
-              ) : (
-                <>
-                  <Icon name="camera" size={32} color={colors.primary} />
-                  <Text style={styles.captureText}>Tap to capture face</Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            <Text style={styles.modalInputLabel}>Reason (optional)</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={enrollReason}
-              onChangeText={setEnrollReason}
-              placeholder="e.g. Verification mismatch / new joiner"
-              placeholderTextColor={colors.textLight}
-            />
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.modalCancelBtn}
-                onPress={() => setBiometricModalVisible(false)}
-                disabled={enrollBusy}
-              >
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalConfirmBtn, (!faceImage || enrollBusy) && { opacity: 0.6 }]}
-                onPress={submitBiometricEnrollment}
-                disabled={!faceImage || enrollBusy}
-              >
-                {enrollBusy ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.modalConfirmText}>Submit Enrollment</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* Biometric Management Modal */}
+      <BiometricManagementModal
+        visible={biometricModalVisible}
+        onClose={() => setBiometricModalVisible(false)}
+        employee={selectedEmployee}
+        onUpdated={loadMissingEnrollments}
+      />
     </ScrollView>
   );
 }

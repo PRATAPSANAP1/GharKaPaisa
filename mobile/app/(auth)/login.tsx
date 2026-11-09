@@ -12,11 +12,13 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { colors } from '../../theme/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 import { Card } from '../../components/Card';
 import { Icon } from '../../components/Icon';
 import { Button } from '../../components/Button';
+import { ThemeToggle } from '../../components/ThemeToggle';
 import {
   sendOtp,
   loginWithOtp,
@@ -27,6 +29,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 export default function LoginScreen() {
   const { loginSession } = useAuth();
+  const { colors, isDark } = useTheme();
 
   // Login Mode: 'password' | 'otp'
   const [loginMode, setLoginMode] = useState<'password' | 'otp'>('password');
@@ -167,17 +170,22 @@ export default function LoginScreen() {
 
   return (
     <ScrollView
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, { backgroundColor: colors.bg }]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
+      {/* Top Bar with Theme Toggle */}
+      <View style={{ width: '100%', alignItems: 'flex-end', marginBottom: spacing.xs }}>
+        <ThemeToggle size="sm" />
+      </View>
+
       {/* Brand Header */}
       <View style={styles.header}>
-        <View style={styles.logoBadge}>
+        <View style={[styles.logoBadge, { backgroundColor: colors.primary }]}>
           <Text style={styles.logoBadgeText}>GKP</Text>
         </View>
-        <Text style={styles.brandTitle}>GharKaPaisa</Text>
-        <Text style={styles.brandSubtitle}>Financial Partner & Employee Network</Text>
+        <Text style={[styles.brandTitle, { color: colors.text }]}>GharKaPaisa</Text>
+        <Text style={[styles.brandSubtitle, { color: colors.textMid }]}>Financial Partner & Employee Network</Text>
       </View>
 
       {/* Main Login Card */}
@@ -433,7 +441,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: spacing.lg,
     justifyContent: 'center',
-    backgroundColor: '#0B1120',
+    backgroundColor: colors.bg,
   },
   header: {
     alignItems: 'center',
@@ -462,24 +470,29 @@ const styles = StyleSheet.create({
   brandTitle: {
     fontSize: 26,
     fontWeight: '900',
-    color: '#fff',
+    color: colors.text,
     letterSpacing: 0.5,
   },
   brandSubtitle: {
     fontSize: 12,
-    color: colors.textLight,
+    color: colors.textMid,
     marginTop: 4,
   },
   card: {
     padding: spacing.lg,
     borderRadius: 20,
-    backgroundColor: '#1E293B',
+    backgroundColor: colors.bgSecondary,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   modeTabs: {
     flexDirection: 'row',
-    backgroundColor: '#0F172A',
+    backgroundColor: colors.bgTertiary,
     borderRadius: 10,
     padding: 4,
     marginBottom: spacing.md,
@@ -494,23 +507,23 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   activeModeTab: {
-    backgroundColor: '#1E293B',
+    backgroundColor: colors.bgSecondary,
   },
   modeTabText: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.textLight,
+    color: colors.textMid,
   },
   activeModeTabText: {
-    color: '#fff',
+    color: colors.text,
     fontWeight: '700',
   },
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: colors.errorSoft,
     borderWidth: 1,
-    borderColor: '#EF4444',
+    borderColor: colors.error,
     padding: spacing.sm,
     borderRadius: 8,
     marginBottom: spacing.md,
@@ -519,7 +532,7 @@ const styles = StyleSheet.create({
   errorText: {
     flex: 1,
     fontSize: 12,
-    color: '#EF4444',
+    color: colors.error,
     fontWeight: '600',
   },
   formContainer: {
@@ -540,15 +553,15 @@ const styles = StyleSheet.create({
   forgotText: {
     fontSize: 11,
     fontWeight: '600',
-    color: colors.primaryLight,
+    color: colors.primary,
   },
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
+    backgroundColor: colors.inputBg,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.inputBorder,
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
     gap: spacing.sm,
@@ -556,7 +569,7 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     fontSize: 13,
-    color: '#fff',
+    color: colors.text,
     padding: 0,
   },
   eyeBtn: {
@@ -570,16 +583,16 @@ const styles = StyleSheet.create({
   },
   otpSentTo: {
     fontSize: 11,
-    color: colors.textLight,
+    color: colors.textMid,
   },
   timerText: {
     fontSize: 11,
-    color: colors.textLight,
+    color: colors.textMid,
     fontWeight: '600',
   },
   resendText: {
     fontSize: 11,
-    color: colors.primaryLight,
+    color: colors.primary,
     fontWeight: '700',
   },
   changeIdentityBtn: {
@@ -589,7 +602,7 @@ const styles = StyleSheet.create({
   },
   changeIdentityText: {
     fontSize: 12,
-    color: colors.textLight,
+    color: colors.textMid,
     fontWeight: '600',
   },
   dividerRow: {
@@ -601,12 +614,12 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#334155',
+    backgroundColor: colors.border,
   },
   dividerText: {
     fontSize: 11,
     fontWeight: '700',
-    color: colors.textLight,
+    color: colors.textMid,
   },
   registerBtn: {
     alignItems: 'center',
@@ -614,12 +627,12 @@ const styles = StyleSheet.create({
   },
   registerPrompt: {
     fontSize: 12,
-    color: colors.textLight,
+    color: colors.textMid,
   },
   registerAction: {
     fontSize: 14,
     fontWeight: '800',
-    color: colors.primaryLight,
+    color: colors.primary,
     marginTop: 2,
   },
   footer: {
@@ -629,11 +642,11 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 11,
-    color: colors.textLight,
+    color: colors.textMid,
   },
   footerVersion: {
     fontSize: 10,
-    color: '#475569',
+    color: colors.textLight,
     fontWeight: '600',
   },
   modalBackdrop: {
@@ -643,32 +656,32 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   modalCard: {
-    backgroundColor: '#1E293B',
+    backgroundColor: colors.bgSecondary,
     borderRadius: 16,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.border,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#fff',
+    color: colors.text,
   },
   modalSub: {
     fontSize: 12,
-    color: colors.textLight,
+    color: colors.textMid,
     marginTop: 4,
     marginBottom: spacing.md,
   },
   modalInput: {
-    backgroundColor: '#0F172A',
+    backgroundColor: colors.inputBg,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.inputBorder,
     borderRadius: 8,
     padding: 10,
     fontSize: 13,
     marginBottom: spacing.md,
-    color: '#fff',
+    color: colors.text,
   },
   modalActions: {
     flexDirection: 'row',
@@ -683,7 +696,7 @@ const styles = StyleSheet.create({
   modalCancelText: {
     fontSize: 13,
     fontWeight: '700',
-    color: colors.textLight,
+    color: colors.textMid,
   },
   modalConfirmBtn: {
     backgroundColor: colors.primary,

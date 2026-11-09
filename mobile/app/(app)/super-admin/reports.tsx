@@ -69,7 +69,7 @@ export default function SuperAdminReportsScreen() {
 
       const path = kind === 'csv' ? '/applications/export/csv' : '/super-admin/reports/complete/export';
       const ext = kind === 'csv' ? 'csv' : 'xlsx';
-      const fileUri = `${FileSystem.cacheDirectory}gharkapaisa_report_${Date.now()}.${ext}`;
+      const fileUri = `${(FileSystem as any).cacheDirectory || ''}gharkapaisa_report_${Date.now()}.${ext}`;
 
       const download = await FileSystem.downloadAsync(`${API_BASE_URL}${path}`, fileUri, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},

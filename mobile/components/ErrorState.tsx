@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../theme/colors';
+import { useTheme } from '../contexts/ThemeContext';
 import { typography } from '../theme/typography';
 import { spacing } from '../theme/spacing';
 import { Button } from './Button';
@@ -8,12 +8,16 @@ import { Button } from './Button';
 export const ErrorState: React.FC<{ message?: string; onRetry?: () => void }> = ({
   message = 'Something went wrong',
   onRetry,
-}) => (
-  <View style={styles.center}>
-    <Text style={styles.errorText}>{message}</Text>
-    {onRetry && <Button title="Retry" onPress={onRetry} variant="outline" style={{ marginTop: spacing.md }} />}
-  </View>
-);
+}) => {
+  const { colors } = useTheme();
+
+  return (
+    <View style={[styles.center, { backgroundColor: colors.bg }]}>
+      <Text style={[styles.errorText, { color: colors.error }]}>{message}</Text>
+      {onRetry && <Button title="Retry" onPress={onRetry} variant="outline" style={{ marginTop: spacing.md }} />}
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   center: {
@@ -24,7 +28,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: typography.sizes.md,
-    color: colors.error,
     textAlign: 'center',
   },
 });

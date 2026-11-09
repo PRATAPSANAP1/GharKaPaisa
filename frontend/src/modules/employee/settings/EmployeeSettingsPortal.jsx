@@ -29,6 +29,12 @@ export default function EmployeeSettingsPortal() {
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [ticketForm, setTicketForm] = useState({ subject: '', category: 'General', description: '' });
 
+  // Account Deletion State
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteMode, setDeleteMode] = useState<'temporary' | 'permanent'>('temporary');
+  const [deleteAcknowledged, setDeleteAcknowledged] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
@@ -76,6 +82,32 @@ export default function EmployeeSettingsPortal() {
     alert('✓ Support ticket submitted successfully! HR & Support Team will respond shortly.');
     setShowSupportModal(false);
     setTicketForm({ subject: '', category: 'General', description: '' });
+  };
+
+  // Account Deletion Handler
+  const handleAccountDeletionSubmit = async (e) => {
+    e.preventDefault();
+    if (!deleteAcknowledged) return alert('Please confirm that you understand the terms of account deletion.');
+    
+    const isPermanent = deleteMode === 'permanent';
+    const confirmMsg = isPermanent
+      ? 'ARE YOU EXTREMELY SURE? Permanent deletion will wipe your account and all associated documents, bank details, and employment data from the database. THIS CANNOT BE UNDONE!'
+      : 'Are you sure you want to temporarily deactivate your account? Your profile data, attendance records, and performance data will remain safely saved in the database.';
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setDeleteLoading(true);
+    try {
+      const res = await api.delete(`/auth/delete-account?mode=${deleteMode}`);
+      alert(res.data?.message || 'Your request has been processed. You will now be redirected.');
+      logout();
+      window.location.href = '/login';
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to process account deletion request. Please try again.');
+    } finally {
+      setDeleteLoading(false);
+      setShowDeleteModal(false);
+    }
   };
 
   const emp = profileData?.employee || user || {};
@@ -504,6 +536,68 @@ export default function EmployeeSettingsPortal() {
                   </label>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* 10. DANGER ZONE */}
+          {activeTab === 'danger' && (
+            <div>
+              <h2 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: '#EF4444', margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <FaExclamationTriangle /> 10. Danger Zone - Account Deletion
+              </h2>
+
+              <div style={{ background: '#FEF2F2', border: '2px solid #EF4444', borderRadius: '16px', padding: isMobile ? '16px' : '20px', marginBottom: '20px', boxSizing: 'border-box', width: '100%' }}>
+                <h3 style={{ fontSize: '14.5px', fontWeight: 800, margin: '0 0 10px 0', color: '#EF4444' }}>Delete Account</h3>
+                <p style={{ fontSize: '13px', color: '#991B1B', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                  Once you delete your account, there is no going back. Please be certain.
+                </p>
+                <button onClick={() => setShowDeleteModal(true)} style={{ background: '#EF4444', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', fontSize: '13px' }}>
+                  Delete Account
+                </button>
+              </div>
+
+              {/* Delete Account Modal */}
+              {showDeleteModal && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                  <div style={{ background: C.card, borderRadius: '16px', padding: isMobile ? '20px' : '24px', maxWidth: isMobile ? '90%' : '500px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxSizing: 'border-box' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: 900, margin: '0 0 16px 0', color: '#EF4444' }}>Delete Account</h3>
+                    
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: C.textMid, marginBottom: '8px' }}>Deletion Mode</label>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button onClick={() => setDeleteMode('temporary')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: `2px solid ${deleteMode === 'temporary' ? '#EF4444' : C.border}`, background: deleteMode === 'temporary' ? '#FEF2F2' : C.card, fontWeight: 700, cursor: 'pointer', fontSize: '12px' }}>
+                          Temporary Deactivation
+                        </button>
+                        <button onClick={() => setDeleteMode('permanent')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: `2px solid ${deleteMode === 'permanent' ? '#EF4444' : C.border}`, background: deleteMode === 'permanent' ? '#FEF2F2' : C.card, fontWeight: 700, cursor: 'pointer', fontSize: '12px' }}>
+                          Permanent Deletion
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ background: deleteMode === 'permanent' ? '#FEF2F2' : '#FFF3CD', border: `1px solid ${deleteMode === 'permanent' ? '#EF4444' : '#F59E0B'}`, borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
+                      <p style={{ fontSize: '12px', color: deleteMode === 'permanent' ? '#991B1B' : '#92400E', margin: 0, lineHeight: 1.5 }}>
+                        {deleteMode === 'permanent' 
+                          ? '⚠️ Permanent deletion will completely remove your account, employment records, attendance data, and all associated documents from the database. This action CANNOT be undone.'
+                          : '⚠️ Temporary deactivation will suspend your account but preserve your data. You can reactivate your account by contacting HR or Super Admin.'}
+                      </p>
+                    </div>
+
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '12px', cursor: 'pointer', marginBottom: '16px', fontWeight: 700 }}>
+                      <input type="checkbox" checked={deleteAcknowledged} onChange={(e) => setDeleteAcknowledged(e.target.checked)} style={{ marginTop: '2px' }} />
+                      <span>I understand the consequences and want to proceed with account {deleteMode === 'permanent' ? 'deletion' : 'deactivation'}.</span>
+                    </label>
+
+                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                      <button onClick={() => setShowDeleteModal(false)} style={{ padding: '10px 20px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.card, fontWeight: 700, cursor: 'pointer', fontSize: '12px' }}>
+                        Cancel
+                      </button>
+                      <button onClick={handleAccountDeletionSubmit} disabled={!deleteAcknowledged || deleteLoading} style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#EF4444', color: '#fff', fontWeight: 800, cursor: pointer, fontSize: '12px', opacity: (!deleteAcknowledged || deleteLoading) ? 0.5 : 1 }}>
+                        {deleteLoading ? 'Processing...' : 'Confirm Deletion'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

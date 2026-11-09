@@ -17,9 +17,13 @@ import { NotificationPreference } from '../../types';
 import notificationService from '../../services/notification.service';
 import { fetchSystemSettings, updateSystemSetting } from '../../services/super-admin.service';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { ThemeToggle } from '../../components/ThemeToggle';
+import { Icon } from '../../components/Icon';
 
 export default function SettingsScreen() {
   const { isSuperAdmin } = useAuth();
+  const { colors, isDark } = useTheme();
 
   const [loading, setLoading] = useState(true);
   const [prefs, setPrefs] = useState<NotificationPreference | null>(null);
@@ -109,21 +113,39 @@ export default function SettingsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]}>
+      <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} contentContainerStyle={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>App Settings</Text>
-          <Text style={styles.subtitle}>Preferences & notifications control</Text>
+          <Text style={[styles.title, { color: colors.text }]}>App Settings</Text>
+          <Text style={[styles.subtitle, { color: colors.textLight }]}>Preferences & appearance control</Text>
+        </View>
+
+        {/* Theme & Appearance Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.textLight }]}>Appearance & Theme</Text>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.row}>
+              <View style={styles.rowTextGroup}>
+                <Text style={[styles.rowTitle, { color: colors.text }]}>
+                  {isDark ? 'Dark Theme' : 'Light Theme'}
+                </Text>
+                <Text style={[styles.rowSub, { color: colors.textLight }]}>
+                  {isDark ? 'Using dark mode (#101A2B) matching website' : 'Using light mode (#F5F8FC) matching website'}
+                </Text>
+              </View>
+              <ThemeToggle />
+            </View>
+          </View>
         </View>
 
         {/* Notifications Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notifications</Text>
-          <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: colors.textLight }]}>Notifications</Text>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.row}>
               <View style={styles.rowTextGroup}>
-                <Text style={styles.rowTitle}>Push Notifications</Text>
-                <Text style={styles.rowSub}>Receive real-time system alerts</Text>
+                <Text style={[styles.rowTitle, { color: colors.text }]}>Push Notifications</Text>
+                <Text style={[styles.rowSub, { color: colors.textLight }]}>Receive real-time system alerts</Text>
               </View>
               <Switch
                 value={pushNotifs}
@@ -132,10 +154,10 @@ export default function SettingsScreen() {
               />
             </View>
 
-            <View style={[styles.row, styles.borderTop]}>
+            <View style={[styles.row, styles.borderTop, { borderTopColor: colors.border }]}>
               <View style={styles.rowTextGroup}>
-                <Text style={styles.rowTitle}>Messenger Alerts</Text>
-                <Text style={styles.rowSub}>Notify on incoming chat messages</Text>
+                <Text style={[styles.rowTitle, { color: colors.text }]}>Messenger Alerts</Text>
+                <Text style={[styles.rowSub, { color: colors.textLight }]}>Notify on incoming chat messages</Text>
               </View>
               <Switch
                 value={messengerNotifs}
@@ -144,10 +166,10 @@ export default function SettingsScreen() {
               />
             </View>
 
-            <View style={[styles.row, styles.borderTop]}>
+            <View style={[styles.row, styles.borderTop, { borderTopColor: colors.border }]}>
               <View style={styles.rowTextGroup}>
-                <Text style={styles.rowTitle}>Sound Effects</Text>
-                <Text style={styles.rowSub}>Play sound on new notifications</Text>
+                <Text style={[styles.rowTitle, { color: colors.text }]}>Sound Effects</Text>
+                <Text style={[styles.rowSub, { color: colors.textLight }]}>Play sound on new notifications</Text>
               </View>
               <Switch
                 value={soundEnabled}
@@ -160,12 +182,12 @@ export default function SettingsScreen() {
 
         {/* Privacy & Security Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Privacy Preferences</Text>
-          <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: colors.textLight }]}>Privacy Preferences</Text>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.row}>
               <View style={styles.rowTextGroup}>
-                <Text style={styles.rowTitle}>Admin Privacy Masking</Text>
-                <Text style={styles.rowSub}>
+                <Text style={[styles.rowTitle, { color: colors.text }]}>Admin Privacy Masking</Text>
+                <Text style={[styles.rowSub, { color: colors.textLight }]}>
                   {isSuperAdmin
                     ? 'Mask sensitive customer contact info'
                     : 'Managed centrally by the Super Admin'}
@@ -183,8 +205,31 @@ export default function SettingsScreen() {
 
         {/* App Version Info */}
         <View style={styles.infoBox}>
-          <Text style={styles.infoTitle}>GharKaPaisa Mobile</Text>
-          <Text style={styles.infoText}>Version 2.4.0 • Enterprise Workspace</Text>
+          <Text style={[styles.infoTitle, { color: colors.text }]}>GharKaPaisa Mobile</Text>
+          <Text style={[styles.infoText, { color: colors.textLight }]}>Version 2.4.0 • Enterprise Workspace</Text>
+        </View>
+
+        {/* Account Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.textLight }]}>Account</Text>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <TouchableOpacity
+              style={styles.dangerButton}
+              onPress={() => Alert.alert(
+                'Delete Account',
+                'Are you sure you want to delete your account? This action cannot be undone.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Delete', style: 'destructive', onPress: () => {
+                    Alert.alert('Request Submitted', 'Your account deletion request has been submitted.');
+                  }}
+                ]
+              )}
+            >
+              <Icon name="trash-2" size={20} color={colors.error} />
+              <Text style={styles.dangerButtonText}>Delete Account</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -284,5 +329,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textLight,
     marginTop: 2
-  }
+  },
+  dangerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.md,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 8,
+    gap: spacing.sm,
+  },
+  dangerButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.error,
+  },
 });

@@ -96,7 +96,7 @@ export interface AttendanceResponse {
 export const getTodayAttendance = async (): Promise<AttendanceRecord | null> => {
   try {
     const response = await apiClient.get('/attendance/today');
-    return response.data;
+    return response.data?.data !== undefined ? response.data.data : response.data;
   } catch (error: any) {
     throw error.response?.data || { success: false, message: 'Failed to load today\'s attendance' };
   }
@@ -112,7 +112,7 @@ export const getMyAttendanceHistory = async (params: {
 } = {}): Promise<{ records: AttendanceRecord[]; total: number }> => {
   try {
     const response = await apiClient.get('/attendance/my-attendance', { params });
-    return response.data;
+    return response.data?.data !== undefined ? response.data.data : response.data;
   } catch (error: any) {
     throw error.response?.data || { success: false, message: 'Failed to load attendance history' };
   }
@@ -127,7 +127,7 @@ export const getMyAttendanceSummary = async (params: {
 } = {}): Promise<MonthlySummary> => {
   try {
     const response = await apiClient.get('/attendance/my-summary', { params });
-    return response.data;
+    return response.data?.data !== undefined ? response.data.data : response.data;
   } catch (error: any) {
     throw error.response?.data || { success: false, message: 'Failed to load attendance summary' };
   }
@@ -152,16 +152,16 @@ export const getEnrollmentStatus = async (): Promise<{ is_enrolled: boolean }> =
 export const createVerificationSession = async (): Promise<VerificationSession> => {
   try {
     const response = await apiClient.post('/attendance/verification/session');
-    return response.data;
+    return response.data?.data !== undefined ? response.data.data : response.data;
   } catch (error: any) {
     if (error.response?.status === 404) {
       try {
         const fb1 = await apiClient.post('/attendance/session');
-        return fb1.data;
+        return fb1.data?.data !== undefined ? fb1.data.data : fb1.data;
       } catch (e1: any) {
         if (e1.response?.status === 404) {
           const fb2 = await apiClient.post('/attendance-verification/session');
-          return fb2.data;
+          return fb2.data?.data !== undefined ? fb2.data.data : fb2.data;
         }
       }
     }
@@ -176,16 +176,16 @@ export const createLivenessSession = async (sessionId: string): Promise<Liveness
   const payload = { session_id: sessionId };
   try {
     const response = await apiClient.post('/attendance/verification/liveness/session', payload);
-    return response.data;
+    return response.data?.data !== undefined ? response.data.data : response.data;
   } catch (error: any) {
     if (error.response?.status === 404) {
       try {
         const fb1 = await apiClient.post('/attendance/liveness/session', payload);
-        return fb1.data;
+        return fb1.data?.data !== undefined ? fb1.data.data : fb1.data;
       } catch (e1: any) {
         if (e1.response?.status === 404) {
           const fb2 = await apiClient.post('/attendance-verification/liveness/session', payload);
-          return fb2.data;
+          return fb2.data?.data !== undefined ? fb2.data.data : fb2.data;
         }
       }
     }
@@ -200,16 +200,16 @@ export const getLivenessCredentials = async (sessionId: string): Promise<Livenes
   const payload = { session_id: sessionId };
   try {
     const response = await apiClient.post('/attendance/verification/liveness/credentials', payload);
-    return response.data;
+    return response.data?.data !== undefined ? response.data.data : response.data;
   } catch (error: any) {
     if (error.response?.status === 404) {
       try {
         const fb1 = await apiClient.post('/attendance/liveness/credentials', payload);
-        return fb1.data;
+        return fb1.data?.data !== undefined ? fb1.data.data : fb1.data;
       } catch (e1: any) {
         if (e1.response?.status === 404) {
           const fb2 = await apiClient.post('/attendance-verification/liveness/credentials', payload);
-          return fb2.data;
+          return fb2.data?.data !== undefined ? fb2.data.data : fb2.data;
         }
       }
     }
@@ -234,16 +234,16 @@ export const validateLivenessResult = async (
   };
   try {
     const response = await apiClient.post('/attendance/verification/liveness/result', payload);
-    return response.data;
+    return response.data?.data !== undefined ? response.data.data : response.data;
   } catch (error: any) {
     if (error.response?.status === 404) {
       try {
         const fb1 = await apiClient.post('/attendance/liveness/result', payload);
-        return fb1.data;
+        return fb1.data?.data !== undefined ? fb1.data.data : fb1.data;
       } catch (e1: any) {
         if (e1.response?.status === 404) {
           const fb2 = await apiClient.post('/attendance-verification/liveness/result', payload);
-          return fb2.data;
+          return fb2.data?.data !== undefined ? fb2.data.data : fb2.data;
         }
       }
     }
@@ -279,16 +279,16 @@ export const completeVerificationPipeline = async (
 
   try {
     const response = await apiClient.post('/attendance/verification/complete', formData, config);
-    return response.data;
+    return response.data?.data !== undefined ? response.data.data : response.data;
   } catch (error: any) {
     if (error.response?.status === 404) {
       try {
         const fb1 = await apiClient.post('/attendance/complete', formData, config);
-        return fb1.data;
+        return fb1.data?.data !== undefined ? fb1.data.data : fb1.data;
       } catch (e1: any) {
         if (e1.response?.status === 404) {
           const fb2 = await apiClient.post('/attendance-verification/complete', formData, config);
-          return fb2.data;
+          return fb2.data?.data !== undefined ? fb2.data.data : fb2.data;
         }
       }
     }
@@ -305,7 +305,7 @@ export const executeCheckIn = async (verificationSessionId: string): Promise<Att
       verification_session_id: verificationSessionId,
       source: 'MOBILE',
     });
-    return response.data;
+    return response.data?.data !== undefined ? response.data.data : response.data;
   } catch (error: any) {
     throw error.response?.data || { success: false, message: 'Failed to mark check-in' };
   }
@@ -320,7 +320,7 @@ export const executeCheckOut = async (verificationSessionId: string): Promise<At
       verification_session_id: verificationSessionId,
       source: 'MOBILE',
     });
-    return response.data;
+    return response.data?.data !== undefined ? response.data.data : response.data;
   } catch (error: any) {
     throw error.response?.data || { success: false, message: 'Failed to mark check-out' };
   }

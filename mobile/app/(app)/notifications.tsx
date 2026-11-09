@@ -380,7 +380,7 @@ export default function NotificationsScreen() {
               <View style={styles.footerLoader}>
                 <ActivityIndicator size="small" color={colors.primary} />
               </View>
-            ) : null
+            ) : undefined
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>

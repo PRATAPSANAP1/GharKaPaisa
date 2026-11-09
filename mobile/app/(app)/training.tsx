@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   SafeAreaView,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Icon } from '../../components/Icon';
@@ -21,10 +22,12 @@ const normalizeModule = (m: any) => ({
   id: m.id,
   title: m.title,
   description: m.description || '',
-  duration: m.duration || '—',
-  level: m.level || m.type || 'General',
-  category: m.category || 'General',
+  duration: m.duration || (m.video_url ? '15:00' : '5 Pages'),
+  level: m.level || m.type || (m.video_url ? 'Video' : 'Document'),
+  category: m.category || 'Sales Training',
   is_completed: m.is_completed ?? m.status === 'completed',
+  video_url: m.video_url || null,
+  pdf_url: m.pdf_url || null,
 });
 
 export default function TrainingScreen() {
@@ -137,6 +140,42 @@ export default function TrainingScreen() {
 
               <Text style={styles.moduleDesc}>{item.description}</Text>
 
+              {/* Media Action Row */}
+              {(item.video_url || item.pdf_url) && (
+                <View style={styles.mediaRow}>
+                  {item.video_url && (
+                    <TouchableOpacity
+                      style={styles.mediaBtn}
+                      onPress={async () => {
+                        try {
+                          await Linking.openURL(item.video_url);
+                        } catch (e) {
+                          Alert.alert('Cannot Open Video', 'Could not open video stream in browser.');
+                        }
+                      }}
+                    >
+                      <Icon name="play" size={14} color={colors.primary} />
+                      <Text style={styles.mediaBtnText}>Watch Tutorial</Text>
+                    </TouchableOpacity>
+                  )}
+                  {item.pdf_url && (
+                    <TouchableOpacity
+                      style={styles.mediaBtn}
+                      onPress={async () => {
+                        try {
+                          await Linking.openURL(item.pdf_url);
+                        } catch (e) {
+                          Alert.alert('Cannot Open Guide', 'Could not open document in browser.');
+                        }
+                      }}
+                    >
+                      <Icon name="file-text" size={14} color="#0284C7" />
+                      <Text style={[styles.mediaBtnText, { color: '#0284C7' }]}>Study Guide</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+
               <View style={styles.moduleFooter}>
                 <View style={styles.levelTag}>
                   <Text style={styles.levelTagText}>{item.level}</Text>
@@ -163,6 +202,25 @@ export default function TrainingScreen() {
 }
 
 const styles = StyleSheet.create({
+  mediaRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginVertical: 10,
+  },
+  mediaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  mediaBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+  },
   safe: {
     flex: 1,
     backgroundColor: '#F8FAFC',

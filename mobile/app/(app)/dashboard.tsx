@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { ThemeToggle } from '../../components/ThemeToggle';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
@@ -14,6 +16,7 @@ import EmployeeDashboardScreen from './employee-dashboard';
 
 export default function DashboardScreen() {
   const { user, userRole, userDesignation, reloadUser } = useAuth();
+  const { colors, isDark } = useTheme();
   const [refreshing, setRefreshing] = React.useState(false);
 
   const onRefresh = async () => {
@@ -39,7 +42,7 @@ export default function DashboardScreen() {
 
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.bg }]}
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
     >
@@ -49,13 +52,14 @@ export default function DashboardScreen() {
           <Text style={styles.avatarText}>{(user?.full_name || user?.email || 'U')[0].toUpperCase()}</Text>
         </View>
         <View style={styles.headerTextContainer}>
-          <Text style={styles.greeting}>Welcome back,</Text>
-          <Text style={styles.userName}>{user?.full_name || user?.name || user?.email}</Text>
+          <Text style={[styles.greeting, { color: colors.textLight }]}>Welcome back,</Text>
+          <Text style={[styles.userName, { color: colors.text }]}>{user?.full_name || user?.name || user?.email}</Text>
           <View style={styles.roleContainer}>
             <StatusBadge status={userRole} />
-            {userDesignation ? <Text style={styles.designationText}> • {userDesignation}</Text> : null}
+            {userDesignation ? <Text style={[styles.designationText, { color: colors.textMid }]}> • {userDesignation}</Text> : null}
           </View>
         </View>
+        <ThemeToggle size="sm" />
       </View>
 
       {/* Role-Specific Overview Banner */}
@@ -172,7 +176,7 @@ const styles = StyleSheet.create({
     color: colors.textMid,
   },
   bannerCard: {
-    backgroundColor: colors.primaryDark,
+    backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
   bannerTitle: {
@@ -183,7 +187,7 @@ const styles = StyleSheet.create({
   },
   bannerText: {
     fontSize: typography.sizes.xs,
-    color: '#93C5FD',
+    color: '#E0E7FF',
   },
   cardHeader: {
     fontSize: typography.sizes.md,

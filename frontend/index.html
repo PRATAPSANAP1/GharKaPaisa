@@ -19,17 +19,22 @@
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="GharKaPaisa" />
+  <meta property="og:locale" content="en_IN" />
   <meta property="og:url" content="https://gharkapaisa.in/" />
   <meta property="og:title" content="GharKaPaisa - Best Credit Cards, Personal Loans & Insurance in India" />
   <meta property="og:description" content="Apply for top credit cards, lifetime-free credit cards, instant personal loans, low interest home loans, and insurance online at GharKaPaisa. Compare offers and get fast approval." />
   <meta property="og:image" content="https://gharkapaisa.in/logo.png" />
+  <meta property="og:image:secure_url" content="https://gharkapaisa.in/logo.png" />
+  <meta property="og:image:alt" content="GharKaPaisa - Credit Cards, Loans & Insurance in India" />
   
   <!-- Twitter -->
-  <meta property="twitter:card" content="summary_large_image" />
-  <meta property="twitter:url" content="https://gharkapaisa.in/" />
-  <meta property="twitter:title" content="GharKaPaisa - Best Credit Cards, Personal Loans & Insurance in India" />
-  <meta property="twitter:description" content="Apply for top credit cards, lifetime-free credit cards, instant personal loans, low interest home loans, and insurance online at GharKaPaisa. Compare offers and get fast approval." />
-  <meta property="twitter:image" content="https://gharkapaisa.in/logo.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@gharkapaisa" />
+  <meta name="twitter:url" content="https://gharkapaisa.in/" />
+  <meta name="twitter:title" content="GharKaPaisa - Best Credit Cards, Personal Loans & Insurance in India" />
+  <meta name="twitter:description" content="Apply for top credit cards, lifetime-free credit cards, instant personal loans, low interest home loans, and insurance online at GharKaPaisa. Compare offers and get fast approval." />
+  <meta name="twitter:image" content="https://gharkapaisa.in/logo.png" />
+  <meta name="twitter:image:alt" content="GharKaPaisa - Credit Cards, Loans & Insurance in India" />
   
   <!-- Canonical URL -->
   <link rel="canonical" href="https://gharkapaisa.in/" />
@@ -111,6 +116,22 @@
       origWarn.apply(console, args);
     };
   </script>
+  
+  <!-- Prevent flash of wrong theme -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('gkp_theme');
+      const isDark = savedTheme === 'dark';
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        document.body.style.backgroundColor = '#101A2B';
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.body.style.backgroundColor = '#F5F8FC';
+      }
+    })();
+  </script>
+  
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 

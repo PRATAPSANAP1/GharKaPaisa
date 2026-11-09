@@ -3,11 +3,15 @@ const router = express.Router();
 const paymentController = require('./payment.controller');
 const jwtAuth = require('../../middleware/authentication/jwtAuth.middleware.js');
 
-// Protect payment routes with JWT auth
-router.use(jwtAuth);
+// Public webhook route (verified via Cashfree HMAC signature header)
+router.post('/cashfree/webhook', paymentController.cashfreeWebhook);
 
-// Payment routes
-router.post('/create-order', paymentController.createOrder);
-router.post('/verify-payment', paymentController.verifyPayment);
+// Protected routes (require JWT authentication)
+router.post('/create-order', jwtAuth, paymentController.createOrder);
+router.post('/verify-payment', jwtAuth, paymentController.verifyPayment);
+
+// Cashfree Payment Gateway routes
+router.post('/cashfree/create-order', jwtAuth, paymentController.createCashfreeOrder);
+router.post('/cashfree/verify-payment', jwtAuth, paymentController.verifyCashfreePayment);
 
 module.exports = router;

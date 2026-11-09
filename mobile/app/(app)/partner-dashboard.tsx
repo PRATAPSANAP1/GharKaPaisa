@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { ThemeToggle } from '../../components/ThemeToggle';
 import { Icon } from '../../components/Icon';
 import {
   fetchPartnerDashboard,
@@ -30,6 +32,7 @@ const BANNER_WIDTH = SCREEN_WIDTH - spacing.md * 2;
 export default function PartnerDashboardScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { colors, isDark } = useTheme();
 
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -100,22 +103,25 @@ export default function PartnerDashboardScreen() {
 
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.bg }]}
       contentContainerStyle={styles.contentContainer}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={() => loadDashboard(true)} colors={[colors.primary]} />
       }
     >
       {/* Header Banner */}
-      <View style={styles.headerCard}>
+      <View style={[styles.headerCard, { backgroundColor: isDark ? colors.card : colors.primaryDark, borderColor: colors.border, borderWidth: 1 }]}>
         <View style={styles.headerLeft}>
           <Text style={styles.welcomeSubtitle}>PARTNER WORKSPACE</Text>
           <Text style={styles.welcomeTitle}>{user?.full_name || 'Partner'}</Text>
           <Text style={styles.partnerCodeText}>Code: {user?.partner_code || partnerProfile.partner_code || 'N/A'}</Text>
         </View>
-        <View style={styles.statusBadge}>
-          <Icon name="check-circle" size={14} color="#059669" />
-          <Text style={styles.statusText}>VERIFIED</Text>
+        <View style={{ alignItems: 'flex-end', gap: 6 }}>
+          <ThemeToggle size="sm" />
+          <View style={styles.statusBadge}>
+            <Icon name="check-circle" size={12} color="#059669" />
+            <Text style={styles.statusText}>VERIFIED</Text>
+          </View>
         </View>
       </View>
 

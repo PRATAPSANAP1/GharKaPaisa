@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../app/store/authStore';
-import { useTheme, ThemeToggle } from '../contexts/ThemeContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { Icons } from '../components/Icon/PartnerIcons';
 import api, { getAccessToken } from '../services/api';
 import { getApiV1Url } from '../config/api';
@@ -525,7 +525,6 @@ const SuperAdminLayout = () => {
         {/* Interface Mode */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 10px' }}>
           <span style={{ fontSize: '14px', fontWeight: 700, color: C.textMid }}>Interface Mode</span>
-          <ThemeToggle />
         </div>
 
         {/* Private Mode */}

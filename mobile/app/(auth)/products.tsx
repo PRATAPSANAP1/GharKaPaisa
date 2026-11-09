@@ -32,6 +32,10 @@ export default function ProductsScreen() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [selectedBank, setSelectedBank] = useState<string>('ALL');
+  const [comparisonCards, setComparisonCards] = useState<ProductItem[]>([]);
+
+  const banks = ['ALL', 'HDFC', 'SBI', 'ICICI', 'Axis', 'Kotak', 'IDFC', 'Yes Bank', 'BOB'];
 
   const loadProducts = async () => {
     try {
@@ -59,10 +63,16 @@ export default function ProductsScreen() {
     loadProducts();
   }, [category]);
 
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(search.toLowerCase()) ||
-    product.bank_name?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = 
+      product.name.toLowerCase().includes(search.toLowerCase()) ||
+      product.bank_name?.toLowerCase().includes(search.toLowerCase());
+    
+    const matchesBank = selectedBank === 'ALL' || 
+      product.bank_name?.toLowerCase().includes(selectedBank.toLowerCase());
+    
+    return matchesSearch && matchesBank;
+  });
 
   const handleProductPress = (productId: string) => {
     router.push({
@@ -74,6 +84,37 @@ export default function ProductsScreen() {
   const getCategoryTitle = () => {
     if (!category) return 'All Products';
     return category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const handleAddToComparison = (product: ProductItem) => {
+    if (comparisonCards.length >= 4) {
+      alert('You can compare up to 4 cards at a time');
+      return;
+    }
+    if (comparisonCards.find(c => c.id === product.id)) {
+      alert('This card is already in comparison');
+      return;
+    }
+    setComparisonCards([...comparisonCards, product]);
+  };
+
+  const handleRemoveFromComparison = (productId: string) => {
+    setComparisonCards(comparisonCards.filter(c => c.id !== productId));
+  };
+
+  const isCardInComparison = (productId: string) => {
+    return comparisonCards.find(c => c.id === productId);
+  };
+
+  const handleGoToComparison = () => {
+    if (comparisonCards.length < 2) {
+      alert('Please select at least 2 cards to compare');
+      return;
+    }
+    router.push({
+      pathname: '/(app)/card-comparison',
+      params: { cards: JSON.stringify(comparisonCards) }
+    });
   };
 
   return (
@@ -98,6 +139,40 @@ export default function ProductsScreen() {
           onChangeText={setSearch}
         />
       </View>
+
+      {/* Comparison Bar */}
+      {comparisonCards.length > 0 && (
+        <View style={[styles.comparisonBar, { backgroundColor: colors.primary }]}>
+          <View style={styles.comparisonBarContent}>
+            <Text style={styles.comparisonBarText}>{comparisonCards.length} cards selected</Text>
+            <TouchableOpacity onPress={handleGoToComparison} style={styles.compareButton}>
+              <Text style={styles.compareButtonText}>Compare Now</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Bank Filter */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.bankFilterContainer}>
+        {banks.map((bank) => (
+          <TouchableOpacity
+            key={bank}
+            style={[
+              styles.bankFilterChip,
+              selectedBank === bank && styles.bankFilterChipActive,
+              { backgroundColor: selectedBank === bank ? colors.primary : colors.bgTertiary, borderColor: colors.border }
+            ]}
+            onPress={() => setSelectedBank(bank)}
+          >
+            <Text style={[
+              styles.bankFilterText,
+              { color: selectedBank === bank ? '#fff' : colors.text }
+            ]}>
+              {bank}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
       {/* Products List */}
       {loading ? (
@@ -144,8 +219,20 @@ export default function ProductsScreen() {
                   {product.description || 'Get instant approval and flexible tenure.'}
                 </Text>
                 <View style={styles.productFooter}>
-                  <Text style={styles.viewDetailsText}>View Details</Text>
-                  <Icon name="chevron-right" size={16} color={colors.primary} />
+                  <TouchableOpacity
+                    onPress={() => handleAddToComparison(product)}
+                    style={styles.compareButtonSmall}
+                  >
+                    <Icon 
+                      name={isCardInComparison(product.id) ? 'check-circle' : 'plus-circle'} 
+                      size={16} 
+                      color={isCardInComparison(product.id) ? colors.success : colors.primary} 
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleProductPress(product.id)} style={styles.viewDetailsButton}>
+                    <Text style={styles.viewDetailsText}>View Details</Text>
+                    <Icon name="chevron-right" size={16} color={colors.primary} />
+                  </TouchableOpacity>
                 </View>
               </Card>
             </TouchableOpacity>
@@ -196,6 +283,53 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
     fontSize: 14,
     color: colors.text,
+  },
+  bankFilterContainer: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  bankFilterChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 20,
+    marginRight: spacing.sm,
+    borderWidth: 1,
+  },
+  bankFilterChipActive: {
+    borderWidth: 1,
+  },
+  bankFilterText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  comparisonBar: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  comparisonBarContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  comparisonBarText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  compareButton: {
+    backgroundColor: '#fff',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: 16,
+  },
+  compareButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
   },
   centerContainer: {
     flex: 1,
@@ -269,10 +403,17 @@ const styles = StyleSheet.create({
   productFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     borderTopWidth: 1,
     borderTopColor: colors.border,
     paddingTop: spacing.xs,
+  },
+  compareButtonSmall: {
+    padding: spacing.xs,
+  },
+  viewDetailsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   viewDetailsText: {
     fontSize: 13,

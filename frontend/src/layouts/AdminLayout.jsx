@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../app/store/authStore';
-import { useTheme, ThemeToggle } from '../contexts/ThemeContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { useActiveBanks } from '../contexts/BanksContext';
 import { Icons } from '../components/Icon/PartnerIcons';
 import LanguageSwitcher from '../components/LanguageSwitcher/LanguageSwitcher';
@@ -514,7 +514,6 @@ const AdminLayout = () => {
             <span style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(255, 255, 255, 0.7)' }}>
               Interface Mode
             </span>
-            <ThemeToggle />
           </div>
 
           {/* Log Out Button */}
@@ -810,7 +809,6 @@ const AdminLayout = () => {
             {/* Desktop Only Extra Controls */}
             <div className="hidden md:flex" style={{ alignItems: 'center', gap: '10px' }}>
               <LanguageSwitcher />
-              <ThemeToggle />
               <button
                 id="admin-logout-button"
                 onClick={handleLogout}

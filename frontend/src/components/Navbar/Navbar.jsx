@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { FaSearch, FaSignInAlt, FaUserPlus } from 'react-icons/fa';
 import './Navbar.css';
 import logo from '../../assets/logos/logo.webp';
-import { ThemeToggle, useTheme } from '../../contexts/ThemeContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { useSearchStore } from '../../app/store/searchStore';
 import LanguageSwitcher from '../LanguageSwitcher/LanguageSwitcher';
 import { getApiV1Url } from '../../config/api';
@@ -127,10 +127,6 @@ const Navbar = () => {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ color: C.text, fontSize: "14px", fontWeight: 600 }}>{t('drawer.language', 'Language')}</span>
             <LanguageSwitcher />
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ color: C.text, fontSize: "14px", fontWeight: 600 }}>{t('drawer.theme', 'Theme')}</span>
-            <ThemeToggle />
           </div>
         </div>
       </div>

@@ -102,6 +102,7 @@ router.use('/admin/bulk-sms',   bulkSmsRoute);
 router.use('/super-admin/bulk-sms', bulkSmsRoute);
 router.use('/admin',            adminRoute);
 router.use('/superadmin',       superadminRouter);
+router.use('/super-admin',      superadminRouter);
 router.use('/applications',     applicationRouter);
 router.use('/wallet',           walletRoute);
 router.use('/notifications',    notificationRoute);

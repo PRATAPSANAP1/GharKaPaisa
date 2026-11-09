@@ -1,94 +1,129 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { FaSun, FaMoon } from 'react-icons/fa';
+import { Sun, Moon } from 'lucide-react';
 
-// ── Brand Palette ──────────────────────────────────────────────────────────────
+// ── Official Brand Palette ──────────────────────────────────────────────────────
 const BRAND = {
-  blue:        "#166397",   // Primary brand blue (verify button)
-  blueDark:    "#0F4F7A",   // Darker blue
-  green:       "#8DC22F",   // Parrot green
-  greenLight:  "#A8D64F",   // Lighter parrot green
-  bgLight:     "#F8FAFC",   // Light page background
-  dark:        "#1F2937",   // Dark text / dark mode surface
+  primaryBlue: "#1B74BB",   // Primary brand blue
+  brandGreen:  "#9CD83D",   // Brand green
+  deepBlue:    "#0851A1",   // Deep blue
 };
 
 // ── Light Theme ────────────────────────────────────────────────────────────────
 export const LIGHT = {
-  bg:          "#F5F8F7",   // Main background
-  bgSecondary: "#E8F7EF",   // Soft green surface
-  card:        "#FFFFFF",   // Card Background
-  sidebar:     "#063F38",   // Main sidebar dark green
-  sidebarGradient: "#07594C", // Sidebar gradient end
+  // Backgrounds
+  bg:          "#F5F8FC",   // Main background
+  bgSecondary: "#FFFFFF",   // Surface/cards
+  bgTertiary:  "#F8FAFC",   // Elevated surface
+  
+  // Text
+  text:        "#172B43",   // Primary text
+  textMid:     "#64748B",   // Secondary text
+  textLight:   "#94A3B8",   // Muted text
+  
+  // Primary Brand Colors
+  primary:     BRAND.primaryBlue,   // Primary button/accent
+  primaryDark: BRAND.deepBlue,    // Hover state
+  primaryLight: "#3B82F6",       // Lighter blue variant
+  
+  // Accent Colors
+  accent:      BRAND.brandGreen,   // Green accent
+  accentDark:  "#7BC32E",        // Darker green
+  accentLight: "#D9F7B3",       // Light green background
+  
+  // Semantic Colors
+  success:     "#10B981",   // Success green
+  successLight: "#D1FAE5",   // Success background
+  warning:     "#F59E0B",   // Warning orange
+  warningLight: "#FEF3C7",   // Warning background
+  error:       "#EF4444",   // Error red
+  errorLight:  "#FEE2E2",   // Error background
+  info:        "#3B82F6",   // Info blue
+  infoLight:   "#DBEAFE",   // Info background
+  
+  // Borders & Inputs
+  border:      "#E2E8F0",   // Border color
+  borderLight: "#F1F5F9",   // Light border
+  inputBg:     "#FFFFFF",   // Input background
+  inputBorder: "#CBD5E1",   // Input border
+  
+  // Sidebar (matches brand colors)
+  sidebar:     BRAND.deepBlue,    // Main sidebar
+  sidebarGradient: BRAND.primaryBlue, // Sidebar gradient
   sidebarText: "#FFFFFF",
-  sidebarInactive: "#D7E8E3", // Inactive nav text
-  sidebarIconInactive: "#C2D9D3", // Inactive nav icons
-  text:        "#101828",   // Main heading text
-  textMid:     "#475569",   // Secondary text
-  textLight:   "#64748B",   // Muted text
-  primary:     "#008A60",   // Primary brand green
-  primaryDark: "#007F5B",   // Hover green
-  primaryButton: "#009B70", // Button green
-  green:       "#008A60",   // Success green
-  greenLight:  "#DDF8EA",   // Success background
-  red:         "#F04444",   // Red alert
-  gold:        "#F59E0B",   // Orange accent
-  goldLight:   "#FFF1DF",   // Orange background
-  purple:      "#8B5CF6",   // Purple accent
-  purpleLight: "#F1EBFF",   // Purple background
-  blue:        "#3B82F6",   // Blue accent
-  blueLight:   "#EAF2FF",   // Blue background
-  border:      "#E3EBE8",   // Border
-  inputBg:     "#FFFFFF",
-  teal:        "#008A60",
-  tealDim:     "#007F5B",
-  navy:        "#063F38",
-  navyMid:     "#087F6B",   // Active nav background
-  tealGlow:    "rgba(0, 138, 96, 0.15)",
-  amber:       "#F59E0B",
-  // ── Employee Panel Tokens ──
-  employeePrimary:     "#008A60",   // Primary brand green
-  employeePrimaryDark: "#007F5B",
-  employeeGlow:        "rgba(0, 138, 96, 0.14)",
-  employeeIncentive:   "#008A60",
+  sidebarInactive: "#94A3B8", // Inactive nav text
+  sidebarIconInactive: "#64748B", // Inactive nav icons
+  sidebarActive: "rgba(156, 216, 61, 0.15)", // Active nav background (green tint)
+  
+  // Additional Colors
+  gold:        "#F59E0B",
+  goldLight:   "#FEF3C7",
+  purple:      "#8B5CF6",
+  purpleLight: "#F1EBFF",
+  
+  // Employee Panel Tokens
+  employeePrimary:     BRAND.primaryBlue,
+  employeePrimaryDark: BRAND.deepBlue,
+  employeeGlow:        "rgba(27, 116, 187, 0.15)",
+  employeeIncentive:   BRAND.brandGreen,
 };
 
 // ── Dark Theme ─────────────────────────────────────────────────────────────────
 export const DARK = {
-  bg:          "#0A0F0D",   // Very dark green tint
-  bgSecondary: "#0D1411",   // Slightly lighter
-  card:        "#0F1A17",   // Dark green card
-  sidebar:     "#063F38",   // Main sidebar dark green
-  sidebarGradient: "#07594C", // Sidebar gradient end
+  // Backgrounds
+  bg:          "#101A2B",   // Main background (not pure black)
+  bgSecondary: "#19283C",   // Surface/cards
+  bgTertiary:  "#233D5B",   // Elevated surface
+  
+  // Text
+  text:        "#F1F5F9",   // Primary text (light)
+  textMid:     "#A8B7CA",   // Secondary text
+  textLight:   "#64748B",   // Muted text
+  
+  // Primary Brand Colors
+  primary:     BRAND.primaryBlue,   // Primary button/accent
+  primaryDark: "#3B82F6",         // Hover state
+  primaryLight: "#60A5FA",       // Lighter blue variant
+  
+  // Accent Colors
+  accent:      BRAND.brandGreen,   // Green accent
+  accentDark:  "#7BC32E",        // Darker green
+  accentLight: "rgba(156, 216, 61, 0.15)", // Light green background
+  
+  // Semantic Colors
+  success:     "#10B981",   // Success green
+  successLight: "rgba(16, 185, 129, 0.15)", // Success background
+  warning:     "#F59E0B",   // Warning orange
+  warningLight: "rgba(245, 158, 11, 0.15)",   // Warning background
+  error:       "#EF4444",   // Error red
+  errorLight:  "rgba(239, 68, 68, 0.15)",   // Error background
+  info:        "#3B82F6",   // Info blue
+  infoLight:   "rgba(59, 130, 246, 0.15)",   // Info background
+  
+  // Borders & Inputs
+  border:      "#34465D",   // Border color
+  borderLight: "#475569",   // Light border
+  inputBg:     "#19283C",   // Input background
+  inputBorder: "#475569",   // Input border
+  
+  // Sidebar (matches brand colors)
+  sidebar:     BRAND.deepBlue,    // Main sidebar
+  sidebarGradient: BRAND.primaryBlue, // Sidebar gradient
   sidebarText: "#FFFFFF",
-  sidebarInactive: "#94A3B8", // Inactive nav text in dark
-  sidebarIconInactive: "#64748B", // Inactive nav icons in dark
-  text:        "#F1F5F9",   // Light text
-  textMid:     "#CBD5E1",   // Secondary labels
-  textLight:   "#94A3B8",   // Muted hints
-  primary:     "#00D4AA",   // Lighter green for dark mode
-  primaryDark: "#00B898",   // Darker green
-  primaryButton: "#00E6C2", // Button green
-  green:       "#00D4AA",   // Success green
-  greenLight:  "#0D3D35",   // Success background
-  red:         "#F87171",   // Lighter red
-  gold:        "#FBBF24",   // Lighter orange
-  goldLight:   "#1F2937",   // Orange background
-  purple:      "#A78BFA",   // Lighter purple
-  purpleLight: "#1E1B4B",   // Purple background
-  blue:        "#60A5FA",   // Lighter blue
-  blueLight:   "#1E3A8A",   // Blue background
-  border:      "#1E293B",   // Dark border
-  inputBg:     "#0F1A17",   // Dark input background
-  teal:        "#00D4AA",
-  tealDim:     "#00B898",
-  navy:        "#063F38",
-  navyMid:     "#087F6B",   // Active nav background
-  tealGlow:    "rgba(0, 212, 170, 0.15)",
-  amber:       "#FBBF24",
-  // ── Employee Panel Tokens ──
-  employeePrimary:     "#00D4AA",   // Light green in dark mode
-  employeePrimaryDark: "#00B898",
-  employeeGlow:        "rgba(0, 212, 170, 0.16)",
-  employeeIncentive:   "#00D4AA",
+  sidebarInactive: "#94A3B8", // Inactive nav text
+  sidebarIconInactive: "#64748B", // Inactive nav icons
+  sidebarActive: "rgba(156, 216, 61, 0.15)", // Active nav background (green tint)
+  
+  // Additional Colors
+  gold:        "#FBBF24",
+  goldLight:   "rgba(251, 191, 36, 0.15)",
+  purple:      "#A78BFA",
+  purpleLight: "rgba(167, 139, 250, 0.15)",
+  
+  // Employee Panel Tokens
+  employeePrimary:     BRAND.primaryBlue,
+  employeePrimaryDark: "#3B82F6",
+  employeeGlow:        "rgba(27, 116, 187, 0.2)",
+  employeeIncentive:   BRAND.brandGreen,
 };
 
 // ── Context ────────────────────────────────────────────────────────────────────
@@ -102,13 +137,19 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     localStorage.setItem("gkp_theme", isDark ? "dark" : "light");
-    document.body.style.backgroundColor = isDark ? "#000000" : "#F8FAFC";
+    
+    // Prevent flash of wrong theme by setting theme before render
+    const root = document.documentElement;
+    const body = document.body;
+    
     if (isDark) {
-      document.documentElement.classList.add("dark");
-      document.body.classList.add("dark");
+      root.classList.add("dark");
+      body.classList.add("dark");
+      body.style.backgroundColor = DARK.bg;
     } else {
-      document.documentElement.classList.remove("dark");
-      document.body.classList.remove("dark");
+      root.classList.remove("dark");
+      body.classList.remove("dark");
+      body.style.backgroundColor = LIGHT.bg;
     }
   }, [isDark]);
 
@@ -133,10 +174,10 @@ export function useTheme() {
 export function makeS(C) {
   return {
     card: {
-      background: C.card,
+      background: C.bgSecondary,
       borderRadius: "16px",
       padding: "20px",
-      boxShadow: `0 4px 24px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.10)`,
+      boxShadow: "0 4px 24px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)",
       border: `1px solid ${C.border}`,
       transition: "all 0.25s ease",
     },
@@ -167,9 +208,9 @@ export function makeS(C) {
       background:
         variant === "outline" || variant === "ghost"
           ? "transparent"
-          : `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
+          : C.primary,
       color:
-        variant === "outline" || variant === "ghost" ? C.teal : "#fff",
+        variant === "outline" || variant === "ghost" ? C.primary : "#fff",
       border:
         variant === "outline" ? `1.5px solid ${C.primary}` : "none",
       boxShadow:
@@ -179,7 +220,7 @@ export function makeS(C) {
       width: "100%",
       padding: "12px 16px",
       borderRadius: "10px",
-      border: `1.5px solid ${C.border}`,
+      border: `1.5px solid ${C.inputBorder}`,
       fontSize: "14px",
       color: C.text,
       background: C.inputBg,
@@ -198,7 +239,7 @@ export function makeS(C) {
   };
 }
 
-// ── Toggle Button Component ────────────────────────────────────────────────────
+// ── Toggle Button Component with lucide-react icons ─────────────────────────
 export function ThemeToggle({ style = {}, onChange }) {
   const { isDark, toggle } = useTheme();
   const isLight = !isDark;
@@ -211,54 +252,73 @@ export function ThemeToggle({ style = {}, onChange }) {
   };
 
   return (
-    <div
+    <button
       className="theme-toggle-btn"
       onClick={handleToggle}
       role="switch"
       aria-checked={isLight}
       style={{
-        width: 72, height: 30, borderRadius: 999,
-        display: "flex", alignItems: "center",
-        padding: 3, cursor: "pointer", position: "relative",
-        transition: "background 0.35s",
+        width: 72, 
+        height: 32, 
+        borderRadius: 999,
+        display: "flex", 
+        alignItems: "center",
+        padding: 4, 
+        cursor: "pointer", 
+        position: "relative",
+        transition: "background 0.3s ease",
         justifyContent: isLight ? "flex-start" : "flex-end",
-        background: isLight ? "#e8e8e8" : "#2e3250",
-        boxShadow: isLight
-          ? "inset 2px 2px 5px #c8c8c8, inset -2px -2px 5px #ffffff"
-          : "inset 2px 2px 5px #1a1d30, inset -2px -2px 5px #424870",
+        background: isLight ? "#E2E8F0" : "#34465D",
+        border: "none",
         flexShrink: 0,
         ...style,
       }}
     >
-      {/* Label text */}
-      <span style={{
-        position: "absolute",
-        fontSize: 7, fontWeight: 700, letterSpacing: "0.02em",
-        lineHeight: 1.0, textAlign: "center", pointerEvents: "none",
-        ...(isLight
-          ? { right: 8, color: "#999" }
-          : { left: 8, color: "#6a70a0" })
-      }}>
-        {isLight ? "LIGHT" : "DARK"}
-      </span>
-
-      {/* Thumb */}
+      {/* Sun icon for light mode */}
       <div style={{
-        width: 24, height: 24, borderRadius: "50%",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 12,
-        background: isLight ? "#f0f0f0" : "#3c4168",
-        boxShadow: isLight
-          ? "1px 1px 3px #c0c0c0, -1px -1px 3px #ffffff"
-          : "1px 1px 3px #1a1d30, -1px -1px 3px #5a60a0",
-        color: isLight ? "#888" : "#aab0d8",
-        transition: "all 0.3s",
+        position: "absolute",
+        left: 8,
+        display: isLight ? "flex" : "none",
+        alignItems: "center",
+        justifyContent: "center",
       }}>
-        {isLight ? <FaSun size={12} /> : <FaMoon size={12} />}
+        <Sun size={16} color="#64748B" />
       </div>
-    </div>
+
+      {/* Moon icon for dark mode */}
+      <div style={{
+        position: "absolute",
+        right: 8,
+        display: isDark ? "flex" : "none",
+        alignItems: "center",
+        justifyContent: "center",
+      }}>
+        <Moon size={16} color="#A8B7CA" />
+      </div>
+
+      {/* Toggle thumb */}
+      <div style={{
+        width: 24, 
+        height: 24, 
+        borderRadius: "50%",
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center",
+        background: isLight ? "#FFFFFF" : "#F1F5F9",
+        boxShadow: isLight
+          ? "0 2px 4px rgba(0,0,0,0.1)"
+          : "0 2px 4px rgba(0,0,0,0.2)",
+        transition: "transform 0.3s ease",
+        transform: isLight ? "translateX(0)" : "translateX(40px)",
+      }}>
+        {isLight ? (
+          <Sun size={14} color={BRAND.primaryBlue} />
+        ) : (
+          <Moon size={14} color={BRAND.brandGreen} />
+        )}
+      </div>
+    </button>
   );
 }
 
 export const LightDarkToggle = ThemeToggle;
-

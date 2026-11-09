@@ -14,12 +14,14 @@ import {
   Linking,
 } from 'react-native';
 import { router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../../../theme/colors';
 import { typography } from '../../../theme/typography';
 import { spacing } from '../../../theme/spacing';
 import { Card } from '../../../components/Card';
 import { Icon } from '../../../components/Icon';
 import { Button } from '../../../components/Button';
+import { BiometricManagementModal } from '../../../components/BiometricManagementModal';
 import {
   fetchEmployeesList,
   fetchEmployeeStats,
@@ -46,7 +48,18 @@ import {
   fetchBonusRules,
   createBonusRule,
   deleteBonusRule,
+  deleteEmployee,
 } from '../../../services/super-admin.service';
+import {
+  getEmployeeBiometricStatus,
+  getBiometricReminderHistory,
+  sendBiometricReminder,
+  createBiometricReEnrollmentSession,
+  commitBiometricReEnrollment,
+  getBiometricPreviewUrl,
+  type BiometricStatus,
+  type BiometricReminder,
+} from '../../../services/attendance-enrollment.service';
 
 const HIERARCHY_LEVELS = [
   { key: 'BRANCH_HEAD', label: 'Branch Head', short: 'BH', color: '#6366F1', bg: '#EEF2FF' },
@@ -75,6 +88,28 @@ export default function SuperAdminEmployeesScreen() {
   const [drawerTab, setDrawerTab] = useState<'overview' | 'kyc' | 'biometric' | 'team' | 'attendance' | 'actions'>('overview');
   const [employee360Data, setEmployee360Data] = useState<any>(null);
   const [loading360, setLoading360] = useState(false);
+
+  // Biometric Management State
+  const [biometricStatus, setBiometricStatus] = useState<BiometricStatus | null>(null);
+  const [loadingBiometric, setLoadingBiometric] = useState(false);
+  const [biometricPreviewUrl, setBiometricPreviewUrl] = useState('');
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [reminderHistory, setReminderHistory] = useState<BiometricReminder[]>([]);
+  const [loadingReminders, setLoadingReminders] = useState(false);
+
+  // Send Reminder Modal State
+  const [reminderModalVisible, setReminderModalVisible] = useState(false);
+  const [reminderMessage, setReminderMessage] = useState(
+    'Please complete your Face Verification photograph in the GharKaPaisa KYC module to activate daily biometric attendance.'
+  );
+  const [sendingReminder, setSendingReminder] = useState(false);
+
+  // Re-Enrollment Modal State
+  const [reEnrollModalVisible, setReEnrollModalVisible] = useState(false);
+  const [reEnrollReason, setReEnrollReason] = useState('');
+  const [reEnrollSessionToken, setReEnrollSessionToken] = useState('');
+  const [reEnrollFaceImage, setReEnrollFaceImage] = useState<{ uri: string; name: string; type: string } | null>(null);
+  const [submittingReEnroll, setSubmittingReEnroll] = useState(false);
 
   // Document Verification State
   const [docStatuses, setDocStatuses] = useState<any>({});
@@ -591,6 +626,31 @@ export default function SuperAdminEmployeesScreen() {
               }
             } catch (err: any) {
               Alert.alert('Error', err.message || 'Failed to delete bonus rule');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteEmployee = async (employeeId: string, employeeName: string) => {
+    Alert.alert(
+      'Delete Employee',
+      `Are you sure you want to permanently delete ${employeeName}? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const res = await deleteEmployee(employeeId);
+              if (res?.success) {
+                Alert.alert('Success', 'Employee deleted successfully');
+                loadData();
+              }
+            } catch (err: any) {
+              Alert.alert('Error', err.message || 'Failed to delete employee');
             }
           },
         },
@@ -1246,29 +1306,10 @@ export default function SuperAdminEmployeesScreen() {
                 </View>
                 <TouchableOpacity 
                   style={styles.reenrollBtn}
-                  onPress={() => {
-                    Alert.alert(
-                      'Biometric Re-Enrollment',
-                      `Request biometric reference re-enrollment for ${emp?.full_name}? The current face template will be locked until re-captured.`,
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        {
-                          text: 'Request Re-Enrollment',
-                          onPress: async () => {
-                            try {
-                              await sendReminder(emp.id);
-                              Alert.alert('Success', 'Biometric re-enrollment notification sent to employee');
-                            } catch (err: any) {
-                              Alert.alert('Error', err.message || 'Failed to send notification');
-                            }
-                          }
-                        }
-                      ]
-                    );
-                  }}
+                  onPress={() => setReEnrollModalVisible(true)}
                 >
                   <Icon name="lock" size={16} color="#FFFFFF" />
-                  <Text style={styles.reenrollText}>🔒 Re-Enroll / Modify Biometric Reference</Text>
+                  <Text style={styles.reenrollText}>🔒 Re-Enroll / Manage Biometric Reference</Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -1299,6 +1340,13 @@ export default function SuperAdminEmployeesScreen() {
                   >
                     <Icon name="bell" size={16} color="#FFFFFF" />
                     <Text style={styles.sendReminderText}>🔔 Send Reminder</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.sendReminderBtn, { backgroundColor: colors.primary }]}
+                    onPress={() => setReEnrollModalVisible(true)}
+                  >
+                    <Icon name="camera" size={16} color="#FFFFFF" />
+                    <Text style={styles.sendReminderText}>Capture / Upload Face</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
                     style={styles.completeVerificationBtn}
@@ -2021,6 +2069,15 @@ export default function SuperAdminEmployeesScreen() {
                         <Icon name="git-branch" size={13} color="#6366F1" />
                         <Text style={[styles.smallBtnText, { color: '#6366F1', fontWeight: '700' }]}>
                           Assign Hierarchy
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.smallBtn, { backgroundColor: '#FEF2F2', borderColor: '#EF4444' }]}
+                        onPress={() => handleDeleteEmployee(emp.id, emp.full_name)}
+                      >
+                        <Icon name="trash-2" size={13} color="#EF4444" />
+                        <Text style={[styles.smallBtnText, { color: '#EF4444', fontWeight: '700' }]}>
+                          Delete
                         </Text>
                       </TouchableOpacity>
 
@@ -2986,6 +3043,19 @@ export default function SuperAdminEmployeesScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* 6. Biometric Management Modal */}
+      <BiometricManagementModal
+        visible={reEnrollModalVisible}
+        onClose={() => setReEnrollModalVisible(false)}
+        employee={selectedEmployee}
+        onUpdated={() => {
+          if (selectedEmployee?.id) {
+            fetchEmployee360(selectedEmployee.id);
+          }
+          loadData();
+        }}
+      />
     </View>
   );
 }

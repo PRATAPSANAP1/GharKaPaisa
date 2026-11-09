@@ -19,6 +19,7 @@ import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchMarketingMaterials } from '../../services/partner.service';
+import { Card } from '../../components/Card';
 
 interface MarketingAsset {
   id: string;
@@ -26,6 +27,7 @@ interface MarketingAsset {
   description: string;
   category: string;
   file_url: string;
+  file_type?: 'image' | 'video' | 'document';
   thumbnail_url?: string | null;
   created_at?: string;
 }

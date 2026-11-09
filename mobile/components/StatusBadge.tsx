@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../theme/colors';
+import { useTheme } from '../contexts/ThemeContext';
 import { typography } from '../theme/typography';
 import { spacing } from '../theme/spacing';
 
@@ -10,6 +10,8 @@ interface StatusBadgeProps {
 }
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'sm' }) => {
+  const { colors } = useTheme();
+
   const getColors = () => {
     const s = (status || '').toLowerCase();
     if (s.includes('approved') || s.includes('active') || s.includes('success') || s.includes('completed') || s.includes('released')) {
@@ -51,3 +53,5 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
 });
+
+export default StatusBadge;

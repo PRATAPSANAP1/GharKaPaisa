@@ -245,6 +245,9 @@ export default function SEO({ noIndex = false }) {
       element.setAttribute("content", content);
     };
 
+    const ogImage = `${SITE_URL}/logo.png`;
+    const canonicalUrl = `${SITE_URL}${rawPath}`;
+
     setMeta("name", "description", config.description);
     setMeta(
       "name",
@@ -253,19 +256,23 @@ export default function SEO({ noIndex = false }) {
     );
 
     // OpenGraph
+    setMeta("property", "og:type", "website");
+    setMeta("property", "og:site_name", "GharKaPaisa");
+    setMeta("property", "og:locale", "en_IN");
     setMeta("property", "og:title", config.title);
     setMeta("property", "og:description", config.description);
-    setMeta("property", "og:url", `${SITE_URL}${rawPath}`);
-    setMeta("property", "og:image", `${SITE_URL}/logo.png`);
+    setMeta("property", "og:url", canonicalUrl);
+    setMeta("property", "og:image", ogImage);
+    setMeta("property", "og:image:alt", config.title);
 
     // Twitter Card
-    setMeta("property", "twitter:title", config.title);
-    setMeta("property", "twitter:description", config.description);
-    setMeta("property", "twitter:url", `${SITE_URL}${rawPath}`);
-    setMeta("property", "twitter:image", `${SITE_URL}/logo.png`);
+    setMeta("name", "twitter:card", "summary_large_image");
+    setMeta("name", "twitter:title", config.title);
+    setMeta("name", "twitter:description", config.description);
+    setMeta("name", "twitter:url", canonicalUrl);
+    setMeta("name", "twitter:image", ogImage);
 
     // Canonical URL
-    const canonicalUrl = `${SITE_URL}${rawPath}`;
     let canonical = document.head.querySelector('link[rel="canonical"]');
     if (!canonical) {
       canonical = document.createElement("link");

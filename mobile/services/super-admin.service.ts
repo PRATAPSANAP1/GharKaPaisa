@@ -758,6 +758,18 @@ export const deleteBonusRule = async (ruleId: string) => {
 };
 
 /**
+ * Delete Employee Account
+ */
+export const deleteEmployee = async (employeeId: string) => {
+  try {
+    const res = await apiClient.delete(`/employees/${employeeId}`);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to delete employee' };
+  }
+};
+
+/**
  * Global System Settings (admin_privacy_mode, maintenance_mode, etc.)
  */
 export const fetchSystemSettings = async (): Promise<Record<string, string>> => {

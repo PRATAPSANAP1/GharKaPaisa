@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Icon } from '../../components/Icon';
+import { ThemeToggle } from '../../components/ThemeToggle';
+import { useTheme } from '../../contexts/ThemeContext';
 import {
   fetchPartnerWallet,
   fetchPartnerWalletTransactions,
@@ -24,6 +26,7 @@ import { spacing } from '../../theme/spacing';
 
 export default function WalletScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
 
   const [wallet, setWallet] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -112,13 +115,13 @@ export default function WalletScreen() {
     const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN') : '';
 
     return (
-      <View style={styles.txRow}>
+      <View style={[styles.txRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={[styles.txIconBg, isCredit ? styles.creditBg : styles.debitBg]}>
           <Icon name={isCredit ? 'arrow-down-left' : 'arrow-up-right'} size={18} color={isCredit ? '#059669' : '#DC2626'} />
         </View>
         <View style={styles.txMeta}>
-          <Text style={styles.txTitle}>{title}</Text>
-          <Text style={styles.txDate}>{dateStr}</Text>
+          <Text style={[styles.txTitle, { color: colors.text }]}>{title}</Text>
+          <Text style={[styles.txDate, { color: colors.textLight }]}>{dateStr}</Text>
         </View>
         <Text style={[styles.txAmount, isCredit ? styles.creditText : styles.debitText]}>
           {isCredit ? '+' : '-'}₹{amount.toLocaleString('en-IN')}
@@ -130,17 +133,20 @@ export default function WalletScreen() {
   const balance = Number(wallet?.balance || wallet?.available_balance || 0);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
       {/* Top Bar */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Icon name="arrow-left" size={20} color="#1E293B" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Wallet & Payouts</Text>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Icon name="arrow-left" size={20} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: colors.text }]}>Wallet & Payouts</Text>
+        </View>
+        <ThemeToggle size="sm" />
       </View>
 
       {/* Balance Card */}
-      <View style={styles.balanceCard}>
+      <View style={[styles.balanceCard, { backgroundColor: isDark ? colors.card : colors.navy, borderColor: colors.border, borderWidth: 1 }]}>
         <Text style={styles.balanceLabel}>Available Balance</Text>
         <Text style={styles.balanceValue}>₹{balance.toLocaleString('en-IN')}</Text>
 
@@ -247,7 +253,7 @@ export default function WalletScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.bg,
   },
   header: {
     flexDirection: 'row',
@@ -264,17 +270,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.sizes.lg,
     fontWeight: '700',
-    color: '#1E293B',
+    color: colors.text,
   },
   balanceCard: {
-    backgroundColor: '#1E293B',
+    backgroundColor: colors.navy,
     margin: spacing.md,
     borderRadius: 16,
     padding: spacing.lg,
     alignItems: 'center',
   },
   balanceLabel: {
-    color: '#94A3B8',
+    color: '#D7E8E3',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -287,14 +293,14 @@ const styles = StyleSheet.create({
   withdrawBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2563EB',
+    backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
     marginTop: spacing.xs,
   },
   withdrawBtnDisabled: {
-    backgroundColor: '#64748B',
+    backgroundColor: colors.textLight,
     opacity: 0.6,
   },
   withdrawBtnText: {
@@ -305,7 +311,7 @@ const styles = StyleSheet.create({
   sectionHeader: {
     fontSize: typography.sizes.md,
     fontWeight: '700',
-    color: '#1E293B',
+    color: colors.text,
     marginHorizontal: spacing.md,
     marginBottom: spacing.xs,
   },
@@ -333,6 +339,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     borderWidth: 1,
     borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   txIconBg: {
     width: 36,
@@ -343,10 +354,10 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   creditBg: {
-    backgroundColor: '#D1FAE5',
+    backgroundColor: colors.primarySoft,
   },
   debitBg: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: colors.errorSoft,
   },
   txMeta: {
     flex: 1,
@@ -354,11 +365,11 @@ const styles = StyleSheet.create({
   txTitle: {
     fontSize: typography.sizes.sm,
     fontWeight: '600',
-    color: '#0F172A',
+    color: colors.text,
   },
   txDate: {
     fontSize: 11,
-    color: '#64748B',
+    color: colors.textLight,
     marginTop: 2,
   },
   txAmount: {
@@ -366,10 +377,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   creditText: {
-    color: '#059669',
+    color: colors.primary,
   },
   debitText: {
-    color: '#DC2626',
+    color: colors.error,
   },
   emptyBox: {
     alignItems: 'center',
@@ -379,7 +390,7 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: spacing.xs,
     fontSize: typography.sizes.sm,
-    color: '#64748B',
+    color: colors.textLight,
   },
   modalOverlay: {
     flex: 1,
@@ -401,10 +412,10 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: typography.sizes.md,
     fontWeight: '700',
-    color: '#0F172A',
+    color: colors.text,
   },
   modalErrorBox: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: colors.errorSoft,
     padding: spacing.xs,
     borderRadius: 6,
     marginBottom: spacing.xs,
@@ -416,22 +427,22 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#475569',
+    color: colors.textMid,
     marginTop: spacing.xs,
     marginBottom: 4,
   },
   input: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.inputBg,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: colors.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: typography.sizes.sm,
-    color: '#0F172A',
+    color: colors.text,
   },
   modalSubmitBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',

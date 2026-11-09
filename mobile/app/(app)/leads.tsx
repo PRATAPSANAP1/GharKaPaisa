@@ -273,7 +273,7 @@ export default function LeadsScreen() {
               </View>
             ) : !hasMore && leads.length > 0 ? (
               <Text style={styles.endListText}>— End of Leads Queue —</Text>
-            ) : null
+            ) : undefined
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>

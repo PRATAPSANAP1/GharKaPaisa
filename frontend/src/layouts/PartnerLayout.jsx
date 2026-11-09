@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../app/store/authStore';
 import { usePartnerStore } from '../app/store/partnerStore';
 import { useTheme } from '../contexts/ThemeContext';
-import { ThemeToggle } from '../contexts/ThemeContext';
 import LanguageSwitcher from '../components/LanguageSwitcher/LanguageSwitcher';
 import PartnerMobileBottomNav from '../components/PartnerMobileBottomNav';
 import Chatbot from '../components/Chatbot/Chatbot';
@@ -511,7 +510,6 @@ export default function PartnerLayout() {
                   {isDark ? t('partnerLayout.dark', 'DARK') : t('partnerLayout.light', 'LIGHT')}
                 </span>
               </div>
-              <ThemeToggle />
             </div>
 
             {/* Language Selector */}
@@ -674,7 +672,6 @@ export default function PartnerLayout() {
                       {isDark ? 'DARK' : 'LIGHT'}
                     </span>
                   </div>
-                  <ThemeToggle />
                 </div>
 
                 {/* Language Selector */}

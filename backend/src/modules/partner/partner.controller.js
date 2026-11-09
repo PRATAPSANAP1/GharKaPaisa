@@ -978,7 +978,7 @@ const getTrainingModules = async (req, res, next) => {
     const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
     const partnerId = partner ? partner.id : null;
 
-    const { rows: dbModules } = await query(`
+    let { rows: dbModules } = await query(`
       SELECT m.*, COALESCE(p.progress, 0) as progress_pct, 
              COALESCE(p.completed, false) as is_completed,
              p.completed_at
@@ -988,7 +988,33 @@ const getTrainingModules = async (req, res, next) => {
       ORDER BY m.created_at ASC
     `, [partnerId]);
 
-    const modules = dbModules.map(m => ({
+    // If database has no modules yet, seed default standard curriculum
+    if (!dbModules || dbModules.length === 0) {
+      try {
+        await query(`
+          INSERT INTO training_modules (title, description, video_url, is_active)
+          VALUES 
+          ('Introduction to GharKaPaisa Platform', 'Essential platform rules, KYC requirements, and guides to start earning.', 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', true),
+          ('Pitching Credit Cards effectively', 'Learn best practices on customer eligibility and recommending the right card benefits.', 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', true),
+          ('Pitching Personal & Business Loans', 'Step-by-step walkthrough for documentation, application tracking, and disbursals.', 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', true)
+          ON CONFLICT DO NOTHING;
+        `);
+        const seeded = await query(`
+          SELECT m.*, COALESCE(p.progress, 0) as progress_pct, 
+                 COALESCE(p.completed, false) as is_completed,
+                 p.completed_at
+          FROM training_modules m
+          LEFT JOIN partner_training_progress p ON m.id = p.training_id AND p.partner_id = $1
+          WHERE m.is_active = true
+          ORDER BY m.created_at ASC
+        `, [partnerId]);
+        dbModules = seeded.rows;
+      } catch (seedErr) {
+        logger.warn('Failed to auto-seed training modules:', seedErr.message);
+      }
+    }
+
+    const modules = (dbModules || []).map(m => ({
       id: m.id,
       title: m.title,
       description: m.description,
@@ -996,6 +1022,8 @@ const getTrainingModules = async (req, res, next) => {
       duration: m.video_url ? '15:00' : '5 Pages',
       category: 'Sales Training',
       status: m.is_completed ? 'completed' : (m.progress_pct > 0 ? 'in_progress' : 'not_started'),
+      is_completed: Boolean(m.is_completed),
+      progress_pct: m.progress_pct || 0,
       video_url: m.video_url,
       pdf_url: m.pdf_url
     }));
@@ -1011,10 +1039,32 @@ const completeTrainingModule = async (req, res, next) => {
   try {
     const { moduleId } = req.params;
     const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
-    const partnerId = partner ? partner.id : null;
+    let partnerId = partner ? partner.id : null;
+
+    if (!partnerId && req.user?.id) {
+      // Auto-provision a partner_profile stub so any authenticated role can track training
+      try {
+        const userRes = await query(`SELECT name, email, phone FROM users WHERE id = $1`, [req.user.id]);
+        const u = userRes.rows[0];
+        const fullName = ((u && u.name) || 'User').trim().split(/\s+/);
+        const firstName = fullName[0] || 'User';
+        const lastName = fullName.slice(1).join(' ') || '';
+        const pCode = 'P' + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+        const insertRes = await query(`
+          INSERT INTO partner_profiles (user_id, first_name, last_name, partner_code, partner_type, kyc_status)
+          VALUES ($1, $2, $3, $4, 'INDIVIDUAL', 'approved')
+          ON CONFLICT (user_id) DO UPDATE SET updated_at = NOW()
+          RETURNING id
+        `, [req.user.id, firstName, lastName, pCode]);
+        partnerId = insertRes.rows[0]?.id;
+      } catch (autoErr) {
+        logger.warn('Could not auto-provision partner profile for training progress:', autoErr.message);
+      }
+    }
 
     if (!partnerId) {
-      return error(res, 'Partner profile not found', 404);
+      return error(res, 'User profile not found for training progress', 404);
     }
 
     // Upsert progress to completed
@@ -1025,7 +1075,7 @@ const completeTrainingModule = async (req, res, next) => {
       DO UPDATE SET progress = 100, completed = true, completed_at = NOW(), updated_at = NOW()
     `, [partnerId, moduleId]);
 
-    return success(res, { message: 'Module marked as completed successfully' });
+    return success(res, { message: 'Module marked as completed successfully', moduleId, is_completed: true });
   } catch (err) {
     next(err);
   }

@@ -1,0 +1,48 @@
+# GharKaPaisa
+
+> GharKaPaisa (https://gharkapaisa.in) is an India-focused financial product discovery platform. Users compare and apply online for credit cards, lifetime-free credit cards, personal loans, home loans, business loans, insurance, and everyday financial services such as money transfer, recharges, bill payments, FASTag, and travel bookings.
+
+GharKaPaisa aggregates offers from leading Indian banks and NBFCs (including HDFC, SBI, ICICI, Axis, Kotak, IDFC FIRST, AU Small Finance Bank, and more) and publishes free financial education guides. All product comparison content is publicly accessible; authenticated partner, employee, HR, and admin dashboards are not part of the public site.
+
+Sitemap: https://gharkapaisa.in/sitemap.xml
+Robots: https://gharkapaisa.in/robots.txt
+
+## Credit Cards
+- [Credit Cards](https://gharkapaisa.in/credit-cards): Compare and apply for credit cards from major Indian banks, with details on fees, rewards, and eligibility.
+- [Lifetime Free Credit Cards](https://gharkapaisa.in/credit-cards/lifetime-free-credit-cards-ltf): Zero joining-fee and zero annual-fee credit card options in India.
+- [Attractive Cards & Loans Offers](https://gharkapaisa.in/attractive-cards-loans): Featured credit card deals and low-interest personal loan offers.
+
+## Loans
+- [Personal Loans & Loan Offers](https://gharkapaisa.in/loans): Explore personal, home, and business loan offers, eligibility, interest rates, and application details.
+- [Loan EMI Repayment](https://gharkapaisa.in/loan-repay): Pay loan EMIs online for partner banks and NBFCs.
+
+## Insurance
+- [Insurance Plans](https://gharkapaisa.in/insurance): Compare health, life, and general insurance plans, coverage, and premiums in India.
+
+## Financial Services & Utilities
+- [Financial Services](https://gharkapaisa.in/services): Digital financial services, utility bill payments, recharges, and business compliance solutions.
+- [Money Transfer](https://gharkapaisa.in/money-transfer): Instant, secure money transfer and digital payment services.
+- [Mobile Recharge & DTH](https://gharkapaisa.in/recharge): Online mobile recharge and DTH payments for major operators.
+- [Electricity Bill Payment](https://gharkapaisa.in/electricity): Pay electricity bills online across Indian state electricity boards.
+- [FASTag Recharge](https://gharkapaisa.in/fastag): Online FASTag recharge and management.
+- [Travel & Transit](https://gharkapaisa.in/travel-transit): Flight, train, bus, and hotel booking services with discounts and cashback.
+
+## Financial Guides (Knowledge Hub)
+- [Financial Guides](https://gharkapaisa.in/guides): Expert guides on credit cards, personal loans, CIBIL scores, and personal finance in India.
+- [Best Lifetime Free Credit Cards in India (2026)](https://gharkapaisa.in/guides/best-lifetime-free-credit-cards-india): Comparison of top lifetime-free cards, benefits, and important considerations.
+- [How to Choose Your First Credit Card in India](https://gharkapaisa.in/guides/how-to-choose-first-credit-card): Beginner guide covering fees, reward types, CIBIL requirements, and application tips.
+- [Credit Card Eligibility Criteria in India](https://gharkapaisa.in/guides/credit-card-eligibility-criteria-india): Minimum salary, age limits, CIBIL score thresholds, and mandatory KYC documents.
+- [What Is a Credit Score and How Does It Work?](https://gharkapaisa.in/guides/what-is-credit-score-how-it-works): How CIBIL scores are calculated, the factors that impact them, and ways to improve them.
+- [Personal Loan Eligibility & Documents Required](https://gharkapaisa.in/guides/personal-loan-eligibility-documents-required): Eligibility criteria, interest rates, and documents required for instant personal loans.
+
+## Customer Self-Service
+- [Track Application](https://gharkapaisa.in/track-application): Check the real-time status of a loan or credit card application.
+
+## Company & Legal
+- [Careers](https://gharkapaisa.in/careers): Career opportunities and advisor onboarding at GharKaPaisa.
+- [Contact](https://gharkapaisa.in/contact): Customer support and advisory contact details.
+- [Terms and Conditions](https://gharkapaisa.in/terms-and-conditions): Official terms for using the GharKaPaisa platform.
+- [Privacy Policy](https://gharkapaisa.in/privacy-policy): Data protection, user security, and confidentiality practices.
+
+## Optional
+- [Sitemap](https://gharkapaisa.in/sitemap.xml): Full XML sitemap of indexable public pages.

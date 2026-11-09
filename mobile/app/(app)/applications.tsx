@@ -251,7 +251,7 @@ export default function ApplicationsScreen() {
       const blob = await exportApplicationsCSV(params);
       
       // Create a temporary file
-      const fileUri = FileSystem.documentDirectory + 'applications_export.csv';
+      const fileUri = ((FileSystem as any).documentDirectory || '') + 'applications_export.csv';
       await FileSystem.writeAsStringAsync(fileUri, blob, { encoding: FileSystem.EncodingType.Base64 });
       
       // Share the file
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
   header: {
     padding: spacing.md,
     paddingTop: spacing.xl,
-    backgroundColor: colors.bgSecondary,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
     height: 48,
     paddingHorizontal: spacing.sm + 4,
     borderRadius: 8,
-    backgroundColor: colors.card,
+    backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: colors.border,
     justifyContent: 'center',
@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
   },
   filterBtnActive: {
     borderColor: colors.primary,
-    backgroundColor: colors.primary + '15',
+    backgroundColor: colors.primarySoft,
   },
   filterBtnText: {
     fontSize: typography.sizes.xs,
@@ -740,7 +740,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: colors.bgSecondary,
+    backgroundColor: '#fff',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: '80%',
@@ -783,7 +783,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 16,
-    backgroundColor: colors.card,
+    backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: colors.border,
     marginRight: spacing.xs,

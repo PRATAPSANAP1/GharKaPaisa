@@ -23,6 +23,8 @@ router.put('/bank-details', requireApprovedPartnerOrAdmin, validateBankDetails, 
 router.get('/admin/overview', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.getWalletOverview);
 router.get('/admin/partners-overview', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.getPartnersOverview);
 router.get('/admin/razorpay/balance', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.getRazorpayAccountSummary);
+router.get('/admin/cashfree/balance', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.getCashfreeAccountSummary);
+router.post('/admin/withdrawals/:id/cashfree-payout', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.processCashfreeWithdrawalPayout);
 
 // Razorpay Add Funds Requests (Super Admin)
 router.post('/admin/fund-requests', authorize('SUPER_ADMIN', 'ADMIN'), walletCtrl.createAddFundsRequest);

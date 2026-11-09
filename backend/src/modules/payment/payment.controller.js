@@ -2,6 +2,7 @@ const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const logger = require('../../config/logger');
 const { creditWalletFromPayment } = require('../wallet/service');
+const cashfreeHelper = require('../../utils/helpers/cashfree');
 
 // Lazy-initialize Razorpay instance to use latest env vars
 const getRazorpayInstance = () => {
@@ -178,7 +179,176 @@ const verifyPayment = async (req, res) => {
   }
 };
 
+/**
+ * CASHFREE STEP 1: Create Cashfree PG Order
+ * POST /api/v1/payment/cashfree/create-order
+ */
+const createCashfreeOrder = async (req, res) => {
+  try {
+    const { amount, customerPhone, customerName, customerEmail, returnUrl, note } = req.body;
+
+    const numAmount = parseFloat(amount);
+    if (!amount || isNaN(numAmount) || numAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid amount provided. Amount must be a positive number in INR.'
+      });
+    }
+
+    const { query } = require('../../config/database');
+    let partnerId = req.partner?.id || req.user?.PartnerId || req.user?.partner_id;
+    if (!partnerId && req.user) {
+      const { rows: [p] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (p) partnerId = p.id;
+    }
+
+    const orderId = `cf_ord_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const phone = customerPhone || req.user?.mobile || '9999999999';
+    const name = customerName || req.user?.full_name || req.user?.first_name || 'GKP Customer';
+    const email = customerEmail || req.user?.email || 'customer@gharkapaisa.in';
+    const customerId = partnerId ? `partner_${partnerId}` : (req.user?.id ? `user_${req.user.id}` : `guest_${Date.now()}`);
+
+    const cfOrder = await cashfreeHelper.createCashfreeOrder({
+      orderId,
+      orderAmount: numAmount,
+      customerId,
+      customerPhone: phone,
+      customerName: name,
+      customerEmail: email,
+      returnUrl,
+      orderNote: note || `GharKaPaisa Wallet Topup for ${name}`
+    });
+
+    return res.status(200).json({
+      success: true,
+      ...cfOrder,
+      client_id: cashfreeHelper.CLIENT_ID
+    });
+  } catch (error) {
+    logger.error('Cashfree Create Order Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to create Cashfree payment order.'
+    });
+  }
+};
+
+/**
+ * CASHFREE STEP 2: Verify Cashfree Payment & Credit Wallet
+ * POST /api/v1/payment/cashfree/verify-payment
+ */
+const verifyCashfreePayment = async (req, res) => {
+  try {
+    const { order_id } = req.body;
+    if (!order_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'order_id is required for Cashfree payment verification.'
+      });
+    }
+
+    const statusRes = await cashfreeHelper.getCashfreeOrderStatus(order_id);
+    const orderData = statusRes.data;
+
+    if (!statusRes.isPaid) {
+      return res.status(400).json({
+        success: false,
+        message: `Order status is '${orderData.order_status}', not PAID.`,
+        order_status: orderData.order_status
+      });
+    }
+
+    const { query } = require('../../config/database');
+    let partnerId = req.partner?.id || req.user?.PartnerId || req.user?.partner_id;
+    if (!partnerId && req.user) {
+      const { rows: [p] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (p) partnerId = p.id;
+    }
+
+    if (!partnerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Authenticated partner profile not found.'
+      });
+    }
+
+    const amountInInr = parseFloat(Number(orderData.order_amount).toFixed(2));
+    const paymentId = orderData.cf_order_id ? String(orderData.cf_order_id) : `cf_pay_${order_id}`;
+
+    const result = await creditWalletFromPayment(
+      partnerId,
+      amountInInr,
+      paymentId,
+      order_id,
+      req.user?.id || null
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: result.alreadyProcessed
+        ? 'Payment verified (already processed).'
+        : 'Cashfree payment verified and wallet credited successfully.',
+      already_processed: result.alreadyProcessed,
+      payment_id: paymentId,
+      order_id,
+      amount: amountInInr
+    });
+  } catch (error) {
+    logger.error('Cashfree Payment Verification Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to verify Cashfree payment.'
+    });
+  }
+};
+
+/**
+ * CASHFREE Webhook Endpoint
+ * POST /api/v1/payment/cashfree/webhook
+ */
+const cashfreeWebhook = async (req, res) => {
+  try {
+    const signature = req.headers['x-webhook-signature'];
+    const timestamp = req.headers['x-webhook-timestamp'];
+    const rawBody = req.rawBody || JSON.stringify(req.body);
+
+    const isValid = cashfreeHelper.verifyWebhookSignature(rawBody, signature, timestamp);
+    if (!isValid) {
+      logger.warn('[CASHFREE_WEBHOOK] Invalid webhook signature detected.');
+      return res.status(400).json({ success: false, message: 'Invalid webhook signature.' });
+    }
+
+    const event = req.body;
+    logger.info(`[CASHFREE_WEBHOOK] Received event: ${event.type}`);
+
+    if (event.type === 'PAYMENT_SUCCESS_WEBHOOK') {
+      const paymentData = event.data?.payment;
+      const orderData = event.data?.order;
+      if (orderData && paymentData && paymentData.payment_status === 'SUCCESS') {
+        const orderId = orderData.order_id;
+        const amount = parseFloat(paymentData.payment_amount);
+        const paymentId = String(paymentData.cf_payment_id || orderData.cf_order_id);
+        const customerId = orderData.customer_details?.customer_id || '';
+        const partnerId = customerId.startsWith('partner_') ? customerId.replace('partner_', '') : null;
+
+        if (partnerId) {
+          await creditWalletFromPayment(partnerId, amount, paymentId, orderId, null);
+          logger.info(`[CASHFREE_WEBHOOK] Wallet successfully credited for partner ${partnerId}, amount ₹${amount}`);
+        }
+      }
+    }
+
+    return res.status(200).json({ success: true, message: 'Webhook processed.' });
+  } catch (err) {
+    logger.error('[CASHFREE_WEBHOOK] Error handling webhook:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   createOrder,
-  verifyPayment
+  verifyPayment,
+  createCashfreeOrder,
+  verifyCashfreePayment,
+  cashfreeWebhook
 };

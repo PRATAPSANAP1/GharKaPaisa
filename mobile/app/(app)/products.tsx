@@ -12,7 +12,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Icon } from '../../components/Icon';
+import { ThemeToggle } from '../../components/ThemeToggle';
 import {
   fetchProductsList,
   fetchEmployeeProducts,
@@ -25,6 +27,7 @@ import { spacing } from '../../theme/spacing';
 export default function ProductsScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { colors, isDark } = useTheme();
 
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -93,36 +96,36 @@ export default function ProductsScreen() {
     const reward = item.base_incentive || item.commission_amount || item.payout || null;
 
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.cardHeader}>
-          <View style={styles.bankBadge}>
-            <Icon name="shield" size={12} color="#2563EB" />
-            <Text style={styles.bankBadgeText}>{bankName}</Text>
+          <View style={[styles.bankBadge, { backgroundColor: colors.bgTertiary }]}>
+            <Icon name="shield" size={12} color={colors.primary} />
+            <Text style={[styles.bankBadgeText, { color: colors.textLight }]}>{bankName}</Text>
           </View>
           {reward ? (
-            <View style={styles.rewardBadge}>
-              <Text style={styles.rewardText}>Earn up to ₹{reward}</Text>
+            <View style={[styles.rewardBadge, { backgroundColor: colors.accentLight }]}>
+              <Text style={[styles.rewardText, { color: colors.accentDark }]}>Earn up to ₹{reward}</Text>
             </View>
           ) : null}
         </View>
 
-        <Text style={styles.productTitle}>{name}</Text>
+        <Text style={[styles.productTitle, { color: colors.text }]}>{name}</Text>
         {item.description ? (
-          <Text style={styles.productDesc} numberOfLines={2}>
+          <Text style={[styles.productDesc, { color: colors.textMid }]} numberOfLines={2}>
             {item.description}
           </Text>
         ) : null}
 
-        <View style={styles.cardFooter}>
+        <View style={[styles.cardFooter, { borderTopColor: colors.border }]}>
           <TouchableOpacity
-            style={styles.detailBtn}
+            style={[styles.detailBtn, { borderColor: colors.primary }]}
             onPress={() => router.push(`/add-lead?product_id=${pId}`)}
           >
-            <Icon name="user-plus" size={14} color="#2563EB" />
-            <Text style={styles.detailBtnText}>Punch Lead</Text>
+            <Icon name="user-plus" size={14} color={colors.primary} />
+            <Text style={[styles.detailBtnText, { color: colors.primary }]}>Punch Lead</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.shareBtn} onPress={() => handleShareProduct(item)}>
+          <TouchableOpacity style={[styles.shareBtn, { backgroundColor: colors.primary }]} onPress={() => handleShareProduct(item)}>
             <Icon name="share-2" size={14} color="#FFFFFF" />
             <Text style={styles.shareBtnText}>Share Link</Text>
           </TouchableOpacity>
@@ -132,11 +135,14 @@ export default function ProductsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
       {/* Top Bar */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Products Catalog</Text>
-        <Text style={styles.subtitle}>Authorized financial products & referral links</Text>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={{ flex: 1, paddingRight: 8 }}>
+          <Text style={[styles.title, { color: colors.text }]}>Products Catalog</Text>
+          <Text style={[styles.subtitle, { color: colors.textLight }]}>Authorized financial products & referral links</Text>
+        </View>
+        <ThemeToggle size="sm" />
       </View>
 
       {loading ? (

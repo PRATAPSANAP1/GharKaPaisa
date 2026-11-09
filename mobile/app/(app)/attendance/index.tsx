@@ -18,13 +18,12 @@ import { typography } from '../../../theme/typography';
 import { spacing } from '../../../theme/spacing';
 import { Button, Card, LoadingState, ErrorState } from '../../../components';
 import { Icon } from '../../../components/Icon';
-import * as ImagePicker from 'expo-image-picker';
+import MobileAttendanceVerificationModal from '../../../components/MobileAttendanceVerificationModal';
 import {
   getTodayAttendance,
   getMyAttendanceHistory,
   getMyAttendanceSummary,
   createVerificationSession,
-  completeVerificationPipeline,
   executeCheckIn,
   executeCheckOut,
   getEnrollmentStatus,
@@ -63,9 +62,7 @@ export default function AttendanceScreen() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [verificationSessionId, setVerificationSessionId] = useState<string | null>(null);
-  const [capturingFace, setCapturingFace] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [actionType, setActionType] = useState<'CHECK_IN' | 'CHECK_OUT'>('CHECK_IN');
   const [error, setError] = useState<string | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -73,7 +70,7 @@ export default function AttendanceScreen() {
   const [showEnrollModal, setShowEnrollModal] = useState(false);
 
   const checkAttendanceAccess = () => {
-    return isAttendanceEnabledForEmployee((user as any)?.employee_code || (user as any)?.employee_id || '');
+    return user ? isAttendanceEnabledForEmployee(user) : false;
   };
 
   const fetchTodayAttendance = async () => {
@@ -81,7 +78,7 @@ export default function AttendanceScreen() {
       const data = await getTodayAttendance();
       setTodayAttendance(data);
     } catch (err: any) {
-      if (err.message.includes('KYC_PHOTO_NOT_FOUND')) {
+      if (err.message && err.message.includes('KYC_PHOTO_NOT_FOUND')) {
         setError('KYC photograph is compulsory for attendance. Please upload your photo in the employee panel.');
       } else {
         setError(err.message || 'Failed to load today\'s attendance');
@@ -101,7 +98,7 @@ export default function AttendanceScreen() {
   const fetchAttendanceHistory = async () => {
     try {
       const data = await getMyAttendanceHistory({ month: selectedMonth, year: selectedYear, limit: 31 });
-      setAttendanceHistory(data.records || []);
+      setAttendanceHistory(data?.records || []);
     } catch (err: any) {
       console.error('Error fetching attendance history:', err);
     }
@@ -144,85 +141,39 @@ export default function AttendanceScreen() {
   };
 
   const handleCheckIn = async () => {
-    try {
-      // Check face enrollment status
-      if (isFaceEnrolled === false) {
-        Alert.alert(
-          'Biometric Enrollment Required',
-          'Please complete your biometric enrollment in the employee panel before marking attendance.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      const session = await createVerificationSession();
-      setVerificationSessionId(session.sessionId);
-      setShowVerificationModal(true);
-    } catch (err: any) {
-      if (err.message.includes('KYC_PHOTO_NOT_FOUND')) {
-        Alert.alert('KYC Photo Required', 'Please upload your photo in the employee panel before marking attendance.');
-      } else {
-        Alert.alert('Error', err.message || 'Failed to start verification');
-      }
+    if (isFaceEnrolled === false) {
+      Alert.alert(
+        'Biometric Enrollment Required',
+        'Please complete your biometric enrollment in the employee panel before marking attendance.',
+        [{ text: 'OK' }]
+      );
+      return;
     }
+    setActionType('CHECK_IN');
+    setShowVerificationModal(true);
   };
 
   const handleCheckOut = async () => {
-    try {
-      const session = await createVerificationSession();
-      setVerificationSessionId(session.sessionId);
-      setShowVerificationModal(true);
-    } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to start verification');
-    }
+    setActionType('CHECK_OUT');
+    setShowVerificationModal(true);
   };
 
-  const handlePickImage = async () => {
+  const handleVerificationSuccess = async (verifiedSessionId: string) => {
+    setShowVerificationModal(false);
+    setLoading(true);
     try {
-      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permissionResult.granted) {
-        Alert.alert('Permission Required', 'Please grant camera permissions for attendance verification');
-        return;
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setSelectedImage(result.assets[0].uri);
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to capture photo');
-    }
-  };
-
-  const handleCompleteVerification = async () => {
-    if (!selectedImage || !verificationSessionId) return;
-
-    setCapturingFace(true);
-    try {
-      await completeVerificationPipeline(verificationSessionId, selectedImage);
-      
-      // Determine whether to check-in or check-out based on current state
-      if (!todayAttendance?.check_in_time) {
-        await executeCheckIn(verificationSessionId);
-        Alert.alert('Success', 'Check-in marked successfully');
+      if (actionType === 'CHECK_IN') {
+        const res = await executeCheckIn(verifiedSessionId);
+        Alert.alert('Work Started', res.message || 'Check-in recorded successfully!');
       } else {
-        await executeCheckOut(verificationSessionId);
-        Alert.alert('Success', 'Check-out marked successfully');
+        const res = await executeCheckOut(verifiedSessionId);
+        Alert.alert('Work Ended', res.message || 'Check-out recorded successfully!');
       }
-      
-      setShowVerificationModal(false);
-      setSelectedImage(null);
-      setVerificationSessionId(null);
-      loadAllData();
+      await loadAllData();
     } catch (err: any) {
-      Alert.alert('Verification Failed', err.message || 'Face verification failed');
+      Alert.alert('Action Failed', err.message || 'Could not record attendance');
     } finally {
-      setCapturingFace(false);
+      setLoading(false);
     }
   };
 
@@ -401,10 +352,10 @@ export default function AttendanceScreen() {
           <Text style={styles.cardTitle}>ATTENDANCE HISTORY</Text>
           <View style={styles.filterRow}>
             <TouchableOpacity style={styles.filterButton}>
-              <Text style={styles.filterText}>September ▼</Text>
+              <Text style={styles.filterText}>{new Date(selectedYear, selectedMonth - 1).toLocaleString('en-US', { month: 'long' })} ▼</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.filterButton}>
-              <Text style={styles.filterText}>2026 ▼</Text>
+              <Text style={styles.filterText}>{selectedYear} ▼</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.exportButton}>
               <Text style={styles.exportText}>Export</Text>
@@ -516,45 +467,13 @@ export default function AttendanceScreen() {
         </View>
       </Modal>
 
-      {/* Face Verification Modal */}
-      <Modal visible={showVerificationModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Face Verification</Text>
-              <TouchableOpacity onPress={() => setShowVerificationModal(false)}>
-                <Icon name="x" size={24} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.verificationInstruction}>
-              Please capture your face for biometric verification
-            </Text>
-
-            {selectedImage ? (
-              <View style={styles.capturedContainer}>
-                <Image source={{ uri: selectedImage }} style={styles.capturedImage} />
-                <TouchableOpacity style={styles.retakeButton} onPress={handlePickImage}>
-                  <Text style={styles.retakeText}>Retake Photo</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity style={styles.cameraButton} onPress={handlePickImage}>
-                <Icon name="camera" size={48} color={colors.primary} />
-                <Text style={styles.cameraText}>Capture Photo</Text>
-              </TouchableOpacity>
-            )}
-
-            <Button
-              title={capturingFace ? 'Verifying...' : 'Complete Verification'}
-              onPress={handleCompleteVerification}
-              disabled={!selectedImage || capturingFace}
-              loading={capturingFace}
-              style={styles.verifyButton}
-            />
-          </View>
-        </View>
-      </Modal>
+      {/* Biometric & Geofence Attendance Verification Modal */}
+      <MobileAttendanceVerificationModal
+        visible={showVerificationModal}
+        actionType={actionType}
+        onClose={() => setShowVerificationModal(false)}
+        onSuccess={handleVerificationSuccess}
+      />
     </ScrollView>
   );
 }

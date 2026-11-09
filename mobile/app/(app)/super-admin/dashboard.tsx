@@ -13,12 +13,14 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useTheme } from '../../../contexts/ThemeContext';
 import { colors } from '../../../theme/colors';
 import { typography } from '../../../theme/typography';
 import { spacing } from '../../../theme/spacing';
 import { Card } from '../../../components/Card';
 import { Button } from '../../../components/Button';
 import { Icon } from '../../../components/Icon';
+import { ThemeToggle } from '../../../components/ThemeToggle';
 import {
   fetchSuperAdminDashboard,
   fetchBusinessStats,
@@ -50,6 +52,7 @@ interface AdminUser {
 
 export default function SuperAdminDashboardScreen() {
   const { user } = useAuth();
+  const { colors, isDark } = useTheme();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [metrics, setMetrics] = useState<any>(null);
@@ -234,19 +237,22 @@ export default function SuperAdminDashboardScreen() {
 
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.bg }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
     >
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: isDark ? colors.card : colors.primaryDark }]}>
         <View style={styles.headerLeft}>
           <Text style={styles.roleBadge}>SUPER ADMIN</Text>
           <Text style={styles.headerTitle}>Dashboard</Text>
           <Text style={styles.headerSubtitle}>{user?.full_name || 'Administrator'}</Text>
         </View>
-        <TouchableOpacity style={styles.logoutBtn} onPress={() => router.replace('/(auth)/login')}>
-          <Icon name="x" size={20} color="#fff" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <ThemeToggle size="sm" />
+          <TouchableOpacity style={styles.logoutBtn} onPress={() => router.replace('/(auth)/login')}>
+            <Icon name="x" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {error && (
@@ -261,12 +267,12 @@ export default function SuperAdminDashboardScreen() {
         {statCards.map((stat, index) => (
           <TouchableOpacity
             key={index}
-            style={[styles.statCard, { borderLeftColor: stat.color }]}
+            style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: stat.color }]}
             onPress={() => router.push(stat.path as any)}
           >
             <Text style={styles.statIcon}>{stat.icon}</Text>
             <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
-            <Text style={styles.statLabel}>{stat.label}</Text>
+            <Text style={[styles.statLabel, { color: colors.textLight }]}>{stat.label}</Text>
           </TouchableOpacity>
         ))}
       </View>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
-import { colors } from '../theme/colors';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface GradientProps {
   colors?: string[];
@@ -13,13 +13,16 @@ interface GradientProps {
 }
 
 export const Gradient: React.FC<GradientProps> = ({
-  colors: gradientColors = colors.gradientPrimary,
+  colors: propColors,
   start = { x: 0, y: 0 },
   end = { x: 1, y: 1 },
   style,
   borderRadius = 0,
   children,
 }) => {
+  const { colors: themeColors } = useTheme();
+  const gradientColors = propColors || themeColors.gradientPrimary;
+
   return (
     <View style={[{ borderRadius, overflow: 'hidden' }, style]}>
       <Svg style={StyleSheet.absoluteFill} preserveAspectRatio="none">
@@ -36,3 +39,5 @@ export const Gradient: React.FC<GradientProps> = ({
     </View>
   );
 };
+
+export default Gradient;

@@ -265,7 +265,7 @@ export default function CustomersScreen() {
               </View>
             ) : !hasMore && customers.length > 0 ? (
               <Text style={styles.endListText}>— End of Customers List —</Text>
-            ) : null
+            ) : undefined
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>

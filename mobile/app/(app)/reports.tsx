@@ -186,7 +186,7 @@ export default function ReportsScreen() {
       if (endDate.trim()) query.append('endDate', endDate.trim());
       const qs = query.toString();
 
-      const fileUri = `${FileSystem.cacheDirectory}gharkapaisa_${selectedCategory.toLowerCase()}_${Date.now()}.xlsx`;
+      const fileUri = `${(FileSystem as any).cacheDirectory || ''}gharkapaisa_${selectedCategory.toLowerCase()}_${Date.now()}.xlsx`;
       const download = await FileSystem.downloadAsync(
         `${API_BASE_URL}${path}${qs ? `?${qs}` : ''}`,
         fileUri,

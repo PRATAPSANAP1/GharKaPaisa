@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Tabs, Redirect } from 'expo-router';
 import { Text, View, StyleSheet, AppState } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { LoadingState } from '../../components/LoadingState';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -34,6 +35,7 @@ const TabIcon = ({ label, focused, badgeCount }: { label: string; focused: boole
 
 export default function AppLayout() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { colors } = useTheme();
   const [unreadCount, setUnreadCount] = useState<number>(0);
 
   useEffect(() => {

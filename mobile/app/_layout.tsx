@@ -2,15 +2,16 @@ import React from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '../contexts/AuthContext';
-import { colors } from '../theme/colors';
+import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { useDeepLinking } from '../hooks/useDeepLinking';
 
 function RootNavigation() {
   useDeepLinking();
+  const { colors, isDark } = useTheme();
 
   return (
     <>
-      <StatusBar style="light" backgroundColor={colors.bg} />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -20,6 +21,7 @@ function RootNavigation() {
         <Stack.Screen name="index" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(app)" />
+        <Stack.Screen name="(public)" />
       </Stack>
     </>
   );
@@ -27,8 +29,10 @@ function RootNavigation() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <RootNavigation />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <RootNavigation />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,10 @@ import {
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
+import { Gradient } from '../../components/Gradient';
 import { router } from 'expo-router';
 import { colors } from '../../theme/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 import { Card } from '../../components/Card';
@@ -37,8 +39,46 @@ interface ProductItem {
 }
 
 export default function HomeScreen() {
+  const { colors, isDark } = useTheme();
   const [loading, setLoading] = useState(false);
   const [featuredProducts, setFeaturedProducts] = useState<ProductItem[]>([]);
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const scrollViewRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+
+  const banners = [
+    {
+      id: 1,
+      title: 'Instant Credit Cards',
+      subtitle: 'Get approved in minutes',
+      color: '#1B74BB',
+      gradient: ['#1B74BB', '#0851A1'],
+    },
+    {
+      id: 2,
+      title: 'Low Interest Loans',
+      subtitle: 'Starting from 10.99% p.a.',
+      color: '#9CD83D',
+      gradient: ['#9CD83D', '#7BC32E'],
+    },
+    {
+      id: 3,
+      title: 'Zero Annual Fee Cards',
+      subtitle: 'Lifetime free credit cards',
+      color: '#F59E0B',
+      gradient: ['#F59E0B', '#D97706'],
+    },
+  ];
+
+  const scrollToBanner = (index: number) => {
+    setCurrentBannerIndex(index);
+    scrollViewRef.current?.scrollTo({ x: index * width, animated: true });
+  };
+
+  const handleScroll = (event: any) => {
+    const contentOffset = event.nativeEvent.contentOffset.x;
+    const index = Math.round(contentOffset / width);
+    setCurrentBannerIndex(index);
+  };
 
   const categories: CategoryItem[] = [
     { id: 'credit_card', label: 'Credit Cards', icon: '💳' },
@@ -84,32 +124,56 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Hero Section */}
-      <View style={styles.heroSection}>
-        <View style={styles.heroContent}>
-          <Text style={styles.heroTitle}>GharKaPaisa</Text>
-          <Text style={styles.heroSubtitle}>
-            Your One-Stop Financial Solution for Credit Cards, Loans & Insurance
-          </Text>
-          <View style={styles.heroButtons}>
-            <Button
-              title="Get Started"
-              onPress={() => router.push('/(auth)/login')}
-              style={styles.heroButton}
+    <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} showsVerticalScrollIndicator={false}>
+      {/* Hero Banner Carousel */}
+      <View style={styles.bannerContainer}>
+        <ScrollView
+          ref={scrollViewRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+        >
+          {banners.map((banner) => (
+            <View key={banner.id} style={[styles.bannerSlide, { width, backgroundColor: banner.gradient[0] }]}>
+              <Gradient
+                colors={banner.gradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.bannerGradient}
+              >
+                <View style={styles.bannerContent}>
+                  <Text style={styles.bannerTitle}>{banner.title}</Text>
+                  <Text style={styles.bannerSubtitle}>{banner.subtitle}</Text>
+                  <Button
+                    title="Apply Now"
+                    onPress={() => router.push('/(auth)/products')}
+                    style={styles.bannerButton}
+                  />
+                </View>
+              </Gradient>
+            </View>
+          ))}
+        </ScrollView>
+        
+        {/* Banner Indicators */}
+        <View style={styles.bannerIndicators}>
+          {banners.map((_, index) => (
+            <TouchableOpacity
+              key={index}
+              style={[
+                styles.indicator,
+                currentBannerIndex === index && styles.activeIndicator
+              ]}
+              onPress={() => scrollToBanner(index)}
             />
-            <Button
-              title="Partner With Us"
-              onPress={() => router.push('/(auth)/login')}
-              variant="outline"
-              style={styles.heroButton}
-            />
-          </View>
+          ))}
         </View>
       </View>
 
       {/* Quick Stats */}
-      <View style={styles.statsContainer}>
+      <View style={[styles.statsContainer, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}>
         <View style={styles.statItem}>
           <Text style={styles.statValue}>50+</Text>
           <Text style={styles.statLabel}>Partner Banks</Text>
@@ -126,57 +190,138 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {/* Popular Cards Carousel */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Popular Credit Cards</Text>
+          <TouchableOpacity onPress={() => router.push('/(auth)/products')}>
+            <Text style={[styles.viewAllText, { color: colors.primary }]}>View All →</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {featuredProducts.slice(0, 5).map((product) => (
+            <TouchableOpacity
+              key={product.id}
+              style={[styles.popularCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => handleProductPress(product.id)}
+            >
+              <View style={[styles.popularBadge, { backgroundColor: colors.primarySoft }]}>
+                <Text style={[styles.popularBadgeText, { color: colors.primary }]}>POPULAR</Text>
+              </View>
+              <Text style={[styles.popularBank, { color: colors.textMid }]}>{product.bank_name || 'Partner Bank'}</Text>
+              <Text style={[styles.popularName, { color: colors.text }]} numberOfLines={2}>
+                {product.name}
+              </Text>
+              <Text style={[styles.popularDesc, { color: colors.textMid }]} numberOfLines={2}>
+                {product.description || 'Get instant approval and flexible tenure.'}
+              </Text>
+              <View style={[styles.popularFooter, { borderTopColor: colors.border }]}>
+                <Text style={[styles.popularApplyText, { color: colors.primary }]}>Apply Now</Text>
+                <Icon name="chevron-right" size={16} color={colors.primary} />
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Bank Partners Logos */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Our Partner Banks</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bankLogosContainer}>
+          {['HDFC', 'SBI', 'ICICI', 'Axis', 'Kotak', 'IDFC', 'Yes Bank', 'BOB'].map((bank) => (
+            <TouchableOpacity 
+              key={bank} 
+              style={styles.bankLogoItem}
+              onPress={() => router.push({ pathname: '/(auth)/bank-cards', params: { bank } })}
+            >
+              <View style={[styles.bankLogoBadge, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}>
+                <Text style={[styles.bankLogoText, { color: colors.text }]}>{bank}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
       {/* Categories Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Explore Financial Products</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Explore Financial Products</Text>
         <View style={styles.categoriesGrid}>
           {categories.map((category) => (
             <TouchableOpacity
               key={category.id}
-              style={styles.categoryCard}
+              style={[styles.categoryCard, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={() => handleCategoryPress(category.id)}
             >
               <Text style={styles.categoryIcon}>{category.icon}</Text>
-              <Text style={styles.categoryLabel}>{category.label}</Text>
+              <Text style={[styles.categoryLabel, { color: colors.text }]}>{category.label}</Text>
             </TouchableOpacity>
           ))}
+        </View>
+      </View>
+
+      {/* Quick Tools */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Tools</Text>
+        <View style={styles.quickToolsRow}>
+          <TouchableOpacity
+            style={[styles.quickToolCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={() => router.push('/(app)/loan-calculator')}
+          >
+            <Icon name="calculator" size={24} color={colors.primary} />
+            <Text style={[styles.quickToolText, { color: colors.text }]}>Loan Calculator</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.quickToolCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={() => router.push('/(public)/travel-booking')}
+          >
+            <Icon name="map" size={24} color={colors.warning} />
+            <Text style={[styles.quickToolText, { color: colors.text }]}>Travel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.quickToolCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={() => router.push('/(public)/insurance')}
+          >
+            <Icon name="shield" size={24} color={colors.error} />
+            <Text style={[styles.quickToolText, { color: colors.text }]}>Insurance</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
       {/* Featured Products */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Featured Products</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Featured Products</Text>
           <TouchableOpacity onPress={() => router.push('/(auth)/products')}>
-            <Text style={styles.viewAllText}>View All →</Text>
+            <Text style={[styles.viewAllText, { color: colors.primary }]}>View All →</Text>
           </TouchableOpacity>
         </View>
 
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>Loading products...</Text>
+            <Text style={[styles.loadingText, { color: colors.textMid }]}>Loading products...</Text>
           </View>
         ) : featuredProducts.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {featuredProducts.map((product) => (
               <TouchableOpacity
                 key={product.id}
-                style={styles.productCard}
+                style={[styles.productCard, { backgroundColor: colors.card, borderColor: colors.border }]}
                 onPress={() => handleProductPress(product.id)}
               >
-                <View style={styles.productBadge}>
-                  <Text style={styles.productBadgeText}>{product.category.replace(/_/g, ' ')}</Text>
+                <View style={[styles.productBadge, { backgroundColor: colors.accentLight }]}>
+                  <Text style={[styles.productBadgeText, { color: colors.accentDark }]}>{product.category.replace(/_/g, ' ')}</Text>
                 </View>
-                <Text style={styles.productBank}>{product.bank_name || 'Partner Bank'}</Text>
-                <Text style={styles.productName} numberOfLines={2}>
+                <Text style={[styles.productBank, { color: colors.textLight }]}>{product.bank_name || 'Partner Bank'}</Text>
+                <Text style={[styles.productName, { color: colors.text }]} numberOfLines={2}>
                   {product.name}
                 </Text>
-                <Text style={styles.productDesc} numberOfLines={2}>
+                <Text style={[styles.productDesc, { color: colors.textMid }]} numberOfLines={2}>
                   {product.description || 'Get instant approval and flexible tenure.'}
                 </Text>
-                <View style={styles.productFooter}>
-                  <Text style={styles.applyText}>Apply Now</Text>
+                <View style={[styles.productFooter, { borderTopColor: colors.border }]}>
+                  <Text style={[styles.applyText, { color: colors.primary }]}>Apply Now</Text>
                   <Icon name="chevron-right" size={16} color={colors.primary} />
                 </View>
               </TouchableOpacity>
@@ -184,40 +329,40 @@ export default function HomeScreen() {
           </ScrollView>
         ) : (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No featured products available</Text>
+            <Text style={[styles.emptyText, { color: colors.textMid }]}>No featured products available</Text>
           </View>
         )}
       </View>
 
       {/* Why Choose Us */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Why Choose GharKaPaisa?</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Why Choose GharKaPaisa?</Text>
         <View style={styles.featuresGrid}>
-          <View style={styles.featureCard}>
+          <View style={[styles.featureCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Icon name="shield" size={32} color={colors.primary} />
-            <Text style={styles.featureTitle}>100% Secure</Text>
-            <Text style={styles.featureDesc}>
+            <Text style={[styles.featureTitle, { color: colors.text }]}>100% Secure</Text>
+            <Text style={[styles.featureDesc, { color: colors.textMid }]}>
               Your data is protected with bank-grade encryption
             </Text>
           </View>
-          <View style={styles.featureCard}>
+          <View style={[styles.featureCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Icon name="clock" size={32} color={colors.primary} />
-            <Text style={styles.featureTitle}>Fast Approval</Text>
-            <Text style={styles.featureDesc}>
+            <Text style={[styles.featureTitle, { color: colors.text }]}>Fast Approval</Text>
+            <Text style={[styles.featureDesc, { color: colors.textMid }]}>
               Get instant approval on most credit cards and loans
             </Text>
           </View>
-          <View style={styles.featureCard}>
+          <View style={[styles.featureCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Icon name="award" size={32} color={colors.primary} />
-            <Text style={styles.featureTitle}>Best Rates</Text>
-            <Text style={styles.featureDesc}>
+            <Text style={[styles.featureTitle, { color: colors.text }]}>Best Rates</Text>
+            <Text style={[styles.featureDesc, { color: colors.textMid }]}>
               Competitive interest rates from top banks
             </Text>
           </View>
-          <View style={styles.featureCard}>
+          <View style={[styles.featureCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Icon name="user-check" size={32} color={colors.primary} />
-            <Text style={styles.featureTitle}>Expert Support</Text>
-            <Text style={styles.featureDesc}>
+            <Text style={[styles.featureTitle, { color: colors.text }]}>Expert Support</Text>
+            <Text style={[styles.featureDesc, { color: colors.textMid }]}>
               Dedicated support team to assist you
             </Text>
           </View>
@@ -250,10 +395,10 @@ export default function HomeScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.serviceBtn}
-            onPress={() => router.push('/(public)/careers' as any)}
+            onPress={() => router.push('/(public)/chatbot' as any)}
           >
-            <Icon name="briefcase" size={20} color={colors.primaryLight} />
-            <Text style={styles.serviceBtnText}>Careers & Hiring</Text>
+            <Icon name="bot" size={20} color={colors.primaryLight} />
+            <Text style={styles.serviceBtnText}>AI Assistant</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.serviceBtn}
@@ -289,40 +434,144 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
-  heroSection: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xl,
-    paddingTop: spacing.xxl,
+  bannerContainer: {
+    height: 200,
+    position: 'relative',
   },
-  heroContent: {
+  bannerSlide: {
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  heroTitle: {
-    fontSize: 32,
+  bannerGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bannerContent: {
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  bannerTitle: {
+    fontSize: 28,
     fontWeight: '800',
     color: '#fff',
-    marginBottom: spacing.sm,
-  },
-  heroSubtitle: {
-    fontSize: 16,
-    color: '#E0E7FF',
+    marginBottom: spacing.xs,
     textAlign: 'center',
-    marginBottom: spacing.lg,
-    lineHeight: 24,
   },
-  heroButtons: {
+  bannerSubtitle: {
+    fontSize: 14,
+    color: '#E0E7FF',
+    marginBottom: spacing.md,
+    textAlign: 'center',
+  },
+  bannerButton: {
+    width: 140,
+  },
+  bannerIndicators: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    bottom: 12,
+    left: 0,
+    right: 0,
+    gap: 8,
   },
-  heroButton: {
-    flex: 1,
+  indicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  activeIndicator: {
+    backgroundColor: '#fff',
+    width: 20,
+  },
+  popularCard: {
+    width: 220,
+    backgroundColor: colors.bgSecondary,
+    borderRadius: 12,
+    padding: spacing.md,
+    marginRight: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  popularBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginBottom: spacing.xs,
+  },
+  popularBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.primary,
+    textTransform: 'uppercase',
+  },
+  popularBank: {
+    fontSize: 11,
+    color: colors.textMid,
+    marginBottom: 4,
+  },
+  popularName: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  popularDesc: {
+    fontSize: 12,
+    color: colors.textMid,
+    marginBottom: spacing.sm,
+    lineHeight: 16,
+  },
+  popularFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.xs,
+  },
+  popularApplyText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+    marginRight: 4,
+  },
+  bankLogosContainer: {
+    flexDirection: 'row',
+    paddingVertical: spacing.sm,
+  },
+  bankLogoItem: {
+    marginRight: spacing.md,
+  },
+  bankLogoBadge: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 80,
+  },
+  bankLogoText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.text,
   },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    backgroundColor: '#fff',
+    backgroundColor: colors.bgSecondary,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.md,
     marginTop: -spacing.lg,
@@ -330,7 +579,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 4,
   },
@@ -379,12 +628,17 @@ const styles = StyleSheet.create({
   },
   categoryCard: {
     width: (width - spacing.md * 2 - spacing.sm * 3) / 4,
-    backgroundColor: '#fff',
+    backgroundColor: colors.bgSecondary,
     borderRadius: 12,
     padding: spacing.sm,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   categoryIcon: {
     fontSize: 24,
@@ -395,6 +649,30 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
+  },
+  quickToolsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  quickToolCard: {
+    flex: 1,
+    backgroundColor: colors.bgSecondary,
+    borderRadius: 12,
+    padding: spacing.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  quickToolText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: spacing.sm,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -407,16 +685,21 @@ const styles = StyleSheet.create({
   },
   productCard: {
     width: 220,
-    backgroundColor: '#fff',
+    backgroundColor: colors.bgSecondary,
     borderRadius: 12,
     padding: spacing.md,
     marginRight: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   productBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: `${colors.primary}15`,
+    backgroundColor: colors.primarySoft,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -474,12 +757,17 @@ const styles = StyleSheet.create({
   },
   featureCard: {
     width: (width - spacing.md * 2 - spacing.sm) / 2,
-    backgroundColor: '#fff',
+    backgroundColor: colors.bgSecondary,
     borderRadius: 12,
     padding: spacing.md,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   featureTitle: {
     fontSize: 14,
@@ -521,6 +809,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    backgroundColor: colors.bgSecondary,
   },
   footerText: {
     fontSize: 12,
@@ -533,7 +822,7 @@ const styles = StyleSheet.create({
   },
   footerLink: {
     fontSize: 12,
-    color: colors.primaryLight,
+    color: colors.primary,
     fontWeight: '600',
   },
   serviceRow: {
@@ -542,18 +831,18 @@ const styles = StyleSheet.create({
   },
   serviceBtn: {
     flex: 1,
-    backgroundColor: '#1E293B',
+    backgroundColor: colors.bgSecondary,
     padding: spacing.md,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.border,
     alignItems: 'center',
     gap: spacing.xs,
   },
   serviceBtnText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.text,
     textAlign: 'center',
   },
 });

@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, StyleProp, ViewStyle, TouchableOpacity } from 'react-native';
-import { colors } from '../theme/colors';
+import { useTheme } from '../contexts/ThemeContext';
 import { spacing } from '../theme/spacing';
-import { shadows } from '../theme/shadows';
 
 interface CardProps {
   children: React.ReactNode;
@@ -13,14 +12,32 @@ interface CardProps {
   padding?: number;
 }
 
-export const Card: React.FC<CardProps> = ({ children, style, onPress, elevated = false, glow = false, padding }) => {
-  const cardStyle = [
-    styles.card,
-    elevated && styles.elevated,
-    glow && shadows.glow,
-    padding !== undefined && { padding },
-    style,
-  ];
+export const Card: React.FC<CardProps> = ({
+  children,
+  style,
+  onPress,
+  elevated = false,
+  glow = false,
+  padding,
+}) => {
+  const { colors, isDark } = useTheme();
+
+  const dynamicCardStyle: ViewStyle = {
+    backgroundColor: elevated ? colors.bgTertiary : colors.card,
+    borderColor: elevated ? colors.borderLight : colors.border,
+    ...(glow
+      ? {
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: isDark ? 0.35 : 0.15,
+          shadowRadius: 12,
+          elevation: 6,
+        }
+      : {}),
+    ...(padding !== undefined ? { padding } : {}),
+  };
+
+  const cardStyle = [styles.baseCard, dynamicCardStyle, style];
 
   if (onPress) {
     return (
@@ -33,18 +50,17 @@ export const Card: React.FC<CardProps> = ({ children, style, onPress, elevated =
 };
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: spacing.radius.lg,
+  baseCard: {
+    borderRadius: 16,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
     marginBottom: spacing.md,
-    ...shadows.sm,
-  },
-  elevated: {
-    backgroundColor: colors.cardElevated,
-    borderColor: colors.borderLight,
-    ...shadows.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
 });
+
+export default Card;
