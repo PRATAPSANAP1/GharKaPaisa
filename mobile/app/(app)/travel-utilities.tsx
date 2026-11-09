@@ -58,6 +58,7 @@ export default function TravelUtilitiesScreen() {
       const list = res?.data?.transactions || res?.transactions || [];
       setTransactions(list);
     } catch (e) {
+      console.warn('Failed to load travel utility transactions:', e);
       setTransactions([]);
     } finally {
       setLoading(false);
@@ -75,7 +76,7 @@ export default function TravelUtilitiesScreen() {
       });
       setMarginRates(map);
     } catch (e) {
-      // non-critical: margin tag falls back to default
+      console.warn('Failed to load travel utility margin rates:', e);
     }
   }, []);
 

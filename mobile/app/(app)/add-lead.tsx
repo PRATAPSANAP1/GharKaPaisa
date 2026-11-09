@@ -224,7 +224,9 @@ export default function AddLeadScreen() {
         const guideText = `Hi ${customerName.trim()}, I will guide you through the application for ${prodLabel}. Please open this link while we are connected:\n${link}`;
         try {
           await Share.share({ message: guideText });
-        } catch (_) {}
+        } catch (shareErr) {
+          console.warn('Share co-browsing error:', shareErr);
+        }
         setShareResult({
           title: 'Co-Browsing Session Started',
           url: link,
@@ -254,7 +256,9 @@ export default function AddLeadScreen() {
         ].join('\n');
         try {
           await Share.share({ title: 'Offline Application Detail Sheet', message: sheet });
-        } catch (_) {}
+        } catch (shareErr) {
+          console.warn('Share physical sheet error:', shareErr);
+        }
         setShareResult({ title: 'Physical Process Sheet', url: '', kind: 'sheet', sheet, leadId: created?.id || created?.lead_id });
         setShowShareResult(true);
         setAgreeTerms(false);

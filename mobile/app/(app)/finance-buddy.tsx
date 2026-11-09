@@ -220,7 +220,9 @@ export default function FinanceBuddyScreen() {
     if (sending) return;
     try {
       await chatbotService.resetConversation(sessionId);
-    } catch (err) {}
+    } catch (err) {
+      console.warn('Failed to reset chatbot session on server:', err);
+    }
     const newSessionId = `mob_session_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     setSessionId(newSessionId);
     initWelcomeMessage(userProfile);

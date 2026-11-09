@@ -62,6 +62,27 @@ export default function MoreScreen() {
       route: '/(app)/products'
     },
     {
+      id: 'employee-credit-cards',
+      title: 'Credit Cards Hub',
+      subtitle: 'Bank-wise cards, reward perks & digital apply journeys',
+      icon: '💳',
+      route: '/(app)/employee-credit-cards'
+    },
+    {
+      id: 'employee-loan-on-card',
+      title: 'Loan on Credit Card',
+      subtitle: 'Insta cash credit & jumbo pre-approved loans',
+      icon: '🪙',
+      route: '/(app)/employee-loan-on-card'
+    },
+    {
+      id: 'employee-smart-emi',
+      title: 'Smart EMI on Card',
+      subtitle: 'Convert credit card purchases into flexible EMIs',
+      icon: '🔄',
+      route: '/(app)/employee-smart-emi'
+    },
+    {
       id: 'referrals',
       title: 'Referral Products & Links',
       subtitle: 'Product referral links & employee commission codes',

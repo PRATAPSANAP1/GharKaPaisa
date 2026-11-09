@@ -124,6 +124,34 @@ export default function SuperAdminMenuScreen() {
       color: '#0284C7',
       path: '/super-admin/support',
     },
+    {
+      title: 'CMS Banners',
+      description: 'Homepage & mobile promo banners',
+      icon: 'image',
+      color: '#F43F5E',
+      path: '/super-admin/banners',
+    },
+    {
+      title: 'CMS Sections',
+      description: 'Landing sections & corporate branding',
+      icon: 'layers',
+      color: '#8B5CF6',
+      path: '/super-admin/sections',
+    },
+    {
+      title: 'Bank Direct Links',
+      description: 'Partner & digital journey redirects',
+      icon: 'link',
+      color: '#06B6D4',
+      path: '/super-admin/links',
+    },
+    {
+      title: 'Services Catalog',
+      description: 'Service items, routes & click tracking',
+      icon: 'grid',
+      color: '#10B981',
+      path: '/super-admin/services',
+    },
   ];
 
   return (

@@ -220,6 +220,9 @@ export default function AppLayout() {
       <Tabs.Screen name="commission-rules" options={{ href: null }} />
       <Tabs.Screen name="hr-candidates" options={{ href: null }} />
       <Tabs.Screen name="partner-referrals" options={{ href: null }} />
+      <Tabs.Screen name="employee-credit-cards" options={{ href: null }} />
+      <Tabs.Screen name="employee-loan-on-card" options={{ href: null }} />
+      <Tabs.Screen name="employee-smart-emi" options={{ href: null }} />
     </Tabs>
   );
 }
