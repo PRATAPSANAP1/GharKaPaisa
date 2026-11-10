@@ -2890,15 +2890,15 @@ export default function Home({ onNavigate }) {
         {/* ── MODERN FOOTER ── */}
         <LazyRenderOnScroll minHeight={380} rootMargin="300px">
         {(() => {
-          const isDark = C?.isDark || C?.bg === '#000000' || C?.text === '#F8FAFC';
-          const footerBg = isDark ? "#081424" : "#F1F5F9";
-          const textColor = isDark ? "#ffffff" : "#0F172A";
-          const accentColor = isDark ? "#2DD4BF" : "#0D5CAB";
-          const subTextColor = isDark ? "rgba(255, 255, 255, 0.85)" : "#475569";
-          const borderColor = isDark ? "rgba(255, 255, 255, 0.15)" : "#E2E8F0";
-          const btnBg = isDark ? "#2DD4BF" : "#0D5CAB";
-          const btnText = isDark ? "#081424" : "#ffffff";
-          const iconBg = isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.06)";
+          const isDark = C?.isDark || C?.bg === '#0A0F0D' || C?.bg === '#000000';
+          const footerBg = isDark ? "#063F38" : (C?.bgSecondary || "#E8F7EF");
+          const textColor = isDark ? "#ffffff" : (C?.text || "#101828");
+          const accentColor = C?.teal || (isDark ? "#00D4AA" : "#008A60");
+          const subTextColor = isDark ? "rgba(255, 255, 255, 0.85)" : (C?.textMid || "#475569");
+          const borderColor = isDark ? "rgba(255, 255, 255, 0.15)" : (C?.border || "#E3EBE8");
+          const btnBg = C?.teal || (isDark ? "#00D4AA" : "#008A60");
+          const btnText = "#ffffff";
+          const iconBg = isDark ? "rgba(255,255,255,0.15)" : "rgba(0, 138, 96, 0.10)";
 
           return (
             <div style={{ 
