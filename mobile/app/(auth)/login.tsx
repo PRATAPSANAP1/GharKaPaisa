@@ -174,11 +174,6 @@ export default function LoginScreen() {
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
-      {/* Top Bar with Theme Toggle */}
-      <View style={{ width: '100%', alignItems: 'flex-end', marginBottom: spacing.xs }}>
-        <ThemeToggle size="sm" />
-      </View>
-
       {/* Brand Header */}
       <View style={styles.header}>
         <View style={[styles.logoBadge, { backgroundColor: colors.primary }]}>

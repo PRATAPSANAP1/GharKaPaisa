@@ -52,6 +52,7 @@ export default function HomeScreen() {
       subtitle: 'Get approved in minutes',
       color: '#1B74BB',
       gradient: ['#1B74BB', '#0851A1'],
+      icon: 'credit-card',
     },
     {
       id: 2,
@@ -59,6 +60,7 @@ export default function HomeScreen() {
       subtitle: 'Starting from 10.99% p.a.',
       color: '#9CD83D',
       gradient: ['#9CD83D', '#7BC32E'],
+      icon: 'dollar-sign',
     },
     {
       id: 3,
@@ -66,6 +68,7 @@ export default function HomeScreen() {
       subtitle: 'Lifetime free credit cards',
       color: '#F59E0B',
       gradient: ['#F59E0B', '#D97706'],
+      icon: 'gift',
     },
   ];
 
@@ -144,6 +147,7 @@ export default function HomeScreen() {
                 style={styles.bannerGradient}
               >
                 <View style={styles.bannerContent}>
+                  <Icon name={banner.icon as any} size={48} color="#fff" style={styles.bannerIcon} />
                   <Text style={styles.bannerTitle}>{banner.title}</Text>
                   <Text style={styles.bannerSubtitle}>{banner.subtitle}</Text>
                   <Button
@@ -452,6 +456,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.md,
   },
+  bannerIcon: {
+    marginBottom: spacing.sm,
+  },
   bannerTitle: {
     fontSize: 28,
     fontWeight: '800',
@@ -490,17 +497,16 @@ const styles = StyleSheet.create({
   },
   popularCard: {
     width: 220,
-    backgroundColor: colors.bgSecondary,
-    borderRadius: 12,
+    backgroundColor: colors.card,
+    borderRadius: 16,
     padding: spacing.md,
-    marginRight: spacing.sm,
+    marginRight: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   popularBadge: {
     alignSelf: 'flex-start',

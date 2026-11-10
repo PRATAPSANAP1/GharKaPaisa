@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuthStore } from '../app/store/authStore';
 import { 
   HiOutlineHome, 
-  HiOutlineTag, 
-  HiOutlineArrowRightOnRectangle, 
-  HiOutlineUserPlus, 
-  HiOutlinePhone 
+  HiOutlineCreditCard, 
+  HiOutlineBanknotes, 
+  HiOutlinePhone, 
+  HiOutlineArrowRightOnRectangle,
+  HiOutlineSquares2X2 
 } from 'react-icons/hi2';
 
 export default function HomeMobileBottomNav() {
   const { C, isDark } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated, user } = useAuthStore();
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : true);
 
   useEffect(() => {
@@ -30,13 +33,33 @@ export default function HomeMobileBottomNav() {
     return currentPath.startsWith(path);
   };
 
+  const getDashboardPath = () => {
+    if (!user) return '/partner/dashboard';
+    switch (user.role) {
+      case 'ADMIN':
+        return '/admin/dashboard';
+      case 'SUPER_ADMIN':
+        return '/super-admin/dashboard';
+      case 'EMPLOYEE':
+        return '/employee/dashboard';
+      case 'PARTNER':
+      default:
+        return '/partner/dashboard';
+    }
+  };
+
   const navItems = [
     { id: 'home', label: 'Home', path: '/', icon: <HiOutlineHome size={22} /> },
-    { id: 'offers', label: 'Offers', path: '/loans', icon: <HiOutlineTag size={22} /> },
-    { id: 'login', label: 'Login', path: '/login', icon: <HiOutlineArrowRightOnRectangle size={22} /> },
-    { id: 'register', label: 'Register', path: '/register', icon: <HiOutlineUserPlus size={22} /> },
+    { id: 'cards', label: 'Cards', path: '/credit-cards', icon: <HiOutlineCreditCard size={22} /> },
+    { id: 'loans', label: 'Loans', path: '/loans', icon: <HiOutlineBanknotes size={22} /> },
     { id: 'support', label: 'Support', path: '/contact', icon: <HiOutlinePhone size={22} /> },
+    isAuthenticated
+      ? { id: 'dashboard', label: 'Dashboard', path: getDashboardPath(), icon: <HiOutlineSquares2X2 size={22} /> }
+      : { id: 'login', label: 'Login', path: '/login', icon: <HiOutlineArrowRightOnRectangle size={22} /> },
   ];
+
+  const activeColor = C?.teal || '#2563EB';
+  const inactiveColor = isDark ? '#94A3B8' : '#64748B';
 
   return (
     <div
@@ -45,7 +68,7 @@ export default function HomeMobileBottomNav() {
         bottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
         left: '10px',
         right: '10px',
-        zIndex: 50,
+        zIndex: 90,
         display: 'flex',
         justifyContent: 'center',
         pointerEvents: 'none'
@@ -55,22 +78,21 @@ export default function HomeMobileBottomNav() {
         style={{
           width: '100%',
           maxWidth: '540px',
-          background: isDark ? '#1E293B' : '#FFFFFF',
+          background: isDark ? 'rgba(30, 41, 59, 0.96)' : 'rgba(255, 255, 255, 0.96)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-around',
-          padding: '10px 14px',
+          padding: '10px 8px',
           pointerEvents: 'auto',
-          border: `1px solid ${isDark ? '#334155' : '#E2E8F0'}`,
-          borderRadius: '18px',
-          boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
-          backdropFilter: 'blur(10px)'
+          border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)'}`,
+          borderRadius: '20px',
+          boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.45)' : '0 8px 30px rgba(0,0,0,0.12)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)'
         }}
       >
         {navItems.map((item) => {
           const active = isActive(item.path);
-          const activeColor = '#2563EB';
-          const inactiveColor = isDark ? '#94A3B8' : '#64748B';
 
           return (
             <div

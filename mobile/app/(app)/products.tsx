@@ -142,7 +142,6 @@ export default function ProductsScreen() {
           <Text style={[styles.title, { color: colors.text }]}>Products Catalog</Text>
           <Text style={[styles.subtitle, { color: colors.textLight }]}>Authorized financial products & referral links</Text>
         </View>
-        <ThemeToggle size="sm" />
       </View>
 
       {loading ? (

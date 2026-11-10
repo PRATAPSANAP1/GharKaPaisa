@@ -248,7 +248,6 @@ export default function SuperAdminDashboardScreen() {
           <Text style={styles.headerSubtitle}>{user?.full_name || 'Administrator'}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <ThemeToggle size="sm" />
           <TouchableOpacity style={styles.logoutBtn} onPress={() => router.replace('/(auth)/login')}>
             <Icon name="x" size={20} color="#fff" />
           </TouchableOpacity>

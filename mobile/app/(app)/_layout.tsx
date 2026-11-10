@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Tabs, Redirect } from 'expo-router';
+import { Tabs, Redirect, useRouter, usePathname } from 'expo-router';
 import { Text, View, StyleSheet, AppState } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { LoadingState } from '../../components/LoadingState';
-import { colors } from '../../theme/colors';
+import { MinimalDock } from '../../components/MinimalDock';
 import { typography } from '../../theme/typography';
 import { getUnreadCount } from '../../services/messenger.service';
 import { getMessengerSocket } from '../../services/messengerSocket';
@@ -36,7 +36,9 @@ const TabIcon = ({ label, focused, badgeCount }: { label: string; focused: boole
 export default function AppLayout() {
   const { isAuthenticated, isLoading } = useAuth();
   const { colors } = useTheme();
+  const router = useRouter();
   const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -106,25 +108,74 @@ export default function AppLayout() {
     return <Redirect href="/(auth)/login" />;
   }
 
+  const pathname = usePathname();
+
+  const currentTab = (() => {
+    if (pathname.includes('/applications')) return 'applications';
+    if (pathname.includes('/customers')) return 'customers';
+    if (pathname.includes('/messenger')) return 'messenger';
+    if (pathname.includes('/more')) return 'more';
+    if (pathname.includes('/dashboard')) return 'dashboard';
+    return activeTab;
+  })();
+
+  const dockItems = [
+    {
+      id: 'home',
+      label: 'Home',
+      active: currentTab === 'dashboard',
+      onPress: () => {
+        setActiveTab('dashboard');
+        router.replace('/(app)/dashboard');
+      },
+    },
+    {
+      id: 'cards',
+      label: 'Cards',
+      active: currentTab === 'applications',
+      onPress: () => {
+        setActiveTab('applications');
+        router.replace('/(app)/applications');
+      },
+    },
+    {
+      id: 'customers',
+      label: 'Customers',
+      active: currentTab === 'customers',
+      onPress: () => {
+        setActiveTab('customers');
+        router.replace('/(app)/customers');
+      },
+    },
+    {
+      id: 'chat',
+      label: 'Chat',
+      active: currentTab === 'messenger',
+      badgeCount: unreadCount,
+      onPress: () => {
+        setActiveTab('messenger');
+        router.replace('/(app)/messenger');
+      },
+    },
+    {
+      id: 'more',
+      label: 'More',
+      active: currentTab === 'more',
+      onPress: () => {
+        setActiveTab('more');
+        router.replace('/(app)/more');
+      },
+    },
+  ];
+
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: colors.card,
-          borderTopColor: colors.border,
-          height: 64,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textLight,
-        tabBarLabelStyle: {
-          fontSize: typography.sizes.xs,
-          fontWeight: typography.weights.bold,
-        },
-      }}
-    >
+    <View style={{ flex: 1 }}>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: { display: 'none' },
+        }}
+      >
       {/* 1. Dashboard */}
       <Tabs.Screen
         name="dashboard"
@@ -223,7 +274,9 @@ export default function AppLayout() {
       <Tabs.Screen name="employee-credit-cards" options={{ href: null }} />
       <Tabs.Screen name="employee-loan-on-card" options={{ href: null }} />
       <Tabs.Screen name="employee-smart-emi" options={{ href: null }} />
-    </Tabs>
+      </Tabs>
+      <MinimalDock items={dockItems} />
+    </View>
   );
 }
 

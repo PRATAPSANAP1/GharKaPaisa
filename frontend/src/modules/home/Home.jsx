@@ -611,7 +611,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs, dynamicBa
     const filterCategories = ["All", "Cashback", "Travel", "Business", "Rewards"];
 
     return (
-      <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: "80px", color: C.text }}>
+      <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: isMobile ? "110px" : "40px", color: C.text }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px 16px" }}>
           <BackRow />
 
@@ -1301,7 +1301,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs, dynamicBa
   }
 
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: "80px" }}>
+    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: isMobile ? "110px" : "40px" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px 16px" }}>
         <BackRow />
         {category.type === "dynamic-products" ? (
@@ -1338,35 +1338,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs, dynamicBa
   );
 }
 
-// ── Mobile Bottom Navigation ────────────────────────────────────────
-function MobileBottomNav({ C, onNavigate, activeTab }) {
-  const { t } = useTranslation();
-  const navItems = [
-    { id: "home", label: t('home.dashboard', 'Dashboard'), icon: <FaHome /> },
-    { id: "credit-cards", label: t('home.creditCard', 'Credit Card'), icon: <FaRegCreditCard /> },
-    { id: "loans", label: t('home.loan', 'Loan'), icon: <FaMoneyBillWave /> },
-    { id: "insurance", label: t('home.insurance', 'Insurance'), icon: <FaShieldAlt /> },
-    { id: "investment", label: t('home.investment', 'Investment'), icon: <FaChartLine /> },
-    { id: "services", label: t('home.services', 'Services'), icon: <FaFileInvoiceDollar /> }
-  ];
 
-  return (
-    <div style={{
-      position: "fixed", bottom: 0, left: 0, right: 0,
-      background: C.card, borderTop: `1px solid ${C.border}`,
-      display: "flex", justifyContent: "flex-start", padding: "10px 16px", gap: "24px",
-      overflowX: "auto", whiteSpace: "nowrap", WebkitOverflowScrolling: "touch",
-      zIndex: 100, boxShadow: "0 -4px 12px rgba(0,0,0,0.05)"
-    }}>
-      {navItems.map(item => (
-        <div key={item.id} onClick={() => onNavigate(item.id)} style={{ flexShrink: 0, minWidth: "50px", display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", color: activeTab === item.id ? C.teal : C.textLight, cursor: "pointer" }}>
-          <div style={{ fontSize: "20px" }}>{item.icon}</div>
-          <div style={{ fontSize: "10px", fontWeight: 700, whiteSpace: "nowrap" }}>{item.label}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 
 
@@ -1389,7 +1361,7 @@ function FastagPage({ onBack, C, isMobile, breadcrumbs }) {
   };
 
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: "80px" }}>
+    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: isMobile ? "110px" : "40px" }}>
       <div style={{ maxWidth: "800px", margin: "0 auto", padding: "24px 16px" }}>
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", fontSize: "14px", color: "#64748b", marginBottom: "20px" }}>
           {breadcrumbs.map((crumb, idx) => {
@@ -1475,7 +1447,7 @@ function TravelBookingPage({ onBack, C, isMobile, breadcrumbs }) {
   ];
 
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: "80px" }}>
+    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: isMobile ? "110px" : "40px" }}>
       <div style={{ maxWidth: "800px", margin: "0 auto", padding: "24px 16px" }}>
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", fontSize: "14px", color: "#64748b", marginBottom: "20px" }}>
           {breadcrumbs.map((crumb, idx) => {
@@ -2322,28 +2294,19 @@ export default function Home({ onNavigate }) {
 
   if (activeCategory?.id === "fastag") {
     return (
-      <>
-        <FastagPage onBack={handleBack} C={C} isMobile={isMobile} breadcrumbs={getBreadcrumbs(activeCategory)} />
-        {isMobile && <MobileBottomNav C={C} onNavigate={handleBottomNavClick} activeTab="home" />}
-      </>
+      <FastagPage onBack={handleBack} C={C} isMobile={isMobile} breadcrumbs={getBreadcrumbs(activeCategory)} />
     );
   }
 
   if (activeCategory?.id === "flight-booking") {
     return (
-      <>
-        <TravelBookingPage onBack={handleBack} C={C} isMobile={isMobile} breadcrumbs={getBreadcrumbs(activeCategory)} />
-        {isMobile && <MobileBottomNav C={C} onNavigate={handleBottomNavClick} activeTab="travel-transit" />}
-      </>
+      <TravelBookingPage onBack={handleBack} C={C} isMobile={isMobile} breadcrumbs={getBreadcrumbs(activeCategory)} />
     );
   }
 
   if (activeCategory?.id === "personal-loan" || activeCategory?.id === "category-personal_loan") {
     return (
-      <>
-        <PersonalLoanPage onBack={handleBack} C={C} isMobile={isMobile} />
-        {isMobile && <MobileBottomNav C={C} onNavigate={handleBottomNavClick} activeTab="home" />}
-      </>
+      <PersonalLoanPage onBack={handleBack} C={C} isMobile={isMobile} />
     );
   }
 
@@ -2351,7 +2314,6 @@ export default function Home({ onNavigate }) {
     return (
       <>
         <CategoryPage category={activeCategory} onBack={handleBack} onItemClick={handleItemClick} C={C} breadcrumbs={getBreadcrumbs(activeCategory)} dynamicBanks={dynamicBanks} />
-        {isMobile && <MobileBottomNav C={C} onNavigate={handleBottomNavClick} activeTab={activeCategory.id || "home"} />}
         {verifyCard && (
           <CardApplyVerificationModal
             card={verifyCard}
@@ -2368,7 +2330,7 @@ export default function Home({ onNavigate }) {
   return (
     <>
       <SEO />
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: isMobile ? "60px" : "30px" }}>
+    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: isMobile ? "110px" : "40px" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: isMobile ? "12px 16px" : "20px 16px" }}>
 
         {/* ── HERO BANNER OVERHAUL ── */}
@@ -2920,15 +2882,20 @@ export default function Home({ onNavigate }) {
 
           return (
             <div style={{ 
-              marginTop: isMobile ? "24px" : "32px", padding: isMobile ? "32px 20px" : "48px 48px", 
+              marginTop: isMobile ? "24px" : "32px", 
+              padding: isMobile ? (window.innerWidth < 480 ? "24px 16px" : "32px 20px") : "48px 48px", 
               background: footerBg, color: textColor, borderRadius: "24px",
               border: `1px solid ${borderColor}`, transition: "background 0.3s, color 0.3s"
             }}>
               <div style={{
-                display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "2fr 1fr 1fr 1fr",
-                gap: "36px", marginBottom: "32px"
+                display: "grid", 
+                gridTemplateColumns: isMobile 
+                  ? (window.innerWidth < 520 ? "1fr" : "repeat(2, 1fr)") 
+                  : "2fr 1fr 1fr 1fr",
+                gap: isMobile ? "28px" : "36px", 
+                marginBottom: "32px"
               }}>
-                <div style={{ gridColumn: isMobile ? "1 / -1" : "auto" }}>
+                <div style={{ gridColumn: isMobile ? (window.innerWidth < 520 ? "1" : "1 / -1") : "auto" }}>
                   <h2 style={{ margin: "0 0 4px 0", fontSize: "28px", fontWeight: 900, letterSpacing: "-0.5px", color: textColor }}>
                     GharKaPaisa
                   </h2>
@@ -3002,7 +2969,7 @@ export default function Home({ onNavigate }) {
               </div>
 
               {/* Quick Links Horizontal Strip */}
-              <div style={{ borderTop: `1px solid ${borderColor}`, paddingTop: "16px", marginBottom: "16px", fontSize: "12px", color: subTextColor, display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
+              <div style={{ borderTop: `1px solid ${borderColor}`, paddingTop: "16px", marginBottom: "16px", fontSize: "12px", color: subTextColor, display: "flex", flexWrap: "wrap", gap: "8px 12px", alignItems: "center", lineHeight: 1.6 }}>
                 <span style={{ fontWeight: 700, color: textColor }}>Quick Links:</span>
                 <span onClick={() => navigate("/")} style={{ cursor: "pointer", color: accentColor }}>Home</span> |
                 <span onClick={() => navigate("/credit-cards")} style={{ cursor: "pointer", color: accentColor }}>Products</span> |
@@ -3024,8 +2991,6 @@ export default function Home({ onNavigate }) {
 
       </div>
       
-      {/* Show Bottom Nav only on Mobile */}
-      {isMobile && <MobileBottomNav C={C} onNavigate={handleBottomNavClick} activeTab="home" />}
       {verifyCard && (
         <CardApplyVerificationModal
           card={verifyCard}

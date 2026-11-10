@@ -516,10 +516,17 @@
 /* ══════════════════════════════════════════════════════════════════════════════
    Mobile Responsiveness
    ══════════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .gkp-chatbot-container {
+    bottom: calc(85px + env(safe-area-inset-bottom, 0px));
+    right: 16px;
+  }
+}
+
 @media (max-width: 480px) {
   .gkp-chatbot-container {
-    bottom: 16px;
-    right: 16px;
+    bottom: calc(85px + env(safe-area-inset-bottom, 0px));
+    right: 14px;
   }
 
   .robot-launcher {

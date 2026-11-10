@@ -142,7 +142,6 @@ export default function WalletScreen() {
           </TouchableOpacity>
           <Text style={[styles.title, { color: colors.text }]}>Wallet & Payouts</Text>
         </View>
-        <ThemeToggle size="sm" />
       </View>
 
       {/* Balance Card */}

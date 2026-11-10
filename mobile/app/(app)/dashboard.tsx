@@ -3,13 +3,13 @@ import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native
 import { router } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { ThemeToggle } from '../../components/ThemeToggle';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { StatusBadge } from '../../components/StatusBadge';
+import { ThemeToggle } from '../../components/ThemeToggle';
 import PartnerDashboardScreen from './partner-dashboard';
 import TeamDashboardScreen from './team-dashboard';
 import EmployeeDashboardScreen from './employee-dashboard';
@@ -134,6 +134,7 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.md,
     paddingTop: spacing.xl,
+    paddingBottom: 90,
   },
   header: {
     flexDirection: 'row',

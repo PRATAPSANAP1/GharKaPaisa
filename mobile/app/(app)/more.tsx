@@ -10,7 +10,6 @@ import {
 import { router } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { ThemeToggle } from '../../components/ThemeToggle';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
@@ -267,7 +266,6 @@ export default function MoreScreen() {
                 Priority-ordered menu ({userRole || 'User'} {userDesignation ? `• ${userDesignation}` : ''})
               </Text>
             </View>
-            <ThemeToggle size="sm" />
           </View>
         </View>
 
