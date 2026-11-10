@@ -1,6 +1,11 @@
-import React from 'react';
-import ChatbotModule from '../../modules/chatbot/Chatbot';
+import React, { Suspense, lazy } from 'react';
+
+const ChatbotModule = lazy(() => import('../../modules/chatbot/Chatbot'));
 
 export default function Chatbot() {
-  return <ChatbotModule />;
+  return (
+    <Suspense fallback={null}>
+      <ChatbotModule />
+    </Suspense>
+  );
 }

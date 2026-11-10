@@ -4,9 +4,21 @@ import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { Icons } from "../../../components/Icon/PartnerIcons";
 import {
   FaArrowUp, FaArrowDown, FaPlus, FaTrash, FaEdit, FaTimes, FaSave,
-  FaCheck, FaExclamationTriangle, FaChevronDown, FaChevronUp
+  FaCheck, FaExclamationTriangle, FaChevronDown, FaChevronUp,
+  FaMobileAlt, FaBolt, FaMoneyBillWave, FaTags, FaRegCreditCard,
+  FaUniversity, FaLaptopHouse, FaMoneyCheckAlt, FaUser, FaBriefcase,
+  FaHome, FaHeartbeat, FaShieldAlt, FaUmbrella, FaPlane, FaTrain,
+  FaBus, FaHotel, FaGift, FaUsers, FaFileInvoiceDollar, FaTv,
+  FaRegQuestionCircle
 } from "react-icons/fa";
-import * as FaIcons from "react-icons/fa";
+
+const SECTION_ICON_MAP = {
+  FaMobileAlt, FaBolt, FaMoneyBillWave, FaTags, FaRegCreditCard,
+  FaUniversity, FaLaptopHouse, FaMoneyCheckAlt, FaUser, FaBriefcase,
+  FaHome, FaHeartbeat, FaShieldAlt, FaUmbrella, FaPlane, FaTrain,
+  FaBus, FaHotel, FaGift, FaUsers, FaFileInvoiceDollar, FaTv,
+  FaRegQuestionCircle
+};
 
 const defaultFallbackSections = {
   money_transfer: {
@@ -411,11 +423,11 @@ export default function ManageSections() {
 
   // Dynamic FontAwesome Icon previewer
   const renderIconPreview = (iconName, color = C.teal, size = 20) => {
-    const IconComp = FaIcons[iconName];
+    const IconComp = SECTION_ICON_MAP[iconName];
     if (IconComp) {
       return <IconComp size={size} style={{ color }} />;
     }
-    return <FaIcons.FaRegQuestionCircle size={size} style={{ color: C.textLight }} />;
+    return <FaRegQuestionCircle size={size} style={{ color: C.textLight }} />;
   };
 
   return (

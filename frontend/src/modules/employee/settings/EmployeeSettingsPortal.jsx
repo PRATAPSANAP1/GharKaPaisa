@@ -13,7 +13,8 @@ import NotificationSettings from '../../../components/NotificationSettings/Notif
 
 export default function EmployeeSettingsPortal() {
   const { C, isDark, toggle } = useTheme();
-  const { user, logout } = useAuthStore();
+  const user = useAuthStore(state => state.user);
+  const logout = useAuthStore(state => state.logout);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('account');
   const [profileData, setProfileData] = useState(null);

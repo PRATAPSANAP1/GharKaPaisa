@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { FaSearch, FaSignInAlt, FaUserPlus } from 'react-icons/fa';
@@ -30,8 +30,17 @@ const Navbar = () => {
   const setSearchItem = useSearchStore(state => state.setSearchItem);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [dynamicCatalog, setDynamicCatalog] = useState(staticLinks);
+
+  // Debounce search query to prevent high-frequency re-filtering
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 200);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
   const path = location.pathname.toLowerCase().replace(/\/$/, '');
   const isAuthPage = path === '/login' || path === '/register';
@@ -87,12 +96,15 @@ const Navbar = () => {
     fetchCatalog();
   }, []);
 
-  const filteredCatalog = searchQuery.trim() === ""
-    ? []
-    : (Array.isArray(dynamicCatalog) ? dynamicCatalog : []).filter(item =>
-        item.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.desc && item.desc.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
+  const filteredCatalog = useMemo(() => {
+    const q = debouncedQuery.trim().toLowerCase();
+    if (!q) return [];
+    const list = Array.isArray(dynamicCatalog) ? dynamicCatalog : [];
+    return list.filter(item =>
+      (item.label && item.label.toLowerCase().includes(q)) ||
+      (item.desc && item.desc.toLowerCase().includes(q))
+    );
+  }, [debouncedQuery, dynamicCatalog]);
 
   return (
     <>
@@ -139,7 +151,7 @@ const Navbar = () => {
             <span></span>
           </button>
           <div onClick={() => navigate('/')} style={{ display: "flex", alignItems: "center", gap: "12px", cursor: "pointer" }}>
-            <img src={logo} alt="logo" className="logo" />
+            <img src={logo} alt="GharKaPaisa Logo" className="logo" width="44" height="44" loading="eager" decoding="async" />
             <h1 style={{ color: C.text, margin: 0, fontSize: "22px", fontWeight: "bold" }}>GharKaPaisa</h1>
           </div>
         </div>

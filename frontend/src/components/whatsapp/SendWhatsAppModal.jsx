@@ -23,7 +23,7 @@ export default function SendWhatsAppModal({
   initialVariables = {},
   onSuccess = null
 }) {
-  const { user } = useAuthStore();
+  const user = useAuthStore(state => state.user);
   
   // Recipient Category: CUSTOMER | STAFF
   const [recipientCategory, setRecipientCategory] = useState('CUSTOMER');

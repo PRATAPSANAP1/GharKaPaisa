@@ -18,7 +18,7 @@ import LoadingLogo from '../../../components/Loader/LoadingLogo';
 
 export default function EmployeeLoanOnCreditCard() {
   const { C, isDark } = useTheme();
-  const { user } = useAuthStore();
+  const user = useAuthStore(state => state.user);
   const [search, setSearch] = useState('');
   const [selectedBank, setSelectedBank] = useState('ALL');
   const [dbOffers, setDbOffers] = useState([]);

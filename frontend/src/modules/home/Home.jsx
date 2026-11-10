@@ -16,9 +16,19 @@ import {
   FaBuilding as FaBuildingAlt, FaReceipt, FaBriefcase, FaHandsHelping, FaIdCard,
   FaPlane, FaTrain, FaBus, FaHotel, FaTimes, FaWhatsapp, FaSearch, FaCheckCircle
 } from "react-icons/fa";
-import * as FaIcons from "react-icons/fa";
 
-import CardApplyVerificationModal from "./components/CreditCards/CardApplyVerificationModal";
+const DYNAMIC_ICON_MAP = {
+  FaMobileAlt, FaBolt, FaMoneyBillWave, FaChevronRight, FaChevronLeft,
+  FaRegCreditCard, FaLaptopHouse, FaUniversity, FaBuilding, FaCar,
+  FaGraduationCap, FaHeartbeat, FaShieldAlt, FaUmbrella, FaFacebook,
+  FaTwitter, FaInstagram, FaEnvelope, FaPhoneAlt, FaArrowLeft, FaHome,
+  FaChartLine, FaFileInvoiceDollar, FaCalculator, FaUsers, FaMoneyCheckAlt,
+  FaStar, FaGooglePlay, FaApple, FaLinkedin, FaYoutube, FaFileAlt,
+  FaReceipt, FaBriefcase, FaHandsHelping, FaIdCard,
+  FaPlane, FaTrain, FaBus, FaHotel, FaTimes, FaWhatsapp, FaSearch, FaCheckCircle
+};
+
+const CardApplyVerificationModal = React.lazy(() => import("./components/CreditCards/CardApplyVerificationModal"));
 import { loansData } from "./components/Loans/index";
 import { resolveAndApply } from "../../services/applicationResolver";
 
@@ -31,7 +41,8 @@ import { popularCards } from "./components/PopularCards/index";
 import { travelTransitData } from "./components/TravelTransit/index";
 import CategoryCardItem from "./components/CategoryCardItem";
 import { HeroBannerCarousel } from "./components/HomePageSections";
-import PersonalLoanPage from "./components/Loans/PersonalLoanPage";
+const PersonalLoanPage = React.lazy(() => import("./components/Loans/PersonalLoanPage"));
+import LazyRenderOnScroll from "../../components/LazyRenderOnScroll";
 import "./Home.css";
 
 // Import banner images
@@ -1620,7 +1631,7 @@ export default function Home({ onNavigate }) {
     if (cmsSection && cmsSection.is_active && cmsSection.items?.length > 0) {
       return cmsSection.items.map(item => {
         if (typeof item.icon === 'string') {
-          const IconComp = FaIcons[item.icon] || FaIcons.FaRegCreditCard;
+          const IconComp = DYNAMIC_ICON_MAP[item.icon] || FaRegCreditCard;
           return { ...item, icon: <IconComp /> };
         }
         return item;
@@ -2306,7 +2317,9 @@ export default function Home({ onNavigate }) {
 
   if (activeCategory?.id === "personal-loan" || activeCategory?.id === "category-personal_loan") {
     return (
-      <PersonalLoanPage onBack={handleBack} C={C} isMobile={isMobile} />
+      <React.Suspense fallback={<div style={{ padding: "40px", textAlign: "center" }}>Loading...</div>}>
+        <PersonalLoanPage onBack={handleBack} C={C} isMobile={isMobile} />
+      </React.Suspense>
     );
   }
 
@@ -2315,11 +2328,13 @@ export default function Home({ onNavigate }) {
       <>
         <CategoryPage category={activeCategory} onBack={handleBack} onItemClick={handleItemClick} C={C} breadcrumbs={getBreadcrumbs(activeCategory)} dynamicBanks={dynamicBanks} />
         {verifyCard && (
-          <CardApplyVerificationModal
-            card={verifyCard}
-            onClose={() => setVerifyCard(null)}
-            C={C}
-          />
+          <React.Suspense fallback={null}>
+            <CardApplyVerificationModal
+              card={verifyCard}
+              onClose={() => setVerifyCard(null)}
+              C={C}
+            />
+          </React.Suspense>
         )}
       </>
     );
@@ -2854,6 +2869,10 @@ export default function Home({ onNavigate }) {
                   <img 
                     src={bank.logo} 
                     alt={bank.name} 
+                    loading="lazy"
+                    decoding="async"
+                    width={100}
+                    height={35}
                     style={{ 
                       maxWidth: "100%", 
                       maxHeight: "100%", 
@@ -2869,6 +2888,7 @@ export default function Home({ onNavigate }) {
 
 
         {/* ── MODERN FOOTER ── */}
+        <LazyRenderOnScroll minHeight={380} rootMargin="300px">
         {(() => {
           const isDark = C?.isDark || C?.bg === '#000000' || C?.text === '#F8FAFC';
           const footerBg = isDark ? "#081424" : "#F1F5F9";
@@ -2987,16 +3007,19 @@ export default function Home({ onNavigate }) {
             </div>
           );
         })()}
+        </LazyRenderOnScroll>
 
 
       </div>
       
       {verifyCard && (
-        <CardApplyVerificationModal
-          card={verifyCard}
-          onClose={() => setVerifyCard(null)}
-          C={C}
-        />
+        <React.Suspense fallback={null}>
+          <CardApplyVerificationModal
+            card={verifyCard}
+            onClose={() => setVerifyCard(null)}
+            C={C}
+          />
+        </React.Suspense>
       )}
       {selectedPopularCard && (
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", backdropFilter: "blur(4px)" }}>

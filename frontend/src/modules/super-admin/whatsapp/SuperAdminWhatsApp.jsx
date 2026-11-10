@@ -10,7 +10,7 @@ import { useAuthStore } from '../../../app/store/authStore';
 import SendWhatsAppModal from '../../../components/whatsapp/SendWhatsAppModal';
 
 export default function SuperAdminWhatsApp() {
-  const { user } = useAuthStore();
+  const user = useAuthStore(state => state.user);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {

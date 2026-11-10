@@ -5,7 +5,6 @@ import { useTheme } from "../../../contexts/ThemeContext";
 import { useActiveBanks } from "../../../contexts/BanksContext";
 import { getApiV1Url } from "../../../config/api";
 import { FaChevronRight, FaChevronLeft, FaRegCreditCard, FaLaptopHouse, FaUniversity, FaBuilding, FaCar, FaGraduationCap, FaHeartbeat, FaShieldAlt, FaUmbrella, FaPlane, FaTrain, FaBus, FaHotel, FaStar, FaCheckCircle } from "react-icons/fa";
-import * as FaIcons from "react-icons/fa";
 
 // Import modular data lists
 import { bankCardsDetails, ltfCards } from "./CreditCards/index";
@@ -66,6 +65,10 @@ function ResponsiveGrid({ items, C, onSeeMore, onItemClick }) {
             <img 
               src={item.image} 
               alt={t('banks.' + item.id, item.label)} 
+              loading="lazy"
+              decoding="async"
+              width={isMobile ? 80 : 120}
+              height={isMobile ? 35 : 50}
               style={{ 
                 maxWidth: "85%", 
                 maxHeight: "85%", 
@@ -323,6 +326,11 @@ export function HeroBannerCarousel({ C, navigate }) {
             <img
               src={banner.image}
               alt={banner.title || 'Offer Banner'}
+              loading={idx === 0 ? "eager" : "lazy"}
+              fetchPriority={idx === 0 ? "high" : "auto"}
+              decoding={idx === 0 ? "sync" : "async"}
+              width={1200}
+              height={380}
               onError={(e) => {
                 e.currentTarget.src = offerBanner;
               }}

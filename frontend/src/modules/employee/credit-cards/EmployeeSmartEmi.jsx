@@ -18,7 +18,7 @@ import LoadingLogo from '../../../components/Loader/LoadingLogo';
 
 export default function EmployeeSmartEmi() {
   const { C, isDark } = useTheme();
-  const { user } = useAuthStore();
+  const user = useAuthStore(state => state.user);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
   React.useEffect(() => {

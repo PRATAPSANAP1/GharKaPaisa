@@ -7,11 +7,11 @@ import logo from '../assets/logos/logo.webp';
 import GkpLoader from '../components/Loader/GkpLoader';
 
 // Layouts
-import AdminLayout from '../layouts/AdminLayout';
-import PartnerLayout from '../layouts/PartnerLayout';
-import SuperAdminLayout from '../layouts/SuperAdminLayout';
 import PublicLayout from '../layouts/PublicLayout';
-import EmployeeLayout from '../layouts/EmployeeLayout';
+const AdminLayout = lazy(() => import('../layouts/AdminLayout'));
+const PartnerLayout = lazy(() => import('../layouts/PartnerLayout'));
+const SuperAdminLayout = lazy(() => import('../layouts/SuperAdminLayout'));
+const EmployeeLayout = lazy(() => import('../layouts/EmployeeLayout'));
 
 // Public Pages
 const Home = lazy(() => import('../modules/home/Home'));

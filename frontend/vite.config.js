@@ -10,8 +10,14 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
+            if (id.includes('react-icons/fa') || id.includes('react-icons/fa6')) {
+              return 'vendor-icons-fa';
+            }
+            if (id.includes('react-icons/md')) {
+              return 'vendor-icons-md';
+            }
             if (id.includes('react-icons')) {
-              return 'vendor-react-icons';
+              return 'vendor-icons-misc';
             }
             if (id.includes('lucide-react')) {
               return 'vendor-lucide';

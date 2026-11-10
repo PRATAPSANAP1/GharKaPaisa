@@ -81,7 +81,7 @@ export default function PartnerProducts({
   const S = makeS(C);
   const { activeBanks } = useActiveBanks();
   
-  const { user } = useAuthStore();
+  const user = useAuthStore(state => state.user);
   const partnerCode = user?.partner_code || user?.Partner_code || '';
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);

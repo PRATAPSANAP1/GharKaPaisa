@@ -6,7 +6,7 @@ import AttendanceVerificationStepper from './components/AttendanceVerificationSt
 import GpsAcquisitionProgress from './components/GpsAcquisitionProgress';
 import LivenessPreparation from './components/LivenessPreparation';
 import CameraPermissionState from './components/CameraPermissionState';
-import LivenessState from './components/LivenessState';
+const LivenessState = React.lazy(() => import('./components/LivenessState'));
 import LivenessAnalysis from './components/LivenessAnalysis';
 import LivenessSuccess from './components/LivenessSuccess';
 import IdentityVerificationProgress from './components/IdentityVerificationProgress';
@@ -709,16 +709,22 @@ export default function AttendanceVerificationModal({
 
         {/* STEP 3: LIVE AWS FACE LIVENESS DETECTOR */}
         {currentState === 'LIVENESS_ACTIVE' && awsProviderSessionId && (
-          <LivenessState
-            key="liveness_active"
-            sessionId={awsProviderSessionId}
-            region={awsRegion}
-            livenessConfig={livenessConfig}
-            onAnalysisComplete={handleAnalysisComplete}
-            onError={handleLivenessError}
-            onUserCancel={handleLivenessCancel}
-            isMobile={isMobile}
-          />
+          <React.Suspense fallback={
+            <div style={{ padding: '32px', textAlign: 'center', color: '#64748B' }}>
+              <div style={{ marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>Loading biometric verification...</div>
+            </div>
+          }>
+            <LivenessState
+              key="liveness_active"
+              sessionId={awsProviderSessionId}
+              region={awsRegion}
+              livenessConfig={livenessConfig}
+              onAnalysisComplete={handleAnalysisComplete}
+              onError={handleLivenessError}
+              onUserCancel={handleLivenessCancel}
+              isMobile={isMobile}
+            />
+          </React.Suspense>
         )}
 
         {/* STEP 4: LIVENESS & BACKEND GEOFENCE ANALYZING */}
