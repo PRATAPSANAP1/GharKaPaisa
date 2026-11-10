@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import AppRoutes from '../routes/AppRoutes';
 import { ThemeProvider } from '../contexts/ThemeContext';
