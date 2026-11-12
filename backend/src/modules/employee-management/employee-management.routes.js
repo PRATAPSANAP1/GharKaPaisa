@@ -651,6 +651,32 @@ router.delete('/assigned-product-links/:id', async (req, res, next) => {
   }
 });
 
+// DELETE /api/v1/employees/:id — Delete or deactivate an employee account (temporary or permanent)
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const mode = req.query.mode || req.body?.mode || 'permanent';
+
+    if (id === req.user.id) {
+      return res.status(400).json({ success: false, message: 'You are not permitted to delete your own account.' });
+    }
+
+    const { softDeleteUserAccount, deleteUserAccount } = require('../auth/user-deletion.service.js');
+    let result;
+    if (mode === 'temporary') {
+      result = await softDeleteUserAccount(id);
+    } else {
+      result = await deleteUserAccount(id);
+    }
+
+    const actionText = mode === 'temporary' ? 'temporarily deactivated (soft deleted)' : 'permanently deleted';
+    return res.json({ success: true, data: result, message: `Employee account ${actionText} successfully.` });
+  } catch (err) {
+    logger.error('Error deleting employee account:', err);
+    next(err);
+  }
+});
+
 // POST /api/v1/employees/bulk-product-links — Bulk assign product links to employees
 router.post('/bulk-product-links', async (req, res, next) => {
   try {

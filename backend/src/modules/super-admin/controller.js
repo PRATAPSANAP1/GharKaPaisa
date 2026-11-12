@@ -1048,7 +1048,10 @@ const getAuditLogs = async (req, res, next) => {
 
 /**
  * DELETE /api/v1/superadmin/admins/:id
- * Delete an administrator user permanently.
+ * DELETE /api/v1/superadmin/users/:id
+ * DELETE /api/v1/superadmin/partners/:id
+ * DELETE /api/v1/superadmin/employees/:id
+ * Delete any user account (temporary or permanent).
  */
 const deleteAdmin = async (req, res, next) => {
   try {
@@ -1059,12 +1062,13 @@ const deleteAdmin = async (req, res, next) => {
       return error(res, 'You are not permitted to delete your own account.', 400);
     }
 
-    // Check if user exists and is admin/employee
+    // Check if user exists in users table
     let { rows: [targetUser] } = await query(
-      `SELECT id, email, role FROM users WHERE id::text = $1`,
+      `SELECT id, email, role, full_name FROM users WHERE id::text = $1`,
       [id]
     );
 
+    // If not found, check partner_profiles
     if (!targetUser) {
       const { rows: [partner] } = await query(
         `SELECT user_id FROM partner_profiles WHERE id::text = $1`,
@@ -1072,28 +1076,55 @@ const deleteAdmin = async (req, res, next) => {
       );
       if (partner?.user_id) {
         const { rows: [userByPartner] } = await query(
-          `SELECT id, email, role FROM users WHERE id::text = $1`,
+          `SELECT id, email, role, full_name FROM users WHERE id::text = $1`,
           [partner.user_id]
         );
         targetUser = userByPartner;
       }
     }
 
-    // Delete user
+    // If not found, check employees
+    if (!targetUser) {
+      const { rows: [emp] } = await query(
+        `SELECT user_id, full_name, email_id FROM employees WHERE id::text = $1`,
+        [id]
+      );
+      if (emp?.user_id) {
+        const { rows: [userByEmp] } = await query(
+          `SELECT id, email, role, full_name FROM users WHERE id::text = $1`,
+          [emp.user_id]
+        );
+        targetUser = userByEmp;
+      }
+    }
+
+    // Prevent deleting Super Admin accounts
+    if (targetUser && targetUser.role === 'SUPER_ADMIN') {
+      return error(res, 'Super Administrator accounts cannot be deleted or suspended.', 403);
+    }
+
+    // Delete user (temporary soft delete or permanent hard delete)
     const mode = req.query.mode || req.body?.mode || 'permanent';
     const { softDeleteUserAccount, deleteUserAccount } = require('../auth/user-deletion.service.js');
+    let result;
     if (mode === 'temporary') {
-      await softDeleteUserAccount(targetUser ? targetUser.id : id);
+      result = await softDeleteUserAccount(targetUser ? targetUser.id : id);
     } else {
-      await deleteUserAccount(targetUser ? targetUser.id : id);
+      result = await deleteUserAccount(targetUser ? targetUser.id : id);
     }
 
     // Record action in audit logs
     if (targetUser) {
-      await logAction(req, 'DELETE_USER', targetUser.id, { email: targetUser.email, role: targetUser.role }).catch(() => {});
+      await logAction(req, mode === 'temporary' ? 'DEACTIVATE_USER' : 'DELETE_USER', targetUser.id, { 
+        email: targetUser.email, 
+        role: targetUser.role,
+        full_name: targetUser.full_name,
+        mode 
+      }).catch(() => {});
     }
 
-    return success(res, {}, 'Administrator account deleted successfully.');
+    const actionText = mode === 'temporary' ? 'temporarily deactivated (soft deleted)' : 'permanently deleted';
+    return success(res, result, `User account ${actionText} successfully.`);
   } catch (err) {
     next(err);
   }

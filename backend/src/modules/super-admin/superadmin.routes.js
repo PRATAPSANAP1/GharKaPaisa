@@ -28,6 +28,7 @@ router.put('/assign-bank-operation-head', ctrl.assignBankOperationHead);
 router.delete('/admins/:id', ctrl.deleteAdmin);
 router.delete('/users/:id', ctrl.deleteAdmin);
 router.delete('/partners/:id', ctrl.deleteAdmin);
+router.delete('/employees/:id', ctrl.deleteAdmin);
 router.post('/block-user', ctrl.blockUser);
 router.post('/unlock-user', ctrl.unlockUser);
 router.post('/update-partner-status', ctrl.updatePartnerStatus);

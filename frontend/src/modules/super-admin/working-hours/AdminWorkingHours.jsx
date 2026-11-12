@@ -45,7 +45,8 @@ import {
   activateAccount,
   deactivateAccount,
   scheduleAccountStatus,
-  bulkUpdateAccountStatus
+  bulkUpdateAccountStatus,
+  deleteUserAccountApi
 } from '../../../services/accountStatus.api';
 
 const DAYS_OF_WEEK = [
@@ -223,6 +224,14 @@ export default function AdminWorkingHours() {
     targetStatus: 'active', // 'active' or 'inactive'
     reason: ''
   });
+
+  // Delete User Account Confirmation Dialog State (Temporary & Permanent)
+  const [deleteConfirmData, setDeleteConfirmData] = useState({
+    user: null,
+    mode: 'temporary', // 'temporary' | 'permanent'
+    confirmationText: ''
+  });
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -549,6 +558,52 @@ export default function AdminWorkingHours() {
       loadData();
     } catch (err) {
       showToast(err.message || 'Status update failed', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Delete User Account Handlers (Temporary Deactivate / Permanent Delete)
+  const handlePromptDelete = (user, mode = 'temporary') => {
+    if (user.role === 'SUPER_ADMIN') {
+      showToast('Super Administrator accounts cannot be deleted or suspended.', 'error');
+      return;
+    }
+    setDeleteConfirmData({
+      user,
+      mode,
+      confirmationText: ''
+    });
+    setShowDeleteConfirmModal(true);
+  };
+
+  const handleExecuteDelete = async () => {
+    if (!deleteConfirmData.user) return;
+    const u = deleteConfirmData.user;
+    const isPermanent = deleteConfirmData.mode === 'permanent';
+
+    if (isPermanent && deleteConfirmData.confirmationText.trim().toUpperCase() !== 'DELETE') {
+      showToast('Please type DELETE to confirm permanent account purge.', 'error');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await deleteUserAccountApi(u.id, deleteConfirmData.mode);
+      if (res && res.success) {
+        showToast(
+          isPermanent
+            ? `Account for ${u.user || u.name || u.email} has been PERMANENTLY deleted.`
+            : `Account for ${u.user || u.name || u.email} has been temporarily deactivated (soft deleted).`
+        );
+        setShowDeleteConfirmModal(false);
+        setDeleteConfirmData({ user: null, mode: 'temporary', confirmationText: '' });
+        loadData();
+      } else {
+        showToast(res?.message || 'Delete operation failed', 'error');
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || err.message || 'Error processing deletion', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -1328,6 +1383,24 @@ export default function AdminWorkingHours() {
                                 </button>
                               )}
 
+                              {/* Delete Account Button */}
+                              {u.role !== 'SUPER_ADMIN' && (
+                                <button
+                                  onClick={() => handlePromptDelete(u)}
+                                  style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                    padding: '6px 10px', borderRadius: '8px',
+                                    border: '1px solid #FECACA', backgroundColor: '#FEF2F2',
+                                    color: '#DC2626', fontWeight: 700, fontSize: '12.5px',
+                                    cursor: 'pointer', transition: 'all 0.15s'
+                                  }}
+                                  title="Delete Account (Temporary or Permanent)"
+                                >
+                                  <Trash2 size={13} />
+                                  <span>Delete</span>
+                                </button>
+                              )}
+
                               {/* Three-dots Menu */}
                               <div className="action-menu-container" style={{ position: 'relative' }}>
                                 <button
@@ -1349,7 +1422,7 @@ export default function AdminWorkingHours() {
                                     position: 'absolute', right: 0, top: '100%', zIndex: 100,
                                     backgroundColor: '#FFFFFF', borderRadius: '10px',
                                     border: '1px solid #E2E8F0', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.12)',
-                                    minWidth: '190px', padding: '6px', display: 'flex', flexDirection: 'column', gap: '2px'
+                                    minWidth: '220px', padding: '6px', display: 'flex', flexDirection: 'column', gap: '2px'
                                   }}>
                                     <button
                                       onClick={() => { setOpenActionMenuId(null); handleOpenExtendForUser(u); }}
@@ -1389,6 +1462,42 @@ export default function AdminWorkingHours() {
                                       <Settings size={14} color="#6366F1" />
                                       <span>Manage Working Days</span>
                                     </button>
+
+                                    {u.role !== 'SUPER_ADMIN' && (
+                                      <>
+                                        <div style={{ height: '1px', backgroundColor: '#E2E8F0', margin: '4px 0' }} />
+                                        <button
+                                          onClick={() => {
+                                            setOpenActionMenuId(null);
+                                            handlePromptDelete(u, 'temporary');
+                                          }}
+                                          style={{
+                                            display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px',
+                                            border: 'none', background: 'none', textAlign: 'left',
+                                            fontSize: '12.5px', fontWeight: 700, color: '#D97706', cursor: 'pointer',
+                                            borderRadius: '6px', width: '100%'
+                                          }}
+                                        >
+                                          <Power size={14} color="#D97706" />
+                                          <span>🟡 Temporary Delete (Deactivate)</span>
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            setOpenActionMenuId(null);
+                                            handlePromptDelete(u, 'permanent');
+                                          }}
+                                          style={{
+                                            display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px',
+                                            border: 'none', background: 'none', textAlign: 'left',
+                                            fontSize: '12.5px', fontWeight: 700, color: '#DC2626', cursor: 'pointer',
+                                            borderRadius: '6px', width: '100%'
+                                          }}
+                                        >
+                                          <Trash2 size={14} color="#DC2626" />
+                                          <span>🔴 Permanent Delete (Purge)</span>
+                                        </button>
+                                      </>
+                                    )}
                                   </div>
                                 )}
                               </div>
@@ -2353,6 +2462,174 @@ export default function AdminWorkingHours() {
               >
                 {submitting ? 'Updating...' : (statusConfirmData.targetStatus === 'active' ? 'Confirm Activate' : 'Confirm Deactivate')}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: DELETE USER ACCOUNT (TEMPORARY & PERMANENT) ================= */}
+      {showDeleteConfirmModal && deleteConfirmData.user && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 10000,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '16px', backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            backgroundColor: '#FFFFFF', borderRadius: '16px',
+            maxWidth: '520px', width: '100%',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            overflow: 'hidden', border: '1px solid #E2E8F0'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '20px 24px',
+              borderBottom: '1px solid #F1F5F9',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              backgroundColor: deleteConfirmData.mode === 'permanent' ? '#FEF2F2' : '#FFFBEB'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '40px', height: '40px', borderRadius: '10px',
+                  backgroundColor: deleteConfirmData.mode === 'permanent' ? '#FEE2E2' : '#FEF3C7',
+                  color: deleteConfirmData.mode === 'permanent' ? '#DC2626' : '#D97706',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                }}>
+                  <Trash2 size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0F172A' }}>
+                    {deleteConfirmData.mode === 'permanent' ? 'Permanently Delete User Account' : 'Temporary Delete (Deactivate)'}
+                  </h3>
+                  <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                    {deleteConfirmData.user.user || deleteConfirmData.user.full_name} ({deleteConfirmData.user.role})
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => { setShowDeleteConfirmModal(false); setDeleteConfirmData({ user: null, mode: 'temporary', confirmationText: '' }); }}
+                style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '24px' }}>
+              {/* Mode Selector Tabs */}
+              <div style={{
+                display: 'flex', gap: '8px', padding: '4px',
+                backgroundColor: '#F1F5F9', borderRadius: '10px', marginBottom: '20px'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmData(prev => ({ ...prev, mode: 'temporary' }))}
+                  style={{
+                    flex: 1, padding: '9px 12px', borderRadius: '8px', border: 'none',
+                    fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                    backgroundColor: deleteConfirmData.mode === 'temporary' ? '#FFFFFF' : 'transparent',
+                    color: deleteConfirmData.mode === 'temporary' ? '#D97706' : '#64748B',
+                    boxShadow: deleteConfirmData.mode === 'temporary' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
+                  }}
+                >
+                  🟡 Temporary Delete
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmData(prev => ({ ...prev, mode: 'permanent' }))}
+                  style={{
+                    flex: 1, padding: '9px 12px', borderRadius: '8px', border: 'none',
+                    fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                    backgroundColor: deleteConfirmData.mode === 'permanent' ? '#FFFFFF' : 'transparent',
+                    color: deleteConfirmData.mode === 'permanent' ? '#DC2626' : '#64748B',
+                    boxShadow: deleteConfirmData.mode === 'permanent' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
+                  }}
+                >
+                  🔴 Permanent Delete
+                </button>
+              </div>
+
+              {/* User Card */}
+              <div style={{
+                padding: '12px 16px', backgroundColor: '#F8FAFC', borderRadius: '10px',
+                border: '1px solid #E2E8F0', marginBottom: '16px', fontSize: '13px', lineHeight: 1.6
+              }}>
+                <div><strong>Name:</strong> {deleteConfirmData.user.user || deleteConfirmData.user.full_name}</div>
+                <div><strong>Email / ID:</strong> {deleteConfirmData.user.displayUserId || deleteConfirmData.user.email}</div>
+                <div><strong>Role / Dept:</strong> {deleteConfirmData.user.role} {deleteConfirmData.user.department ? `(${deleteConfirmData.user.department})` : ''}</div>
+              </div>
+
+              {deleteConfirmData.mode === 'temporary' ? (
+                <div style={{
+                  padding: '12px 16px', backgroundColor: '#FFFBEB', borderRadius: '10px',
+                  border: '1px solid #FDE68A', color: '#92400E', fontSize: '13px', lineHeight: 1.5, marginBottom: '20px'
+                }}>
+                  <strong>Temporary Deletion (Soft Delete):</strong>
+                  <p style={{ margin: '6px 0 0' }}>
+                    The account will be suspended and immediately blocked from logging in. All past applications, leads, KYC documents, and earnings remain safely preserved in the database. You can reactivate this account at any time.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <div style={{
+                    padding: '12px 16px', backgroundColor: '#FEF2F2', borderRadius: '10px',
+                    border: '1px solid #FECACA', color: '#991B1B', fontSize: '13px', lineHeight: 1.5, marginBottom: '16px'
+                  }}>
+                    <strong>CAUTION: Permanent Deletion (Hard Delete / Purge):</strong>
+                    <p style={{ margin: '6px 0 0' }}>
+                      This user, their login credentials, biometric/profile templates, team associations, and non-immutable records will be completely and permanently removed from the database. <strong>THIS CANNOT BE UNDONE.</strong>
+                    </p>
+                  </div>
+
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                      Type <span style={{ color: '#DC2626', fontWeight: 900 }}>DELETE</span> to confirm permanent deletion:
+                    </label>
+                    <input
+                      type="text"
+                      value={deleteConfirmData.confirmationText}
+                      onChange={e => setDeleteConfirmData(prev => ({ ...prev, confirmationText: e.target.value }))}
+                      placeholder="DELETE"
+                      style={{
+                        width: '100%', padding: '10px 14px', borderRadius: '8px',
+                        border: '1.5px solid #CBD5E1', fontSize: '14px', fontWeight: 700,
+                        outline: 'none', boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => { setShowDeleteConfirmModal(false); setDeleteConfirmData({ user: null, mode: 'temporary', confirmationText: '' }); }}
+                  disabled={submitting}
+                  style={{
+                    padding: '10px 18px', borderRadius: '8px', border: '1px solid #CBD5E1',
+                    backgroundColor: '#FFFFFF', color: '#475569', fontSize: '13px',
+                    fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExecuteDelete}
+                  disabled={submitting || (deleteConfirmData.mode === 'permanent' && deleteConfirmData.confirmationText.trim().toUpperCase() !== 'DELETE')}
+                  style={{
+                    padding: '10px 20px', borderRadius: '8px', border: 'none',
+                    backgroundColor: deleteConfirmData.mode === 'permanent' ? '#DC2626' : '#D97706',
+                    color: '#FFFFFF', fontSize: '13px', fontWeight: 800,
+                    cursor: (submitting || (deleteConfirmData.mode === 'permanent' && deleteConfirmData.confirmationText.trim().toUpperCase() !== 'DELETE')) ? 'not-allowed' : 'pointer',
+                    opacity: (deleteConfirmData.mode === 'permanent' && deleteConfirmData.confirmationText.trim().toUpperCase() !== 'DELETE') ? 0.6 : 1,
+                    boxShadow: deleteConfirmData.mode === 'permanent' ? '0 4px 12px rgba(220, 38, 38, 0.3)' : '0 4px 12px rgba(217, 119, 6, 0.3)'
+                  }}
+                >
+                  {submitting ? 'Processing...' : (deleteConfirmData.mode === 'permanent' ? 'Permanently Delete' : 'Confirm Temporary Delete')}
+                </button>
+              </div>
             </div>
           </div>
         </div>

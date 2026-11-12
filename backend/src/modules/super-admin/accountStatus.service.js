@@ -311,6 +311,11 @@ async function activateAccount(targetUserId, actorAdminId, { isScheduled = false
     WHERE id = $2
   `, [actorAdminId, targetUserId]);
 
+  // Sync activation across employees, partner_profiles, and wallets
+  await query(`UPDATE employees SET employee_status = 'ACTIVE', updated_at = NOW() WHERE user_id = $1`, [targetUserId]).catch(() => {});
+  await query(`UPDATE partner_profiles SET status = 'approved', updated_at = NOW() WHERE user_id = $1 AND status = 'suspended'`, [targetUserId]).catch(() => {});
+  await query(`UPDATE partner_wallets SET status = 'active', updated_at = NOW() WHERE user_id = $1`, [targetUserId]).catch(() => {});
+
   await logAction(reqContext || actorAdminId, 'ACTIVATE_ACCOUNT', targetUserId, {
     targetUserId,
     targetEmail: targetUser.email,
@@ -429,6 +434,11 @@ async function deactivateAccount(targetUserId, actorAdminId, { isScheduled = fal
       updated_at = NOW()
     WHERE id = $3
   `, [actorAdminId, reason || 'Account deactivated by administrator', targetUserId]);
+
+  // Sync deactivation across employees, partner_profiles, and wallets
+  await query(`UPDATE employees SET employee_status = 'INACTIVE', updated_at = NOW() WHERE user_id = $1`, [targetUserId]).catch(() => {});
+  await query(`UPDATE partner_profiles SET status = 'suspended', updated_at = NOW() WHERE user_id = $1`, [targetUserId]).catch(() => {});
+  await query(`UPDATE partner_wallets SET status = 'inactive', updated_at = NOW() WHERE user_id = $1`, [targetUserId]).catch(() => {});
 
   // Invalidate and revoke all refresh tokens for the deactivated user
   await query(`

@@ -38,3 +38,8 @@ export const fetchAccountAuditHistory = async (userId) => {
   const res = await api.get(`/superadmin/accounts/${userId}/audit-history`);
   return res.data;
 };
+
+export const deleteUserAccountApi = async (userId, mode = 'temporary') => {
+  const res = await api.delete(`/superadmin/users/${userId}?mode=${mode}`);
+  return res.data;
+};

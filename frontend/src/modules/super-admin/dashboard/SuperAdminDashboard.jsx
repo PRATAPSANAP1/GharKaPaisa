@@ -1135,21 +1135,59 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  // Delete Admin account
-  const handleDeleteAdmin = async (userId) => {
-    if (!window.confirm('Are you sure you want to PERMANENTLY delete this administrator? This action cannot be undone.')) {
+  // Delete Admin account Modal State (Temporary vs Permanent)
+  const [adminDeleteModal, setAdminDeleteModal] = useState({
+    isOpen: false,
+    admin: null,
+    mode: 'temporary', // 'temporary' | 'permanent'
+    confirmText: '',
+    loading: false
+  });
+
+  const promptDeleteAdmin = (admin, mode = 'temporary') => {
+    setAdminDeleteModal({
+      isOpen: true,
+      admin,
+      mode,
+      confirmText: '',
+      loading: false
+    });
+  };
+
+  const executeDeleteAdmin = async () => {
+    if (!adminDeleteModal.admin) return;
+    const targetAdmin = adminDeleteModal.admin;
+    const isPermanent = adminDeleteModal.mode === 'permanent';
+
+    if (isPermanent && adminDeleteModal.confirmText.trim().toUpperCase() !== 'DELETE') {
+      alert('Please type DELETE in the confirmation box to permanently delete this administrator.');
       return;
     }
 
+    setAdminDeleteModal(prev => ({ ...prev, loading: true }));
     try {
-      const res = await api.delete(`/superadmin/admins/${userId}`);
+      const targetId = targetAdmin._id || targetAdmin.id;
+      const res = await api.delete(`/superadmin/admins/${targetId}?mode=${adminDeleteModal.mode}`);
       if (res.data && res.data.success) {
-        alert('Administrator account deleted successfully.');
+        alert(
+          isPermanent
+            ? 'Administrator account permanently deleted.'
+            : 'Administrator account temporarily deactivated (soft deleted).'
+        );
+        setAdminDeleteModal({ isOpen: false, admin: null, mode: 'temporary', confirmText: '', loading: false });
         fetchAdmins();
+      } else {
+        alert(res.data?.message || 'Delete failed');
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Delete failed');
+      alert(err.response?.data?.message || 'Delete operation failed');
+    } finally {
+      setAdminDeleteModal(prev => ({ ...prev, loading: false }));
     }
+  };
+
+  const handleDeleteAdmin = (admin) => {
+    promptDeleteAdmin(admin, 'temporary');
   };
 
   // Stats calculations
@@ -2031,10 +2069,10 @@ export default function SuperAdminDashboard() {
                                 <Edit size={14} color="#2563EB" />
                               </button>
 
-                              {/* Delete Admin */}
+                              {/* Delete Admin (Temporary or Permanent) */}
                               <button
                                 type="button"
-                                onClick={() => handleDeleteAdmin(admin._id || admin.id)}
+                                onClick={() => promptDeleteAdmin(admin, 'temporary')}
                                 style={{
                                   background: "#FFFFFF",
                                   color: "#DC2626",
@@ -2048,7 +2086,7 @@ export default function SuperAdminDashboard() {
                                   cursor: "pointer",
                                   transition: "all 0.15s"
                                 }}
-                                title="Delete Admin"
+                                title="Delete Admin (Temporary or Permanent)"
                                 onMouseEnter={e => e.currentTarget.style.background = "#FEF2F2"}
                                 onMouseLeave={e => e.currentTarget.style.background = "#FFFFFF"}
                               >
@@ -3081,6 +3119,175 @@ export default function SuperAdminDashboard() {
               >
                 Close Audit History
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Administrator Account Modal (Temporary & Permanent) */}
+      {adminDeleteModal.isOpen && adminDeleteModal.admin && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 10000,
+          backgroundColor: "rgba(15, 23, 42, 0.65)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "16px", backdropFilter: "blur(4px)"
+        }}>
+          <div style={{
+            backgroundColor: "#FFFFFF", borderRadius: "16px",
+            maxWidth: "520px", width: "100%",
+            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+            overflow: "hidden", border: "1px solid #E2E8F0",
+            fontFamily: "'Inter', sans-serif"
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: "20px 24px",
+              borderBottom: "1px solid #F1F5F9",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              backgroundColor: adminDeleteModal.mode === "permanent" ? "#FEF2F2" : "#FFFBEB"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{
+                  width: "40px", height: "40px", borderRadius: "10px",
+                  backgroundColor: adminDeleteModal.mode === "permanent" ? "#FEE2E2" : "#FEF3C7",
+                  color: adminDeleteModal.mode === "permanent" ? "#DC2626" : "#D97706",
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
+                }}>
+                  <Trash2 size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 800, color: "#0F172A" }}>
+                    {adminDeleteModal.mode === "permanent" ? "Permanently Delete Administrator" : "Temporary Delete (Deactivate)"}
+                  </h3>
+                  <div style={{ fontSize: "12px", color: "#64748B", marginTop: "2px" }}>
+                    {adminDeleteModal.admin.name || adminDeleteModal.admin.full_name} ({adminDeleteModal.admin.email})
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setAdminDeleteModal({ isOpen: false, admin: null, mode: "temporary", confirmText: "", loading: false })}
+                style={{ background: "none", border: "none", color: "#94A3B8", cursor: "pointer", padding: "4px" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: "24px" }}>
+              {/* Mode Selector Tabs */}
+              <div style={{
+                display: "flex", gap: "8px", padding: "4px",
+                backgroundColor: "#F1F5F9", borderRadius: "10px", marginBottom: "20px"
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setAdminDeleteModal(prev => ({ ...prev, mode: "temporary" }))}
+                  style={{
+                    flex: 1, padding: "9px 12px", borderRadius: "8px", border: "none",
+                    fontSize: "13px", fontWeight: 700, cursor: "pointer",
+                    backgroundColor: adminDeleteModal.mode === "temporary" ? "#FFFFFF" : "transparent",
+                    color: adminDeleteModal.mode === "temporary" ? "#D97706" : "#64748B",
+                    boxShadow: adminDeleteModal.mode === "temporary" ? "0 2px 6px rgba(0,0,0,0.06)" : "none"
+                  }}
+                >
+                  🟡 Temporary Delete
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAdminDeleteModal(prev => ({ ...prev, mode: "permanent" }))}
+                  style={{
+                    flex: 1, padding: "9px 12px", borderRadius: "8px", border: "none",
+                    fontSize: "13px", fontWeight: 700, cursor: "pointer",
+                    backgroundColor: adminDeleteModal.mode === "permanent" ? "#FFFFFF" : "transparent",
+                    color: adminDeleteModal.mode === "permanent" ? "#DC2626" : "#64748B",
+                    boxShadow: adminDeleteModal.mode === "permanent" ? "0 2px 6px rgba(0,0,0,0.06)" : "none"
+                  }}
+                >
+                  🔴 Permanent Delete
+                </button>
+              </div>
+
+              {/* Admin Info Card */}
+              <div style={{
+                padding: "12px 16px", backgroundColor: "#F8FAFC", borderRadius: "10px",
+                border: "1px solid #E2E8F0", marginBottom: "16px", fontSize: "13px", lineHeight: 1.6
+              }}>
+                <div><strong>Admin Name:</strong> {adminDeleteModal.admin.name || adminDeleteModal.admin.full_name}</div>
+                <div><strong>Email:</strong> {adminDeleteModal.admin.email}</div>
+                <div><strong>Role / Scope:</strong> {adminDeleteModal.admin.role || "ADMIN"} {adminDeleteModal.admin.assigned_scope ? `(${adminDeleteModal.admin.assigned_scope})` : ""}</div>
+              </div>
+
+              {adminDeleteModal.mode === "temporary" ? (
+                <div style={{
+                  padding: "12px 16px", backgroundColor: "#FFFBEB", borderRadius: "10px",
+                  border: "1px solid #FDE68A", color: "#92400E", fontSize: "13px", lineHeight: 1.5, marginBottom: "20px"
+                }}>
+                  <strong>Temporary Deletion (Soft Delete):</strong>
+                  <p style={{ margin: "6px 0 0" }}>
+                    The administrator account will be marked as suspended and active login sessions will be immediately invalidated. All audit logs, actions performed, and assigned data will remain preserved in the system. The account can be restored at any time.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <div style={{
+                    padding: "12px 16px", backgroundColor: "#FEF2F2", borderRadius: "10px",
+                    border: "1px solid #FECACA", color: "#991B1B", fontSize: "13px", lineHeight: 1.5, marginBottom: "16px"
+                  }}>
+                    <strong>CAUTION: Permanent Deletion (Hard Delete / Purge):</strong>
+                    <p style={{ margin: "6px 0 0" }}>
+                      This administrator user, authentication credentials, permissions, and non-immutable records will be permanently removed from the database. <strong>THIS CANNOT BE UNDONE.</strong>
+                    </p>
+                  </div>
+
+                  <div style={{ marginBottom: "20px" }}>
+                    <label style={{ display: "block", fontSize: "12.5px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
+                      Type <span style={{ color: "#DC2626", fontWeight: 900 }}>DELETE</span> to confirm permanent deletion:
+                    </label>
+                    <input
+                      type="text"
+                      value={adminDeleteModal.confirmText}
+                      onChange={e => setAdminDeleteModal(prev => ({ ...prev, confirmText: e.target.value }))}
+                      placeholder="DELETE"
+                      style={{
+                        width: "100%", padding: "10px 14px", borderRadius: "8px",
+                        border: "1.5px solid #CBD5E1", fontSize: "14px", fontWeight: 700,
+                        outline: "none", boxSizing: "border-box"
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  onClick={() => setAdminDeleteModal({ isOpen: false, admin: null, mode: "temporary", confirmText: "", loading: false })}
+                  disabled={adminDeleteModal.loading}
+                  style={{
+                    padding: "10px 18px", borderRadius: "8px", border: "1px solid #CBD5E1",
+                    backgroundColor: "#FFFFFF", color: "#475569", fontSize: "13px",
+                    fontWeight: 700, cursor: adminDeleteModal.loading ? "not-allowed" : "pointer"
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={executeDeleteAdmin}
+                  disabled={adminDeleteModal.loading || (adminDeleteModal.mode === "permanent" && adminDeleteModal.confirmText.trim().toUpperCase() !== "DELETE")}
+                  style={{
+                    padding: "10px 20px", borderRadius: "8px", border: "none",
+                    backgroundColor: adminDeleteModal.mode === "permanent" ? "#DC2626" : "#D97706",
+                    color: "#FFFFFF", fontSize: "13px", fontWeight: 800,
+                    cursor: (adminDeleteModal.loading || (adminDeleteModal.mode === "permanent" && adminDeleteModal.confirmText.trim().toUpperCase() !== "DELETE")) ? "not-allowed" : "pointer",
+                    opacity: (adminDeleteModal.mode === "permanent" && adminDeleteModal.confirmText.trim().toUpperCase() !== "DELETE") ? 0.6 : 1,
+                    boxShadow: adminDeleteModal.mode === "permanent" ? "0 4px 12px rgba(220, 38, 38, 0.3)" : "0 4px 12px rgba(217, 119, 6, 0.3)"
+                  }}
+                >
+                  {adminDeleteModal.loading ? "Processing..." : (adminDeleteModal.mode === "permanent" ? "Permanently Delete" : "Confirm Temporary Delete")}
+                </button>
+              </div>
             </div>
           </div>
         </div>

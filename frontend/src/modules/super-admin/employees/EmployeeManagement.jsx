@@ -440,6 +440,58 @@ export default function EmployeeManagement() {
     }
   };
 
+  // Delete Employee (Temporary Deactivate or Permanent Purge)
+  const [empDeleteModal, setEmpDeleteModal] = useState({
+    isOpen: false,
+    emp: null,
+    mode: 'temporary', // 'temporary' | 'permanent'
+    confirmText: '',
+    loading: false
+  });
+
+  const promptDeleteEmp = (emp, mode = 'temporary') => {
+    setEmpDeleteModal({
+      isOpen: true,
+      emp,
+      mode,
+      confirmText: '',
+      loading: false
+    });
+  };
+
+  const executeDeleteEmp = async () => {
+    if (!empDeleteModal.emp) return;
+    const emp = empDeleteModal.emp;
+    const isPermanent = empDeleteModal.mode === 'permanent';
+
+    if (isPermanent && empDeleteModal.confirmText.trim().toUpperCase() !== 'DELETE') {
+      alert('Please type DELETE in the confirmation box to permanently delete this employee account.');
+      return;
+    }
+
+    setEmpDeleteModal(prev => ({ ...prev, loading: true }));
+    try {
+      const targetId = emp.user_id || emp.id;
+      const res = await api.delete(`/superadmin/users/${targetId}?mode=${empDeleteModal.mode}`);
+      if (res.data?.success) {
+        alert(
+          isPermanent
+            ? `Employee "${emp.full_name}" has been permanently purged from the system.`
+            : `Employee "${emp.full_name}" has been temporarily deactivated (soft deleted).`
+        );
+        setEmpDeleteModal({ isOpen: false, emp: null, mode: 'temporary', confirmText: '', loading: false });
+        if (drawerEmp?.id === emp.id) setDrawerEmp(null);
+        if (typeof fetchData === 'function') fetchData();
+      } else {
+        alert(res.data?.message || 'Delete operation failed');
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Failed to delete employee account');
+    } finally {
+      setEmpDeleteModal(prev => ({ ...prev, loading: false }));
+    }
+  };
+
   const handleDownloadProfileSummary = (emp) => {
     const target = emp || drawerEmp;
     if (!target) return;
@@ -2059,6 +2111,27 @@ Generated On        : ${new Date().toLocaleString()}
                           >
                             <FaEllipsisV />
                           </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              promptDeleteEmp(emp, 'temporary');
+                            }}
+                            style={{
+                              background: '#FEF2F2',
+                              border: '1px solid #FECACA',
+                              borderRadius: '8px',
+                              width: '32px',
+                              height: '32px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              color: '#DC2626'
+                            }}
+                            title="Delete or deactivate employee account"
+                          >
+                            <FaTrash size={12} />
+                          </button>
                         </div>
                       </div>
                     );
@@ -2189,6 +2262,37 @@ Generated On        : ${new Date().toLocaleString()}
                               title="View & manage employee profile"
                             >
                               <FaEllipsisV />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                promptDeleteEmp(emp, 'temporary');
+                              }}
+                              style={{
+                                background: 'transparent',
+                                border: '1px solid #FECACA',
+                                cursor: 'pointer',
+                                color: '#DC2626',
+                                fontSize: '13px',
+                                padding: '6px 9px',
+                                borderRadius: '8px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginLeft: '6px',
+                                transition: 'all 0.15s ease'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#FEF2F2';
+                                e.currentTarget.style.color = '#B91C1C';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                                e.currentTarget.style.color = '#DC2626';
+                              }}
+                              title="Delete or deactivate employee account"
+                            >
+                              <FaTrash size={13} />
                             </button>
                           </td>
                         </tr>
@@ -4972,6 +5076,29 @@ Generated On        : ${new Date().toLocaleString()}
                         >
                           <FaEye style={{ color: '#3B82F6' }} /> Inspect 360° Profile
                         </button>
+                        <div style={{ height: '1px', background: C.border, margin: '4px 0' }} />
+                        <button
+                          onClick={() => {
+                            setDrawerActionsOpen(false);
+                            promptDeleteEmp(drawerEmp, 'temporary');
+                          }}
+                          style={{ width: '100%', padding: '9px 12px', background: 'transparent', border: 'none', borderRadius: '8px', textAlign: 'left', fontSize: '12.5px', fontWeight: 700, color: '#D97706', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = '#FEF3C7'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <FaUserTimes style={{ color: '#D97706' }} /> 🟡 Temporary Delete (Deactivate)
+                        </button>
+                        <button
+                          onClick={() => {
+                            setDrawerActionsOpen(false);
+                            promptDeleteEmp(drawerEmp, 'permanent');
+                          }}
+                          style={{ width: '100%', padding: '9px 12px', background: 'transparent', border: 'none', borderRadius: '8px', textAlign: 'left', fontSize: '12.5px', fontWeight: 700, color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = '#FEE2E2'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <FaTrash style={{ color: '#DC2626' }} /> 🔴 Permanent Delete (Purge)
+                        </button>
                       </div>
                     )}
 
@@ -6789,6 +6916,177 @@ Generated On        : ${new Date().toLocaleString()}
               >
                 Close Audit Details
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Employee Account Modal (Temporary & Permanent) */}
+        {empDeleteModal.isOpen && empDeleteModal.emp && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 10000,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '16px', backdropFilter: 'blur(4px)'
+          }}>
+            <div style={{
+              backgroundColor: '#FFFFFF', borderRadius: '16px',
+              maxWidth: '520px', width: '100%',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              overflow: 'hidden', border: '1px solid #E2E8F0',
+              fontFamily: "'Inter', sans-serif"
+            }}>
+              {/* Header */}
+              <div style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid #F1F5F9',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                backgroundColor: empDeleteModal.mode === 'permanent' ? '#FEF2F2' : '#FFFBEB'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: '10px',
+                    backgroundColor: empDeleteModal.mode === 'permanent' ? '#FEE2E2' : '#FEF3C7',
+                    color: empDeleteModal.mode === 'permanent' ? '#DC2626' : '#D97706',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    fontSize: '18px'
+                  }}>
+                    <FaTrash />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0F172A' }}>
+                      {empDeleteModal.mode === 'permanent' ? 'Permanently Delete Employee Account' : 'Temporary Delete (Deactivate)'}
+                    </h3>
+                    <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                      {empDeleteModal.emp.full_name} ({empDeleteModal.emp.employee_code || empDeleteModal.emp.employee_id || 'EMP'})
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setEmpDeleteModal({ isOpen: false, emp: null, mode: 'temporary', confirmText: '', loading: false })}
+                  style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '4px', fontSize: '18px' }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Body */}
+              <div style={{ padding: '24px' }}>
+                {/* Mode Selector Tabs */}
+                <div style={{
+                  display: 'flex', gap: '8px', padding: '4px',
+                  backgroundColor: '#F1F5F9', borderRadius: '10px', marginBottom: '20px'
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => setEmpDeleteModal(prev => ({ ...prev, mode: 'temporary' }))}
+                    style={{
+                      flex: 1, padding: '9px 12px', borderRadius: '8px', border: 'none',
+                      fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                      backgroundColor: empDeleteModal.mode === 'temporary' ? '#FFFFFF' : 'transparent',
+                      color: empDeleteModal.mode === 'temporary' ? '#D97706' : '#64748B',
+                      boxShadow: empDeleteModal.mode === 'temporary' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
+                    }}
+                  >
+                    🟡 Temporary Delete
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEmpDeleteModal(prev => ({ ...prev, mode: 'permanent' }))}
+                    style={{
+                      flex: 1, padding: '9px 12px', borderRadius: '8px', border: 'none',
+                      fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                      backgroundColor: empDeleteModal.mode === 'permanent' ? '#FFFFFF' : 'transparent',
+                      color: empDeleteModal.mode === 'permanent' ? '#DC2626' : '#64748B',
+                      boxShadow: empDeleteModal.mode === 'permanent' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
+                    }}
+                  >
+                    🔴 Permanent Delete
+                  </button>
+                </div>
+
+                {/* Employee Summary Card */}
+                <div style={{
+                  padding: '12px 16px', backgroundColor: '#F8FAFC', borderRadius: '10px',
+                  border: '1px solid #E2E8F0', marginBottom: '16px', fontSize: '13px', lineHeight: 1.6
+                }}>
+                  <div><strong>Employee:</strong> {empDeleteModal.emp.full_name}</div>
+                  <div><strong>ID:</strong> {empDeleteModal.emp.employee_code || empDeleteModal.emp.employee_id}</div>
+                  <div><strong>Designation:</strong> {empDeleteModal.emp.designation || 'N/A'} • {empDeleteModal.emp.department || 'N/A'}</div>
+                  <div><strong>Mobile:</strong> {empDeleteModal.emp.mobile_number || 'N/A'}</div>
+                </div>
+
+                {empDeleteModal.mode === 'temporary' ? (
+                  <div style={{
+                    padding: '12px 16px', backgroundColor: '#FFFBEB', borderRadius: '10px',
+                    border: '1px solid #FDE68A', color: '#92400E', fontSize: '13px', lineHeight: 1.5, marginBottom: '20px'
+                  }}>
+                    <strong>Temporary Deletion (Soft Delete):</strong>
+                    <p style={{ margin: '6px 0 0' }}>
+                      The employee account will be marked as INACTIVE and their login sessions will be immediately terminated. Their historical attendance, leads, applications, hierarchy, and uploaded documents will remain safely stored. The account can be restored at any time.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{
+                      padding: '12px 16px', backgroundColor: '#FEF2F2', borderRadius: '10px',
+                      border: '1px solid #FECACA', color: '#991B1B', fontSize: '13px', lineHeight: 1.5, marginBottom: '16px'
+                    }}>
+                      <strong>CAUTION: Permanent Deletion (Hard Delete / Purge):</strong>
+                      <p style={{ margin: '6px 0 0' }}>
+                        This employee record, login account, biometric face encodings, team relationships, and documents will be completely deleted from the database. <strong>THIS ACTION CANNOT BE UNDONE.</strong>
+                      </p>
+                    </div>
+
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                        Type <span style={{ color: '#DC2626', fontWeight: 900 }}>DELETE</span> to confirm permanent deletion:
+                      </label>
+                      <input
+                        type="text"
+                        value={empDeleteModal.confirmText}
+                        onChange={e => setEmpDeleteModal(prev => ({ ...prev, confirmText: e.target.value }))}
+                        placeholder="DELETE"
+                        style={{
+                          width: '100%', padding: '10px 14px', borderRadius: '8px',
+                          border: '1.5px solid #CBD5E1', fontSize: '14px', fontWeight: 700,
+                          outline: 'none', boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    onClick={() => setEmpDeleteModal({ isOpen: false, emp: null, mode: 'temporary', confirmText: '', loading: false })}
+                    disabled={empDeleteModal.loading}
+                    style={{
+                      padding: '10px 18px', borderRadius: '8px', border: '1px solid #CBD5E1',
+                      backgroundColor: '#FFFFFF', color: '#475569', fontSize: '13px',
+                      fontWeight: 700, cursor: empDeleteModal.loading ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={executeDeleteEmp}
+                    disabled={empDeleteModal.loading || (empDeleteModal.mode === 'permanent' && empDeleteModal.confirmText.trim().toUpperCase() !== 'DELETE')}
+                    style={{
+                      padding: '10px 20px', borderRadius: '8px', border: 'none',
+                      backgroundColor: empDeleteModal.mode === 'permanent' ? '#DC2626' : '#D97706',
+                      color: '#FFFFFF', fontSize: '13px', fontWeight: 800,
+                      cursor: (empDeleteModal.loading || (empDeleteModal.mode === 'permanent' && empDeleteModal.confirmText.trim().toUpperCase() !== 'DELETE')) ? 'not-allowed' : 'pointer',
+                      opacity: (empDeleteModal.mode === 'permanent' && empDeleteModal.confirmText.trim().toUpperCase() !== 'DELETE') ? 0.6 : 1,
+                      boxShadow: empDeleteModal.mode === 'permanent' ? '0 4px 12px rgba(220, 38, 38, 0.3)' : '0 4px 12px rgba(217, 119, 6, 0.3)'
+                    }}
+                  >
+                    {empDeleteModal.loading ? 'Processing...' : (empDeleteModal.mode === 'permanent' ? 'Permanently Delete' : 'Confirm Temporary Delete')}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
