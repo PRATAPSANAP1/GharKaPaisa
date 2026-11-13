@@ -88,6 +88,16 @@ async function ensureEmployeeSchema() {
         `).catch(err => logger.warn('Hierarchy columns ensure note:', err.message));
       }
 
+      // Ensure status and lifecycle columns on employees table
+      await query(`
+        ALTER TABLE employees 
+          ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE,
+          ADD COLUMN IF NOT EXISTS deactivated_at TIMESTAMPTZ DEFAULT NULL,
+          ADD COLUMN IF NOT EXISTS activated_at TIMESTAMPTZ DEFAULT NULL,
+          ADD COLUMN IF NOT EXISTS deactivated_by UUID REFERENCES users(id) ON DELETE SET NULL,
+          ADD COLUMN IF NOT EXISTS deactivation_reason TEXT DEFAULT NULL
+      `).catch(err => logger.warn('Employees status columns ensure note:', err.message));
+
       // 3. Ensure supporting tables exist
       await query(`
         CREATE TABLE IF NOT EXISTS employee_bank_assignments (

@@ -9,7 +9,7 @@ const isUuid = (val) => typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-
  * @param {string} inputId - UUID of user or employee or partner_profile or team_member
  * @returns {Promise<Object>} Updated user record
  */
-const softDeleteUserAccount = async (inputId) => {
+const softDeleteUserAccount = async (inputId, extraIdentifiers = {}) => {
   const client = await getClient();
   try {
     await client.query('BEGIN');
@@ -38,197 +38,391 @@ const softDeleteUserAccount = async (inputId) => {
       }
     };
 
-    let actualUserId = null;
-    let actualPartnerId = null;
-    let actualEmployeeId = null;
-    let userRecord = null;
-    let empRecord = null;
+    const allEmployeeIds = new Set();
+    const allUserIds = new Set();
+    const allPartnerIds = new Set();
+    const emails = new Set();
+    const mobiles = new Set();
+    const empCodes = new Set();
+
+    const addMobile = (num) => {
+      if (!num) return;
+      const str = String(num).trim();
+      if (!str) return;
+      mobiles.add(str);
+      const digits = str.replace(/\D/g, '');
+      if (digits.length >= 10) {
+        const last10 = digits.slice(-10);
+        mobiles.add(last10);
+        mobiles.add('+91' + last10);
+        mobiles.add('91' + last10);
+      }
+    };
+
+    const addEmail = (em) => {
+      if (!em) return;
+      const str = String(em).trim().toLowerCase();
+      if (str && str.includes('@')) emails.add(str);
+    };
+
+    const addCode = (code) => {
+      if (!code) return;
+      const str = String(code).trim();
+      if (str) empCodes.add(str);
+    };
+
+    // Ingest extraIdentifiers if provided
+    if (extraIdentifiers.userId && isUuid(extraIdentifiers.userId)) allUserIds.add(extraIdentifiers.userId);
+    if (extraIdentifiers.empId && isUuid(extraIdentifiers.empId)) allEmployeeIds.add(extraIdentifiers.empId);
+    if (extraIdentifiers.partnerId && isUuid(extraIdentifiers.partnerId)) allPartnerIds.add(extraIdentifiers.partnerId);
+    if (extraIdentifiers.empCode) addCode(extraIdentifiers.empCode);
+    if (extraIdentifiers.email) addEmail(extraIdentifiers.email);
+    if (extraIdentifiers.mobile) addMobile(extraIdentifiers.mobile);
+
+    // Initial categorization of inputId
+    if (typeof inputId === 'string') {
+      const trimmed = inputId.trim();
+      if (isUuid(trimmed)) {
+        // Could be user_id, employee PK id, or partner_id
+      } else if (trimmed.includes('@')) {
+        addEmail(trimmed);
+      } else if (/^\+?\d{8,15}$/.test(trimmed)) {
+        addMobile(trimmed);
+      } else {
+        addCode(trimmed);
+      }
+    }
 
     // 1. Check partner_team_relationships
     const { rows: tmRows } = await safeQuery(
-      `SELECT child_partner_id, parent_partner_id FROM partner_team_relationships WHERE id::text = $1 OR child_partner_id::text = $1 OR parent_partner_id::text = $1 LIMIT 1`,
+      `SELECT child_partner_id, parent_partner_id FROM partner_team_relationships 
+       WHERE id::text = $1 OR child_partner_id::text = $1 OR parent_partner_id::text = $1 LIMIT 1`,
       [inputId]
     );
     if (tmRows[0]) {
-      actualPartnerId = tmRows[0].child_partner_id || tmRows[0].parent_partner_id;
-      const { rows: [p] } = await safeQuery(`SELECT user_id FROM partner_profiles WHERE id::text = $1`, [actualPartnerId]);
-      actualUserId = p?.user_id || null;
+      const pId = tmRows[0].child_partner_id || tmRows[0].parent_partner_id;
+      if (pId) allPartnerIds.add(pId);
+      const { rows: [p] } = await safeQuery(`SELECT id, user_id FROM partner_profiles WHERE id::text = $1`, [pId]);
+      if (p?.user_id) allUserIds.add(p.user_id);
+      if (p?.id) allPartnerIds.add(p.id);
     }
 
-    // 2. Check employees
-    const { rows: [emp] } = await safeQuery(
-      `SELECT id, user_id, employee_id, email_id, mobile_number, full_name FROM employees WHERE id::text = $1 OR user_id::text = $1 OR employee_id::text = $1 OR email_id ILIKE $1 OR mobile_number = $1 LIMIT 1`,
+    // 2. Check employees table by UUID, user_id, employee_id, email, or mobile
+    const { rows: empRows } = await safeQuery(
+      `SELECT id, user_id, employee_id, email_id, mobile_number, full_name FROM employees 
+       WHERE id::text = $1 
+          OR user_id::text = $1 
+          OR employee_id::text = $1 
+          OR email_id ILIKE $1 
+          OR mobile_number = $1`,
       [inputId]
     );
-    if (emp) {
-      actualEmployeeId = emp.id;
-      empRecord = emp;
-      if (emp.user_id) actualUserId = emp.user_id;
+    for (const emp of empRows) {
+      allEmployeeIds.add(emp.id);
+      if (emp.user_id) allUserIds.add(emp.user_id);
+      if (emp.employee_id) addCode(emp.employee_id);
+      if (emp.email_id) addEmail(emp.email_id);
+      if (emp.mobile_number) addMobile(emp.mobile_number);
     }
 
-    // 3. Check users
-    if (!actualUserId) {
-      const { rows: [userDirect] } = await safeQuery(
-        `SELECT id, email, role, mobile, full_name, employee_id FROM users WHERE id::text = $1 OR email ILIKE $1 OR mobile = $1 OR employee_id::text = $1 LIMIT 1`,
-        [inputId]
+    // 3. Check users table by UUID, employee_id, email, or mobile
+    const { rows: uRows } = await safeQuery(
+      `SELECT id, email, role, mobile, full_name, employee_id FROM users 
+       WHERE id::text = $1 
+          OR employee_id::text = $1 
+          OR email ILIKE $1 
+          OR mobile = $1`,
+      [inputId]
+    );
+    for (const u of uRows) {
+      allUserIds.add(u.id);
+      if (u.role === 'SUPER_ADMIN') {
+        throw new Error('Super Administrator accounts cannot be deleted or suspended.');
+      }
+      if (u.employee_id) addCode(u.employee_id);
+      if (u.email) addEmail(u.email);
+      if (u.mobile) addMobile(u.mobile);
+    }
+
+    // 4. Check partner_profiles table by UUID, user_id, partner_code, email, or mobile
+    const { rows: partnerRows } = await safeQuery(
+      `SELECT id, user_id, email, mobile, partner_code FROM partner_profiles 
+       WHERE id::text = $1 
+          OR user_id::text = $1 
+          OR partner_code::text = $1 
+          OR email ILIKE $1 
+          OR mobile = $1`,
+      [inputId]
+    );
+    for (const p of partnerRows) {
+      allPartnerIds.add(p.id);
+      if (p.user_id) allUserIds.add(p.user_id);
+      if (p.partner_code) addCode(p.partner_code);
+      if (p.email) addEmail(p.email);
+      if (p.mobile) addMobile(p.mobile);
+    }
+
+    // ── CROSS-RESOLUTION: Link user <-> employee <-> partner across sets ──
+    const userUuids = Array.from(allUserIds).filter(isUuid);
+    const codeList = Array.from(empCodes);
+    const emailList = Array.from(emails);
+    const mobileList = Array.from(mobiles);
+
+    // Cross-resolve employees linked to any identified users, codes, emails, or mobiles
+    const empConditions = [];
+    const empParams = [];
+    if (userUuids.length > 0) {
+      empParams.push(userUuids);
+      empConditions.push(`user_id = ANY(${empParams.length}::uuid[])`);
+    }
+    if (codeList.length > 0) {
+      empParams.push(codeList);
+      empConditions.push(`employee_id = ANY(${empParams.length}::text[])`);
+    }
+    if (emailList.length > 0) {
+      empParams.push(emailList);
+      empConditions.push(`LOWER(email_id) = ANY(${empParams.length}::text[])`);
+    }
+    if (mobileList.length > 0) {
+      empParams.push(mobileList);
+      empConditions.push(`mobile_number = ANY(${empParams.length}::text[])`);
+    }
+
+    if (empConditions.length > 0) {
+      const { rows: crossEmps } = await safeQuery(
+        `SELECT id, user_id, employee_id, email_id, mobile_number FROM employees WHERE ${empConditions.join(' OR ')}`,
+        empParams
       );
-      if (userDirect) {
-        actualUserId = userDirect.id;
-        userRecord = userDirect;
+      for (const e of crossEmps) {
+        allEmployeeIds.add(e.id);
+        if (e.user_id) allUserIds.add(e.user_id);
+        if (e.employee_id) addCode(e.employee_id);
+        if (e.email_id) addEmail(e.email_id);
+        if (e.mobile_number) addMobile(e.mobile_number);
       }
     }
 
-    // 4. Check partner_profiles
-    if (!actualUserId) {
-      const { rows: [partner] } = await safeQuery(
-        `SELECT id, user_id FROM partner_profiles WHERE id::text = $1 OR user_id::text = $1 OR partner_code::text = $1 LIMIT 1`,
-        [inputId]
+    // Cross-resolve users linked to any identified employees, partners, codes, emails, or mobiles
+    const finalEmpUuids = Array.from(allEmployeeIds).filter(isUuid);
+    const finalCodeList = Array.from(empCodes);
+    const finalEmailList = Array.from(emails);
+    const finalMobileList = Array.from(mobiles);
+
+    const userConditions = [];
+    const userParams = [];
+    if (userUuids.length > 0) {
+      userParams.push(userUuids);
+      userConditions.push(`id = ANY(${userParams.length}::uuid[])`);
+    }
+    if (finalEmpUuids.length > 0) {
+      userParams.push(finalEmpUuids);
+      userConditions.push(`id IN (SELECT user_id FROM employees WHERE id = ANY(${userParams.length}::uuid[]) AND user_id IS NOT NULL)`);
+    }
+    if (finalCodeList.length > 0) {
+      userParams.push(finalCodeList);
+      userConditions.push(`employee_id = ANY(${userParams.length}::text[])`);
+    }
+    if (finalEmailList.length > 0) {
+      userParams.push(finalEmailList);
+      userConditions.push(`LOWER(email) = ANY(${userParams.length}::text[])`);
+    }
+    if (finalMobileList.length > 0) {
+      userParams.push(finalMobileList);
+      userConditions.push(`mobile = ANY(${userParams.length}::text[])`);
+    }
+
+    if (userConditions.length > 0) {
+      const { rows: crossUsers } = await safeQuery(
+        `SELECT id, email, role, mobile, full_name, employee_id FROM users WHERE ${userConditions.join(' OR ')}`,
+        userParams
       );
-      if (partner) {
-        actualPartnerId = partner.id;
-        actualUserId = partner.user_id;
+      for (const u of crossUsers) {
+        allUserIds.add(u.id);
+        if (u.role === 'SUPER_ADMIN') {
+          throw new Error('Super Administrator accounts cannot be deleted or suspended.');
+        }
+        if (u.employee_id) addCode(u.employee_id);
+        if (u.email) addEmail(u.email);
+        if (u.mobile) addMobile(u.mobile);
       }
     }
 
-    // If empRecord found but actualUserId not found yet, check users by mobile or email
-    if (!actualUserId && empRecord) {
-      const { rows: [uByContact] } = await safeQuery(
-        `SELECT id, email, role, mobile, full_name FROM users WHERE (mobile = $1 AND $1 IS NOT NULL) OR (email ILIKE $2 AND $2 IS NOT NULL) LIMIT 1`,
-        [empRecord.mobile_number || null, empRecord.email_id || null]
-      );
-      if (uByContact) {
-        actualUserId = uByContact.id;
-        userRecord = uByContact;
-      }
-    }
-
-    // Resolve userRecord if actualUserId is known
-    if (actualUserId && !userRecord) {
-      const { rows: [u] } = await safeQuery(
-        `SELECT id, email, role, mobile, full_name, employee_id FROM users WHERE id::text = $1`,
-        [actualUserId]
-      );
-      userRecord = u || null;
-    }
-
-    // If actualUserId found but empRecord not found yet, find empRecord
-    if (actualUserId && !empRecord) {
-      const { rows: [eByUser] } = await safeQuery(
-        `SELECT id, user_id, employee_id, email_id, mobile_number, full_name FROM employees WHERE user_id::text = $1 OR (email_id ILIKE $2 AND $2 IS NOT NULL) OR (mobile_number = $3 AND $3 IS NOT NULL) LIMIT 1`,
-        [actualUserId, userRecord?.email || null, userRecord?.mobile || null]
-      );
-      if (eByUser) {
-        actualEmployeeId = eByUser.id;
-        empRecord = eByUser;
-      }
-    }
-
-    if (actualUserId && !actualPartnerId) {
-      const { rows: [partner] } = await safeQuery(
-        `SELECT id FROM partner_profiles WHERE user_id::text = $1 LIMIT 1`,
-        [actualUserId]
-      );
-      if (partner) actualPartnerId = partner.id;
-    }
-
-    if (!actualUserId && !actualPartnerId && !actualEmployeeId) {
+    if (allUserIds.size === 0 && allEmployeeIds.size === 0 && allPartnerIds.size === 0 && empCodes.size === 0) {
       throw new Error('User, employee, or partner account not found');
     }
 
-    // Prevent deactivating Super Admin accounts
-    if (userRecord?.role === 'SUPER_ADMIN') {
-      throw new Error('Super Administrator accounts cannot be deleted or suspended.');
-    }
+    const resolvedUserUuids = Array.from(allUserIds).filter(isUuid);
+    const resolvedEmpUuids = Array.from(allEmployeeIds).filter(isUuid);
+    const resolvedPartnerUuids = Array.from(allPartnerIds).filter(isUuid);
+    const resolvedCodes = Array.from(empCodes);
+    const resolvedEmails = Array.from(emails);
+    const resolvedMobiles = Array.from(mobiles);
 
-    // 5. Deactivate partner and children if applicable
-    if (actualPartnerId || actualUserId) {
-      if (actualPartnerId) {
-        await safeExec(
-          `UPDATE partner_profiles SET status = 'suspended', updated_at = NOW() WHERE parent_partner_id::text = $1`,
-          [actualPartnerId]
-        );
-        await safeExec(
-          `UPDATE wallet_withdrawals SET status = 'rejected', admin_note = 'Account suspended', updated_at = NOW() WHERE partner_id::text = $1 AND status = 'pending'`,
-          [actualPartnerId]
-        );
+    // 5. Deactivate partner profiles & withdrawals & wallets
+    if (resolvedPartnerUuids.length > 0 || resolvedUserUuids.length > 0) {
+      const pConds = [];
+      const pParams = [];
+      if (resolvedPartnerUuids.length > 0) {
+        pParams.push(resolvedPartnerUuids);
+        pConds.push(`id = ANY(${pParams.length}::uuid[])`);
+        pConds.push(`parent_partner_id = ANY(${pParams.length}::uuid[])`);
       }
+      if (resolvedUserUuids.length > 0) {
+        pParams.push(resolvedUserUuids);
+        pConds.push(`user_id = ANY(${pParams.length}::uuid[])`);
+      }
+      if (resolvedCodes.length > 0) {
+        pParams.push(resolvedCodes);
+        pConds.push(`partner_code = ANY(${pParams.length}::text[])`);
+      }
+      if (pConds.length > 0) {
+        await safeExec(`UPDATE partner_profiles SET status = 'suspended', updated_at = NOW() WHERE ${pConds.join(' OR ')}`, pParams);
+      }
+      if (resolvedPartnerUuids.length > 0) {
+        await safeExec(`UPDATE wallet_withdrawals SET status = 'rejected', admin_note = 'Account suspended', updated_at = NOW() WHERE partner_id = ANY($1::uuid[]) AND status = 'pending'`, [resolvedPartnerUuids]);
+      }
+    }
+
+    // Deactivate wallets
+    if (resolvedPartnerUuids.length > 0 || resolvedUserUuids.length > 0) {
+      const wConds = [];
+      const wParams = [];
+      if (resolvedPartnerUuids.length > 0) {
+        wParams.push(resolvedPartnerUuids);
+        wConds.push(`partner_id = ANY(${wParams.length}::uuid[])`);
+      }
+      if (resolvedUserUuids.length > 0) {
+        wParams.push(resolvedUserUuids);
+        wConds.push(`user_id = ANY(${wParams.length}::uuid[])`);
+      }
+      if (wConds.length > 0) {
+        await safeExec(`UPDATE partner_wallets SET status = 'inactive', updated_at = NOW() WHERE ${wConds.join(' OR ')}`, wParams);
+        await safeExec(`UPDATE wallets SET status = 'inactive', updated_at = NOW() WHERE ${wConds.join(' OR ')}`, wParams);
+      }
+    }
+
+    // 6. Deactivate employees table
+    const empUpdConds = [];
+    const empUpdParams = [];
+    if (resolvedEmpUuids.length > 0) {
+      empUpdParams.push(resolvedEmpUuids);
+      empUpdConds.push(`id = ANY(${empUpdParams.length}::uuid[])`);
+    }
+    if (resolvedUserUuids.length > 0) {
+      empUpdParams.push(resolvedUserUuids);
+      empUpdConds.push(`user_id = ANY(${empUpdParams.length}::uuid[])`);
+    }
+    if (resolvedCodes.length > 0) {
+      empUpdParams.push(resolvedCodes);
+      empUpdConds.push(`employee_id = ANY(${empUpdParams.length}::text[])`);
+    }
+    if (resolvedEmails.length > 0) {
+      empUpdParams.push(resolvedEmails);
+      empUpdConds.push(`LOWER(email_id) = ANY(${empUpdParams.length}::text[])`);
+    }
+    if (resolvedMobiles.length > 0) {
+      empUpdParams.push(resolvedMobiles);
+      empUpdConds.push(`mobile_number = ANY(${empUpdParams.length}::text[])`);
+    }
+
+    if (empUpdConds.length > 0) {
+      // Primary status update: guaranteed fields
       await safeExec(
-        `UPDATE partner_profiles SET status = 'suspended', updated_at = NOW() WHERE id::text = $1 OR user_id::text = $2`,
-        [actualPartnerId || '', actualUserId || '']
+        `UPDATE employees 
+         SET employee_status = 'INACTIVE', 
+             activation_status = 'SUSPENDED', 
+             updated_at = NOW() 
+         WHERE ${empUpdConds.join(' OR ')}`,
+        empUpdParams
+      );
+
+      // Secondary updates: optional timestamp & boolean columns (safeExec in case columns are absent)
+      await safeExec(`UPDATE employees SET deactivated_at = NOW() WHERE ${empUpdConds.join(' OR ')}`, empUpdParams);
+      await safeExec(`UPDATE employees SET is_active = FALSE WHERE ${empUpdConds.join(' OR ')}`, empUpdParams);
+    }
+
+    // 7. Deactivate employee_onboarding_checklist
+    if (resolvedEmpUuids.length > 0) {
+      await safeExec(
+        `UPDATE employee_onboarding_checklist SET current_stage = 'SUSPENDED', updated_at = NOW() WHERE employee_id = ANY($1::uuid[])`,
+        [resolvedEmpUuids]
       );
     }
 
-    // 6. Deactivate wallets
-    if (actualPartnerId || actualUserId) {
+    // 8. Deactivate employee_candidates
+    const candConds = [];
+    const candParams = [];
+    if (resolvedCodes.length > 0) {
+      candParams.push(resolvedCodes);
+      candConds.push(`reference_code = ANY(${candParams.length}::text[]) OR employee_id = ANY(${candParams.length}::text[])`);
+    }
+    if (resolvedMobiles.length > 0) {
+      candParams.push(resolvedMobiles);
+      candConds.push(`mobile_number = ANY(${candParams.length}::text[])`);
+    }
+    if (resolvedEmails.length > 0) {
+      candParams.push(resolvedEmails);
+      candConds.push(`LOWER(email_id) = ANY(${candParams.length}::text[])`);
+    }
+    if (candConds.length > 0) {
       await safeExec(
-        `UPDATE partner_wallets SET status = 'inactive', updated_at = NOW() WHERE partner_id::text = $1 OR user_id::text = $2`,
-        [actualPartnerId || '', actualUserId || '']
-      );
-      await safeExec(
-        `UPDATE wallets SET status = 'inactive', updated_at = NOW() WHERE partner_id::text = $1 OR user_id::text = $2`,
-        [actualPartnerId || '', actualUserId || '']
+        `UPDATE employee_candidates SET interview_status = 'SUSPENDED', updated_at = NOW() WHERE ${candConds.join(' OR ')}`,
+        candParams
       );
     }
 
-    const finalEmail = userRecord?.email || empRecord?.email_id || null;
-    const finalMobile = userRecord?.mobile || empRecord?.mobile_number || null;
-    const finalEmpCode = empRecord?.employee_id || userRecord?.employee_id || null;
-
-    // 7. Deactivate employee record & onboarding checklist if applicable
-    await safeExec(
-      `UPDATE employees 
-       SET employee_status = 'INACTIVE', 
-           activation_status = 'SUSPENDED', 
-           deactivated_at = NOW(), 
-           updated_at = NOW() 
-       WHERE id::text = $1 
-          OR user_id::text = $2 
-          OR employee_id::text = $1
-          OR (employee_id::text = $3 AND $3 IS NOT NULL)
-          OR (email_id ILIKE $4 AND $4 IS NOT NULL)
-          OR (mobile_number = $5 AND $5 IS NOT NULL)`,
-      [actualEmployeeId || inputId, actualUserId || '', finalEmpCode, finalEmail, finalMobile]
-    );
-
-    if (actualEmployeeId) {
-      await safeExec(
-        `UPDATE employee_onboarding_checklist SET current_stage = 'SUSPENDED', updated_at = NOW() WHERE employee_id::text = $1`,
-        [actualEmployeeId]
-      );
+    // 9. Deactivate users table
+    const userUpdConds = [];
+    const userUpdParams = [];
+    if (resolvedUserUuids.length > 0) {
+      userUpdParams.push(resolvedUserUuids);
+      userUpdConds.push(`id = ANY(${userUpdParams.length}::uuid[])`);
     }
-
-    // 8. Deactivate candidate entry if applicable
-    if (finalEmpCode || finalMobile || finalEmail) {
-      await safeExec(
-        `UPDATE employee_candidates 
-         SET interview_status = 'SUSPENDED', updated_at = NOW() 
-         WHERE (reference_code::text = $1 AND $1 IS NOT NULL)
-            OR (mobile_number = $2 AND $2 IS NOT NULL)
-            OR (email_id ILIKE $3 AND $3 IS NOT NULL)`,
-        [finalEmpCode, finalMobile, finalEmail]
-      );
+    if (resolvedCodes.length > 0) {
+      userUpdParams.push(resolvedCodes);
+      userUpdConds.push(`employee_id = ANY(${userUpdParams.length}::text[])`);
     }
-
-    // 9. Deactivate user account & terminate active tokens
-    if (actualUserId) {
+    if (resolvedEmails.length > 0) {
+      userUpdParams.push(resolvedEmails);
+      userUpdConds.push(`LOWER(email) = ANY(${userUpdParams.length}::text[])`);
+    }
+    if (resolvedMobiles.length > 0) {
+      userUpdParams.push(resolvedMobiles);
+      userUpdConds.push(`mobile = ANY(${userUpdParams.length}::text[])`);
+    }
+    if (userUpdConds.length > 0) {
       await safeExec(
         `UPDATE users 
          SET status = 'suspended', 
              is_active = FALSE, 
              deactivated_at = NOW(), 
              updated_at = NOW() 
-         WHERE id::text = $1 
-            OR (email ILIKE $2 AND $2 IS NOT NULL) 
-            OR (mobile = $3 AND $3 IS NOT NULL)
-            OR (employee_id::text = $4 AND $4 IS NOT NULL)`,
-        [actualUserId, finalEmail, finalMobile, finalEmpCode]
+         WHERE ${userUpdConds.join(' OR ')}`,
+        userUpdParams
       );
-      await safeExec(`DELETE FROM refresh_tokens WHERE user_id::text = $1`, [actualUserId]);
+    }
+
+    // 10. Invalidate refresh tokens
+    if (resolvedUserUuids.length > 0) {
+      await safeExec(`DELETE FROM refresh_tokens WHERE user_id = ANY($1::uuid[])`, [resolvedUserUuids]);
     }
 
     await client.query('COMMIT');
-    logger.info(`Successfully soft-deleted (deactivated) account: ${inputId} (User: ${actualUserId})`);
-    return { id: actualUserId || inputId, mode: 'temporary', status: 'suspended', success: true };
+    const primaryUserId = resolvedUserUuids[0] || null;
+    const primaryEmpId = resolvedEmpUuids[0] || null;
+    logger.info(`Successfully soft-deleted (deactivated) account: ${inputId}`, {
+      userIds: resolvedUserUuids,
+      employeeIds: resolvedEmpUuids,
+      codes: resolvedCodes
+    });
+    return { 
+      id: primaryUserId || primaryEmpId || inputId, 
+      userId: primaryUserId,
+      employeeId: primaryEmpId,
+      mode: 'temporary', 
+      status: 'suspended', 
+      success: true 
+    };
   } catch (err) {
     await client.query('ROLLBACK');
     logger.error(`Error soft-deleting account ${inputId}:`, err);

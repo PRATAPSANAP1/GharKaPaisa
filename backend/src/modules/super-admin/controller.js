@@ -1056,9 +1056,11 @@ const getAuditLogs = async (req, res, next) => {
 const deleteAdmin = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const extraUserId = req.query.user_id || req.body?.user_id;
+    const extraEmpCode = req.query.emp_code || req.body?.emp_code;
 
     // Prevent deleting oneself
-    if (id === req.user.id) {
+    if (id === req.user.id || (extraUserId && extraUserId === req.user.id)) {
       return error(res, 'You are not permitted to delete your own account.', 400);
     }
 
@@ -1073,42 +1075,51 @@ const deleteAdmin = async (req, res, next) => {
     );
 
     // If not found, check partner_profiles
+    let targetPartner = null;
     if (!targetUser) {
       const { rows: [partner] } = await query(
-        `SELECT user_id FROM partner_profiles WHERE id::text = $1 OR partner_code::text = $1 OR email ILIKE $1 OR mobile = $1`,
+        `SELECT id, user_id, partner_code, email, mobile FROM partner_profiles WHERE id::text = $1 OR partner_code::text = $1 OR email ILIKE $1 OR mobile = $1`,
         [id]
       );
-      if (partner?.user_id) {
-        const { rows: [userByPartner] } = await query(
-          `SELECT id, email, role, full_name, employee_id, mobile FROM users WHERE id::text = $1`,
-          [partner.user_id]
-        );
-        targetUser = userByPartner;
+      if (partner) {
+        targetPartner = partner;
+        if (partner.user_id) {
+          const { rows: [userByPartner] } = await query(
+            `SELECT id, email, role, full_name, employee_id, mobile FROM users WHERE id::text = $1`,
+            [partner.user_id]
+          );
+          targetUser = userByPartner;
+        }
       }
     }
 
-    // If not found, check employees
-    if (!targetUser) {
-      const { rows: [emp] } = await query(
-        `SELECT id, user_id, full_name, email_id, mobile_number, employee_id FROM employees WHERE id::text = $1 OR employee_id::text = $1 OR email_id ILIKE $1 OR mobile_number = $1 LIMIT 1`,
-        [id]
-      );
-      if (emp) {
-        if (emp.user_id) {
-          const { rows: [userByEmp] } = await query(
-            `SELECT id, email, role, full_name, employee_id, mobile FROM users WHERE id::text = $1`,
-            [emp.user_id]
-          );
-          targetUser = userByEmp;
-        }
-        if (!targetUser && (emp.mobile_number || emp.email_id)) {
-          const { rows: [userByContact] } = await query(
-            `SELECT id, email, role, full_name, employee_id, mobile FROM users WHERE (mobile = $1 AND $1 IS NOT NULL) OR (email ILIKE $2 AND $2 IS NOT NULL) LIMIT 1`,
-            [emp.mobile_number || null, emp.email_id || null]
-          );
-          targetUser = userByContact;
-        }
+    // Check employees table
+    let targetEmployee = null;
+    const { rows: [emp] } = await query(
+      `SELECT id, user_id, full_name, email_id, mobile_number, employee_id FROM employees WHERE id::text = $1 OR employee_id::text = $1 OR email_id ILIKE $1 OR mobile_number = $1 LIMIT 1`,
+      [id]
+    );
+    if (emp) {
+      targetEmployee = emp;
+      if (!targetUser && emp.user_id) {
+        const { rows: [userByEmp] } = await query(
+          `SELECT id, email, role, full_name, employee_id, mobile FROM users WHERE id::text = $1`,
+          [emp.user_id]
+        );
+        targetUser = userByEmp;
       }
+      if (!targetUser && (emp.mobile_number || emp.email_id)) {
+        const { rows: [userByContact] } = await query(
+          `SELECT id, email, role, full_name, employee_id, mobile FROM users WHERE (mobile = $1 AND $1 IS NOT NULL) OR (email ILIKE $2 AND $2 IS NOT NULL) LIMIT 1`,
+          [emp.mobile_number || null, emp.email_id || null]
+        );
+        targetUser = userByContact;
+      }
+    }
+
+    // Prevent deleting oneself if matched
+    if (targetUser && targetUser.id === req.user.id) {
+      return error(res, 'You are not permitted to delete your own account.', 400);
     }
 
     // Prevent deleting Super Admin accounts
@@ -1116,30 +1127,43 @@ const deleteAdmin = async (req, res, next) => {
       return error(res, 'Super Administrator accounts cannot be deleted or suspended.', 403);
     }
 
+    const extraIdentifiers = {
+      userId: extraUserId || targetUser?.id,
+      empId: targetEmployee?.id,
+      partnerId: targetPartner?.id,
+      empCode: extraEmpCode || targetEmployee?.employee_id || targetUser?.employee_id,
+      email: targetEmployee?.email_id || targetUser?.email,
+      mobile: targetEmployee?.mobile_number || targetUser?.mobile
+    };
+
     // Delete user (temporary soft delete or permanent hard delete)
     const mode = req.query.mode || req.body?.mode || 'permanent';
     const { softDeleteUserAccount, deleteUserAccount } = require('../auth/user-deletion.service.js');
     let result;
-    const targetLookupId = targetUser ? targetUser.id : id;
     if (mode === 'temporary') {
-      result = await softDeleteUserAccount(targetLookupId);
+      result = await softDeleteUserAccount(id, extraIdentifiers);
     } else {
-      result = await deleteUserAccount(targetLookupId);
+      result = await deleteUserAccount(id);
+      if (extraIdentifiers.userId && extraIdentifiers.userId !== id) {
+        await deleteUserAccount(extraIdentifiers.userId).catch(() => {});
+      }
     }
 
     // Record action in audit logs
-    if (targetUser) {
-      await logAction(req, mode === 'temporary' ? 'DEACTIVATE_USER' : 'DELETE_USER', targetUser.id, { 
-        email: targetUser.email, 
-        role: targetUser.role,
-        full_name: targetUser.full_name,
-        employee_id: targetUser.employee_id,
+    const auditUserId = targetUser?.id || targetEmployee?.user_id || id;
+    if (auditUserId) {
+      await logAction(req, mode === 'temporary' ? 'DEACTIVATE_USER' : 'DELETE_USER', auditUserId, { 
+        email: targetUser?.email || targetEmployee?.email_id, 
+        role: targetUser?.role || 'EMPLOYEE',
+        full_name: targetUser?.full_name || targetEmployee?.full_name,
+        employee_id: targetUser?.employee_id || targetEmployee?.employee_id,
         mode 
       }).catch(() => {});
     }
 
     const actionText = mode === 'temporary' ? 'temporarily deactivated (soft deleted)' : 'permanently deleted';
-    return success(res, result, `Administrator account ${actionText} successfully.`);
+    const entityType = targetEmployee ? 'Employee' : (targetPartner ? 'Partner' : 'Administrator');
+    return success(res, result, `${entityType} account ${actionText} successfully.`);
   } catch (err) {
     next(err);
   }

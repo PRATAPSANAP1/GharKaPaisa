@@ -518,8 +518,11 @@ export default function EmployeeManagement() {
 
     setEmpDeleteModal(prev => ({ ...prev, loading: true }));
     try {
-      const targetId = emp.user_id || emp.id;
-      const res = await api.delete(`/superadmin/users/${targetId}?mode=${empDeleteModal.mode}`);
+      const targetId = emp.id || emp.user_id;
+      const params = new URLSearchParams({ mode: empDeleteModal.mode });
+      if (emp.user_id) params.append('user_id', emp.user_id);
+      if (emp.employee_id) params.append('emp_code', emp.employee_id);
+      const res = await api.delete(`/superadmin/users/${targetId}?${params.toString()}`);
       if (res.data?.success) {
         alert(
           isPermanent
@@ -529,10 +532,10 @@ export default function EmployeeManagement() {
         setEmpDeleteModal({ isOpen: false, emp: null, mode: 'temporary', confirmText: '', loading: false });
         const isMatchEmp = (e) => (
           e && emp && (
-            e.id === emp.id ||
-            (emp.user_id && e.user_id === emp.user_id) ||
-            (emp.employee_id && e.employee_id === emp.employee_id) ||
-            (emp.employee_code && (e.employee_code === emp.employee_code || e.emp_code === emp.employee_code)) ||
+            (e.id && emp.id && e.id === emp.id) ||
+            (emp.user_id && e.user_id && e.user_id === emp.user_id) ||
+            (emp.employee_id && (e.employee_id === emp.employee_id || e.employee_code === emp.employee_id || e.emp_code === emp.employee_id)) ||
+            (emp.employee_code && (e.employee_code === emp.employee_code || e.employee_id === emp.employee_code || e.emp_code === emp.employee_code)) ||
             (emp.email_id && (e.email_id === emp.email_id || e.email === emp.email_id)) ||
             (emp.mobile_number && (e.mobile_number === emp.mobile_number || e.mobile === emp.mobile_number))
           )
