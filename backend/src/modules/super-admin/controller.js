@@ -1086,15 +1086,24 @@ const deleteAdmin = async (req, res, next) => {
     // If not found, check employees
     if (!targetUser) {
       const { rows: [emp] } = await query(
-        `SELECT user_id, full_name, email_id FROM employees WHERE id::text = $1`,
+        `SELECT id, user_id, full_name, email_id, mobile_number FROM employees WHERE id::text = $1 OR employee_id::text = $1 OR email_id ILIKE $1 OR mobile_number = $1 LIMIT 1`,
         [id]
       );
-      if (emp?.user_id) {
-        const { rows: [userByEmp] } = await query(
-          `SELECT id, email, role, full_name FROM users WHERE id::text = $1`,
-          [emp.user_id]
-        );
-        targetUser = userByEmp;
+      if (emp) {
+        if (emp.user_id) {
+          const { rows: [userByEmp] } = await query(
+            `SELECT id, email, role, full_name FROM users WHERE id::text = $1`,
+            [emp.user_id]
+          );
+          targetUser = userByEmp;
+        }
+        if (!targetUser && (emp.mobile_number || emp.email_id)) {
+          const { rows: [userByContact] } = await query(
+            `SELECT id, email, role, full_name FROM users WHERE (mobile = $1 AND $1 IS NOT NULL) OR (email ILIKE $2 AND $2 IS NOT NULL) LIMIT 1`,
+            [emp.mobile_number || null, emp.email_id || null]
+          );
+          targetUser = userByContact;
+        }
       }
     }
 

@@ -312,7 +312,22 @@ async function activateAccount(targetUserId, actorAdminId, { isScheduled = false
   `, [actorAdminId, targetUserId]);
 
   // Sync activation across employees, partner_profiles, and wallets
-  await query(`UPDATE employees SET employee_status = 'ACTIVE', updated_at = NOW() WHERE user_id = $1`, [targetUserId]).catch(() => {});
+  await query(`
+    UPDATE employees 
+    SET employee_status = 'ACTIVE', 
+        activation_status = 'APPROVED', 
+        activated_at = NOW(), 
+        deactivated_at = NULL, 
+        updated_at = NOW() 
+    WHERE user_id = $1 
+       OR (email_id ILIKE $2 AND $2 IS NOT NULL) 
+       OR (mobile_number = $3 AND $3 IS NOT NULL)
+  `, [targetUserId, targetUser.email || null, targetUser.mobile || null]).catch(() => {});
+  await query(`
+    UPDATE employee_onboarding_checklist 
+    SET current_stage = 'ACTIVE', activated = true, activated_at = NOW(), overall_progress = 100 
+    WHERE employee_id IN (SELECT id FROM employees WHERE user_id = $1)
+  `).catch(() => {});
   await query(`UPDATE partner_profiles SET status = 'approved', updated_at = NOW() WHERE user_id = $1 AND status = 'suspended'`, [targetUserId]).catch(() => {});
   await query(`UPDATE partner_wallets SET status = 'active', updated_at = NOW() WHERE user_id = $1`, [targetUserId]).catch(() => {});
 
@@ -436,7 +451,21 @@ async function deactivateAccount(targetUserId, actorAdminId, { isScheduled = fal
   `, [actorAdminId, reason || 'Account deactivated by administrator', targetUserId]);
 
   // Sync deactivation across employees, partner_profiles, and wallets
-  await query(`UPDATE employees SET employee_status = 'INACTIVE', updated_at = NOW() WHERE user_id = $1`, [targetUserId]).catch(() => {});
+  await query(`
+    UPDATE employees 
+    SET employee_status = 'INACTIVE', 
+        activation_status = 'SUSPENDED', 
+        deactivated_at = NOW(), 
+        updated_at = NOW() 
+    WHERE user_id = $1 
+       OR (email_id ILIKE $2 AND $2 IS NOT NULL) 
+       OR (mobile_number = $3 AND $3 IS NOT NULL)
+  `, [targetUserId, targetUser.email || null, targetUser.mobile || null]).catch(() => {});
+  await query(`
+    UPDATE employee_onboarding_checklist 
+    SET current_stage = 'SUSPENDED', updated_at = NOW() 
+    WHERE employee_id IN (SELECT id FROM employees WHERE user_id = $1)
+  `).catch(() => {});
   await query(`UPDATE partner_profiles SET status = 'suspended', updated_at = NOW() WHERE user_id = $1`, [targetUserId]).catch(() => {});
   await query(`UPDATE partner_wallets SET status = 'inactive', updated_at = NOW() WHERE user_id = $1`, [targetUserId]).catch(() => {});
 

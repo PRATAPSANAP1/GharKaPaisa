@@ -40,6 +40,7 @@ const softDeleteUserAccount = async (inputId) => {
     let actualPartnerId = null;
     let actualEmployeeId = null;
     let userRecord = null;
+    let empRecord = null;
 
     // 1. Check partner_team_relationships
     const { rows: tmRows } = await safeQuery(
@@ -53,21 +54,20 @@ const softDeleteUserAccount = async (inputId) => {
     }
 
     // 2. Check employees
-    if (!actualUserId) {
-      const { rows: [emp] } = await safeQuery(
-        `SELECT id, user_id FROM employees WHERE id::text = $1 OR user_id::text = $1 OR employee_id::text = $1 LIMIT 1`,
-        [inputId]
-      );
-      if (emp) {
-        actualEmployeeId = emp.id;
-        actualUserId = emp.user_id || null;
-      }
+    const { rows: [emp] } = await safeQuery(
+      `SELECT id, user_id, employee_id, email_id, mobile_number, full_name FROM employees WHERE id::text = $1 OR user_id::text = $1 OR employee_id::text = $1 OR email_id ILIKE $1 OR mobile_number = $1 LIMIT 1`,
+      [inputId]
+    );
+    if (emp) {
+      actualEmployeeId = emp.id;
+      empRecord = emp;
+      if (emp.user_id) actualUserId = emp.user_id;
     }
 
     // 3. Check users
     if (!actualUserId) {
       const { rows: [userDirect] } = await safeQuery(
-        `SELECT id, email, role, mobile, full_name FROM users WHERE id::text = $1 OR email ILIKE $1 OR mobile = $1`,
+        `SELECT id, email, role, mobile, full_name, employee_id FROM users WHERE id::text = $1 OR email ILIKE $1 OR mobile = $1 OR employee_id::text = $1 LIMIT 1`,
         [inputId]
       );
       if (userDirect) {
@@ -88,29 +88,45 @@ const softDeleteUserAccount = async (inputId) => {
       }
     }
 
-    // Resolve remaining IDs if user is found
-    if (actualUserId) {
-      if (!userRecord) {
-        const { rows: [u] } = await safeQuery(
-          `SELECT id, email, role, mobile, full_name FROM users WHERE id::text = $1`,
-          [actualUserId]
-        );
-        userRecord = u || null;
+    // If empRecord found but actualUserId not found yet, check users by mobile or email
+    if (!actualUserId && empRecord) {
+      const { rows: [uByContact] } = await safeQuery(
+        `SELECT id, email, role, mobile, full_name FROM users WHERE (mobile = $1 AND $1 IS NOT NULL) OR (email ILIKE $2 AND $2 IS NOT NULL) LIMIT 1`,
+        [empRecord.mobile_number || null, empRecord.email_id || null]
+      );
+      if (uByContact) {
+        actualUserId = uByContact.id;
+        userRecord = uByContact;
       }
-      if (!actualEmployeeId) {
-        const { rows: [emp] } = await safeQuery(
-          `SELECT id FROM employees WHERE user_id::text = $1 LIMIT 1`,
-          [actualUserId]
-        );
-        if (emp) actualEmployeeId = emp.id;
+    }
+
+    // Resolve userRecord if actualUserId is known
+    if (actualUserId && !userRecord) {
+      const { rows: [u] } = await safeQuery(
+        `SELECT id, email, role, mobile, full_name, employee_id FROM users WHERE id::text = $1`,
+        [actualUserId]
+      );
+      userRecord = u || null;
+    }
+
+    // If actualUserId found but empRecord not found yet, find empRecord
+    if (actualUserId && !empRecord) {
+      const { rows: [eByUser] } = await safeQuery(
+        `SELECT id, user_id, employee_id, email_id, mobile_number, full_name FROM employees WHERE user_id::text = $1 OR (email_id ILIKE $2 AND $2 IS NOT NULL) OR (mobile_number = $3 AND $3 IS NOT NULL) LIMIT 1`,
+        [actualUserId, userRecord?.email || null, userRecord?.mobile || null]
+      );
+      if (eByUser) {
+        actualEmployeeId = eByUser.id;
+        empRecord = eByUser;
       }
-      if (!actualPartnerId) {
-        const { rows: [partner] } = await safeQuery(
-          `SELECT id FROM partner_profiles WHERE user_id::text = $1 LIMIT 1`,
-          [actualUserId]
-        );
-        if (partner) actualPartnerId = partner.id;
-      }
+    }
+
+    if (actualUserId && !actualPartnerId) {
+      const { rows: [partner] } = await safeQuery(
+        `SELECT id FROM partner_profiles WHERE user_id::text = $1 LIMIT 1`,
+        [actualUserId]
+      );
+      if (partner) actualPartnerId = partner.id;
     }
 
     if (!actualUserId && !actualPartnerId && !actualEmployeeId) {
@@ -123,18 +139,20 @@ const softDeleteUserAccount = async (inputId) => {
     }
 
     // 5. Deactivate partner and children if applicable
-    if (actualPartnerId) {
+    if (actualPartnerId || actualUserId) {
+      if (actualPartnerId) {
+        await safeExec(
+          `UPDATE partner_profiles SET status = 'suspended', updated_at = NOW() WHERE parent_partner_id::text = $1`,
+          [actualPartnerId]
+        );
+        await safeExec(
+          `UPDATE wallet_withdrawals SET status = 'rejected', admin_note = 'Account suspended', updated_at = NOW() WHERE partner_id::text = $1 AND status = 'pending'`,
+          [actualPartnerId]
+        );
+      }
       await safeExec(
-        `UPDATE partner_profiles SET status = 'suspended', updated_at = NOW() WHERE parent_partner_id::text = $1`,
-        [actualPartnerId]
-      );
-      await safeExec(
-        `UPDATE wallet_withdrawals SET status = 'rejected', admin_note = 'Account suspended', updated_at = NOW() WHERE partner_id::text = $1 AND status = 'pending'`,
-        [actualPartnerId]
-      );
-      await safeExec(
-        `UPDATE partner_profiles SET status = 'suspended', updated_at = NOW() WHERE id::text = $1`,
-        [actualPartnerId]
+        `UPDATE partner_profiles SET status = 'suspended', updated_at = NOW() WHERE id::text = $1 OR user_id::text = $2`,
+        [actualPartnerId || '', actualUserId || '']
       );
     }
 
@@ -150,19 +168,58 @@ const softDeleteUserAccount = async (inputId) => {
       );
     }
 
-    // 7. Deactivate employee record if applicable
-    if (actualEmployeeId || actualUserId) {
+    const finalEmail = userRecord?.email || empRecord?.email_id || null;
+    const finalMobile = userRecord?.mobile || empRecord?.mobile_number || null;
+    const finalEmpCode = empRecord?.employee_id || userRecord?.employee_id || null;
+
+    // 7. Deactivate employee record & onboarding checklist if applicable
+    await safeExec(
+      `UPDATE employees 
+       SET employee_status = 'INACTIVE', 
+           activation_status = 'SUSPENDED', 
+           deactivated_at = NOW(), 
+           updated_at = NOW() 
+       WHERE id::text = $1 
+          OR user_id::text = $2 
+          OR employee_id::text = $1
+          OR (employee_id::text = $3 AND $3 IS NOT NULL)
+          OR (email_id ILIKE $4 AND $4 IS NOT NULL)
+          OR (mobile_number = $5 AND $5 IS NOT NULL)`,
+      [actualEmployeeId || inputId, actualUserId || '', finalEmpCode, finalEmail, finalMobile]
+    );
+
+    if (actualEmployeeId) {
       await safeExec(
-        `UPDATE employees SET employee_status = 'INACTIVE', updated_at = NOW() WHERE id::text = $1 OR user_id::text = $2`,
-        [actualEmployeeId || '', actualUserId || '']
+        `UPDATE employee_onboarding_checklist SET current_stage = 'SUSPENDED', updated_at = NOW() WHERE employee_id::text = $1`,
+        [actualEmployeeId]
       );
     }
 
-    // 8. Deactivate user account & terminate active tokens
+    // 8. Deactivate candidate entry if applicable
+    if (finalEmpCode || finalMobile || finalEmail) {
+      await safeExec(
+        `UPDATE employee_candidates 
+         SET interview_status = 'SUSPENDED', updated_at = NOW() 
+         WHERE (reference_code::text = $1 AND $1 IS NOT NULL)
+            OR (mobile_number = $2 AND $2 IS NOT NULL)
+            OR (email_id ILIKE $3 AND $3 IS NOT NULL)`,
+        [finalEmpCode, finalMobile, finalEmail]
+      );
+    }
+
+    // 9. Deactivate user account & terminate active tokens
     if (actualUserId) {
       await safeExec(
-        `UPDATE users SET status = 'suspended', is_active = FALSE, updated_at = NOW() WHERE id::text = $1`,
-        [actualUserId]
+        `UPDATE users 
+         SET status = 'suspended', 
+             is_active = FALSE, 
+             deactivated_at = NOW(), 
+             updated_at = NOW() 
+         WHERE id::text = $1 
+            OR (email ILIKE $2 AND $2 IS NOT NULL) 
+            OR (mobile = $3 AND $3 IS NOT NULL)
+            OR (employee_id::text = $4 AND $4 IS NOT NULL)`,
+        [actualUserId, finalEmail, finalMobile, finalEmpCode]
       );
       await safeExec(`DELETE FROM refresh_tokens WHERE user_id::text = $1`, [actualUserId]);
     }
@@ -582,7 +639,16 @@ const deleteUserAccount = async (inputId) => {
       await safeExec(`DELETE FROM employee_working_hours WHERE employee_id = ANY($1::uuid[])`, [empIds]);
       await safeExec(`DELETE FROM contest_participants WHERE employee_id = ANY($1::uuid[]) OR employee_id = $2`, [empIds, actualUserId]);
       await safeExec(`DELETE FROM hr_profiles WHERE user_id = $1 OR (employee_id = ANY($2::uuid[]) AND $2::text[] <> '{}')`, [actualUserId, empIds]);
-      await safeExec(`DELETE FROM employee_candidates WHERE (converted_to_employee_id = ANY($1::uuid[]) AND $1::text[] <> '{}') OR interviewer_id = $2 OR created_by = $2 OR updated_by = $2`, [empIds, actualUserId]);
+      await safeExec(
+        `DELETE FROM employee_candidates 
+         WHERE (converted_to_employee_id = ANY($1::uuid[]) AND $1::text[] <> '{}') 
+            OR interviewer_id = $2 
+            OR created_by = $2 
+            OR updated_by = $2
+            OR (mobile_number = ANY($3::text[]) AND $3::text[] <> '{}')
+            OR (email_id ILIKE ANY($4::text[]) AND $4::text[] <> '{}')`,
+        [empIds, actualUserId, Array.from(mobiles), Array.from(emails)]
+      );
 
       await safeExec(`DELETE FROM employees WHERE id = ANY($1::uuid[]) OR user_id = $2`, [empIds, actualUserId]);
     }

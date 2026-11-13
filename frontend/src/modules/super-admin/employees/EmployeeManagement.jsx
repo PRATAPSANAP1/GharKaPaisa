@@ -406,13 +406,59 @@ export default function EmployeeManagement() {
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [drawerActionsOpen]);
 
+  const getEmployeeAccountStatus = (emp) => {
+    if (!emp) return { key: 'pending', label: '● Pending Activation', badgeLabel: '● Pending', bg: '#FEF3C7', color: '#92400E', isSuspended: false };
+    
+    const empStatusUpper = String(emp.employee_status || emp.status || '').toUpperCase();
+    const actStatusUpper = String(emp.activation_status || '').toUpperCase();
+    const isSuspended = empStatusUpper === 'INACTIVE' 
+      || empStatusUpper === 'SUSPENDED' 
+      || actStatusUpper === 'SUSPENDED' 
+      || actStatusUpper === 'INACTIVE' 
+      || emp.is_active === false
+      || String(emp.status || '').toLowerCase() === 'suspended'
+      || String(emp.status || '').toLowerCase() === 'inactive';
+
+    if (isSuspended) {
+      return {
+        key: 'suspended',
+        label: '● Deactivated / Suspended',
+        badgeLabel: '● Deactivated',
+        bg: '#FEE2E2',
+        color: '#DC2626',
+        isSuspended: true
+      };
+    }
+
+    if (actStatusUpper === 'APPROVED' || empStatusUpper === 'ACTIVE') {
+      return {
+        key: 'active',
+        label: '✓ Active & Verified',
+        badgeLabel: '✓ Active',
+        bg: '#D1FAE5',
+        color: '#065F46',
+        isSuspended: false
+      };
+    }
+
+    return {
+      key: 'pending',
+      label: '● Pending Activation',
+      badgeLabel: '● Pending',
+      bg: '#FEF3C7',
+      color: '#92400E',
+      isSuspended: false
+    };
+  };
+
   const handleToggleEmpStatus = async (emp) => {
     const targetEmp = emp || drawerEmp;
     if (!targetEmp) return;
-    const isCurrentlyActive = targetEmp.activation_status === 'APPROVED' || targetEmp.employee_status === 'ACTIVE';
+    const currentStatus = getEmployeeAccountStatus(targetEmp);
+    const isCurrentlyActive = !currentStatus.isSuspended && (targetEmp.activation_status === 'APPROVED' || targetEmp.employee_status === 'ACTIVE');
     const newActivation = isCurrentlyActive ? 'SUSPENDED' : 'APPROVED';
-    const newStatus = isCurrentlyActive ? 'SUSPENDED' : 'ACTIVE';
-    const actionLabel = isCurrentlyActive ? 'suspend' : 'activate';
+    const newStatus = isCurrentlyActive ? 'INACTIVE' : 'ACTIVE';
+    const actionLabel = isCurrentlyActive ? 'deactivate / suspend' : 'activate / restore';
 
     if (!window.confirm(`Are you sure you want to ${actionLabel} account for ${targetEmp.full_name}?`)) {
       return;
@@ -424,12 +470,13 @@ export default function EmployeeManagement() {
         employee_status: newStatus
       });
       if (res.data?.success) {
-        alert(`✓ Account successfully ${isCurrentlyActive ? 'suspended' : 'activated'}!`);
+        alert(`✓ Account successfully ${isCurrentlyActive ? 'deactivated (suspended)' : 'activated'}!`);
         const updated = {
           ...targetEmp,
           activation_status: newActivation,
           employee_status: newStatus,
-          status: newStatus
+          status: isCurrentlyActive ? 'suspended' : 'active',
+          is_active: !isCurrentlyActive
         };
         if (drawerEmp?.id === targetEmp.id) setDrawerEmp(updated);
         setEmployees(prev => prev.map(e => e.id === targetEmp.id ? { ...e, ...updated } : e));
@@ -480,7 +527,50 @@ export default function EmployeeManagement() {
             : `Employee "${emp.full_name}" has been temporarily deactivated (soft deleted).`
         );
         setEmpDeleteModal({ isOpen: false, emp: null, mode: 'temporary', confirmText: '', loading: false });
-        if (drawerEmp?.id === emp.id) setDrawerEmp(null);
+        const isMatchEmp = (e) => (
+          e && emp && (
+            e.id === emp.id ||
+            (emp.user_id && e.user_id === emp.user_id) ||
+            (emp.employee_id && e.employee_id === emp.employee_id) ||
+            (emp.employee_code && (e.employee_code === emp.employee_code || e.emp_code === emp.employee_code)) ||
+            (emp.email_id && (e.email_id === emp.email_id || e.email === emp.email_id)) ||
+            (emp.mobile_number && (e.mobile_number === emp.mobile_number || e.mobile === emp.mobile_number))
+          )
+        );
+
+        if (isPermanent) {
+          if (drawerEmp && isMatchEmp(drawerEmp)) {
+            setDrawerEmp(null);
+          }
+          setEmployees(prev => prev.filter(e => !isMatchEmp(e)));
+          setAllEmployees(prev => prev.filter(e => !isMatchEmp(e)));
+        } else {
+          // Immediately update drawer state to deactivated / suspended if this employee is open
+          if (drawerEmp && isMatchEmp(drawerEmp)) {
+            setDrawerEmp(prev => ({
+              ...prev,
+              employee_status: 'INACTIVE',
+              activation_status: 'SUSPENDED',
+              is_active: false,
+              status: 'suspended'
+            }));
+          }
+          // Immediately update list state in cards / table
+          setEmployees(prev => prev.map(e => isMatchEmp(e) ? {
+            ...e,
+            employee_status: 'INACTIVE',
+            activation_status: 'SUSPENDED',
+            is_active: false,
+            status: 'suspended'
+          } : e));
+          setAllEmployees(prev => prev.map(e => isMatchEmp(e) ? {
+            ...e,
+            employee_status: 'INACTIVE',
+            activation_status: 'SUSPENDED',
+            is_active: false,
+            status: 'suspended'
+          } : e));
+        }
         if (typeof fetchData === 'function') fetchData();
       } else {
         alert(res.data?.message || 'Delete operation failed');
@@ -507,7 +597,7 @@ Email Address       : ${target.email_id || target.email || 'N/A'}
 Reporting Manager   : ${target.manager_name || target.reporting_manager || target.team_leader_name || 'Super Admin'}
 Team                : ${target.team_name || target.team || 'N/A'}
 Joining Date        : ${target.joining_date || target.date_of_joining || (target.created_at ? new Date(target.created_at).toLocaleDateString() : 'N/A')}
-Account Status      : ${target.activation_status === 'APPROVED' ? 'ACTIVE' : target.activation_status || 'PENDING'}
+Account Status      : ${getEmployeeAccountStatus(target).label}
 Attendance Access   : ${(target.attendance_access === false || target.attendance_enabled === false) ? 'DISABLED' : 'ENABLED'}
 Aadhaar Number      : ${target.aadhaar_number || 'N/A'}
 PAN Number          : ${target.pan_number || 'N/A'}
@@ -1831,7 +1921,7 @@ Generated On        : ${new Date().toLocaleString()}
             { label: 'KYC Pending', count: kycPendingCount, icon: <FaClock />, color: '#D97706', bg: '#FEF3C7' },
             { label: 'Face Verification Missing', count: faceMissingCount, icon: <FaCamera />, color: '#DC2626', bg: '#FEE2E2' },
             { label: 'Attendance Active', count: (Array.isArray(targetEmployeeList) ? targetEmployeeList : []).filter(e => e.attendance_enabled !== false).length, icon: <FaCheckCircle />, color: '#10B981', bg: '#D1FAE5' },
-            { label: 'Active Employees', count: (Array.isArray(targetEmployeeList) ? targetEmployeeList : []).filter(e => String(e.activation_status || '').toUpperCase() === 'APPROVED').length, icon: <FaUserCheck />, color: '#6366F1', bg: '#EEF2FF' }
+            { label: 'Active Employees', count: (Array.isArray(targetEmployeeList) ? targetEmployeeList : []).filter(e => getEmployeeAccountStatus(e).key === 'active').length, icon: <FaUserCheck />, color: '#6366F1', bg: '#EEF2FF' }
           ].map((st, i) => (
             <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '0px', padding: isMobile ? '10px 12px' : '14px 16px', display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
               <div style={{ width: isMobile ? '32px' : '40px', height: isMobile ? '32px' : '40px', borderRadius: '0px', background: st.bg, color: st.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isMobile ? '15px' : '18px', flexShrink: 0 }}>
@@ -2083,11 +2173,11 @@ Generated On        : ${new Date().toLocaleString()}
                           <span 
                             style={{ 
                               padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 800,
-                              background: emp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7',
-                              color: emp.activation_status === 'APPROVED' ? '#065F46' : '#92400E'
+                              background: getEmployeeAccountStatus(emp).bg,
+                              color: getEmployeeAccountStatus(emp).color
                             }}
                           >
-                            {emp.activation_status === 'APPROVED' ? 'Active' : 'Pending'}
+                            {getEmployeeAccountStatus(emp).badgeLabel}
                           </span>
                           <button
                             onClick={(e) => {
@@ -2221,14 +2311,14 @@ Generated On        : ${new Date().toLocaleString()}
                             <span 
                               style={{ 
                                 padding: '4px 10px', borderRadius: '10px', fontSize: '12px', fontWeight: 800,
-                                background: emp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7',
-                                color: emp.activation_status === 'APPROVED' ? '#065F46' : '#92400E',
+                                background: getEmployeeAccountStatus(emp).bg,
+                                color: getEmployeeAccountStatus(emp).color,
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: '5px'
                               }}
                             >
-                              {emp.activation_status === 'APPROVED' ? '● Active' : '● Pending Activation'}
+                              {getEmployeeAccountStatus(emp).label}
                             </span>
                           </td>
                           <td style={{ padding: '14px 20px', textAlign: 'center' }}>
@@ -5035,12 +5125,12 @@ Generated On        : ${new Date().toLocaleString()}
                             setDrawerActionsOpen(false);
                             handleToggleEmpStatus(drawerEmp);
                           }}
-                          style={{ width: '100%', padding: '9px 12px', background: 'transparent', border: 'none', borderRadius: '8px', textAlign: 'left', fontSize: '12.5px', fontWeight: 700, color: drawerEmp.activation_status === 'APPROVED' ? '#EF4444' : '#10B981', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                          style={{ width: '100%', padding: '9px 12px', background: 'transparent', border: 'none', borderRadius: '8px', textAlign: 'left', fontSize: '12.5px', fontWeight: 700, color: getEmployeeAccountStatus(drawerEmp).isSuspended ? '#10B981' : '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
                           onMouseEnter={(e) => e.currentTarget.style.background = C.bgSecondary}
                           onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                         >
-                          {drawerEmp.activation_status === 'APPROVED' ? <FaLock style={{ color: '#EF4444' }} /> : <FaCheck style={{ color: '#10B981' }} />}
-                          {drawerEmp.activation_status === 'APPROVED' ? 'Suspend Employee Account' : 'Activate Employee Account'}
+                          {getEmployeeAccountStatus(drawerEmp).isSuspended ? <FaCheck style={{ color: '#10B981' }} /> : <FaLock style={{ color: '#EF4444' }} />}
+                          {getEmployeeAccountStatus(drawerEmp).isSuspended ? 'Activate / Restore Account' : 'Suspend Employee Account'}
                         </button>
                         <div style={{ height: '1px', background: C.border, margin: '3px 0' }} />
                         <button
@@ -5127,8 +5217,18 @@ Generated On        : ${new Date().toLocaleString()}
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <h3 style={{ fontSize: isMobile ? '15px' : '17px', fontWeight: 900, color: C.text, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{drawerEmp.full_name}</h3>
-                      <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 900, background: drawerEmp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7', color: drawerEmp.activation_status === 'APPROVED' ? '#065F46' : '#92400E', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        ✓ {drawerEmp.activation_status === 'APPROVED' ? 'Active' : 'Pending'}
+                      <span style={{ 
+                        padding: '2px 8px', 
+                        borderRadius: '6px', 
+                        fontSize: '11px', 
+                        fontWeight: 900, 
+                        background: getEmployeeAccountStatus(drawerEmp).bg, 
+                        color: getEmployeeAccountStatus(drawerEmp).color, 
+                        display: 'inline-flex', 
+                        alignItems: 'center', 
+                        gap: '4px' 
+                      }}>
+                        {getEmployeeAccountStatus(drawerEmp).label}
                       </span>
                     </div>
                     <div style={{ fontSize: '11.5px', fontWeight: 700, color: C.teal, marginTop: '2px' }}>
@@ -5237,8 +5337,18 @@ Generated On        : ${new Date().toLocaleString()}
 
                           <div>
                             <span style={{ color: C.textMid, fontSize: '11px', display: 'block', marginBottom: '2px' }}>Account Status</span>
-                            <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, background: drawerEmp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7', color: drawerEmp.activation_status === 'APPROVED' ? '#065F46' : '#92400E', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                              {drawerEmp.activation_status === 'APPROVED' ? '✓ Active & Verified' : '● Pending Activation'}
+                            <span style={{ 
+                              padding: '2px 8px', 
+                              borderRadius: '6px', 
+                              fontSize: '11px', 
+                              fontWeight: 800, 
+                              background: getEmployeeAccountStatus(drawerEmp).bg, 
+                              color: getEmployeeAccountStatus(drawerEmp).color, 
+                              display: 'inline-flex', 
+                              alignItems: 'center', 
+                              gap: '3px' 
+                            }}>
+                              {getEmployeeAccountStatus(drawerEmp).label}
                             </span>
                           </div>
                           <div>
@@ -5785,11 +5895,16 @@ Generated On        : ${new Date().toLocaleString()}
                 {/* 2. KYC & DOCS TAB (EMBEDDED 360° INSPECTION) */}
                 {drawerTab === 'kyc' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div style={{ background: drawerEmp.activation_status === 'APPROVED' ? '#D1FAE515' : '#FEF3C715', border: `1px solid ${drawerEmp.activation_status === 'APPROVED' ? '#A7F3D0' : '#FDE68A'}`, borderRadius: '0px', padding: '14px' }}>
-                      <div style={{ fontSize: '13px', fontWeight: 900, color: drawerEmp.activation_status === 'APPROVED' ? '#065F46' : '#92400E' }}>
-                        KYC Approval Status: {drawerEmp.activation_status === 'APPROVED' ? '✓ VERIFIED & APPROVED' : '⏳ PENDING SUPER ADMIN APPROVAL'}
+                    <div style={{ 
+                      background: getEmployeeAccountStatus(drawerEmp).isSuspended ? '#FEE2E215' : (drawerEmp.activation_status === 'APPROVED' ? '#D1FAE515' : '#FEF3C715'), 
+                      border: `1px solid ${getEmployeeAccountStatus(drawerEmp).isSuspended ? '#FECACA' : (drawerEmp.activation_status === 'APPROVED' ? '#A7F3D0' : '#FDE68A')}`, 
+                      borderRadius: '0px', 
+                      padding: '14px' 
+                    }}>
+                      <div style={{ fontSize: '13px', fontWeight: 900, color: getEmployeeAccountStatus(drawerEmp).isSuspended ? '#DC2626' : (drawerEmp.activation_status === 'APPROVED' ? '#065F46' : '#92400E') }}>
+                        KYC Approval Status: {getEmployeeAccountStatus(drawerEmp).isSuspended ? '● ACCOUNT DEACTIVATED / SUSPENDED' : (drawerEmp.activation_status === 'APPROVED' ? '✓ VERIFIED & APPROVED' : '⏳ PENDING SUPER ADMIN APPROVAL')}
                       </div>
-                      {drawerEmp.activation_status !== 'APPROVED' && (
+                      {!getEmployeeAccountStatus(drawerEmp).isSuspended && drawerEmp.activation_status !== 'APPROVED' && (
                         <button
                           onClick={() => handleKycVerify(drawerEmp.id, 'VERIFIED')}
                           style={{ marginTop: '10px', width: '100%', padding: '10px', background: '#10B981', color: '#fff', border: 'none', borderRadius: '0px', fontWeight: 900, fontSize: '13px', cursor: 'pointer' }}
@@ -6667,12 +6782,27 @@ Generated On        : ${new Date().toLocaleString()}
 
                       <button
                         onClick={() => handleToggleEmpStatus(drawerEmp)}
-                        style={{ padding: '12px 14px', background: drawerEmp.activation_status === 'APPROVED' ? '#FEF2F2' : '#F0FDF4', border: `1px solid ${drawerEmp.activation_status === 'APPROVED' ? '#FCA5A5' : '#86EFAC'}`, borderRadius: '12px', color: drawerEmp.activation_status === 'APPROVED' ? '#DC2626' : '#166534', fontWeight: 800, fontSize: '13px', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+                        style={{ 
+                          padding: '12px 14px', 
+                          background: getEmployeeAccountStatus(drawerEmp).isSuspended ? '#F0FDF4' : '#FEF2F2', 
+                          border: `1px solid ${getEmployeeAccountStatus(drawerEmp).isSuspended ? '#86EFAC' : '#FCA5A5'}`, 
+                          borderRadius: '12px', 
+                          color: getEmployeeAccountStatus(drawerEmp).isSuspended ? '#166534' : '#DC2626', 
+                          fontWeight: 800, 
+                          fontSize: '13px', 
+                          textAlign: 'left', 
+                          cursor: 'pointer', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '10px' 
+                        }}
                       >
-                        {drawerEmp.activation_status === 'APPROVED' ? <FaLock style={{ color: '#EF4444', fontSize: '16px' }} /> : <FaCheck style={{ color: '#10B981', fontSize: '16px' }} />}
+                        {getEmployeeAccountStatus(drawerEmp).isSuspended ? <FaCheck style={{ color: '#10B981', fontSize: '16px' }} /> : <FaLock style={{ color: '#EF4444', fontSize: '16px' }} />}
                         <div>
-                          <div>{drawerEmp.activation_status === 'APPROVED' ? 'Suspend Employee Account' : 'Activate Employee Account'}</div>
-                          <div style={{ fontSize: '11px', opacity: 0.8, fontWeight: 600 }}>{drawerEmp.activation_status === 'APPROVED' ? 'Revoke login access and mark account suspended' : 'Grant active portal login access'}</div>
+                          <div>{getEmployeeAccountStatus(drawerEmp).isSuspended ? 'Activate / Restore Employee Account' : 'Suspend Employee Account'}</div>
+                          <div style={{ fontSize: '11px', opacity: 0.8, fontWeight: 600 }}>
+                            {getEmployeeAccountStatus(drawerEmp).isSuspended ? 'Grant active portal login access and restore account' : 'Revoke login access and mark account suspended'}
+                          </div>
                         </div>
                       </button>
                     </div>
