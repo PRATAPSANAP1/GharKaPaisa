@@ -1171,9 +1171,20 @@ export default function SuperAdminDashboard() {
       if (res.data && res.data.success) {
         alert(
           isPermanent
-            ? 'Administrator account permanently deleted.'
-            : 'Administrator account temporarily deactivated (soft deleted).'
+            ? 'Administrator account permanently deleted from the system.'
+            : 'Administrator account deactivated (status: Suspended).'
         );
+        if (isPermanent) {
+          setAdmins(prev => (Array.isArray(prev) ? prev : []).filter(a => 
+            (a._id || a.id) !== targetId &&
+            a.id !== targetId &&
+            a._id !== targetId &&
+            a.email !== targetAdmin.email &&
+            a.employeeId !== targetAdmin.employeeId &&
+            a.employee_id !== targetAdmin.employeeId &&
+            a.employee_id !== targetAdmin.employee_id
+          ));
+        }
         setAdminDeleteModal({ isOpen: false, admin: null, mode: 'temporary', confirmText: '', loading: false });
         fetchAdmins();
       } else {

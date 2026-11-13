@@ -596,6 +596,13 @@ export default function AdminWorkingHours() {
             ? `Account for ${u.user || u.name || u.email} has been PERMANENTLY deleted.`
             : `Account for ${u.user || u.name || u.email} has been temporarily deactivated (soft deleted).`
         );
+        if (isPermanent) {
+          setUsers(prev => (Array.isArray(prev) ? prev : []).filter(user => 
+            user.id !== u.id && 
+            user.email !== u.email && 
+            user.employee_id !== u.employee_id
+          ));
+        }
         setShowDeleteConfirmModal(false);
         setDeleteConfirmData({ user: null, mode: 'temporary', confirmationText: '' });
         loadData();

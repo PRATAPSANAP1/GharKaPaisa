@@ -1062,21 +1062,25 @@ const deleteAdmin = async (req, res, next) => {
       return error(res, 'You are not permitted to delete your own account.', 400);
     }
 
-    // Check if user exists in users table
+    // Check if user exists in users table (by UUID, employee_id, email, or mobile)
     let { rows: [targetUser] } = await query(
-      `SELECT id, email, role, full_name FROM users WHERE id::text = $1`,
+      `SELECT id, email, role, full_name, employee_id, mobile FROM users 
+       WHERE id::text = $1 
+          OR employee_id::text = $1 
+          OR email ILIKE $1 
+          OR mobile = $1`,
       [id]
     );
 
     // If not found, check partner_profiles
     if (!targetUser) {
       const { rows: [partner] } = await query(
-        `SELECT user_id FROM partner_profiles WHERE id::text = $1`,
+        `SELECT user_id FROM partner_profiles WHERE id::text = $1 OR partner_code::text = $1 OR email ILIKE $1 OR mobile = $1`,
         [id]
       );
       if (partner?.user_id) {
         const { rows: [userByPartner] } = await query(
-          `SELECT id, email, role, full_name FROM users WHERE id::text = $1`,
+          `SELECT id, email, role, full_name, employee_id, mobile FROM users WHERE id::text = $1`,
           [partner.user_id]
         );
         targetUser = userByPartner;
@@ -1086,20 +1090,20 @@ const deleteAdmin = async (req, res, next) => {
     // If not found, check employees
     if (!targetUser) {
       const { rows: [emp] } = await query(
-        `SELECT id, user_id, full_name, email_id, mobile_number FROM employees WHERE id::text = $1 OR employee_id::text = $1 OR email_id ILIKE $1 OR mobile_number = $1 LIMIT 1`,
+        `SELECT id, user_id, full_name, email_id, mobile_number, employee_id FROM employees WHERE id::text = $1 OR employee_id::text = $1 OR email_id ILIKE $1 OR mobile_number = $1 LIMIT 1`,
         [id]
       );
       if (emp) {
         if (emp.user_id) {
           const { rows: [userByEmp] } = await query(
-            `SELECT id, email, role, full_name FROM users WHERE id::text = $1`,
+            `SELECT id, email, role, full_name, employee_id, mobile FROM users WHERE id::text = $1`,
             [emp.user_id]
           );
           targetUser = userByEmp;
         }
         if (!targetUser && (emp.mobile_number || emp.email_id)) {
           const { rows: [userByContact] } = await query(
-            `SELECT id, email, role, full_name FROM users WHERE (mobile = $1 AND $1 IS NOT NULL) OR (email ILIKE $2 AND $2 IS NOT NULL) LIMIT 1`,
+            `SELECT id, email, role, full_name, employee_id, mobile FROM users WHERE (mobile = $1 AND $1 IS NOT NULL) OR (email ILIKE $2 AND $2 IS NOT NULL) LIMIT 1`,
             [emp.mobile_number || null, emp.email_id || null]
           );
           targetUser = userByContact;
@@ -1116,10 +1120,11 @@ const deleteAdmin = async (req, res, next) => {
     const mode = req.query.mode || req.body?.mode || 'permanent';
     const { softDeleteUserAccount, deleteUserAccount } = require('../auth/user-deletion.service.js');
     let result;
+    const targetLookupId = targetUser ? targetUser.id : id;
     if (mode === 'temporary') {
-      result = await softDeleteUserAccount(targetUser ? targetUser.id : id);
+      result = await softDeleteUserAccount(targetLookupId);
     } else {
-      result = await deleteUserAccount(targetUser ? targetUser.id : id);
+      result = await deleteUserAccount(targetLookupId);
     }
 
     // Record action in audit logs
@@ -1128,12 +1133,13 @@ const deleteAdmin = async (req, res, next) => {
         email: targetUser.email, 
         role: targetUser.role,
         full_name: targetUser.full_name,
+        employee_id: targetUser.employee_id,
         mode 
       }).catch(() => {});
     }
 
     const actionText = mode === 'temporary' ? 'temporarily deactivated (soft deleted)' : 'permanently deleted';
-    return success(res, result, `User account ${actionText} successfully.`);
+    return success(res, result, `Administrator account ${actionText} successfully.`);
   } catch (err) {
     next(err);
   }

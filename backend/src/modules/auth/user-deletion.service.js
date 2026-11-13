@@ -1,6 +1,8 @@
 const { getClient } = require('../../config/database');
 const logger = require('../../config/logger');
 
+const isUuid = (val) => typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val);
+
 /**
  * Temporary Deletion (Soft Delete / Deactivate / Suspend Account)
  * Follows flow for all user roles: Super Admin safety check -> Check user/employee/partner -> Deactivate profile -> Deactivate wallet/tokens -> Mark inactive
@@ -278,6 +280,17 @@ const deleteUserAccount = async (inputId) => {
     const allPartnerIds = new Set();
     const emails = new Set();
     const mobiles = new Set();
+    const empCodes = new Set();
+
+    if (typeof inputId === 'string' && !isUuid(inputId)) {
+      if (inputId.includes('@')) {
+        emails.add(inputId.trim().toLowerCase());
+      } else if (/^\+?\d{8,15}$/.test(inputId.trim())) {
+        mobiles.add(inputId.trim());
+      } else {
+        empCodes.add(inputId.trim());
+      }
+    }
 
     // Check team relationships
     const { rows: tmRows } = await safeQuery(
@@ -298,6 +311,7 @@ const deleteUserAccount = async (inputId) => {
     );
     for (const emp of empRows) {
       allEmployeeIds.add(emp.id);
+      if (emp.employee_id) empCodes.add(emp.employee_id.trim());
       if (emp.user_id) actualUserId = emp.user_id;
       if (emp.email_id) emails.add(emp.email_id.trim().toLowerCase());
       if (emp.mobile_number) mobiles.add(emp.mobile_number.trim());
@@ -315,15 +329,37 @@ const deleteUserAccount = async (inputId) => {
       if (p.mobile) mobiles.add(p.mobile.trim());
     }
 
-    // Check users table
+    // Check users table (UUID, employee_id, email, or mobile)
     if (!actualUserId) {
       const { rows: [uDirect] } = await safeQuery(
-        `SELECT id, email, role, mobile, full_name FROM users WHERE id::text = $1 OR email ILIKE $1 OR mobile = $1`,
+        `SELECT id, email, role, mobile, full_name, employee_id FROM users 
+         WHERE id::text = $1 
+            OR employee_id::text = $1 
+            OR email ILIKE $1 
+            OR mobile = $1`,
         [inputId]
       );
       if (uDirect) {
         actualUserId = uDirect.id;
         userRecord = uDirect;
+        if (uDirect.employee_id) empCodes.add(uDirect.employee_id.trim());
+        if (uDirect.email) emails.add(uDirect.email.trim().toLowerCase());
+        if (uDirect.mobile) mobiles.add(uDirect.mobile.trim());
+      }
+    }
+
+    // If still no actualUserId, check by collected empCodes
+    if (!actualUserId && empCodes.size > 0) {
+      const codes = Array.from(empCodes);
+      const { rows: [uByCode] } = await safeQuery(
+        `SELECT id, email, role, mobile, full_name, employee_id FROM users WHERE employee_id = ANY($1::text[]) LIMIT 1`,
+        [codes]
+      );
+      if (uByCode) {
+        actualUserId = uByCode.id;
+        userRecord = uByCode;
+        if (uByCode.email) emails.add(uByCode.email.trim().toLowerCase());
+        if (uByCode.mobile) mobiles.add(uByCode.mobile.trim());
       }
     }
 
@@ -331,21 +367,23 @@ const deleteUserAccount = async (inputId) => {
     if (actualUserId) {
       if (!userRecord) {
         const { rows: [u] } = await safeQuery(
-          `SELECT id, email, role, mobile, full_name FROM users WHERE id::text = $1`,
+          `SELECT id, email, role, mobile, full_name, employee_id FROM users WHERE id::text = $1`,
           [actualUserId]
         );
         userRecord = u || null;
       }
       if (userRecord?.email) emails.add(userRecord.email.trim().toLowerCase());
       if (userRecord?.mobile) mobiles.add(userRecord.mobile.trim());
+      if (userRecord?.employee_id) empCodes.add(userRecord.employee_id.trim());
 
       // Fetch all employees for this user
       const { rows: linkedEmps } = await safeQuery(
-        `SELECT id, email_id, mobile_number FROM employees WHERE user_id::text = $1`,
+        `SELECT id, employee_id, email_id, mobile_number FROM employees WHERE user_id::text = $1`,
         [actualUserId]
       );
       for (const e of linkedEmps) {
         allEmployeeIds.add(e.id);
+        if (e.employee_id) empCodes.add(e.employee_id.trim());
         if (e.email_id) emails.add(e.email_id.trim().toLowerCase());
         if (e.mobile_number) mobiles.add(e.mobile_number.trim());
       }
@@ -362,13 +400,17 @@ const deleteUserAccount = async (inputId) => {
       }
     }
 
-    // Convert sets to arrays
+    // Convert sets to arrays & filter valid UUIDs
     const empIds = Array.from(allEmployeeIds).filter(Boolean);
     const partnerIds = Array.from(allPartnerIds).filter(Boolean);
     const emailList = Array.from(emails).filter(Boolean);
     const mobileList = Array.from(mobiles).filter(Boolean);
+    const codeList = Array.from(empCodes).filter(Boolean);
 
-    if (!actualUserId && empIds.length === 0 && partnerIds.length === 0) {
+    const empUuids = empIds.filter(id => isUuid(id));
+    const partnerUuids = partnerIds.filter(id => isUuid(id));
+
+    if (!actualUserId && empIds.length === 0 && partnerIds.length === 0 && codeList.length === 0) {
       throw new Error('User, employee, or partner account not found');
     }
 
@@ -379,23 +421,45 @@ const deleteUserAccount = async (inputId) => {
 
     logger.info(`Beginning permanent account deletion for inputId: ${inputId}`, {
       userId: actualUserId,
-      empIds,
-      partnerIds,
+      empUuids,
+      partnerUuids,
+      codeList,
       emailList,
       mobileList
     });
 
-    // ── 2. PURGE APPLICATIONS & APPLICATION CHILD RECORDS ─────────────────────
-    // Identify all applications directly owned, submitted by, or created for this account
-    const { rows: targetAppRows } = await safeQuery(`
-      SELECT id FROM applications 
-      WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}')
-         OR (submitted_by = $2 AND $2 IS NOT NULL)
-         OR (customer_id = $2 AND $2 IS NOT NULL)
-         OR (employee_id = ANY($3::uuid[]) AND $3::text[] <> '{}' AND submitted_by = $2)
-    `, [partnerIds, actualUserId, empIds]);
+    // Find a fallback active Super Admin for necessary NOT NULL foreign key reassignments
+    let fallbackId = null;
+    if (actualUserId) {
+      const { rows: [fallbackAdmin] } = await safeQuery(
+        `SELECT id FROM users WHERE role = 'SUPER_ADMIN' AND id <> $1 ORDER BY created_at ASC LIMIT 1`,
+        [actualUserId]
+      );
+      fallbackId = fallbackAdmin?.id || null;
+    }
 
-    const targetAppIds = targetAppRows.map(r => r.id);
+    // ── 2. PURGE APPLICATIONS & APPLICATION CHILD RECORDS ─────────────────────
+    let targetAppIds = [];
+    {
+      const conds = [];
+      const p = [];
+      if (partnerUuids.length > 0) {
+        p.push(partnerUuids);
+        conds.push(`partner_id = ANY($${p.length}::uuid[])`);
+      }
+      if (actualUserId) {
+        p.push(actualUserId);
+        conds.push(`submitted_by = $${p.length} OR customer_id = $${p.length}`);
+      }
+      if (empUuids.length > 0) {
+        p.push(empUuids);
+        conds.push(`employee_id = ANY($${p.length}::uuid[])`);
+      }
+      if (conds.length > 0) {
+        const { rows } = await safeQuery(`SELECT id FROM applications WHERE ${conds.join(' OR ')}`, p);
+        targetAppIds = rows.map(r => r.id);
+      }
+    }
 
     if (targetAppIds.length > 0) {
       await safeExec(`DELETE FROM application_timeline WHERE application_id = ANY($1::uuid[])`, [targetAppIds]);
@@ -422,44 +486,95 @@ const deleteUserAccount = async (inputId) => {
     }
 
     // Clean remaining application child tables where this user or partner has records
-    if (actualUserId || partnerIds.length > 0) {
-      await safeExec(`DELETE FROM bank_card_applications WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}') OR created_by = $2 OR process_by = $2 OR updated_by = $2`, [partnerIds, actualUserId]);
-      await safeExec(`DELETE FROM sbi_credit_card_applications WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}') OR created_by = $2 OR process_by = $2 OR updated_by = $2`, [partnerIds, actualUserId]);
-      await safeExec(`DELETE FROM loan_applications WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}')`, [partnerIds]);
-      await safeExec(`DELETE FROM insurance_applications WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}')`, [partnerIds]);
+    if (actualUserId) {
       await safeExec(`DELETE FROM application_notes WHERE user_id = $1`, [actualUserId]);
       await safeExec(`DELETE FROM application_admin_assignments WHERE admin_user_id = $1 OR assigned_by = $1`, [actualUserId]);
       await safeExec(`DELETE FROM application_audit_logs WHERE user_id = $1`, [actualUserId]);
       await safeExec(`DELETE FROM application_links WHERE created_by = $1`, [actualUserId]);
-      await safeExec(`DELETE FROM application_click_logs WHERE customer_id = $1 OR (partner_id = ANY($2::uuid[]) AND $2::text[] <> '{}')`, [actualUserId, partnerIds]);
       await safeExec(`DELETE FROM application_operator_history WHERE operator_id = $1`, [actualUserId]);
-      await safeExec(`DELETE FROM application_employee_assignments WHERE assigned_to_user_id = $1 OR assigned_by_user_id = $1 OR (assigned_to_employee_id = ANY($2::uuid[]) AND $2::text[] <> '{}')`, [actualUserId, empIds]);
+      await safeExec(`DELETE FROM application_employee_assignments WHERE assigned_to_user_id = $1 OR assigned_by_user_id = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM bank_card_applications WHERE created_by = $1 OR process_by = $1 OR updated_by = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM sbi_credit_card_applications WHERE created_by = $1 OR process_by = $1 OR updated_by = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM direct_card_applications WHERE created_by = $1`, [actualUserId]);
     }
 
-    // Unlink shared applications where this user was merely assigned or referenced
-    if (empIds.length > 0) {
-      await safeExec(`UPDATE applications SET employee_id = NULL, assigned_to_employee_id = NULL WHERE employee_id = ANY($1::uuid[]) OR assigned_to_employee_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`UPDATE applications SET employee_link_id = NULL WHERE employee_link_id IN (SELECT id FROM employee_product_links WHERE employee_id = ANY($1::uuid[]))`, [empIds]);
-      await safeExec(`UPDATE physical_application_details SET assigned_to_employee_id = NULL WHERE assigned_to_employee_id = ANY($1::uuid[])`, [empIds]);
+    if (partnerUuids.length > 0) {
+      await safeExec(`DELETE FROM bank_card_applications WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM sbi_credit_card_applications WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM loan_applications WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM insurance_applications WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM application_click_logs WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`UPDATE applications SET parent_partner_id = NULL WHERE parent_partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`UPDATE applications SET team_member_id = NULL WHERE team_member_id = ANY($1::uuid[])`, [partnerUuids]);
     }
+
+    if (empUuids.length > 0) {
+      await safeExec(`UPDATE applications SET employee_id = NULL, assigned_to_employee_id = NULL WHERE employee_id = ANY($1::uuid[]) OR assigned_to_employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`UPDATE applications SET employee_link_id = NULL WHERE employee_link_id IN (SELECT id FROM employee_product_links WHERE employee_id = ANY($1::uuid[]))`, [empUuids]);
+      await safeExec(`UPDATE physical_application_details SET assigned_to_employee_id = NULL WHERE assigned_to_employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM application_employee_assignments WHERE assigned_to_employee_id = ANY($1::uuid[])`, [empUuids]);
+    }
+
+    // Unlink shared applications where this user was merely assigned, operator, or reviewer
     if (actualUserId) {
-      await safeExec(`UPDATE applications SET submitted_by = NULL, remark_updated_by = NULL WHERE submitted_by = $1 OR remark_updated_by = $1`, [actualUserId]);
-    }
-    if (partnerIds.length > 0) {
-      await safeExec(`UPDATE applications SET parent_partner_id = NULL WHERE parent_partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`UPDATE applications SET team_member_id = NULL WHERE team_member_id = ANY($1::uuid[])`, [partnerIds]);
+      if (fallbackId) {
+        await safeExec(`UPDATE applications SET submitted_by = $2 WHERE submitted_by = $1`, [actualUserId, fallbackId]);
+        await safeExec(`UPDATE applications SET created_by = $2 WHERE created_by = $1`, [actualUserId, fallbackId]);
+      } else {
+        await safeExec(`DELETE FROM applications WHERE submitted_by = $1 OR created_by = $1`, [actualUserId]);
+      }
+
+      await safeExec(`
+        UPDATE applications 
+        SET remark_updated_by = NULL,
+            approved_by = NULL,
+            rejected_by = NULL,
+            verified_by = NULL,
+            super_admin_verified_by = NULL,
+            operator_id = NULL,
+            assigned_operator_id = NULL,
+            last_operator_id = NULL,
+            assigned_admin_id = NULL,
+            loan_operator_id = NULL,
+            credit_card_operator_id = NULL,
+            curable_operator_id = NULL,
+            status_updated_by = NULL,
+            updated_by = NULL
+        WHERE remark_updated_by = $1 
+           OR approved_by = $1 
+           OR rejected_by = $1 
+           OR verified_by = $1 
+           OR super_admin_verified_by = $1 
+           OR operator_id = $1 
+           OR assigned_operator_id = $1 
+           OR last_operator_id = $1 
+           OR assigned_admin_id = $1 
+           OR loan_operator_id = $1 
+           OR credit_card_operator_id = $1 
+           OR curable_operator_id = $1 
+           OR status_updated_by = $1 
+           OR updated_by = $1
+      `, [actualUserId]);
     }
 
     // ── 3. PURGE LEADS & CRM RECORDS ──────────────────────────────────────────
-    const { rows: targetLeadRows } = await safeQuery(`
-      SELECT id FROM leads 
-      WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}')
-         OR (parent_partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}')
-         OR created_by = $2 
-         OR assigned_to = $2
-    `, [partnerIds, actualUserId]);
-
-    const targetLeadIds = targetLeadRows.map(r => r.id);
+    let targetLeadIds = [];
+    {
+      const conds = [];
+      const p = [];
+      if (partnerUuids.length > 0) {
+        p.push(partnerUuids);
+        conds.push(`partner_id = ANY($${p.length}::uuid[]) OR parent_partner_id = ANY($${p.length}::uuid[])`);
+      }
+      if (actualUserId) {
+        p.push(actualUserId);
+        conds.push(`created_by = $${p.length} OR assigned_to = $${p.length}`);
+      }
+      if (conds.length > 0) {
+        const { rows } = await safeQuery(`SELECT id FROM leads WHERE ${conds.join(' OR ')}`, p);
+        targetLeadIds = rows.map(r => r.id);
+      }
+    }
 
     if (targetLeadIds.length > 0) {
       await safeExec(`DELETE FROM lead_followups WHERE lead_id = ANY($1::uuid[])`, [targetLeadIds]);
@@ -484,18 +599,50 @@ const deleteUserAccount = async (inputId) => {
       await safeExec(`DELETE FROM lead_activity_logs WHERE performed_by = $1`, [actualUserId]);
       await safeExec(`DELETE FROM lead_status_history WHERE changed_by = $1`, [actualUserId]);
       await safeExec(`DELETE FROM lead_checklist WHERE verified_by = $1`, [actualUserId]);
-      await safeExec(`UPDATE leads SET assigned_to = NULL, created_by = NULL WHERE assigned_to = $1 OR created_by = $1`, [actualUserId]);
+
+      if (fallbackId) {
+        await safeExec(`UPDATE leads SET scheduled_by = $2 WHERE scheduled_by = $1`, [actualUserId, fallbackId]);
+      } else {
+        await safeExec(`DELETE FROM leads WHERE scheduled_by = $1`, [actualUserId]);
+      }
+
+      await safeExec(`
+        UPDATE leads 
+        SET assigned_to = NULL, 
+            operator_id = NULL, 
+            closed_by = NULL, 
+            created_by = NULL, 
+            updated_by = NULL 
+        WHERE assigned_to = $1 
+           OR operator_id = $1 
+           OR closed_by = $1 
+           OR created_by = $1 
+           OR updated_by = $1
+      `, [actualUserId]);
     }
 
     // ── 4. PURGE CUSTOMERS ────────────────────────────────────────────────────
-    const { rows: targetCustRows } = await safeQuery(`
-      SELECT id FROM customers 
-      WHERE (created_by = $1 AND $1 IS NOT NULL)
-         OR (LOWER(email) = ANY($2::text[]) AND $2::text[] <> '{}')
-         OR (mobile = ANY($3::text[]) AND $3::text[] <> '{}')
-    `, [actualUserId, emailList, mobileList]);
-
-    const targetCustIds = targetCustRows.map(r => r.id);
+    let targetCustIds = [];
+    {
+      const conds = [];
+      const p = [];
+      if (actualUserId) {
+        p.push(actualUserId);
+        conds.push(`created_by = $${p.length}`);
+      }
+      if (emailList.length > 0) {
+        p.push(emailList);
+        conds.push(`LOWER(email) = ANY($${p.length}::text[])`);
+      }
+      if (mobileList.length > 0) {
+        p.push(mobileList);
+        conds.push(`mobile = ANY($${p.length}::text[])`);
+      }
+      if (conds.length > 0) {
+        const { rows } = await safeQuery(`SELECT id FROM customers WHERE ${conds.join(' OR ')}`, p);
+        targetCustIds = rows.map(r => r.id);
+      }
+    }
 
     if (targetCustIds.length > 0) {
       await safeExec(`DELETE FROM customer_notes WHERE customer_id = ANY($1::uuid[])`, [targetCustIds]);
@@ -510,147 +657,276 @@ const deleteUserAccount = async (inputId) => {
       await safeExec(`DELETE FROM customers WHERE id = ANY($1::uuid[])`, [targetCustIds]);
     }
 
-    if (actualUserId || partnerIds.length > 0) {
-      await safeExec(`DELETE FROM customer_notes WHERE user_id = $1 OR (partner_id = ANY($2::uuid[]) AND $2::text[] <> '{}')`, [actualUserId, partnerIds]);
+    if (actualUserId) {
+      if (fallbackId) {
+        await safeExec(`UPDATE customers SET created_by = $2 WHERE created_by = $1`, [actualUserId, fallbackId]);
+      }
+      await safeExec(`DELETE FROM customer_notes WHERE user_id = $1`, [actualUserId]);
       await safeExec(`DELETE FROM customer_documents WHERE verified_by = $1`, [actualUserId]);
       await safeExec(`DELETE FROM customer_timeline WHERE created_by = $1`, [actualUserId]);
-      await safeExec(`DELETE FROM customer_followups WHERE user_id = $1 OR (partner_id = ANY($2::uuid[]) AND $2::text[] <> '{}')`, [actualUserId, partnerIds]);
+      await safeExec(`DELETE FROM customer_followups WHERE user_id = $1`, [actualUserId]);
       await safeExec(`DELETE FROM customer_activity_logs WHERE performed_by = $1`, [actualUserId]);
       await safeExec(`DELETE FROM customer_communications WHERE sent_by = $1`, [actualUserId]);
     }
+    if (partnerUuids.length > 0) {
+      await safeExec(`DELETE FROM customer_notes WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM customer_followups WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+    }
 
     // ── 5. PURGE WALLETS, TRANSACTIONS, LEDGER & WITHDRAWALS ──────────────────
-    const { rows: targetWalletRows } = await safeQuery(`
-      SELECT id FROM partner_wallets WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}') OR (user_id = $2 AND $2 IS NOT NULL)
-      UNION
-      SELECT id FROM wallets WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}') OR (user_id = $2 AND $2 IS NOT NULL)
-    `, [partnerIds, actualUserId]);
+    let targetWalletIds = [];
+    {
+      const p = [];
+      const conds = [];
+      if (partnerUuids.length > 0) {
+        p.push(partnerUuids);
+        conds.push(`partner_id = ANY($${p.length}::uuid[])`);
+      }
+      if (actualUserId) {
+        p.push(actualUserId);
+        conds.push(`user_id = $${p.length}`);
+      }
+      if (conds.length > 0) {
+        const { rows } = await safeQuery(`
+          SELECT id FROM partner_wallets WHERE ${conds.join(' OR ')}
+          UNION
+          SELECT id FROM wallets WHERE ${conds.join(' OR ')}
+        `, p);
+        targetWalletIds = rows.map(r => r.id);
+      }
+    }
 
-    const targetWalletIds = targetWalletRows.map(r => r.id);
-
-    if (targetWalletIds.length > 0 || partnerIds.length > 0 || actualUserId) {
+    if (targetWalletIds.length > 0) {
       await safeExec(`DELETE FROM wallet_audit_logs WHERE wallet_id = ANY($1::uuid[])`, [targetWalletIds]);
-      await safeExec(`DELETE FROM wallet_withdrawal_events WHERE withdrawal_id IN (SELECT id FROM wallet_withdrawals WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}') OR wallet_id = ANY($2::uuid[])) OR changed_by = $3`, [partnerIds, targetWalletIds, actualUserId]);
-      await safeExec(`DELETE FROM withdrawal_audit_logs WHERE withdrawal_id IN (SELECT id FROM wallet_withdrawals WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}') OR wallet_id = ANY($2::uuid[])) OR performed_by = $3`, [partnerIds, targetWalletIds, actualUserId]);
-      await safeExec(`DELETE FROM wallet_withdrawals WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}') OR wallet_id = ANY($2::uuid[]) OR processed_by = $3 OR approved_by = $3 OR transferred_by = $3`, [partnerIds, targetWalletIds, actualUserId]);
-      await safeExec(`DELETE FROM withdrawal_requests WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}') OR processed_by = $2`, [partnerIds, actualUserId]);
-      await safeExec(`DELETE FROM wallet_transactions WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}') OR user_id = $2 OR processed_by = $2`, [partnerIds, actualUserId]);
-      await safeExec(`DELETE FROM wallet_ledger WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}') OR created_by = $2`, [partnerIds, actualUserId]);
-      await safeExec(`DELETE FROM wallet_reconciliation WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}')`, [partnerIds]);
-      await safeExec(`DELETE FROM wallet_bonus WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}')`, [partnerIds]);
-      await safeExec(`DELETE FROM wallet_adjustments WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}') OR adjusted_by = $2`, [partnerIds, actualUserId]);
-      await safeExec(`DELETE FROM commission_release_jobs WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}')`, [partnerIds]);
-      await safeExec(`DELETE FROM commission_decisions WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}') OR decided_by = $2`, [partnerIds, actualUserId]);
-      await safeExec(`DELETE FROM commission_rules WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}')`, [partnerIds]);
-      await safeExec(`DELETE FROM commission_structures WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}') OR created_by = $2`, [partnerIds, actualUserId]);
-      await safeExec(`DELETE FROM partner_settlements WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}')`, [partnerIds]);
-      await safeExec(`DELETE FROM payout_logs WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}')`, [partnerIds]);
-      await safeExec(`DELETE FROM fund_requests WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}') OR processed_by = $2`, [partnerIds, actualUserId]);
+      await safeExec(`DELETE FROM wallet_withdrawal_events WHERE withdrawal_id IN (SELECT id FROM wallet_withdrawals WHERE wallet_id = ANY($1::uuid[]))`, [targetWalletIds]);
+      await safeExec(`DELETE FROM withdrawal_audit_logs WHERE withdrawal_id IN (SELECT id FROM wallet_withdrawals WHERE wallet_id = ANY($1::uuid[]))`, [targetWalletIds]);
+      await safeExec(`DELETE FROM wallet_withdrawals WHERE wallet_id = ANY($1::uuid[])`, [targetWalletIds]);
+      await safeExec(`DELETE FROM partner_wallets WHERE id = ANY($1::uuid[])`, [targetWalletIds]);
+      await safeExec(`DELETE FROM wallets WHERE id = ANY($1::uuid[])`, [targetWalletIds]);
+    }
+
+    if (partnerUuids.length > 0) {
+      await safeExec(`DELETE FROM wallet_withdrawal_events WHERE withdrawal_id IN (SELECT id FROM wallet_withdrawals WHERE partner_id = ANY($1::uuid[]))`, [partnerUuids]);
+      await safeExec(`DELETE FROM withdrawal_audit_logs WHERE withdrawal_id IN (SELECT id FROM wallet_withdrawals WHERE partner_id = ANY($1::uuid[]))`, [partnerUuids]);
+      await safeExec(`DELETE FROM wallet_withdrawals WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM withdrawal_requests WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM wallet_transactions WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM wallet_ledger WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM wallet_reconciliation WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM wallet_bonus WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM wallet_adjustments WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM commission_release_jobs WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM commission_decisions WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM commission_rules WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM commission_structures WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM partner_settlements WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM payout_logs WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM fund_requests WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM razorpay_processed_payments WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM partner_wallets WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM wallets WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+    }
+
+    if (actualUserId) {
+      await safeExec(`UPDATE wallet_withdrawals SET approved_by = NULL, processed_by = NULL, transferred_by = NULL WHERE approved_by = $1 OR processed_by = $1 OR transferred_by = $1`, [actualUserId]);
+      await safeExec(`UPDATE wallet_transactions SET created_by = NULL, approved_by = NULL, processed_by = NULL WHERE created_by = $1 OR approved_by = $1 OR processed_by = $1`, [actualUserId]);
+      await safeExec(`UPDATE wallet_ledger SET created_by = NULL WHERE created_by = $1`, [actualUserId]);
+      await safeExec(`UPDATE wallet_adjustments SET adjusted_by = NULL WHERE adjusted_by = $1`, [actualUserId]);
+      await safeExec(`UPDATE withdrawal_requests SET processed_by = NULL WHERE processed_by = $1`, [actualUserId]);
+      await safeExec(`UPDATE fund_requests SET processed_by = NULL WHERE processed_by = $1`, [actualUserId]);
       await safeExec(`DELETE FROM razorpay_fund_requests WHERE requested_by = $1 OR reconciled_by = $1`, [actualUserId]);
-      await safeExec(`DELETE FROM razorpay_processed_payments WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}')`, [partnerIds]);
-      await safeExec(`DELETE FROM partner_wallets WHERE id = ANY($1::uuid[]) OR (partner_id = ANY($2::uuid[]) AND $2::text[] <> '{}') OR user_id = $3`, [targetWalletIds, partnerIds, actualUserId]);
-      await safeExec(`DELETE FROM wallets WHERE id = ANY($1::uuid[]) OR (partner_id = ANY($2::uuid[]) AND $2::text[] <> '{}') OR user_id = $3`, [targetWalletIds, partnerIds, actualUserId]);
+      await safeExec(`UPDATE commission_decisions SET decided_by = NULL WHERE decided_by = $1`, [actualUserId]);
+
+      if (fallbackId) {
+        await safeExec(`UPDATE commission_structures SET created_by = $2 WHERE created_by = $1`, [actualUserId, fallbackId]);
+        await safeExec(`UPDATE commission_rules SET created_by = $2 WHERE created_by = $1`, [actualUserId, fallbackId]);
+      } else {
+        await safeExec(`DELETE FROM commission_structures WHERE created_by = $1`, [actualUserId]);
+        await safeExec(`DELETE FROM commission_rules WHERE created_by = $1`, [actualUserId]);
+      }
+      await safeExec(`DELETE FROM partner_wallets WHERE user_id = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM wallets WHERE user_id = $1`, [actualUserId]);
     }
 
     // ── 6. PURGE PARTNER PROFILES, TEAMS, REFERRALS & ASSETS ──────────────────
-    if (partnerIds.length > 0 || actualUserId) {
-      await safeExec(`UPDATE partner_profiles SET parent_partner_id = NULL WHERE parent_partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`UPDATE partner_profiles SET partner_id = NULL WHERE partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`UPDATE partner_profiles SET referred_by_employee_id = NULL WHERE referred_by_employee_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`DELETE FROM partner_team_relationships WHERE parent_partner_id = ANY($1::uuid[]) OR child_partner_id = ANY($1::uuid[]) OR member_partner_id = ANY($1::uuid[]) OR sponsor_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`DELETE FROM team_activity WHERE partner_id = ANY($1::uuid[]) OR parent_partner_id = ANY($1::uuid[]) OR child_partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`DELETE FROM team_commissions WHERE partner_id = ANY($1::uuid[]) OR parent_partner_id = ANY($1::uuid[]) OR child_partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`DELETE FROM team_goals WHERE partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`DELETE FROM team_notifications WHERE partner_id = ANY($1::uuid[]) OR child_partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`DELETE FROM partner_teams WHERE partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`DELETE FROM partner_referrals WHERE partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`DELETE FROM referral_clicks WHERE partner_id = ANY($1::uuid[]) OR converted_partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`DELETE FROM referral_campaigns WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}') OR created_by = $2`, [partnerIds, actualUserId]);
-      await safeExec(`DELETE FROM invitation_history WHERE partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`DELETE FROM registration_logs WHERE parent_partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`DELETE FROM partner_upgrade_requests WHERE partner_id = ANY($1::uuid[]) OR user_id = $2 OR reviewed_by = $2`, [partnerIds, actualUserId]);
-      await safeExec(`DELETE FROM partner_saved_products WHERE partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`DELETE FROM partner_recent_products WHERE partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`DELETE FROM partner_preferences WHERE partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`DELETE FROM product_ratings WHERE partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`DELETE FROM product_share_logs WHERE partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`DELETE FROM product_views WHERE partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`DELETE FROM partner_training_progress WHERE partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`DELETE FROM partner_share_links WHERE partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`DELETE FROM click_tracking WHERE partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`DELETE FROM partner_videos WHERE partner_id = ANY($1::uuid[])`, [partnerIds]);
-      await safeExec(`DELETE FROM kyc_documents WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}') OR user_id = $2 OR verified_by = $2`, [partnerIds, actualUserId]);
-      await safeExec(`DELETE FROM partner_bank_details WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}') OR user_id = $2`, [partnerIds, actualUserId]);
-      await safeExec(`DELETE FROM bank_details_history WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}') OR changed_by = $2`, [partnerIds, actualUserId]);
-      await safeExec(`DELETE FROM bank_details WHERE (partner_id = ANY($1::uuid[]) AND $1::text[] <> '{}') OR user_id = $2`, [partnerIds, actualUserId]);
-      await safeExec(`DELETE FROM partner_profiles WHERE id = ANY($1::uuid[]) OR user_id = $2`, [partnerIds, actualUserId]);
+    if (partnerUuids.length > 0) {
+      await safeExec(`UPDATE partner_profiles SET parent_partner_id = NULL WHERE parent_partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`UPDATE partner_profiles SET partner_id = NULL WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM partner_team_relationships WHERE parent_partner_id = ANY($1::uuid[]) OR child_partner_id = ANY($1::uuid[]) OR member_partner_id = ANY($1::uuid[]) OR sponsor_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM team_activity WHERE partner_id = ANY($1::uuid[]) OR parent_partner_id = ANY($1::uuid[]) OR child_partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM team_commissions WHERE partner_id = ANY($1::uuid[]) OR parent_partner_id = ANY($1::uuid[]) OR child_partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM team_goals WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM team_notifications WHERE partner_id = ANY($1::uuid[]) OR child_partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM partner_teams WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM partner_referrals WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM referral_clicks WHERE partner_id = ANY($1::uuid[]) OR converted_partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM referral_campaigns WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM invitation_history WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM registration_logs WHERE parent_partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM partner_upgrade_requests WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM partner_saved_products WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM partner_recent_products WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM partner_preferences WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM product_ratings WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM product_share_logs WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM product_views WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM partner_training_progress WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM partner_share_links WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM click_tracking WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM partner_videos WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM kyc_documents WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM partner_bank_details WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM bank_details_history WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM bank_details WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM partner_profiles WHERE id = ANY($1::uuid[])`, [partnerUuids]);
+    }
+
+    if (empUuids.length > 0) {
+      await safeExec(`UPDATE partner_profiles SET referred_by_employee_id = NULL WHERE referred_by_employee_id = ANY($1::uuid[])`, [empUuids]);
+    }
+
+    if (actualUserId) {
+      await safeExec(`
+        UPDATE partner_profiles 
+        SET approved_by = NULL, 
+            created_by = NULL, 
+            kyc_reviewed_by = NULL 
+        WHERE approved_by = $1 
+           OR created_by = $1 
+           OR kyc_reviewed_by = $1
+      `, [actualUserId]);
+      await safeExec(`DELETE FROM referral_campaigns WHERE created_by = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM partner_upgrade_requests WHERE user_id = $1 OR reviewed_by = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM kyc_documents WHERE user_id = $1 OR verified_by = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM partner_bank_details WHERE user_id = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM bank_details_history WHERE changed_by = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM bank_details WHERE user_id = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM partner_profiles WHERE user_id = $1`, [actualUserId]);
     }
 
     // ── 7. PURGE EMPLOYEES, ATTENDANCE, BIOMETRICS & INCENTIVES ────────────────
-    if (empIds.length > 0 || actualUserId) {
-      await safeExec(`UPDATE employee_hierarchy SET team_leader_id = NULL WHERE team_leader_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`UPDATE employee_hierarchy SET manager_id = NULL WHERE manager_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`UPDATE employee_hierarchy SET senior_manager_id = NULL WHERE senior_manager_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`UPDATE employee_hierarchy SET branch_head_id = NULL WHERE branch_head_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`DELETE FROM employee_hierarchy WHERE employee_id = ANY($1::uuid[]) OR assigned_by = $2`, [empIds, actualUserId]);
+    if (empUuids.length > 0) {
+      await safeExec(`UPDATE employee_hierarchy SET team_leader_id = NULL WHERE team_leader_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`UPDATE employee_hierarchy SET manager_id = NULL WHERE manager_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`UPDATE employee_hierarchy SET senior_manager_id = NULL WHERE senior_manager_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`UPDATE employee_hierarchy SET branch_head_id = NULL WHERE branch_head_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_hierarchy WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
 
-      await safeExec(`DELETE FROM attendance_logs WHERE employee_id = ANY($1::uuid[]) OR verified_by = ANY($1::uuid[]) OR verified_by = $2`, [empIds, actualUserId]);
-      await safeExec(`DELETE FROM attendance_verification_queue WHERE employee_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`DELETE FROM attendance_verification_sessions WHERE employee_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`DELETE FROM attendance_rate_limits WHERE employee_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`DELETE FROM attendance_offline_queue WHERE employee_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`DELETE FROM employee_attendance_pins WHERE employee_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`DELETE FROM device_integrity_logs WHERE employee_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`DELETE FROM environment_bypass_approvals WHERE employee_id = ANY($1::uuid[]) OR requested_by = ANY($1::uuid[]) OR approved_by = ANY($1::uuid[]) OR approved_by = $2`, [empIds, actualUserId]);
-      await safeExec(`DELETE FROM attendance_environment_bypasses WHERE employee_id = ANY($1::uuid[]) OR requested_by = ANY($1::uuid[]) OR approved_by = ANY($1::uuid[]) OR approved_by = $2`, [empIds, actualUserId]);
+      await safeExec(`DELETE FROM attendance_logs WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM attendance_verification_queue WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM attendance_verification_sessions WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM attendance_rate_limits WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM attendance_offline_queue WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_attendance_pins WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM device_integrity_logs WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM environment_bypass_approvals WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM attendance_environment_bypasses WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_attendance WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+
+      await safeExec(`DELETE FROM employee_biometric_templates WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_face_encodings WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM face_verification_reminders WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_face_verification_reminders WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+
+      await safeExec(`DELETE FROM employee_documents WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_bank_details WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_bank_assignments WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+
+      await safeExec(`DELETE FROM employee_assigned_products WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_assigned_product_links WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_product_links WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_bonus_rules WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_bonus_transactions WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_incentives WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_incentive_rules WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_incentive_monthly_records WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_incentive_transactions WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_sales_reports WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM sales_reports WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+
+      await safeExec(`DELETE FROM employee_joining_details WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_kyc WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_terms_acceptance WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_onboarding_checklist WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_verification_states WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_working_hours WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM contest_participants WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM hr_profiles WHERE employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employee_candidates WHERE converted_to_employee_id = ANY($1::uuid[])`, [empUuids]);
+      await safeExec(`DELETE FROM employees WHERE id = ANY($1::uuid[])`, [empUuids]);
+    }
+
+    if (actualUserId) {
+      await safeExec(`DELETE FROM employee_hierarchy WHERE assigned_by = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM attendance_logs WHERE verified_by = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM environment_bypass_approvals WHERE requested_by = $1 OR approved_by = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM attendance_environment_bypasses WHERE requested_by = $1 OR approved_by = $1`, [actualUserId]);
       await safeExec(`DELETE FROM attendance_environment_references WHERE created_by = $1`, [actualUserId]);
-      await safeExec(`DELETE FROM employee_attendance WHERE employee_id = ANY($1::uuid[])`, [empIds]);
 
-      await safeExec(`DELETE FROM employee_biometric_templates WHERE employee_id = ANY($1::uuid[]) OR enrolled_by = $2 OR revoked_by = $2 OR admin_reviewed_by = ANY($1::uuid[])`, [empIds, actualUserId]);
-      await safeExec(`DELETE FROM employee_face_encodings WHERE employee_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`DELETE FROM face_verification_reminders WHERE employee_id = ANY($1::uuid[]) OR sent_by = $2`, [empIds, actualUserId]);
-      await safeExec(`DELETE FROM employee_face_verification_reminders WHERE employee_id = ANY($1::uuid[])`, [empIds]);
+      await safeExec(`DELETE FROM employee_biometric_templates WHERE enrolled_by = $1 OR revoked_by = $1 OR admin_reviewed_by = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM face_verification_reminders WHERE sent_by = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM employee_face_verification_reminders WHERE sent_by = $1`, [actualUserId]);
 
-      await safeExec(`DELETE FROM employee_documents WHERE employee_id = ANY($1::uuid[]) OR verified_by = $2`, [empIds, actualUserId]);
-      await safeExec(`DELETE FROM employee_bank_details WHERE employee_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`DELETE FROM employee_bank_assignments WHERE employee_id = ANY($1::uuid[]) OR assigned_by = $2`, [empIds, actualUserId]);
+      await safeExec(`UPDATE employee_documents SET verified_by = NULL WHERE verified_by = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM employee_bank_assignments WHERE assigned_by = $1`, [actualUserId]);
+
+      // Admin bank assignments: Purge both by admin_id and created_by
       await safeExec(`DELETE FROM admin_bank_assignments WHERE admin_id = $1 OR created_by = $1`, [actualUserId]);
 
-      await safeExec(`DELETE FROM employee_assigned_products WHERE employee_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`DELETE FROM employee_assigned_product_links WHERE employee_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`DELETE FROM employee_product_links WHERE employee_id = ANY($1::uuid[]) OR assigned_by = $2`, [empIds, actualUserId]);
-      await safeExec(`DELETE FROM employee_bonus_rules WHERE employee_id = ANY($1::uuid[]) OR created_by = $2`, [empIds, actualUserId]);
-      await safeExec(`DELETE FROM employee_bonus_transactions WHERE employee_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`DELETE FROM employee_incentives WHERE employee_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`DELETE FROM employee_incentive_rules WHERE employee_id = ANY($1::uuid[]) OR created_by = $2`, [empIds, actualUserId]);
-      await safeExec(`DELETE FROM employee_incentive_monthly_records WHERE employee_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`DELETE FROM employee_incentive_transactions WHERE employee_id = ANY($1::uuid[]) OR processed_by = $2`, [empIds, actualUserId]);
-      await safeExec(`DELETE FROM employee_sales_reports WHERE employee_id = ANY($1::uuid[]) OR reviewed_by = $2`, [empIds, actualUserId]);
-      await safeExec(`DELETE FROM sales_reports WHERE employee_id = ANY($1::uuid[]) OR reviewed_by = $2`, [empIds, actualUserId]);
+      await safeExec(`UPDATE employee_product_links SET assigned_by = NULL WHERE assigned_by = $1`, [actualUserId]);
+      await safeExec(`UPDATE employee_bonus_rules SET created_by = NULL WHERE created_by = $1`, [actualUserId]);
+      await safeExec(`UPDATE employee_incentive_rules SET created_by = NULL WHERE created_by = $1`, [actualUserId]);
+      await safeExec(`UPDATE employee_incentive_transactions SET processed_by = NULL WHERE processed_by = $1`, [actualUserId]);
+      await safeExec(`UPDATE employee_sales_reports SET reviewed_by = NULL WHERE reviewed_by = $1`, [actualUserId]);
+      await safeExec(`UPDATE sales_reports SET reviewed_by = NULL WHERE reviewed_by = $1`, [actualUserId]);
 
       await safeExec(`DELETE FROM operator_claims WHERE operator_id = $1`, [actualUserId]);
       await safeExec(`DELETE FROM sales_operator_claims WHERE operator_id = $1`, [actualUserId]);
       await safeExec(`DELETE FROM operator_history WHERE operator_id = $1`, [actualUserId]);
-      await safeExec(`DELETE FROM employee_joining_details WHERE employee_id = ANY($1::uuid[]) OR reviewed_by = $2`, [empIds, actualUserId]);
-      await safeExec(`DELETE FROM employee_kyc WHERE employee_id = ANY($1::uuid[]) OR reviewed_by = $2`, [empIds, actualUserId]);
-      await safeExec(`DELETE FROM employee_terms_acceptance WHERE employee_id = ANY($1::uuid[]) OR verified_by = $2`, [empIds, actualUserId]);
-      await safeExec(`DELETE FROM employee_onboarding_checklist WHERE employee_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`DELETE FROM employee_verification_states WHERE employee_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`DELETE FROM employee_working_hours WHERE employee_id = ANY($1::uuid[])`, [empIds]);
-      await safeExec(`DELETE FROM contest_participants WHERE employee_id = ANY($1::uuid[]) OR employee_id = $2`, [empIds, actualUserId]);
-      await safeExec(`DELETE FROM hr_profiles WHERE user_id = $1 OR (employee_id = ANY($2::uuid[]) AND $2::text[] <> '{}')`, [actualUserId, empIds]);
+      await safeExec(`UPDATE employee_joining_details SET reviewed_by = NULL WHERE reviewed_by = $1`, [actualUserId]);
+      await safeExec(`UPDATE employee_kyc SET reviewed_by = NULL WHERE reviewed_by = $1`, [actualUserId]);
+      await safeExec(`UPDATE employee_terms_acceptance SET verified_by = NULL WHERE verified_by = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM contest_participants WHERE employee_id = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM hr_profiles WHERE user_id = $1`, [actualUserId]);
+
       await safeExec(
-        `DELETE FROM employee_candidates 
-         WHERE (converted_to_employee_id = ANY($1::uuid[]) AND $1::text[] <> '{}') 
-            OR interviewer_id = $2 
-            OR created_by = $2 
-            OR updated_by = $2
-            OR (mobile_number = ANY($3::text[]) AND $3::text[] <> '{}')
-            OR (email_id ILIKE ANY($4::text[]) AND $4::text[] <> '{}')`,
-        [empIds, actualUserId, Array.from(mobiles), Array.from(emails)]
+        `UPDATE employee_candidates 
+         SET interviewer_id = NULL, created_by = NULL, updated_by = NULL 
+         WHERE interviewer_id = $1 OR created_by = $1 OR updated_by = $1`,
+        [actualUserId]
       );
 
-      await safeExec(`DELETE FROM employees WHERE id = ANY($1::uuid[]) OR user_id = $2`, [empIds, actualUserId]);
+      await safeExec(
+        `UPDATE employees 
+         SET interviewer_id = NULL, created_by = NULL, updated_by = NULL, activated_by = NULL 
+         WHERE interviewer_id = $1 OR created_by = $1 OR updated_by = $1 OR activated_by = $1`,
+        [actualUserId]
+      );
+
+      await safeExec(`DELETE FROM employees WHERE user_id = $1`, [actualUserId]);
+    }
+
+    // Clean up admin bank assignments and candidate records by employee codes or emails
+    if (codeList.length > 0 || emailList.length > 0) {
+      const p = [];
+      const conds = [];
+      if (codeList.length > 0) {
+        p.push(codeList);
+        conds.push(`employee_id = ANY($${p.length}::text[])`);
+      }
+      if (emailList.length > 0) {
+        p.push(emailList);
+        conds.push(`email ILIKE ANY($${p.length}::text[])`);
+      }
+      await safeExec(`
+        DELETE FROM admin_bank_assignments 
+        WHERE admin_id IN (SELECT id FROM users WHERE ${conds.join(' OR ')})
+      `, p);
+
+      await safeExec(`
+        DELETE FROM employees 
+        WHERE ${conds.join(' OR ')}
+      `, p);
     }
 
     // ── 8. PURGE COMMUNICATIONS, MESSENGER, CHATBOT & BULK SMS ───────────────
@@ -662,7 +938,7 @@ const deleteUserAccount = async (inputId) => {
       await safeExec(`DELETE FROM messenger_assignments WHERE account_user_id = $1 OR assigned_messenger_user_id = $1 OR assigned_by = $1 OR removed_by = $1`, [actualUserId]);
       await safeExec(`DELETE FROM chatbot_conversations WHERE user_id = $1`, [actualUserId]);
       await safeExec(`DELETE FROM chatbot_analytics WHERE user_id = $1`, [actualUserId]);
-      await safeExec(`DELETE FROM whatsapp_messages WHERE sender_user_id = $1 OR recipient_user_id = $1 OR (partner_id = ANY($2::uuid[]) AND $2::text[] <> '{}') OR (employee_id = ANY($3::uuid[]) AND $3::text[] <> '{}')`, [actualUserId, partnerIds, empIds]);
+      await safeExec(`DELETE FROM whatsapp_messages WHERE sender_user_id = $1 OR recipient_user_id = $1`, [actualUserId]);
       await safeExec(`DELETE FROM whatsapp_templates WHERE created_by = $1`, [actualUserId]);
       await safeExec(`DELETE FROM bulk_sms_recipients WHERE campaign_id IN (SELECT id FROM bulk_sms_campaigns WHERE created_by = $1::text)`, [actualUserId]);
       await safeExec(`DELETE FROM bulk_sms_campaigns WHERE created_by = $1::text`, [actualUserId]);
@@ -676,24 +952,33 @@ const deleteUserAccount = async (inputId) => {
       await safeExec(`DELETE FROM admin_working_hour_holidays WHERE user_id = $1 OR created_by = $1`, [actualUserId]);
       await safeExec(`DELETE FROM device_tokens WHERE user_id = $1`, [actualUserId]);
       await safeExec(`DELETE FROM notification_preferences WHERE user_id = $1`, [actualUserId]);
-      await safeExec(`DELETE FROM notifications WHERE user_id = $1 OR (partner_id = ANY($2::uuid[]) AND $2::text[] <> '{}')`, [actualUserId, partnerIds]);
+      await safeExec(`DELETE FROM notifications WHERE user_id = $1`, [actualUserId]);
       await safeExec(`DELETE FROM broadcast_notifications WHERE created_by = $1`, [actualUserId]);
       await safeExec(`DELETE FROM announcement_recipients WHERE user_id = $1`, [actualUserId]);
       await safeExec(`DELETE FROM announcement_reads WHERE user_id = $1`, [actualUserId]);
       await safeExec(`DELETE FROM announcement_audit_logs WHERE performed_by = $1`, [actualUserId]);
       await safeExec(`DELETE FROM announcements WHERE created_by = $1`, [actualUserId]);
-      await safeExec(`DELETE FROM support_tickets WHERE user_id = $1 OR (partner_id = ANY($2::uuid[]) AND $2::text[] <> '{}')`, [actualUserId, partnerIds]);
-      await safeExec(`DELETE FROM report_cache WHERE user_id = $1 OR (partner_id = ANY($2::uuid[]) AND $2::text[] <> '{}')`, [actualUserId, partnerIds]);
-      await safeExec(`DELETE FROM report_exports WHERE user_id = $1 OR (partner_id = ANY($2::uuid[]) AND $2::text[] <> '{}')`, [actualUserId, partnerIds]);
-      await safeExec(`DELETE FROM scheduled_reports WHERE user_id = $1 OR (partner_id = ANY($2::uuid[]) AND $2::text[] <> '{}')`, [actualUserId, partnerIds]);
-      await safeExec(`DELETE FROM activity_logs WHERE performed_by = $1 OR user_id = $1 OR (partner_id = ANY($2::uuid[]) AND $2::text[] <> '{}')`, [actualUserId, partnerIds]);
-      await safeExec(`DELETE FROM audit_logs WHERE user_id = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM support_tickets WHERE user_id = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM report_cache WHERE user_id = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM report_exports WHERE user_id = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM scheduled_reports WHERE user_id = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM activity_logs WHERE performed_by = $1 OR user_id = $1`, [actualUserId]);
+      await safeExec(`DELETE FROM audit_logs WHERE user_id = $1 OR target_id = $1`, [actualUserId]);
       await safeExec(`DELETE FROM login_activity WHERE user_id = $1`, [actualUserId]);
       await safeExec(`DELETE FROM login_history WHERE user_id = $1`, [actualUserId]);
       await safeExec(`DELETE FROM security_alerts WHERE user_id = $1`, [actualUserId]);
       await safeExec(`DELETE FROM password_history WHERE user_id = $1`, [actualUserId]);
       await safeExec(`DELETE FROM identity_change_challenges WHERE user_id = $1`, [actualUserId]);
       await safeExec(`DELETE FROM refresh_tokens WHERE user_id = $1`, [actualUserId]);
+    }
+
+    if (partnerUuids.length > 0) {
+      await safeExec(`DELETE FROM notifications WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM support_tickets WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM report_cache WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM report_exports WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM scheduled_reports WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
+      await safeExec(`DELETE FROM activity_logs WHERE partner_id = ANY($1::uuid[])`, [partnerUuids]);
     }
 
     // Purge email/mobile tokens & verification records
@@ -706,7 +991,17 @@ const deleteUserAccount = async (inputId) => {
       await safeExec(`DELETE FROM blacklist WHERE value = ANY($1::text[])`, [mobileList]);
     }
     if (mobileList.length > 0 || emailList.length > 0) {
-      await safeExec(`DELETE FROM otp_verifications WHERE identifier = ANY($1::text[]) OR LOWER(identifier) = ANY($2::text[])`, [mobileList, emailList]);
+      const p = [];
+      const conds = [];
+      if (mobileList.length > 0) {
+        p.push(mobileList);
+        conds.push(`identifier = ANY($${p.length}::text[])`);
+      }
+      if (emailList.length > 0) {
+        p.push(emailList);
+        conds.push(`LOWER(identifier) = ANY($${p.length}::text[])`);
+      }
+      await safeExec(`DELETE FROM otp_verifications WHERE ${conds.join(' OR ')}`, p);
     }
 
     // ── 10. UNLINK SHARED CATALOG / CONFIG TABLES ─────────────────────────────
@@ -724,16 +1019,49 @@ const deleteUserAccount = async (inputId) => {
       await safeExec(`UPDATE bank_direct_process_links SET created_by = NULL, updated_by = NULL WHERE created_by = $1 OR updated_by = $1`, [actualUserId]);
       await safeExec(`UPDATE contests SET created_by = NULL, updated_by = NULL WHERE created_by = $1 OR updated_by = $1`, [actualUserId]);
       await safeExec(`UPDATE whatsapp_settings SET updated_by = NULL WHERE updated_by = $1`, [actualUserId]);
+    }
 
-      // ── 11. FINAL PURGE: DELETE USER RECORD ─────────────────────────────────
-      await safeExec(`DELETE FROM users WHERE id = $1`, [actualUserId]);
+    // ── 11. FINAL PURGE: DELETE USER RECORD ─────────────────────────────────
+    let deletedCount = 0;
+    if (actualUserId) {
+      const delRes = await client.query(`DELETE FROM users WHERE id = $1`, [actualUserId]);
+      deletedCount = delRes.rowCount || 0;
+    }
+
+    if (deletedCount === 0 && (codeList.length > 0 || emailList.length > 0 || mobileList.length > 0)) {
+      const p = [];
+      const conds = [];
+      if (codeList.length > 0) {
+        p.push(codeList);
+        conds.push(`employee_id = ANY($${p.length}::text[])`);
+      }
+      if (emailList.length > 0) {
+        p.push(emailList);
+        conds.push(`email ILIKE ANY($${p.length}::text[])`);
+      }
+      if (mobileList.length > 0) {
+        p.push(mobileList);
+        conds.push(`mobile = ANY($${p.length}::text[])`);
+      }
+      if (conds.length > 0) {
+        const altDel = await client.query(`DELETE FROM users WHERE ${conds.join(' OR ')}`, p);
+        deletedCount = altDel.rowCount || 0;
+      }
+    }
+
+    // Verify deletion
+    if (actualUserId) {
+      const { rows: verifyRows } = await client.query(`SELECT id FROM users WHERE id = $1`, [actualUserId]);
+      if (verifyRows.length > 0) {
+        throw new Error(`Permanent purge verification failed: User ${actualUserId} is still present in users table.`);
+      }
     }
 
     await client.query('COMMIT');
     logger.info(`Successfully executed comprehensive permanent deletion for: ${inputId}`, {
       purgedUserId: actualUserId,
-      purgedEmployees: empIds,
-      purgedPartners: partnerIds,
+      purgedEmployees: empUuids,
+      purgedPartners: partnerUuids,
       purgedApplications: targetAppIds.length,
       purgedLeads: targetLeadIds.length,
       purgedCustomers: targetCustIds.length
@@ -745,8 +1073,8 @@ const deleteUserAccount = async (inputId) => {
       success: true,
       purgedSummary: {
         userId: actualUserId,
-        employeeCount: empIds.length,
-        partnerCount: partnerIds.length,
+        employeeCount: empUuids.length,
+        partnerCount: partnerUuids.length,
         applicationCount: targetAppIds.length,
         leadCount: targetLeadIds.length,
         customerCount: targetCustIds.length

@@ -1064,17 +1064,17 @@ export default function ManagePartners() {
                           type="button"
                           onClick={async () => {
                             const targetId = profile.user_id || selectedPartner.user_id || selectedPartner.id;
-                            if (window.confirm(`Deactivate (temporary delete) partner "${selectedPartner.first_name || profile.first_name} ${selectedPartner.last_name || profile.last_name}"? All data will remain safely saved in the database.`)) {
+                            if (window.confirm(`Deactivate partner "${selectedPartner.first_name || profile.first_name} ${selectedPartner.last_name || profile.last_name}"?`)) {
                               setActionLoading(true);
                               try {
                                 const res = await api.delete(`/superadmin/users/${targetId}?mode=temporary`);
                                 if (res.data?.success) {
-                                  alert("Partner account temporarily deactivated.");
+                                  alert("✅ Partner deactivated (status changed to Suspended)");
                                   setSelectedPartner(null);
                                   fetchPartners();
                                 }
                               } catch (err) {
-                                alert(err.response?.data?.message || "Failed to deactivate partner account.");
+                                alert("❌ " + (err.response?.data?.message || "Failed to deactivate"));
                               } finally {
                                 setActionLoading(false);
                               }
@@ -1092,24 +1092,24 @@ export default function ManagePartners() {
                             cursor: actionLoading ? 'not-allowed' : 'pointer'
                           }}
                         >
-                          🟡 Temporary Delete (Deactivate)
+                          🔄 Temporary Deactivate
                         </button>
 
                         <button
                           type="button"
                           onClick={async () => {
                             const targetId = profile.user_id || selectedPartner.user_id || selectedPartner.id;
-                            if (window.confirm(`ARE YOU EXTREMELY SURE? Permanent deletion of partner "${selectedPartner.first_name || profile.first_name} ${selectedPartner.last_name || profile.last_name}" (${profile.email || selectedPartner.email}) will remove all foreign key records, profiles, documents, and wallets. THIS CANNOT BE UNDONE!`)) {
+                            if (window.confirm(`⚠️ Permanent deletion of partner "${selectedPartner.first_name || profile.first_name} ${selectedPartner.last_name || profile.last_name}"? Restore available for 24h.`)) {
                               setActionLoading(true);
                               try {
                                 const res = await api.delete(`/superadmin/users/${targetId}?mode=permanent`);
                                 if (res.data?.success) {
-                                  alert("Partner account permanently deleted.");
+                                  alert("🗑️ Partner deleted (restore available for 24 hours)");
                                   setSelectedPartner(null);
                                   fetchPartners();
                                 }
                               } catch (err) {
-                                alert(err.response?.data?.message || "Failed to delete partner account.");
+                                alert("❌ " + (err.response?.data?.message || "Failed to delete"));
                               } finally {
                                 setActionLoading(false);
                               }
@@ -1117,9 +1117,9 @@ export default function ManagePartners() {
                           }}
                           disabled={actionLoading}
                           style={{
-                            background: `${C.red}12`,
-                            color: C.red,
-                            border: `1.5px solid ${C.red}`,
+                            background: 'rgba(239, 68, 68, 0.12)',
+                            color: '#DC2626',
+                            border: '1.5px solid #DC2626',
                             borderRadius: '8px',
                             padding: '8px 12px',
                             fontSize: '12px',

@@ -523,8 +523,8 @@ export default function EmployeeManagement() {
       if (res.data?.success) {
         alert(
           isPermanent
-            ? `Employee "${emp.full_name}" has been permanently purged from the system.`
-            : `Employee "${emp.full_name}" has been temporarily deactivated (soft deleted).`
+            ? `🗑️ Employee "${emp.full_name}" deleted (restore 24h)`
+            : `🔄 Employee "${emp.full_name}" deactivated (status: Suspended)`
         );
         setEmpDeleteModal({ isOpen: false, emp: null, mode: 'temporary', confirmText: '', loading: false });
         const isMatchEmp = (e) => (
