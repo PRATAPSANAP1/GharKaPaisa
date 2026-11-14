@@ -381,27 +381,27 @@ export default function HdfcCreditCardsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-200">
+    <div className="hdfc-credit-page min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-200">
       
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-blue-950 via-slate-900 to-slate-950 text-white pt-10 pb-16 px-4 sm:px-6 lg:px-8 border-b border-blue-900/40">
+      <section className="relative overflow-hidden bg-gradient-to-b from-white via-slate-50 to-emerald-50/70 dark:from-blue-950 dark:via-slate-900 dark:to-slate-950 text-slate-900 dark:text-white pt-8 sm:pt-10 pb-10 sm:pb-16 px-4 sm:px-6 lg:px-8 border-b border-emerald-100 dark:border-blue-900/40">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(37,99,235,0.18),transparent_50%)] pointer-events-none" />
         <div className="max-w-7xl mx-auto relative z-10">
           
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-8 mb-8">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-6 sm:gap-8 mb-8">
             <div className="max-w-2xl text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs sm:text-sm font-semibold mb-4">
-                <FaBuilding className="text-blue-400" />
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 text-blue-800 dark:text-blue-300 text-xs sm:text-sm font-semibold mb-4">
+                <FaBuilding className="text-blue-700 dark:text-blue-400" />
                 <span>HDFC Bank Direct Authorization • Zero Commission Fee</span>
               </div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-4 leading-tight">
-                Apply for <span className="bg-gradient-to-r from-blue-400 via-teal-300 to-emerald-400 bg-clip-text text-transparent">HDFC Bank Credit Cards</span> Online
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-950 dark:text-white mb-4 leading-tight">
+                Apply for <span className="text-emerald-700 dark:text-emerald-300">HDFC Bank Credit Cards</span> Online
               </h1>
-              <p className="text-slate-300 text-sm sm:text-base lg:text-lg mb-6 leading-relaxed">
+              <p className="text-slate-600 dark:text-slate-300 text-base sm:text-base lg:text-lg mb-6 leading-relaxed">
                 Compare top HDFC credit cards offering up to 10% cashback, unlimited airport lounge access, 5% RuPay UPI rewards, and zero annual fee waivers. Instant approval with 100% digital KYC.
               </p>
 
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-xs sm:text-sm text-slate-300">
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-4 gap-y-3 text-sm text-slate-600 dark:text-slate-300">
                 <div className="flex items-center gap-1.5">
                   <FaCheckCircle className="text-emerald-400" />
                   <span>Instant Decision in 5 Mins</span>
@@ -418,33 +418,33 @@ export default function HdfcCreditCardsPage() {
             </div>
 
             {/* Quick Fast-Track CTA Card */}
-            <div className="w-full lg:w-96 bg-white/5 backdrop-blur-md border border-white/10 p-6 rounded-2xl shadow-2xl text-center lg:text-left">
+            <div className="w-full lg:w-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-5 sm:p-6 rounded-2xl shadow-lg dark:shadow-2xl text-center lg:text-left">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs uppercase font-bold tracking-wider text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md">
+                <span className="text-xs uppercase font-bold tracking-wider text-emerald-800 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-md">
                   Direct Bank Portal
                 </span>
-                <span className="text-xs text-slate-400">100% Free Service</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">100% Free Service</span>
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Want HDFC's Best Recommended Card?</h3>
-              <p className="text-xs text-slate-300 mb-5 leading-relaxed">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Want HDFC's Best Recommended Card?</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-300 mb-5 leading-relaxed">
                 Check your pre-approved limit and instantly browse all available HDFC credit cards directly on the official HDFC server.
               </p>
               <button
                 onClick={() => handleApplyClick('Direct Hero')}
-                className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-sm shadow-lg shadow-emerald-500/25 transition-all duration-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full min-h-11 py-3.5 px-6 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-gradient-to-r dark:from-emerald-500 dark:to-teal-600 dark:hover:from-emerald-600 dark:hover:to-teal-700 text-white font-bold text-sm shadow-md shadow-emerald-700/15 dark:shadow-emerald-500/25 transition-all duration-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Check Eligibility & Apply Now</span>
                 <FaArrowRight />
               </button>
-              <p className="text-[11px] text-slate-400 text-center mt-3 flex items-center justify-center gap-1">
-                <FaShieldAlt className="text-emerald-400" />
+              <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-3 flex items-center justify-center gap-1">
+                <FaShieldAlt className="text-emerald-700 dark:text-emerald-400" />
                 <span>Redirects to official HDFC bank application page</span>
               </p>
             </div>
           </div>
 
           {/* Search & Category Filter Bar */}
-          <div className="mt-8 bg-slate-900/80 p-4 rounded-2xl border border-white/10 shadow-lg">
+          <div className="mt-8 bg-white/95 dark:bg-slate-900/90 p-3 sm:p-4 rounded-2xl border border-slate-200 dark:border-white/10 shadow-md">
             <div className="flex flex-col md:flex-row items-center gap-4 mb-4">
               <div className="relative w-full">
                 <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -453,12 +453,13 @@ export default function HdfcCreditCardsPage() {
                   placeholder="Search cards by name or perk (e.g. Millennia, Swiggy, Lounge, UPI, Cashback)..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-slate-800 text-white rounded-xl border border-slate-700 focus:outline-none focus:border-blue-500 text-sm placeholder-slate-400 transition"
+                  className="w-full min-h-12 pl-11 pr-10 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 text-base sm:text-sm placeholder-slate-500 dark:placeholder-slate-400 transition"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
+                    aria-label="Clear card search"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 min-h-11 min-w-11 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white p-1"
                   >
                     <FaTimes />
                   </button>
@@ -472,10 +473,10 @@ export default function HdfcCreditCardsPage() {
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition cursor-pointer ${
+                  className={`flex min-h-11 items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition cursor-pointer ${
                     activeCategory === cat.id
                       ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                      : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700/60'
+                      : 'bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-700 hover:text-blue-900 dark:hover:text-white border border-slate-200 dark:border-slate-700/60'
                   }`}
                 >
                   <span className="text-sm">{cat.icon}</span>
@@ -489,8 +490,8 @@ export default function HdfcCreditCardsPage() {
       </section>
 
       {/* Main Cards Grid */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
           <div>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
               All HDFC Bank Credit Cards ({filteredCards.length})
@@ -565,7 +566,7 @@ export default function HdfcCreditCardsPage() {
                 {/* Card Body */}
                 <div className="p-6">
                   {/* Fees Strip */}
-                  <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl mb-5 text-xs border border-slate-100 dark:border-slate-800">
+                  <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-3 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl mb-5 text-xs border border-slate-100 dark:border-slate-800">
                     <div>
                       <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Joining Fee</span>
                       <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{card.joiningFee}</span>
@@ -624,7 +625,7 @@ export default function HdfcCreditCardsPage() {
         </div>
 
         {/* Why Apply with GharKaPaisa & HDFC */}
-        <section className="mt-16 bg-white dark:bg-slate-900 rounded-3xl p-8 sm:p-10 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <section className="mt-12 sm:mt-16 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-5 sm:p-8 lg:p-10 border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="text-center max-w-3xl mx-auto mb-10">
             <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-3 py-1 rounded-full">
               Benefits of Applying Here
@@ -638,7 +639,7 @@ export default function HdfcCreditCardsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+            <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
               <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg mb-3">
                 <FaBolt />
               </div>
@@ -648,7 +649,7 @@ export default function HdfcCreditCardsPage() {
               </p>
             </div>
 
-            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+            <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
               <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg mb-3">
                 <FaShieldAlt />
               </div>
@@ -658,7 +659,7 @@ export default function HdfcCreditCardsPage() {
               </p>
             </div>
 
-            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+            <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
               <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 flex items-center justify-center text-lg mb-3">
                 <FaGift />
               </div>
@@ -668,7 +669,7 @@ export default function HdfcCreditCardsPage() {
               </p>
             </div>
 
-            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+            <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
               <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg mb-3">
                 <FaRegClock />
               </div>
@@ -682,7 +683,7 @@ export default function HdfcCreditCardsPage() {
 
         {/* Eligibility & Documents Guide */}
         <section className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="bg-white dark:bg-slate-900 p-5 sm:p-8 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
               <FaAward className="text-blue-600" />
               <span>General Eligibility Criteria</span>
@@ -711,7 +712,7 @@ export default function HdfcCreditCardsPage() {
             </ul>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="bg-white dark:bg-slate-900 p-5 sm:p-8 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
               <FaShieldAlt className="text-emerald-600" />
               <span>Required Verification Documents</span>
@@ -742,7 +743,7 @@ export default function HdfcCreditCardsPage() {
         </section>
 
         {/* FAQs */}
-        <section className="mt-12 bg-white dark:bg-slate-900 rounded-3xl p-8 sm:p-10 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <section className="mt-12 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-5 sm:p-8 lg:p-10 border border-slate-200 dark:border-slate-800 shadow-sm">
           <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">
             Frequently Asked Questions
           </h3>
@@ -780,17 +781,17 @@ export default function HdfcCreditCardsPage() {
       </main>
 
       {/* Floating Bottom Sticky Bar */}
-      <aside aria-label="Quick application banner" className="sticky bottom-0 z-30 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 text-white py-3 px-4 shadow-2xl">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 flex-wrap">
+      <aside aria-label="Quick application banner" className="sticky bottom-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white py-3 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg dark:shadow-2xl">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-600 flex items-center justify-center text-blue-800 dark:text-white shrink-0">
               <FaCreditCard />
             </div>
             <div>
-              <p className="text-xs sm:text-sm font-bold text-white leading-tight">
+              <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">
                 Ready to Apply for an HDFC Credit Card?
               </p>
-              <p className="text-[11px] text-slate-400 hidden sm:block">
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 hidden sm:block">
                 Direct official bank link • 100% paperless instant digital decision
               </p>
             </div>
@@ -798,7 +799,7 @@ export default function HdfcCreditCardsPage() {
 
           <button
             onClick={() => handleApplyClick('Sticky Bar')}
-            className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer flex items-center gap-2"
+            className="w-full sm:w-auto min-h-11 py-2.5 px-6 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-gradient-to-r dark:from-emerald-500 dark:to-teal-600 dark:hover:from-emerald-600 dark:hover:to-teal-700 text-white font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
           >
             <span>Apply on HDFC Portal</span>
             <FaArrowRight className="text-xs" />
@@ -808,11 +809,12 @@ export default function HdfcCreditCardsPage() {
 
       {/* Card Details Modal */}
       {selectedCardForModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800 shadow-2xl p-6 sm:p-8 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div role="dialog" aria-modal="true" aria-labelledby="hdfc-card-detail-title" className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl max-w-2xl w-full max-h-[calc(100dvh-1rem)] sm:max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800 shadow-2xl p-4 sm:p-8 relative">
             <button
               onClick={() => setSelectedCardForModal(null)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 dark:hover:text-white p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              aria-label="Close card details"
+              className="absolute top-3 right-3 sm:top-5 sm:right-5 min-h-11 min-w-11 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"
             >
               <FaTimes />
             </button>
@@ -821,7 +823,7 @@ export default function HdfcCreditCardsPage() {
               {selectedCardForModal.badge}
             </span>
 
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
+            <h3 id="hdfc-card-detail-title" className="pr-10 text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-1">
               {selectedCardForModal.name}
             </h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
@@ -829,7 +831,7 @@ export default function HdfcCreditCardsPage() {
             </p>
 
             {/* Fees Breakdown */}
-            <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl mb-6 text-xs border border-slate-100 dark:border-slate-800">
+            <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl mb-6 text-xs border border-slate-100 dark:border-slate-800">
               <div>
                 <span className="text-slate-400 font-bold uppercase text-[10px]">Joining Fee</span>
                 <span className="block font-bold text-slate-800 dark:text-slate-200 mt-1 text-sm">{selectedCardForModal.joiningFee}</span>
@@ -862,17 +864,17 @@ export default function HdfcCreditCardsPage() {
             </div>
 
             {/* Modal Actions */}
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col-reverse sm:flex-row gap-3">
               <button
                 onClick={() => handleApplyClick(selectedCardForModal.name)}
-                className="flex-1 py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/25 transition cursor-pointer flex items-center justify-center gap-2"
+                className="flex-1 min-h-11 py-3.5 px-4 sm:px-6 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-gradient-to-r dark:from-emerald-600 dark:to-teal-600 dark:hover:from-emerald-700 dark:hover:to-teal-700 text-white font-bold text-sm shadow-md shadow-emerald-600/15 dark:shadow-emerald-600/25 transition cursor-pointer flex items-center justify-center gap-2"
               >
                 <span>Proceed to Apply on HDFC Portal</span>
                 <FaExternalLinkAlt className="text-xs" />
               </button>
               <button
                 onClick={() => setSelectedCardForModal(null)}
-                className="py-3.5 px-5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-semibold transition"
+                className="min-h-11 px-5 py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-semibold transition"
               >
                 Close
               </button>
