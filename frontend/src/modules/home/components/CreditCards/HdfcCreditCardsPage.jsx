@@ -383,16 +383,6 @@ export default function HdfcCreditCardsPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-200">
       
-      {/* Top Promotional Bar */}
-      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-800 text-white text-xs sm:text-sm py-2 px-4 shadow-sm text-center font-medium">
-        <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 flex-wrap">
-          <span className="bg-emerald-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-            Official Partner
-          </span>
-          <span>Apply for HDFC Credit Cards via GharKaPaisa (DSA Code: <strong className="text-amber-300">XYOH</strong>) for Instant Paperless Approval!</span>
-        </div>
-      </div>
-
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-blue-950 via-slate-900 to-slate-950 text-white pt-10 pb-16 px-4 sm:px-6 lg:px-8 border-b border-blue-900/40">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(37,99,235,0.18),transparent_50%)] pointer-events-none" />
@@ -433,7 +423,7 @@ export default function HdfcCreditCardsPage() {
                 <span className="text-xs uppercase font-bold tracking-wider text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md">
                   Direct Bank Portal
                 </span>
-                <span className="text-xs text-slate-400">DSA: XYOH</span>
+                <span className="text-xs text-slate-400">100% Free Service</span>
               </div>
               <h3 className="text-lg font-bold text-white mb-2">Want HDFC's Best Recommended Card?</h3>
               <p className="text-xs text-slate-300 mb-5 leading-relaxed">
@@ -654,7 +644,7 @@ export default function HdfcCreditCardsPage() {
               </div>
               <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-1">Instant Approval Track</h4>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                Direct integration with HDFC Bank's online engine routes your profile via partner code XYOH for accelerated clearance.
+                Direct integration with HDFC Bank's official online portal for fast-track processing and immediate clearance.
               </p>
             </div>
 
@@ -801,7 +791,7 @@ export default function HdfcCreditCardsPage() {
                 Ready to Apply for an HDFC Credit Card?
               </p>
               <p className="text-[11px] text-slate-400 hidden sm:block">
-                Direct official link with GharKaPaisa tracking • Instant digital decision
+                Direct official bank link • 100% paperless instant digital decision
               </p>
             </div>
           </div>
