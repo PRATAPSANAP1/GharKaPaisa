@@ -25,6 +25,13 @@ import {
   loginWithPassword,
   forgotPassword,
 } from '../../services/auth.service';
+import {
+  checkBiometricCapability,
+  isBiometricEnabled,
+  getBiometricSession,
+  authenticateWithBiometrics,
+  saveBiometricSession,
+} from '../../services/biometric.service';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function LoginScreen() {
@@ -45,6 +52,51 @@ export default function LoginScreen() {
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Biometric Auth State
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricName, setBiometricName] = useState('Fingerprint / Face ID');
+  const [hasSavedBiometric, setHasSavedBiometric] = useState(false);
+
+  useEffect(() => {
+    const initBiometrics = async () => {
+      try {
+        const cap = await checkBiometricCapability();
+        const enabled = await isBiometricEnabled();
+        const saved = await getBiometricSession();
+        if (cap.hasHardware && cap.isEnrolled && enabled && saved?.token) {
+          setBiometricAvailable(true);
+          setBiometricName(cap.biometricName);
+          setHasSavedBiometric(true);
+        }
+      } catch {}
+    };
+    initBiometrics();
+  }, []);
+
+  const handleBiometricLogin = async () => {
+    setErrorMsg(null);
+    setLoading(true);
+    try {
+      const authRes = await authenticateWithBiometrics(`Verify identity to sign in with ${biometricName}`);
+      if (!authRes.success) {
+        setErrorMsg(authRes.error || 'Biometric authentication was cancelled.');
+        setLoading(false);
+        return;
+      }
+      const saved = await getBiometricSession();
+      if (saved?.token && saved?.user) {
+        await loginSession(saved.user, saved.token);
+        resolveRoleRedirect(saved.user);
+      } else {
+        setErrorMsg('No saved credentials for biometric login. Please sign in with password.');
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Biometric login failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Forgot Password Modal State
   const [forgotModalVisible, setForgotModalVisible] = useState(false);
@@ -89,6 +141,10 @@ export default function LoginScreen() {
       const res = await loginWithPassword(identity.trim(), password.trim());
       if (res?.success && res?.token && res?.user) {
         await loginSession(res.user, res.token, res.refreshToken);
+        const bioEnabled = await isBiometricEnabled();
+        if (bioEnabled) {
+          await saveBiometricSession(res.token, res.user);
+        }
         resolveRoleRedirect(res.user);
       } else {
         setErrorMsg(res?.message || 'Invalid credentials');
@@ -138,6 +194,10 @@ export default function LoginScreen() {
       const res = await loginWithOtp(identity.trim(), otp.trim());
       if (res?.success && res?.token && res?.user) {
         await loginSession(res.user, res.token, res.refreshToken);
+        const bioEnabled = await isBiometricEnabled();
+        if (bioEnabled) {
+          await saveBiometricSession(res.token, res.user);
+        }
         resolveRoleRedirect(res.user);
       } else {
         setErrorMsg(res?.message || 'Invalid or expired OTP');
@@ -361,6 +421,21 @@ export default function LoginScreen() {
             </>
           )}
         </View>
+
+        {/* Biometric Quick Sign-In Option */}
+        {hasSavedBiometric && biometricAvailable && (
+          <TouchableOpacity
+            style={[styles.biometricBtn, { borderColor: colors.primary, backgroundColor: isDark ? '#003828' : '#ECFDF5' }]}
+            onPress={handleBiometricLogin}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            <Icon name="shield" size={20} color={colors.primary} />
+            <Text style={[styles.biometricBtnText, { color: colors.primary }]}>
+              Fast Sign In with {biometricName}
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {/* Divider */}
         <View style={styles.dividerRow}>
@@ -599,6 +674,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textMid,
     fontWeight: '600',
+  },
+  biometricBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    marginTop: spacing.md,
+  },
+  biometricBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
   dividerRow: {
     flexDirection: 'row',

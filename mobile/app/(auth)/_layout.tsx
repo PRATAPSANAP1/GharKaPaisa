@@ -7,7 +7,6 @@ export default function AuthLayout() {
 
   return (
     <Stack
-      initialRouteName="home"
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: colors.bg },

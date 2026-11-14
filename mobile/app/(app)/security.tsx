@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   FlatList,
+  Switch,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
@@ -24,6 +25,12 @@ import {
   logoutAllDevices,
   fetchSecurityDashboard,
 } from '../../services/auth.service';
+import {
+  checkBiometricCapability,
+  isBiometricEnabled,
+  setBiometricEnabled,
+  authenticateWithBiometrics,
+} from '../../services/biometric.service';
 import { SecurityDeviceSession, SecurityDashboardMetrics } from '../../types';
 
 export default function SecurityScreen() {
@@ -43,9 +50,54 @@ export default function SecurityScreen() {
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [revokingAll, setRevokingAll] = useState(false);
 
+  // Biometrics State
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricEnabled, setBiometricEnabledState] = useState(false);
+  const [biometricName, setBiometricName] = useState('Fingerprint / Face ID');
+  const [togglingBiometric, setTogglingBiometric] = useState(false);
+
   useEffect(() => {
     loadSecurityData();
+    initBiometrics();
   }, []);
+
+  const initBiometrics = async () => {
+    try {
+      const cap = await checkBiometricCapability();
+      setBiometricAvailable(cap.hasHardware && cap.isEnrolled);
+      setBiometricName(cap.biometricName);
+      const isEn = await isBiometricEnabled();
+      setBiometricEnabledState(isEn);
+    } catch (e) {
+      console.warn('Biometric init error:', e);
+    }
+  };
+
+  const handleToggleBiometric = async (value: boolean) => {
+    setTogglingBiometric(true);
+    try {
+      if (value) {
+        // Authenticate before enabling
+        const authRes = await authenticateWithBiometrics(`Verify identity to enable ${biometricName}`);
+        if (!authRes.success) {
+          Alert.alert('Verification Failed', authRes.error || 'Could not verify biometrics.');
+          setTogglingBiometric(false);
+          return;
+        }
+        await setBiometricEnabled(true);
+        setBiometricEnabledState(true);
+        Alert.alert('Success', `${biometricName} authentication has been enabled for this device.`);
+      } else {
+        await setBiometricEnabled(false);
+        setBiometricEnabledState(false);
+        Alert.alert('Disabled', `${biometricName} authentication has been disabled.`);
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to update biometric preference.');
+    } finally {
+      setTogglingBiometric(false);
+    }
+  };
 
   const loadSecurityData = async () => {
     setLoading(true);
@@ -177,6 +229,26 @@ export default function SecurityScreen() {
             </Text>
             <Text style={styles.metricLabel}>Last Password Change</Text>
           </View>
+        </View>
+      </Card>
+
+      {/* Biometric Security Card */}
+      <Card style={styles.card}>
+        <View style={styles.headerBetween}>
+          <View style={{ flex: 1, paddingRight: spacing.sm }}>
+            <Text style={styles.sectionTitle}>Biometric Lock ({biometricName})</Text>
+            <Text style={styles.deviceMeta}>
+              {biometricAvailable
+                ? `Enable ${biometricName} for fast, secure app login and sensitive operations.`
+                : 'No biometric credentials enrolled on this device. Set up Fingerprint or Face ID in device settings.'}
+            </Text>
+          </View>
+          <Switch
+            value={biometricEnabled}
+            onValueChange={handleToggleBiometric}
+            disabled={!biometricAvailable || togglingBiometric}
+            trackColor={{ false: colors.border, true: colors.primary }}
+          />
         </View>
       </Card>
 
@@ -397,6 +469,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: colors.textLight,
     marginTop: 2,
+  },
+  deviceMeta: {
+    fontSize: typography.sizes.xs,
+    color: colors.textLight,
+    marginTop: 4,
+    lineHeight: 16,
   },
   deviceDate: {
     fontSize: 9,

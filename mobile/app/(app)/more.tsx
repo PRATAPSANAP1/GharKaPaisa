@@ -100,7 +100,7 @@ export default function MoreScreen() {
       title: 'Incentives & Rewards',
       subtitle: 'Personal performance target & incentive tracker',
       icon: '🎁',
-      route: '/(app)/finance-buddy'
+      route: '/(app)/employee-incentives'
     },
     {
       id: 'reports',

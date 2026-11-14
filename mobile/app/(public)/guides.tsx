@@ -6,12 +6,16 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Modal,
+  Share,
+  SafeAreaView,
 } from 'react-native';
 import { router } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { Card } from '../../components/Card';
 import { Icon } from '../../components/Icon';
+import { Button } from '../../components/Button';
 import { fetchGuides } from '../../services/cms.service';
 
 interface Guide {
@@ -27,6 +31,7 @@ export default function GuidesScreen() {
   const [loading, setLoading] = useState(true);
   const [guides, setGuides] = useState<Guide[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('ALL');
+  const [selectedGuide, setSelectedGuide] = useState<Guide | null>(null);
 
   useEffect(() => {
     fetchGuides().then((res) => {
@@ -34,6 +39,15 @@ export default function GuidesScreen() {
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
+
+  const handleShareGuide = async (guide: Guide) => {
+    try {
+      await Share.share({
+        title: guide.title,
+        message: `${guide.title}\n\n${guide.description}\n\nRead more financial guides on GharKaPaisa: https://gharkapaisa.in/guides`,
+      });
+    } catch {}
+  };
 
   const categories = ['ALL', ...Array.from(new Set(guides.map(g => g.category)))];
 
@@ -102,10 +116,7 @@ export default function GuidesScreen() {
           {filteredGuides.map(guide => (
           <TouchableOpacity
             key={guide.id}
-            onPress={() => {
-              // In production, this would navigate to the guide detail page
-              alert('Guide detail page coming soon!');
-            }}
+            onPress={() => setSelectedGuide(guide)}
             activeOpacity={0.7}
           >
             <Card style={styles.guideCard}>
@@ -143,6 +154,102 @@ export default function GuidesScreen() {
           Start with "Getting Started" guides if you're new to credit cards and loans.
         </Text>
       </Card>
+
+      {/* Full Guide Detail Reader Modal */}
+      <Modal visible={!!selectedGuide} animationType="slide" transparent={false}>
+        <SafeAreaView style={[styles.modalSafe, { backgroundColor: colors.bg }]}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setSelectedGuide(null)} style={styles.backButton}>
+              <Icon name="arrow-left" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.modalHeaderTitle} numberOfLines={1}>
+              {selectedGuide?.category || 'Financial Guide'}
+            </Text>
+            {selectedGuide && (
+              <TouchableOpacity onPress={() => handleShareGuide(selectedGuide)} style={styles.shareBtn}>
+                <Icon name="share" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            {selectedGuide && (
+              <>
+                <View style={styles.readerMetaRow}>
+                  <View style={styles.readerPill}>
+                    <Text style={styles.readerPillText}>{selectedGuide.category}</Text>
+                  </View>
+                  <View style={styles.readerDuration}>
+                    <Icon name="clock" size={13} color={colors.textMid} />
+                    <Text style={styles.readerDurationText}>{selectedGuide.duration} Read</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.readerTitle}>{selectedGuide.title}</Text>
+                <Text style={styles.readerIntro}>{selectedGuide.description}</Text>
+
+                <Card style={styles.sectionBlock}>
+                  <Text style={styles.sectionHeading}>🎯 Key Objectives & Summary</Text>
+                  <Text style={styles.sectionBody}>
+                    Understanding this topic empowers you to build optimal creditworthiness, avoid costly hidden charges,
+                    and maximize financial rewards on verified banking products across India.
+                  </Text>
+                </Card>
+
+                <Card style={styles.sectionBlock}>
+                  <Text style={styles.sectionHeading}>📋 Step-by-Step Recommendations</Text>
+                  <View style={styles.stepItem}>
+                    <Text style={styles.stepNum}>1</Text>
+                    <Text style={styles.stepText}>
+                      Always review eligibility criteria including age, minimum income, and credit score (CIBIL 750+) before applying.
+                    </Text>
+                  </View>
+                  <View style={styles.stepItem}>
+                    <Text style={styles.stepNum}>2</Text>
+                    <Text style={styles.stepText}>
+                      Compare lifetime-free options with fee-based reward cards to ensure your spending pattern generates net-positive value.
+                    </Text>
+                  </View>
+                  <View style={styles.stepItem}>
+                    <Text style={styles.stepNum}>3</Text>
+                    <Text style={styles.stepText}>
+                      Set up auto-debit for full credit card statement payments to avoid 3.5%-4% monthly interest charges and late fees.
+                    </Text>
+                  </View>
+                </Card>
+
+                <Card style={[styles.sectionBlock, { backgroundColor: '#FEF3C720', borderColor: '#F59E0B40' }]}>
+                  <Text style={[styles.sectionHeading, { color: '#D97706' }]}>⚠️ Common Traps to Avoid</Text>
+                  <Text style={styles.sectionBody}>
+                    • Never withdraw cash from ATMs using a credit card (cash advance charges accrue daily from day one).{'\n'}
+                    • Don't apply for multiple credit cards within short windows (each triggers a hard CIBIL pull).{'\n'}
+                    • Maintain credit utilization ratio under 30% of total limit for rapid score improvement.
+                  </Text>
+                </Card>
+
+                <View style={styles.readerActions}>
+                  <Button
+                    title="Check My Card Offers"
+                    onPress={() => {
+                      setSelectedGuide(null);
+                      router.push('/(public)/apply' as any);
+                    }}
+                    style={{ marginBottom: spacing.sm }}
+                  />
+                  <Button
+                    title="Compare Card Benefits"
+                    variant="outline"
+                    onPress={() => {
+                      setSelectedGuide(null);
+                      router.push('/(public)/card-benefits' as any);
+                    }}
+                  />
+                </View>
+              </>
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </ScrollView>
   );
 }
@@ -299,5 +406,112 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textMid,
     lineHeight: 16,
+  },
+  modalSafe: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalHeaderTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.text,
+    flex: 1,
+    textAlign: 'center',
+  },
+  shareBtn: {
+    padding: 6,
+  },
+  modalContent: {
+    flex: 1,
+    padding: spacing.md,
+  },
+  readerMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  readerPill: {
+    backgroundColor: `${colors.primary}20`,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  readerPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
+    textTransform: 'uppercase',
+  },
+  readerDuration: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  readerDurationText: {
+    fontSize: 12,
+    color: colors.textMid,
+  },
+  readerTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: colors.text,
+    lineHeight: 28,
+    marginBottom: spacing.xs,
+  },
+  readerIntro: {
+    fontSize: 14,
+    color: colors.textMid,
+    lineHeight: 20,
+    marginBottom: spacing.md,
+  },
+  sectionBlock: {
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  sectionHeading: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  sectionBody: {
+    fontSize: 13,
+    color: colors.textMid,
+    lineHeight: 20,
+  },
+  stepItem: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  stepNum: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.primary,
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '800',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  stepText: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.textMid,
+    lineHeight: 18,
+  },
+  readerActions: {
+    marginVertical: spacing.lg,
+    paddingBottom: spacing.xl,
   },
 });

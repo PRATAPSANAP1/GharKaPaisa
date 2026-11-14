@@ -8,6 +8,7 @@ import {
   getAndClearPendingDestination,
   clearPendingDestination,
 } from '../services/deeplink.service';
+import { registerPushNotifications } from '../services/pushNotification';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -64,6 +65,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             router.push(pendingTarget as any);
           }, 300);
         }
+
+        // Register push notification token with backend
+        registerPushNotifications().catch(() => {});
       }
     } catch (err) {
       console.error('[AuthContext] Restore session error:', err);
@@ -82,6 +86,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(authToken);
     setUser(userData);
     setIsAuthenticated(true);
+
+    // Register push notification token with backend
+    registerPushNotifications().catch(() => {});
 
     // Navigate to pending deep link target if present after login
     const pendingTarget = await getAndClearPendingDestination();

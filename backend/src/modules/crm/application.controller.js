@@ -2526,6 +2526,11 @@ const listApplications = async (req, res, next) => {
       countScopeSQL = `WHERE 1=1`;
     }
 
+    let effectiveCountScopeSQL = `WHERE 1=1`;
+    if (isPartnerOrTeam || validPartnerId) {
+      effectiveCountScopeSQL = countScopeSQL;
+    }
+
     const countSearchJoinSQL = validSearch ? `
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
