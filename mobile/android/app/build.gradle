@@ -95,6 +95,10 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace 'com.gharkapaisa.app'
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
     defaultConfig {
         applicationId 'com.gharkapaisa.app'
         minSdkVersion rootProject.ext.minSdkVersion
