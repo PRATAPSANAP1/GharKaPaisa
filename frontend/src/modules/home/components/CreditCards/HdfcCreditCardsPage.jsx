@@ -381,10 +381,10 @@ export default function HdfcCreditCardsPage() {
   ];
 
   return (
-    <div className="hdfc-credit-page min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-200">
+    <div className="hdfc-credit-page min-h-screen bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-200">
       
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-white via-slate-50 to-emerald-50/70 dark:from-blue-950 dark:via-slate-900 dark:to-slate-950 text-slate-900 dark:text-white pt-8 sm:pt-10 pb-10 sm:pb-16 px-4 sm:px-6 lg:px-8 border-b border-emerald-100 dark:border-blue-900/40">
+      <section className="relative overflow-hidden bg-white dark:bg-slate-950 text-slate-900 dark:text-white pt-8 sm:pt-10 pb-10 sm:pb-16 px-4 sm:px-6 lg:px-8 border-b border-slate-100 dark:border-slate-800">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(37,99,235,0.18),transparent_50%)] pointer-events-none" />
         <div className="max-w-7xl mx-auto relative z-10">
           
