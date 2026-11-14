@@ -74,6 +74,7 @@ const PartnerShareLanding = lazy(() => import('../modules/products/PartnerShareL
 const CustomerApplyStep1 = lazy(() => import('../modules/products/CustomerApplyStep1'));
 const CustomerPostApplyStep2 = lazy(() => import('../modules/products/CustomerPostApplyStep2'));
 const DynamicCreditCardsPage = lazy(() => import('../modules/home/components/CreditCards/DynamicCreditCardsPage'));
+const HdfcCreditCardsPage = lazy(() => import('../modules/home/components/CreditCards/HdfcCreditCardsPage'));
 
 // Admin Pages
 const AdminDashboard = lazy(() => import('../modules/admin/dashboard/AdminDashboard'));
@@ -169,6 +170,13 @@ const AppRoutes = () => {
       <Routes>
       {/* Public Routes */}
       <Route element={<PublicLayout />}>
+        {/* Dedicated HDFC Credit Cards Page */}
+        <Route path="/creditcard/hdfc" element={<HdfcCreditCardsPage />} />
+        <Route path="/credit-card/hdfc" element={<HdfcCreditCardsPage />} />
+        <Route path="/creditcards/hdfc" element={<HdfcCreditCardsPage />} />
+        <Route path="/credit-cards/hdfc" element={<HdfcCreditCardsPage />} />
+        <Route path="/cards/hdfc" element={<HdfcCreditCardsPage />} />
+
         <Route path="/" element={<Home />} />
         <Route path="/loans" element={<Home />} />
         <Route path="/insurance" element={<Home />} />
