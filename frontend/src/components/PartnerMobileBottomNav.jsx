@@ -30,7 +30,7 @@ export default function PartnerMobileBottomNav() {
     return location.pathname.startsWith(path);
   };
 
-  const activeColor = '#2563EB';
+  const activeColor = C?.teal || (isDark ? '#00D4AA' : '#008A60');
   const inactiveColor = isDark ? '#94A3B8' : '#64748B';
 
   return (

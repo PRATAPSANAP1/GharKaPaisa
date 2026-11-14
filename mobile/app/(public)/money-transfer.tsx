@@ -1,45 +1,36 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { Card } from '../../components/Card';
 import { Icon } from '../../components/Icon';
+import { fetchPaymentMethods } from '../../services/cms.service';
 
-const transferTypes = [
-  {
-    id: 'upi',
-    title: 'UPI Transfer',
-    description: 'Instant money transfer using UPI ID or QR code',
-    icon: 'smartphone',
-    color: '#3B82F6',
-    bg: '#EFF6FF',
-  },
-  {
-    id: 'bank',
-    title: 'Bank Transfer',
-    description: 'Transfer to any bank account using IMPS/NEFT/RTGS',
-    icon: 'credit-card',
-    color: '#10B981',
-    bg: '#ECFDF5',
-  },
-  {
-    id: 'wallet',
-    title: 'Wallet Transfer',
-    description: 'Transfer funds between wallets',
-    icon: 'wallet',
-    color: '#F59E0B',
-    bg: '#FFFBEB',
-  },
-];
+interface PaymentMethod {
+  id: string;
+  name: string;
+  icon: string;
+  type: string;
+}
 
 export default function MoneyTransferScreen() {
+  const [loading, setLoading] = useState(true);
+  const [methods, setMethods] = useState<PaymentMethod[]>([]);
+
+  useEffect(() => {
+    fetchPaymentMethods().then((res) => {
+      if (res?.success) setMethods(res.data);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
@@ -59,29 +50,29 @@ export default function MoneyTransferScreen() {
       </View>
 
       <View style={styles.transferList}>
-        {transferTypes.map((transfer) => (
-          <TouchableOpacity
-            key={transfer.id}
-            onPress={() => {
-              alert(`${transfer.title} coming soon!`);
-            }}
-            activeOpacity={0.7}
-          >
-            <Card style={styles.transferCard}>
-              <View style={[styles.iconContainer, { backgroundColor: transfer.bg }]}>
-                <Icon name={transfer.icon as any} size={32} color={transfer.color} />
-              </View>
-              <Text style={styles.transferTitle}>{transfer.title}</Text>
-              <Text style={styles.transferDesc} numberOfLines={2}>
-                {transfer.description}
-              </Text>
-              <View style={styles.cardFooter}>
-                <Text style={styles.exploreText}>Get Started</Text>
-                <Icon name="chevron-right" size={16} color={colors.primary} />
-              </View>
-            </Card>
-          </TouchableOpacity>
-        ))}
+        {loading ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>Loading...</Text>
+          </View>
+        ) : methods.length === 0 ? (
+          <View style={styles.centered}>
+            <Icon name="info-circle" size={48} color={colors.textLight} />
+            <Text style={styles.emptyTitle}>No methods</Text>
+          </View>
+        ) : (
+          methods.map((method) => (
+            <TouchableOpacity key={method.id} onPress={() => alert(`${method.name} coming soon!`)} activeOpacity={0.7}>
+              <Card style={styles.transferCard}>
+                <View style={[styles.iconContainer, { backgroundColor: `${colors.primary}20` }]}>
+                  <Icon name={method.icon as any} size={32} color={colors.primary} />
+                </View>
+                <Text style={styles.transferTitle}>{method.name}</Text>
+                <Text style={styles.transferDesc} numberOfLines={2}>{method.type}</Text>
+              </Card>
+            </TouchableOpacity>
+          ))
+        )}
       </View>
 
       <Card style={styles.infoCard}>
@@ -116,6 +107,22 @@ const styles = StyleSheet.create({
   },
   heroTitle: { fontSize: 24, fontWeight: '800', color: colors.text, marginTop: spacing.md },
   heroSubtitle: { fontSize: 14, color: colors.textMid, textAlign: 'center' },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    color: colors.textMid,
+  },
+  emptyTitle: {
+    marginTop: spacing.md,
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textMid,
+  },
   transferList: { padding: spacing.md, gap: spacing.md },
   transferCard: { padding: spacing.md },
   iconContainer: {

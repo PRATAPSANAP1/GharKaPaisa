@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { Card } from '../../components/Card';
 import { Icon } from '../../components/Icon';
+import { fetchFAQs } from '../../services/cms.service';
 
 interface FAQ {
   id: string;
@@ -18,72 +20,18 @@ interface FAQ {
   category: string;
 }
 
-const faqs: FAQ[] = [
-  {
-    id: '1',
-    question: 'How do I apply for a credit card?',
-    answer: 'You can apply for a credit card by browsing our catalog, selecting a card that suits your needs, and clicking the "Apply Now" button. Fill in the required details and submit your application. Our team will review it and get back to you.',
-    category: 'General',
-  },
-  {
-    id: '2',
-    question: 'What documents are required for credit card application?',
-    answer: 'You will need to provide: PAN card, Aadhaar card, address proof (electricity bill, rental agreement, etc.), passport size photograph, and income proof (salary slips, ITR, or bank statements).',
-    category: 'Documents',
-  },
-  {
-    id: '3',
-    question: 'How long does it take to get my credit card approved?',
-    answer: 'The approval process typically takes 7-14 working days depending on the bank and your profile. Some banks offer instant approval for pre-approved customers.',
-    category: 'General',
-  },
-  {
-    id: '4',
-    question: 'What is a Lifetime Free (LTF) credit card?',
-    answer: 'A Lifetime Free credit card has no annual fee, meaning you don\'t have to pay any yearly maintenance charges. These cards are great for users who want to avoid maintenance costs while enjoying premium benefits.',
-    category: 'Cards',
-  },
-  {
-    id: '5',
-    question: 'How can I check my credit card application status?',
-    answer: 'You can check your application status by visiting the "Track Application" page and entering your application reference number or registered mobile number.',
-    category: 'General',
-  },
-  {
-    id: '6',
-    question: 'What is the eligibility criteria for credit cards?',
-    answer: 'To be eligible for a credit card, you should: Be 21-60 years old, have a minimum annual income of ₹2.5 Lakhs, have a credit score of 700 or above, and be employed or self-employed for at least 1 year.',
-    category: 'Eligibility',
-  },
-  {
-    id: '7',
-    question: 'How do I use the loan EMI calculator?',
-    answer: 'Our loan EMI calculator helps you estimate your monthly EMI. Enter the loan amount, interest rate, and tenure to see your EMI, total interest, and total payment. This helps you plan your finances better.',
-    category: 'Tools',
-  },
-  {
-    id: '8',
-    question: 'Can I compare multiple credit cards?',
-    answer: 'Yes! You can compare up to 4 credit cards side-by-side. Use the "Compare" button on product cards to add them to comparison, then click "Compare Now" to see a detailed comparison of features, fees, and benefits.',
-    category: 'Cards',
-  },
-  {
-    id: '9',
-    question: 'What should I do if my credit card application is rejected?',
-    answer: 'If your application is rejected, check the reason provided by the bank. Common reasons include low credit score, insufficient income, or existing debt. Improve these factors and reapply after 3-6 months.',
-    category: 'General',
-  },
-  {
-    id: '10',
-    question: 'How do I become a partner with GharKaPaisa?',
-    answer: 'To become a partner, register on our platform. After registration, complete your KYC verification. Once approved, you can start referring customers and earning commissions on successful applications.',
-    category: 'Partner',
-  },
-];
-
 export default function FAQScreen() {
+  const [loading, setLoading] = useState(true);
+  const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState('ALL');
+
+  useEffect(() => {
+    fetchFAQs().then((res) => {
+      if (res?.success) setFaqs(res.data);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
 
   const categories = ['ALL', ...Array.from(new Set(faqs.map(f => f.category)))];
 
@@ -130,8 +78,19 @@ export default function FAQScreen() {
       </ScrollView>
 
       {/* FAQ List */}
-      <View style={styles.faqList}>
-        {filteredFAQs.map(faq => (
+      {loading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading FAQs...</Text>
+        </View>
+      ) : filteredFAQs.length === 0 ? (
+        <View style={styles.centered}>
+          <Icon name="info-circle" size={48} color={colors.textLight} />
+          <Text style={styles.emptyTitle}>No FAQs available</Text>
+        </View>
+      ) : (
+        <View style={styles.faqList}>
+          {filteredFAQs.map(faq => (
           <Card key={faq.id} style={styles.faqCard}>
             <TouchableOpacity
               style={styles.faqHeader}
@@ -157,7 +116,8 @@ export default function FAQScreen() {
             )}
           </Card>
         ))}
-      </View>
+        </View>
+      )}
 
       {/* Contact Support */}
       <Card style={styles.supportCard}>
@@ -192,6 +152,22 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 14,
+    color: colors.textMid,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    color: colors.textMid,
+  },
+  emptyTitle: {
+    marginTop: spacing.md,
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.textMid,
   },
   categoryScroll: {

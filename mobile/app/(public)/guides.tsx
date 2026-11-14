@@ -1,16 +1,18 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { Card } from '../../components/Card';
 import { Icon } from '../../components/Icon';
+import { fetchGuides } from '../../services/cms.service';
 
 interface Guide {
   id: string;
@@ -21,76 +23,19 @@ interface Guide {
   icon: string;
 }
 
-const guides: Guide[] = [
-  {
-    id: '1',
-    title: 'How to Apply for Credit Card',
-    description: 'Step-by-step guide to apply for your first credit card',
-    category: 'Getting Started',
-    duration: '5 min',
-    icon: 'credit-card',
-  },
-  {
-    id: '2',
-    title: 'Understanding Credit Score',
-    description: 'Learn what credit score is and how to improve it',
-    category: 'Financial Education',
-    duration: '8 min',
-    icon: 'bar-chart',
-  },
-  {
-    id: '3',
-    title: 'Choosing the Right Credit Card',
-    description: 'Tips to select the best credit card for your needs',
-    category: 'Getting Started',
-    duration: '6 min',
-    icon: 'check-circle',
-  },
-  {
-    id: '4',
-    title: 'How to Use Loan Calculator',
-    description: 'Calculate EMI and plan your loan repayments',
-    category: 'Tools',
-    duration: '3 min',
-    icon: 'calculator',
-  },
-  {
-    id: '5',
-    title: 'Credit Card Rewards Explained',
-    description: 'Maximize your rewards with smart spending',
-    category: 'Financial Education',
-    duration: '7 min',
-    icon: 'gift',
-  },
-  {
-    id: '6',
-    title: 'Partner Registration Guide',
-    description: 'Complete guide to become a GharKaPaisa partner',
-    category: 'Partner',
-    duration: '10 min',
-    icon: 'users',
-  },
-  {
-    id: '7',
-    title: 'Loan Application Process',
-    description: 'Everything you need to know about applying for loans',
-    category: 'Getting Started',
-    duration: '6 min',
-    icon: 'file-text',
-  },
-  {
-    id: '8',
-    title: 'Referral Program Benefits',
-    description: 'Earn more by referring customers and friends',
-    category: 'Partner',
-    duration: '4 min',
-    icon: 'share-2',
-  },
-];
-
 export default function GuidesScreen() {
+  const [loading, setLoading] = useState(true);
+  const [guides, setGuides] = useState<Guide[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState('ALL');
+
+  useEffect(() => {
+    fetchGuides().then((res) => {
+      if (res?.success) setGuides(res.data);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
   const categories = ['ALL', ...Array.from(new Set(guides.map(g => g.category)))];
-  const [selectedCategory, setSelectedCategory] = React.useState('ALL');
 
   const filteredGuides = selectedCategory === 'ALL'
     ? guides
@@ -142,8 +87,19 @@ export default function GuidesScreen() {
       </ScrollView>
 
       {/* Guides List */}
-      <View style={styles.guidesList}>
-        {filteredGuides.map(guide => (
+      {loading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading guides...</Text>
+        </View>
+      ) : filteredGuides.length === 0 ? (
+        <View style={styles.centered}>
+          <Icon name="info-circle" size={48} color={colors.textLight} />
+          <Text style={styles.emptyTitle}>No guides available</Text>
+        </View>
+      ) : (
+        <View style={styles.guidesList}>
+          {filteredGuides.map(guide => (
           <TouchableOpacity
             key={guide.id}
             onPress={() => {
@@ -176,7 +132,8 @@ export default function GuidesScreen() {
             </Card>
           </TouchableOpacity>
         ))}
-      </View>
+        </View>
+      )}
 
       {/* Tips Card */}
       <Card style={styles.tipsCard}>
@@ -229,6 +186,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textMid,
     textAlign: 'center',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    color: colors.textMid,
+  },
+  emptyTitle: {
+    marginTop: spacing.md,
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textMid,
   },
   categoryScroll: {
     paddingHorizontal: spacing.md,

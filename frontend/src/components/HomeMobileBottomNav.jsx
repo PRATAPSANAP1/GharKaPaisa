@@ -59,7 +59,7 @@ export default function HomeMobileBottomNav() {
       : { id: 'login', label: 'Login', path: '/login', icon: <HiOutlineArrowRightOnRectangle size={22} /> },
   ];
 
-  const activeColor = C?.teal || '#2563EB';
+  const activeColor = C?.teal || (isDark ? '#00D4AA' : '#008A60');
   const inactiveColor = isDark ? '#94A3B8' : '#64748B';
 
   return (

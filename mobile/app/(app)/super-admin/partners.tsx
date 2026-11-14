@@ -23,6 +23,8 @@ import {
   updatePartnerStatus,
   approvePartnerKYC,
   rejectPartnerKYC,
+  deletePartner,
+  restoreAccount,
 } from '../../../services/super-admin.service';
 
 export default function SuperAdminPartnersScreen() {
@@ -113,12 +115,63 @@ export default function SuperAdminPartnersScreen() {
     );
   };
 
+  const handleDeletePartner = async (partnerId: string, partnerName: string) => {
+    Alert.alert(
+      'Delete Partner',
+      'Choose deletion type:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: '🔄 Temporary',
+          onPress: async () => {
+            try {
+              const res = await deletePartner(partnerId, 'temporary');
+              if (res?.success) {
+                Alert.alert('✅', 'Partner deactivated');
+                loadPartners();
+              }
+            } catch (err: any) {
+              Alert.alert('❌', err.message || 'Failed to deactivate');
+            }
+          },
+        },
+        {
+          text: '🗑️ Permanent',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const res = await deletePartner(partnerId, 'permanent');
+              if (res?.success) {
+                Alert.alert('🗑️', 'Deleted (restore 24h)');
+                loadPartners();
+              }
+            } catch (err: any) {
+              Alert.alert('❌', err.message || 'Failed to delete');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleRestorePartner = async (partnerId: string, partnerName: string) => {
+    try {
+      const res = await restoreAccount(partnerId);
+      if (res?.success) {
+        Alert.alert('✅', 'Partner restored');
+        loadPartners();
+      }
+    } catch (err: any) {
+      Alert.alert('❌', err.message || 'Failed to restore');
+    }
+  };
+
   const filterOptions = [
-    { key: 'ALL', label: 'All Partners' },
-    { key: 'ACTIVE', label: 'Active' },
-    { key: 'PENDING', label: 'Pending KYC' },
-    { key: 'SUSPENDED', label: 'Suspended' },
-    { key: 'BLOCKED', label: 'Blocked' },
+    { key: 'ALL', label: 'All', icon: 'users' },
+    { key: 'ACTIVE', label: 'Active', icon: 'check-circle' },
+    { key: 'PENDING', label: 'Pending', icon: 'clock' },
+    { key: 'SUSPENDED', label: 'Suspended', icon: 'pause-circle' },
+    { key: 'BLOCKED', label: 'Blocked', icon: 'x-circle' },
   ];
 
   return (
@@ -160,9 +213,7 @@ export default function SuperAdminPartnersScreen() {
               style={[styles.filterPill, selectedFilter === opt.key && styles.activeFilterPill]}
               onPress={() => setSelectedFilter(opt.key)}
             >
-              <Text style={[styles.filterText, selectedFilter === opt.key && styles.activeFilterText]}>
-                {opt.label}
-              </Text>
+              <Icon name={opt.icon as any} size={14} color={selectedFilter === opt.key ? colors.primary : colors.textMid} />
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -276,7 +327,20 @@ export default function SuperAdminPartnersScreen() {
                       }}
                     >
                       <Icon name="settings" size={14} color={colors.textMid} />
-                      <Text style={styles.actionBtnText}>Change Status</Text>
+                    </TouchableOpacity>
+                    {(status === 'SUSPENDED' || status === 'DELETED') && (
+                      <TouchableOpacity
+                        style={[styles.actionBtn, styles.restoreBtn]}
+                        onPress={() => handleRestorePartner(partner.id || partner.user_id, partner.full_name || partner.name)}
+                      >
+                        <Icon name="refresh-cw" size={14} color={colors.success} />
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity
+                      style={[styles.actionBtn, styles.deleteBtn]}
+                      onPress={() => handleDeletePartner(partner.id || partner.user_id, partner.full_name || partner.name)}
+                    >
+                      <Icon name="trash-2" size={14} color={colors.error} />
                     </TouchableOpacity>
                   </View>
                 </Card>
@@ -552,6 +616,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: colors.textMid,
+  },
+  deleteBtn: {
+    marginLeft: 'auto',
+  },
+  deleteBtnText: {
+    color: colors.error,
+  },
+  restoreBtn: {
+    backgroundColor: colors.successSoft,
   },
   modalBackdrop: {
     flex: 1,

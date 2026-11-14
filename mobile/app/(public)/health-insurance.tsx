@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { colors } from '../../theme/colors';
@@ -12,35 +13,38 @@ import { spacing } from '../../theme/spacing';
 import { Card } from '../../components/Card';
 import { Icon } from '../../components/Icon';
 import { Button } from '../../components/Button';
+import apiClient from '../../services/api';
 
-const healthPlans = [
-  {
-    id: '1',
-    name: 'Individual Health Plan',
-    insurer: 'HDFC Ergo',
-    coverage: '₹5 Lakhs',
-    premium: '₹4,500/year',
-    features: ['Cashless hospitalization', 'Pre & post hospitalization', 'No claim bonus'],
-  },
-  {
-    id: '2',
-    name: 'Family Floater Plan',
-    insurer: 'ICICI Lombard',
-    coverage: '₹10 Lakhs',
-    premium: '₹8,200/year',
-    features: ['Covers entire family', 'No room rent limit', 'Day care procedures'],
-  },
-  {
-    id: '3',
-    name: 'Critical Illness Plan',
-    insurer: 'Star Health',
-    coverage: '₹25 Lakhs',
-    premium: '₹6,000/year',
-    features: ['Covers 20+ critical illnesses', 'Lump sum payout', 'Tax benefits'],
-  },
-];
+interface HealthPlan {
+  id: string;
+  name: string;
+  insurer: string;
+  coverage: string;
+  premium: string;
+  features: string[];
+}
 
 export default function HealthInsuranceScreen() {
+  const [loading, setLoading] = useState(true);
+  const [plans, setPlans] = useState<HealthPlan[]>([]);
+
+  useEffect(() => {
+    fetchHealthPlans();
+  }, []);
+
+  const fetchHealthPlans = async () => {
+    try {
+      setLoading(true);
+      const res = await apiClient.get('/insurance/health-plans');
+      if (res.data?.success && Array.isArray(res.data?.data)) {
+        setPlans(res.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch health plans:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
@@ -60,7 +64,18 @@ export default function HealthInsuranceScreen() {
       </View>
 
       <View style={styles.plansList}>
-        {healthPlans.map((plan) => (
+        {loading ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>Loading plans...</Text>
+          </View>
+        ) : plans.length === 0 ? (
+          <View style={styles.centered}>
+            <Icon name="info-circle" size={48} color={colors.textLight} />
+            <Text style={styles.emptyTitle}>No plans available</Text>
+          </View>
+        ) : (
+          plans.map((plan) => (
           <Card key={plan.id} style={styles.planCard}>
             <View style={styles.planHeader}>
               <Text style={styles.planName}>{plan.name}</Text>
@@ -96,7 +111,8 @@ export default function HealthInsuranceScreen() {
               onPress={() => router.push({ pathname: '/(public)/apply', params: { productId: 'health-insurance', productName: plan.name } })}
             />
           </Card>
-        ))}
+          ))
+        )}
       </View>
 
       <Card style={styles.infoCard}>
@@ -131,6 +147,22 @@ const styles = StyleSheet.create({
   },
   heroTitle: { fontSize: 24, fontWeight: '800', color: colors.text, marginTop: spacing.md },
   heroSubtitle: { fontSize: 14, color: colors.textMid, textAlign: 'center' },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    color: colors.textMid,
+  },
+  emptyTitle: {
+    marginTop: spacing.md,
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textMid,
+  },
   plansList: { padding: spacing.md, gap: spacing.md },
   planCard: { padding: spacing.md },
   planHeader: {

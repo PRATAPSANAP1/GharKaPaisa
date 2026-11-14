@@ -123,6 +123,7 @@ export default function AppLayout() {
     {
       id: 'home',
       label: 'Home',
+      icon: '🏠',
       active: currentTab === 'dashboard',
       onPress: () => {
         setActiveTab('dashboard');
@@ -132,6 +133,7 @@ export default function AppLayout() {
     {
       id: 'cards',
       label: 'Cards',
+      icon: '💳',
       active: currentTab === 'applications',
       onPress: () => {
         setActiveTab('applications');
@@ -141,6 +143,7 @@ export default function AppLayout() {
     {
       id: 'customers',
       label: 'Customers',
+      icon: '👥',
       active: currentTab === 'customers',
       onPress: () => {
         setActiveTab('customers');
@@ -150,6 +153,7 @@ export default function AppLayout() {
     {
       id: 'chat',
       label: 'Chat',
+      icon: '💬',
       active: currentTab === 'messenger',
       badgeCount: unreadCount,
       onPress: () => {
@@ -160,6 +164,7 @@ export default function AppLayout() {
     {
       id: 'more',
       label: 'More',
+      icon: '☰',
       active: currentTab === 'more',
       onPress: () => {
         setActiveTab('more');

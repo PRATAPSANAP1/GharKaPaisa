@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { colors } from '../../theme/colors';
@@ -12,35 +13,27 @@ import { spacing } from '../../theme/spacing';
 import { Card } from '../../components/Card';
 import { Icon } from '../../components/Icon';
 import { Button } from '../../components/Button';
+import { fetchCarPlans } from '../../services/cms.service';
 
-const carPlans = [
-  {
-    id: '1',
-    name: 'Comprehensive Car Insurance',
-    insurer: 'HDFC Ergo',
-    coverage: 'Own Damage + Third Party',
-    premium: '₹6,500/year',
-    features: ['Full coverage', 'Zero depreciation', 'No claim bonus'],
-  },
-  {
-    id: '2',
-    name: 'Third Party Liability',
-    insurer: 'ICICI Lombard',
-    coverage: 'Third Party Only',
-    premium: '₹2,200/year',
-    features: ['Mandatory coverage', 'Legal compliance', 'Basic protection'],
-  },
-  {
-    id: '3',
-    name: 'Own Damage Cover',
-    insurer: 'Bajaj Allianz',
-    coverage: 'Own Damage Only',
-    premium: '₹4,000/year',
-    features: ['Damage to your vehicle', 'Theft protection', 'Fire coverage'],
-  },
-];
+interface HealthPlan {
+  id: string;
+  name: string;
+  insurer: string;
+  coverage: string;
+  premium: string;
+  features: string[];
+}
 
 export default function CarInsuranceScreen() {
+  const [loading, setLoading] = useState(true);
+  const [plans, setPlans] = useState<HealthPlan[]>([]);
+
+  useEffect(() => {
+    fetchCarPlans().then((res) => {
+      if (res?.success) setPlans(res.data);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
@@ -60,7 +53,18 @@ export default function CarInsuranceScreen() {
       </View>
 
       <View style={styles.plansList}>
-        {carPlans.map((plan) => (
+        {loading ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>Loading plans...</Text>
+          </View>
+        ) : plans.length === 0 ? (
+          <View style={styles.centered}>
+            <Icon name="info-circle" size={48} color={colors.textLight} />
+            <Text style={styles.emptyTitle}>No plans available</Text>
+          </View>
+        ) : (
+          plans.map((plan) => (
           <Card key={plan.id} style={styles.planCard}>
             <View style={styles.planHeader}>
               <Text style={styles.planName}>{plan.name}</Text>
@@ -96,7 +100,8 @@ export default function CarInsuranceScreen() {
               onPress={() => router.push({ pathname: '/(public)/apply', params: { productId: 'car-insurance', productName: plan.name } })}
             />
           </Card>
-        ))}
+          ))
+        )}
       </View>
 
       <Card style={styles.infoCard}>
@@ -131,6 +136,22 @@ const styles = StyleSheet.create({
   },
   heroTitle: { fontSize: 24, fontWeight: '800', color: colors.text, marginTop: spacing.md },
   heroSubtitle: { fontSize: 14, color: colors.textMid, textAlign: 'center' },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    color: colors.textMid,
+  },
+  emptyTitle: {
+    marginTop: spacing.md,
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textMid,
+  },
   plansList: { padding: spacing.md, gap: spacing.md },
   planCard: { padding: spacing.md },
   planHeader: {

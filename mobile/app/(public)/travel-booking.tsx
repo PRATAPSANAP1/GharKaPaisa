@@ -1,53 +1,36 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { Card } from '../../components/Card';
 import { Icon } from '../../components/Icon';
+import { fetchTravelServices } from '../../services/cms.service';
 
-const travelTypes = [
-  {
-    id: 'flight',
-    title: 'Flight Booking',
-    description: 'Book domestic and international flights',
-    icon: 'plane',
-    color: '#3B82F6',
-    bg: '#EFF6FF',
-  },
-  {
-    id: 'train',
-    title: 'Train Booking',
-    description: 'Book train tickets across India',
-    icon: 'activity',
-    color: '#10B981',
-    bg: '#ECFDF5',
-  },
-  {
-    id: 'bus',
-    title: 'Bus Booking',
-    description: 'Book bus tickets for intercity travel',
-    icon: 'bus',
-    color: '#F59E0B',
-    bg: '#FFFBEB',
-  },
-  {
-    id: 'hotel',
-    title: 'Hotel Booking',
-    description: 'Find and book hotels worldwide',
-    icon: 'home',
-    color: '#8B5CF6',
-    bg: '#F5F3FF',
-  },
-];
+interface TravelService {
+  id: string;
+  name: string;
+  icon: string;
+  type: string;
+}
 
 export default function TravelBookingScreen() {
+  const [loading, setLoading] = useState(true);
+  const [services, setServices] = useState<TravelService[]>([]);
+
+  useEffect(() => {
+    fetchTravelServices().then((res) => {
+      if (res?.success) setServices(res.data);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>

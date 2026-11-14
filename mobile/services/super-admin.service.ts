@@ -770,6 +770,30 @@ export const deleteEmployee = async (employeeId: string) => {
 };
 
 /**
+ * Delete Partner Account
+ */
+export const deletePartner = async (partnerId: string, mode: 'temporary' | 'permanent' = 'temporary') => {
+  try {
+    const res = await apiClient.delete(`/superadmin/users/${partnerId}?mode=${mode}`);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to delete partner' };
+  }
+};
+
+/**
+ * Restore Deleted Account
+ */
+export const restoreAccount = async (accountId: string) => {
+  try {
+    const res = await apiClient.post(`/superadmin/users/${accountId}/restore`);
+    return res.data;
+  } catch (err: any) {
+    throw err.response?.data || { success: false, message: 'Failed to restore account' };
+  }
+};
+
+/**
  * Global System Settings (admin_privacy_mode, maintenance_mode, etc.)
  */
 export const fetchSystemSettings = async (): Promise<Record<string, string>> => {
